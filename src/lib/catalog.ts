@@ -16,6 +16,8 @@ export interface Catalog {
   problems: Problem[];
   byId: Map<number, Problem>;
   membership: Map<number, ListId[]>;
+  /** 自訂題目載入完成；在這之前找不到的題號不代表不存在 */
+  loaded: boolean;
 }
 
 const DIFFICULTY_ORDER: Record<Difficulty, number> = { Easy: 0, Medium: 1, Hard: 2 };
@@ -42,13 +44,14 @@ export function roadmapCompare(a: Problem, b: Problem): number {
   );
 }
 
-export function buildCatalog(custom: Problem[]): Catalog {
+export function buildCatalog(custom: Problem[], loaded = true): Catalog {
   const builtinIds = new Set(BUILTIN_PROBLEMS.map((p) => p.id));
   const problems = [...BUILTIN_PROBLEMS, ...custom.filter((p) => !builtinIds.has(p.id))].sort(roadmapCompare);
   return {
     problems,
     byId: new Map(problems.map((p) => [p.id, p])),
     membership: MEMBERSHIP,
+    loaded,
   };
 }
 

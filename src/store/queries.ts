@@ -27,7 +27,7 @@ export function useSettings(): SettingsRecord {
 
 export function useCatalog(): Catalog {
   const custom = useLiveQuery(() => db.customProblems.toArray(), []);
-  return useMemo(() => buildCatalog(custom ?? []), [custom]);
+  return useMemo(() => buildCatalog(custom ?? [], custom !== undefined), [custom]);
 }
 
 export function useProgressMap(): { progress: ReadonlyMap<number, ProgressRecord>; loaded: boolean } {

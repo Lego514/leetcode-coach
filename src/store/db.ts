@@ -24,6 +24,9 @@ export interface AttemptRecord {
   rating: Rating;
   minutes?: number;
   mode: AttemptMode;
+  /** 這次打開了幾層提示 */
+  hints?: number;
+  sawSolution?: boolean;
 }
 
 export interface NoteRecord {
@@ -71,6 +74,8 @@ export interface MockRecord {
   rating?: Rating;
   /** 講解練習的自評：1 講得很順、2 有卡住、3 講不出來 */
   clarity?: Clarity;
+  hints?: number;
+  sawSolution?: boolean;
   reflection: string;
   audio?: Blob;
 }

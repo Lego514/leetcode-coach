@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { Link, useBeforeUnload, useBlocker, useSearchParams } from 'react-router';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { BlobAudio } from '../components/BlobAudio';
+import { HintPanel } from '../components/HintPanel';
+import { LeaveGuard } from '../components/LeaveGuard';
 import { useToast } from '../components/toast';
 import { DifficultyTag, Dialog, LeetCodeLink, PageHead, Sheet } from '../components/ui';
 import {
@@ -16,6 +18,7 @@ import { getPattern, PATTERNS, type PatternId } from '../data/patterns';
 import type { Difficulty, Problem } from '../data/problems';
 import { LIST_FILTER_LABELS, problemsInList } from '../lib/catalog';
 import { formatDay, formatDuration, today } from '../lib/dates';
+import { HINT_LEVELS, suggestRating } from '../lib/practice';
 import { useRecorder, useStopwatch } from '../lib/session';
 import { masteryOf, RATINGS, ratingLabel, type Rating } from '../lib/srs';
 import { deleteMock, recordAttempt, saveMock } from '../store/actions';
@@ -34,6 +37,8 @@ interface SessionResult {
   usedSec: number;
   steps: string[];
   audio: Blob | null;
+  hints: number;
+  sawSolution: boolean;
 }
 
 type Phase =
@@ -70,38 +75,14 @@ export function MockPage() {
         <MockReview session={phase.session} result={phase.result} onDone={() => setPhase({ name: 'setup' })} />
       )}
 
-      {phase.name !== 'setup' && <LeaveGuard />}
+      {phase.name !== 'setup' && (
+        <LeaveGuard
+          title="離開這次模擬面試？"
+          message="計時和錄音會停止，這次的紀錄不會儲存。"
+          leaveLabel="離開，不儲存"
+        />
+      )}
     </div>
-  );
-}
-
-/** 練習進行中或還沒存檔時，離開頁面前先確認 */
-function LeaveGuard() {
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname);
-  useBeforeUnload(
-    useCallback((e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    }, []),
-  );
-
-  return (
-    <Dialog
-      open={blocker.state === 'blocked'}
-      onClose={() => blocker.reset?.()}
-      title="離開這次模擬面試？"
-      footer={
-        <>
-          <button className="btn btn-quiet" onClick={() => blocker.reset?.()}>
-            留在這裡
-          </button>
-          <button className="btn btn-danger" onClick={() => blocker.proceed?.()}>
-            離開，不儲存
-          </button>
-        </>
-      }
-    >
-      <p>計時和錄音會停止，這次的紀錄不會儲存。</p>
-    </Dialog>
   );
 }
 
@@ -330,6 +311,8 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
   const [done, setDone] = useState<string[]>([]);
   const [openStep, setOpenStep] = useState(0);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
+  const [hints, setHints] = useState(0);
+  const [sawSolution, setSawSolution] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const started = useRef(false);
   const { problem } = session;
@@ -358,7 +341,7 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
     const audio = await stopRecording();
     const steps =
       session.kind === 'full' ? done : EXPLAIN_CHECKS.filter((c) => checks[`explain:${c.id}`]).map((c) => c.id);
-    onFinish({ usedSec: Math.round(ms / 1000), steps, audio });
+    onFinish({ usedSec: Math.round(ms / 1000), steps, audio, hints, sawSolution });
   }
 
   function completeStep(index: number) {
@@ -510,6 +493,15 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
         </div>
 
         <div className="stack">
+          {session.kind === 'full' && (
+            <HintPanel
+              problem={problem}
+              used={hints}
+              sawSolution={sawSolution}
+              onReveal={() => setHints((n) => Math.min(HINT_LEVELS, n + 1))}
+              onSolution={() => setSawSolution(true)}
+            />
+          )}
           <Sheet title="錄音" id="recording">
             <div className="sheet-body">
               {recorder.state === 'recording' && (
@@ -548,12 +540,12 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   const { problem } = session;
   const note = useNote(problem.id);
   const toast = useToast();
-  const [rating, setRating] = useState<Rating | null>(null);
+  const isFull = session.kind === 'full';
+  const [rating, setRating] = useState<Rating | null>(isFull ? suggestRating(result.hints, result.sawSolution) : null);
   const [clarity, setClarity] = useState<Clarity | null>(null);
   const [reflection, setReflection] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const isFull = session.kind === 'full';
   const canSave = isFull ? rating !== null : clarity !== null;
 
   async function save() {
@@ -571,10 +563,17 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
     };
     if (rating) record.rating = rating;
     if (clarity) record.clarity = clarity;
+    if (result.hints > 0) record.hints = result.hints;
+    if (result.sawSolution) record.sawSolution = true;
     if (result.audio) record.audio = result.audio;
     await saveMock(record);
     if (isFull && rating) {
-      await recordAttempt(problem.id, rating, { mode: 'mock', minutes: Math.max(1, Math.round(result.usedSec / 60)) });
+      await recordAttempt(problem.id, rating, {
+        mode: 'mock',
+        minutes: Math.max(1, Math.round(result.usedSec / 60)),
+        hints: result.hints,
+        sawSolution: result.sawSolution,
+      });
     }
     toast('已儲存這次練習。');
     onDone();
@@ -590,7 +589,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
           overBy > 0 ? `超過目標 ${formatDuration(overBy)}` : `目標 ${formatDuration(session.limitSec)} 內完成`
         }。${
           isFull
-            ? `完成 ${result.steps.length} / ${INTERVIEW_STEPS.length} 個步驟。`
+            ? `完成 ${result.steps.length} / ${INTERVIEW_STEPS.length} 個步驟${result.hints > 0 ? `，打開 ${result.hints} 層提示` : ''}${result.sawSolution ? '，看過解答' : ''}。`
             : `講到 ${result.steps.length} / ${EXPLAIN_CHECKS.length} 個重點。`
         }`}
       />
@@ -641,7 +640,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
                       </button>
                     ))}
               </div>
-              {isFull && <p className="field-hint">評分會一起更新這題的複習排程。</p>}
+              {isFull && <p className="field-hint">已依提示的使用情況先幫你選好，評分會一起更新這題的複習排程。</p>}
               <label className="field">
                 <span className="field-label">哪裡卡住？下次要怎麼講？</span>
                 <textarea
@@ -749,6 +748,7 @@ function MockHistory() {
                     {m.kind === 'full' ? '步驟' : '重點'} {m.steps.length} / {total}
                   </span>
                   {m.rating && <span>{ratingLabel(m.rating)}</span>}
+                  {m.hints ? <span>{m.hints} 層提示</span> : null}
                   {clarity && <span>{clarity.label}</span>}
                 </div>
                 {m.reflection && <p className="prose-block">{m.reflection}</p>}

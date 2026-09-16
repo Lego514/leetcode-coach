@@ -37,6 +37,7 @@ export function ProblemDetailPage() {
   const catalog = useCatalog();
   const problem = catalog.byId.get(Number(id));
 
+  if (!problem && !catalog.loaded) return null;
   if (!problem) {
     return (
       <div className="page">
@@ -77,8 +78,11 @@ function ProblemDetail({ problem }: { problem: Problem }) {
           <LeetCodeLink slug={problem.slug}>在 LeetCode 作答</LeetCodeLink>
         </div>
         <div className="btn-row" style={{ marginTop: 16 }}>
-          <button className="btn btn-primary" onClick={() => setRecording(true)}>
-            記錄這次練習
+          <Link className="btn btn-primary" to={`/practice/${problem.id}`}>
+            開始練習
+          </Link>
+          <button className="btn" onClick={() => setRecording(true)}>
+            直接記錄
           </button>
           <Link className="btn" to={`/mock?problem=${problem.id}`}>
             模擬面試這題
@@ -112,7 +116,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
                   <dd>{formatDay(progress.firstDay)}</dd>
                 </dl>
               ) : (
-                <p className="sheet-note">還沒做過。做完後按「記錄這次練習」，系統會排好複習日。</p>
+                <p className="sheet-note">還沒做過。按「開始練習」計時作答，記錄後系統會排好複習日。</p>
               )}
             </div>
           </Sheet>
@@ -337,7 +341,9 @@ function History({ problemId }: { problemId: number }) {
                   {ratingLabel(a.rating)}
                   <span className="history-when">
                     （{MODE_LABELS[a.mode]}
-                    {a.minutes ? `，${a.minutes} 分鐘` : ''}）
+                    {a.minutes ? `，${a.minutes} 分鐘` : ''}
+                    {a.hints ? `，${a.hints} 層提示` : ''}
+                    {a.sawSolution ? '，看過解答' : ''}）
                   </span>
                 </span>
                 <span className="history-when history-date">{formatDay(a.day)}</span>

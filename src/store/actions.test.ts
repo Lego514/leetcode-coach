@@ -40,6 +40,19 @@ describe('recordAttempt', () => {
     ]);
   });
 
+  it('stores hint usage only when present', async () => {
+    await recordAttempt(1, 'hint', { day: '2026-09-16', hints: 2, minutes: 20 });
+    await recordAttempt(2, 'solution', { day: '2026-09-16', hints: 0, sawSolution: true });
+    await recordAttempt(3, 'solo', { day: '2026-09-16', hints: 0, sawSolution: false });
+    const byProblem = new Map((await db.attempts.toArray()).map((a) => [a.problemId, a]));
+    expect(byProblem.get(1)).toMatchObject({ hints: 2, minutes: 20 });
+    expect(byProblem.get(1)).not.toHaveProperty('sawSolution');
+    expect(byProblem.get(2)).toMatchObject({ sawSolution: true });
+    expect(byProblem.get(2)).not.toHaveProperty('hints');
+    expect(byProblem.get(3)).not.toHaveProperty('hints');
+    expect(byProblem.get(3)).not.toHaveProperty('sawSolution');
+  });
+
   it('resets progress but keeps notes', async () => {
     await recordAttempt(1, 'solo', { day: '2026-09-16' });
     await saveNote(1, { idea: 'hash map' });

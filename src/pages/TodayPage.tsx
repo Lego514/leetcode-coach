@@ -84,9 +84,14 @@ export function TodayPage() {
                     marked
                     showPattern
                     actions={
-                      <button className="btn btn-small" onClick={() => setRecording({ problem: p, mode: 'review' })}>
-                        記錄
-                      </button>
+                      <>
+                        <Link className="btn btn-small btn-primary" to={`/practice/${p.id}`}>
+                          開始
+                        </Link>
+                        <button className="btn btn-small btn-quiet" onClick={() => setRecording({ problem: p, mode: 'review' })}>
+                          記錄
+                        </button>
+                      </>
                     }
                   />
                 </li>
@@ -112,9 +117,14 @@ export function TodayPage() {
                     marked
                     showPattern
                     actions={
-                      <button className="btn btn-small" onClick={() => setRecording({ problem: p, mode: 'practice' })}>
-                        記錄
-                      </button>
+                      <>
+                        <Link className="btn btn-small btn-primary" to={`/practice/${p.id}`}>
+                          開始
+                        </Link>
+                        <button className="btn btn-small btn-quiet" onClick={() => setRecording({ problem: p, mode: 'practice' })}>
+                          記錄
+                        </button>
+                      </>
                     }
                   />
                 </li>
@@ -138,7 +148,7 @@ export function TodayPage() {
 
         <Sheet title="今天做過的" count={todayAttempts.length} id="done">
           {todayAttempts.length === 0 ? (
-            <p className="sheet-empty">還沒有紀錄。在 LeetCode 做完題目後，回來按「記錄」並評分。</p>
+            <p className="sheet-empty">還沒有紀錄。按「開始」會計時並提供提示；已經在 LeetCode 寫完的話，直接按「記錄」。</p>
           ) : (
             <ul className="done-list">
               {todayAttempts.map((a) => {

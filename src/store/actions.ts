@@ -18,6 +18,8 @@ import {
 export interface RecordAttemptOptions {
   mode?: AttemptMode;
   minutes?: number;
+  hints?: number;
+  sawSolution?: boolean;
   day?: Day;
   at?: Date;
 }
@@ -25,7 +27,7 @@ export interface RecordAttemptOptions {
 export async function recordAttempt(
   problemId: number,
   rating: Rating,
-  { mode = 'practice', minutes, day, at = new Date() }: RecordAttemptOptions = {},
+  { mode = 'practice', minutes, hints, sawSolution, day, at = new Date() }: RecordAttemptOptions = {},
 ): Promise<ProgressRecord> {
   const attemptDay = day ?? toDay(at);
   return db.transaction('rw', db.progress, db.attempts, async () => {
@@ -47,6 +49,8 @@ export async function recordAttempt(
       rating,
       mode,
       ...(minutes && minutes > 0 ? { minutes } : {}),
+      ...(hints && hints > 0 ? { hints } : {}),
+      ...(sawSolution ? { sawSolution } : {}),
     });
     return record;
   });

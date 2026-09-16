@@ -181,8 +181,11 @@ textarea {
 
 code,
 pre,
-kbd {
+kbd,
+.code-input {
   font-family: var(--font-mono);
+  /* 程式碼不要把 -> 或 != 合成一個符號 */
+  font-variant-ligatures: none;
 }
 
 .visually-hidden {
@@ -764,6 +767,11 @@ kbd {
   min-height: 30px;
   padding: 3px 10px;
   font-size: 14px;
+}
+
+.btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .btn-row {
@@ -1770,4 +1778,36 @@ audio {
   display: block;
   font-size: 14px;
   color: var(--ink-3);
+}
+
+/* ---------- 提示 ---------- */
+
+.hint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hint {
+  padding: 12px 14px;
+  border-left: 3px solid var(--pen);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--sheet-2);
+}
+
+.hint-title {
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pen);
+}
+
+.hint-body {
+  font-size: 15px;
+}
+
+.hint-code {
+  max-height: 320px;
+  overflow: auto;
+  background: var(--sheet);
 }

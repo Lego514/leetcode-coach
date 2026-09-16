@@ -1,17 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** 用實際時間差計算，不會因為分頁在背景而變慢 */
-export function useStopwatch() {
-  const [running, setRunning] = useState(false);
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const startedAt = useRef<number | null>(null);
-  const banked = useRef(0);
+export interface StopwatchState {
+  bankedMs: number;
+  /** 計時中時為開始的時間（epoch 毫秒），暫停時為 null */
+  runningSince: number | null;
+}
+
+/**
+ * 用實際時間差計算，不會因為分頁在背景而變慢。
+ * 傳入 initial 可以接續之前的計時（例如重新整理頁面後）。
+ */
+export function useStopwatch(initial?: StopwatchState) {
+  const [running, setRunning] = useState(initial?.runningSince != null);
+  const [elapsedMs, setElapsedMs] = useState(initial?.bankedMs ?? 0);
+  const startedAt = useRef<number | null>(initial?.runningSince ?? null);
+  const banked = useRef(initial?.bankedMs ?? 0);
 
   useEffect(() => {
     if (!running) return;
     const tick = () => setElapsedMs(banked.current + Date.now() - (startedAt.current ?? Date.now()));
+    const first = window.setTimeout(tick, 0);
     const timer = window.setInterval(tick, 250);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(timer);
+    };
   }, [running]);
 
   const start = useCallback(() => {
@@ -19,6 +32,8 @@ export function useStopwatch() {
     startedAt.current = Date.now();
     setRunning(true);
   }, []);
+
+  const snapshot = useCallback((): StopwatchState => ({ bankedMs: banked.current, runningSince: startedAt.current }), []);
 
   const pause = useCallback(() => {
     if (startedAt.current === null) return banked.current;
@@ -29,7 +44,7 @@ export function useStopwatch() {
     return banked.current;
   }, []);
 
-  return { elapsedSec: Math.floor(elapsedMs / 1000), running, start, pause };
+  return { elapsedSec: Math.floor(elapsedMs / 1000), running, start, pause, snapshot };
 }
 
 export type RecorderState = 'idle' | 'recording' | 'paused';
