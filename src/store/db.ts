@@ -1,10 +1,14 @@
-import Dexie, { type EntityTable } from 'dexie';
+import Dexie, { type EntityTable, type Table } from 'dexie';
+import type { AttemptMode, Collection, MockKind } from '../../shared/constants';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import type { Day } from '../lib/dates';
 import type { Rating, ReviewState } from '../lib/srs';
 
+export type { AttemptMode, MockKind };
+
+/** 複習排程：由練習紀錄推算，不會同步到伺服器 */
 export interface ProgressRecord extends ReviewState {
   problemId: number;
   lastRating: Rating;
@@ -13,10 +17,10 @@ export interface ProgressRecord extends ReviewState {
   attempts: number;
 }
 
-export type AttemptMode = 'practice' | 'review' | 'mock' | 'explain';
-
 export interface AttemptRecord {
   id?: number;
+  /** 跨裝置唯一的識別碼，同步時當主鍵 */
+  uid: string;
   problemId: number;
   day: Day;
   /** ISO 時間戳 */
@@ -56,12 +60,11 @@ export interface PatternNoteRecord {
   updatedAt: string;
 }
 
-export type MockKind = 'full' | 'explain';
-
 export type Clarity = 1 | 2 | 3;
 
 export interface MockRecord {
   id?: number;
+  uid: string;
   problemId: number;
   kind: MockKind;
   day: Day;
@@ -77,6 +80,7 @@ export interface MockRecord {
   hints?: number;
   sawSolution?: boolean;
   reflection: string;
+  /** 錄音只留在這台裝置，不會同步 */
   audio?: Blob;
 }
 
@@ -98,6 +102,27 @@ export const DEFAULT_SETTINGS: SettingsRecord = {
   language: 'python',
 };
 
+/** 還沒上傳的本機變更；同一筆資料只留最後一次 */
+export interface OutboxRecord {
+  /** `${collection}:${key}` */
+  id: string;
+  collection: Collection;
+  key: string;
+  deleted: boolean;
+  /** 本機修改時間（epoch 毫秒） */
+  updatedAt: number;
+}
+
+export interface SyncStateRecord {
+  key: 'state';
+  /** 這個瀏覽器的資料目前屬於哪個帳號；沒有登入過就沒有 */
+  userId?: string;
+  email?: string;
+  /** 已經拿到的伺服器版本號 */
+  cursor: number;
+  lastSyncedAt?: number;
+}
+
 export class CoachDB extends Dexie {
   progress!: EntityTable<ProgressRecord, 'problemId'>;
   attempts!: EntityTable<AttemptRecord, 'id'>;
@@ -107,6 +132,8 @@ export class CoachDB extends Dexie {
   mocks!: EntityTable<MockRecord, 'id'>;
   customProblems!: EntityTable<CustomProblemRecord, 'id'>;
   settings!: EntityTable<SettingsRecord, 'key'>;
+  outbox!: EntityTable<OutboxRecord, 'id'>;
+  syncState!: EntityTable<SyncStateRecord, 'key'>;
 
   constructor(name = 'leetcode-coach') {
     super(name);
@@ -120,6 +147,31 @@ export class CoachDB extends Dexie {
       customProblems: 'id',
       settings: 'key',
     });
+    // 第 2 版：加入同步用的識別碼、待上傳清單與同步狀態
+    this.version(2)
+      .stores({
+        attempts: '++id, problemId, day, &uid',
+        mocks: '++id, problemId, day, &uid',
+        outbox: 'id',
+        syncState: 'key',
+      })
+      .upgrade(async (tx) => {
+        const addUid = (row: { uid?: string }) => {
+          row.uid ??= crypto.randomUUID();
+        };
+        await tx.table('attempts').toCollection().modify(addUid);
+        await tx.table('mocks').toCollection().modify(addUid);
+      });
+  }
+
+  /** 會同步的資料表，依集合名稱查 */
+  syncedTable(collection: Collection): Table {
+    return this[collection] as unknown as Table;
+  }
+
+  /** 使用者資料（不含同步用的表） */
+  get dataTables(): Table[] {
+    return [this.progress, this.attempts, this.notes, this.meta, this.patternNotes, this.mocks, this.customProblems, this.settings];
   }
 }
 

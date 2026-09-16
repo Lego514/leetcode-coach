@@ -3,7 +3,21 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// 開發時把 /api 轉給本機的後端，瀏覽器看到的是同一個網域，cookie 才能正常運作
+const apiProxy = { '/api': { target: 'http://localhost:8787', changeOrigin: false } };
+
 export default defineConfig({
+  server: {
+    port: 5173,
+    // 5173 被占用時直接報錯，不要換埠號（換了埠號就會看到另一份本機資料）
+    strictPort: true,
+    proxy: apiProxy,
+  },
+  preview: {
+    port: 4173,
+    strictPort: true,
+    proxy: apiProxy,
+  },
   // 相對路徑，方便部署到 GitHub Pages 之類的子路徑
   base: './',
   plugins: [
@@ -29,11 +43,14 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // API 一律走網路，不要被 service worker 當成頁面回應
+        navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],
   test: {
     environment: 'node',
+    include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts'],
   },
 });

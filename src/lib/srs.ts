@@ -1,4 +1,7 @@
+import type { Rating } from '../../shared/constants';
 import { addDays, type Day } from './dates';
+
+export type { Rating };
 
 /**
  * 做完一題之後的自我評分：
@@ -7,7 +10,6 @@ import { addDays, type Day } from './dates';
  * - solution：看了解答才寫出來
  * - fail：看完解答仍然不太懂
  */
-export type Rating = 'solo' | 'hint' | 'solution' | 'fail';
 
 export const RATINGS: { id: Rating; label: string; detail: string }[] = [
   { id: 'solo', label: '自己解出', detail: '沒看任何提示' },

@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react';
+import { AccountSection } from '../components/AccountSection';
 import { useToast } from '../components/toast';
 import { Dialog, PageHead, Sheet } from '../components/ui';
 import { STUDY_LISTS, type ListId } from '../data/lists';
@@ -7,6 +8,7 @@ import { LANGUAGES } from '../lib/languages';
 import { useTheme, type ThemeChoice } from '../lib/theme';
 import { updateSettings } from '../store/actions';
 import { clearAllData, exportBackup, parseBackup, restoreBackup, type BackupFile } from '../store/backup';
+import { useCloud } from '../store/cloud';
 import { useSettings, useToday } from '../store/queries';
 
 const THEMES: { id: ThemeChoice; label: string }[] = [
@@ -24,6 +26,7 @@ export function SettingsPage() {
     <div className="page">
       <PageHead title="設定" />
       <div className="stack">
+        <AccountSection />
         <Sheet title="刷題計畫" id="plan">
           <div className="sheet-body stack" style={{ gap: 20 }}>
             <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
@@ -151,6 +154,7 @@ function TargetDateField({ value, today }: { value?: string; today: string }) {
 
 function BackupSection() {
   const toast = useToast();
+  const signedIn = useCloud().account.kind === 'signed-in';
   const fileInput = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<BackupFile | null>(null);
   const [importError, setImportError] = useState('');
@@ -197,7 +201,9 @@ function BackupSection() {
     <Sheet title="備份與資料" id="backup">
       <div className="sheet-body stack" style={{ gap: 16 }}>
         <p className="sheet-note">
-          資料只存在這個瀏覽器裡，換電腦、換瀏覽器或清除瀏覽紀錄前，先匯出備份。錄音檔太大，不會放進備份。
+          {signedIn
+            ? '資料會自動同步到雲端。備份檔可以留一份在自己的電腦，以防萬一。錄音檔太大，不會放進備份。'
+            : '沒有登入時，資料只存在這個瀏覽器裡。換電腦、換瀏覽器或清除瀏覽紀錄前，先匯出備份。錄音檔太大，不會放進備份。'}
         </p>
         {importError && (
           <p className="form-error" role="alert">
@@ -235,8 +241,9 @@ function BackupSection() {
         }
       >
         <p>
-          目前的練習紀錄、筆記和設定會被備份檔的內容取代，模擬面試的錄音也會一起清除。備份裡有{' '}
-          {pending?.data.progress.length ?? 0} 題的複習排程、{pending?.data.attempts.length ?? 0} 筆練習紀錄。
+          目前的練習紀錄、筆記和設定會被備份檔的內容取代，模擬面試的錄音也會一起清除
+          {signedIn ? '，雲端上的資料也會改成備份的內容' : ''}。備份裡有 {pending?.data.progress.length ?? 0} 題的複習排程、
+          {pending?.data.attempts.length ?? 0} 筆練習紀錄。
         </p>
       </Dialog>
 
@@ -255,7 +262,10 @@ function BackupSection() {
           </>
         }
       >
-        <p>練習紀錄、筆記、模擬面試與錄音、自訂題目和設定都會刪除，無法復原。建議先匯出備份。</p>
+        <p>
+          練習紀錄、筆記、模擬面試與錄音、自訂題目和設定都會刪除，無法復原
+          {signedIn ? '。你已登入，雲端上的資料也會一起刪除' : ''}。建議先匯出備份。
+        </p>
       </Dialog>
     </Sheet>
   );

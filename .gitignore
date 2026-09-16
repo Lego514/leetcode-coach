@@ -7,3 +7,10 @@ coverage
 
 # 本機工具設定
 .claude/
+
+# 後端
+server/dist
+server/.data
+.env
+.env.*
+!.env.example

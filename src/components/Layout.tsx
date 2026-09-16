@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import { NavLink, Outlet, ScrollRestoration } from 'react-router';
+import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
+import { useCloud } from '../store/cloud';
 import { useProgressMap, useToday } from '../store/queries';
+import { syncStatusText } from './AccountSection';
 
 interface NavItem {
   to: string;
@@ -59,6 +61,36 @@ function TabIcon({ children }: { children: ReactNode }) {
   );
 }
 
+function SyncFootnote() {
+  const cloud = useCloud();
+  const { account } = cloud;
+  if (account.kind === 'loading') return null;
+  if (account.kind === 'signed-in') {
+    return (
+      <p className="nav-foot">
+        <Link to="/settings" className="nav-foot-link">
+          {account.user.email}
+        </Link>
+        <br />
+        <span className={cloud.phase === 'error' ? 'overdue' : undefined}>{syncStatusText(cloud)}</span>
+      </p>
+    );
+  }
+  return (
+    <p className="nav-foot">
+      資料只存在這個瀏覽器。
+      {account.kind === 'signed-out' && (
+        <>
+          <Link to="/settings" className="nav-foot-link">
+            登入
+          </Link>
+          後可以跨裝置同步。
+        </>
+      )}
+    </p>
+  );
+}
+
 export function Layout() {
   const due = useDueCount();
 
@@ -87,7 +119,7 @@ export function Layout() {
             </ul>
           ))}
         </div>
-        <p className="nav-foot">資料只存在這個瀏覽器裡，記得定期到設定匯出備份。</p>
+        <SyncFootnote />
       </nav>
 
       <main className="main" id="main">

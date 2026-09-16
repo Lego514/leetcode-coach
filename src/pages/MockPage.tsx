@@ -551,7 +551,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   async function save() {
     if (!canSave || saving) return;
     setSaving(true);
-    const record: Omit<MockRecord, 'id'> = {
+    const record: Omit<MockRecord, 'id' | 'uid'> = {
       problemId: problem.id,
       kind: session.kind,
       day: today(),

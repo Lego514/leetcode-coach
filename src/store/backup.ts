@@ -1,4 +1,6 @@
-import { db, type MockRecord } from './db';
+import { COLLECTIONS } from '../../shared/constants';
+import { db, type AttemptRecord, type MockRecord } from './db';
+import { keyOf, track, type LocalRecord } from './tracking';
 
 const APP_ID = 'leetcode-coach';
 const BACKUP_VERSION = 1;
@@ -25,7 +27,7 @@ const TABLE_KEYS = ['progress', 'attempts', 'notes', 'meta', 'patternNotes', 'mo
 
 /** 匯出全部資料；錄音檔太大，不放進備份 */
 export async function exportBackup(): Promise<BackupFile> {
-  return db.transaction('r', db.tables, async () => {
+  return db.transaction('r', db.dataTables, async () => {
     const mocks = await db.mocks.toArray();
     return {
       app: APP_ID,
@@ -66,24 +68,44 @@ export function parseBackup(text: string): BackupFile {
   return file as BackupFile;
 }
 
-/** 用備份檔取代目前全部資料 */
+/** 把現有的使用者資料全部刪掉，並留下刪除標記，登入時雲端也會跟著刪 */
+async function deleteAllTracked(now: number): Promise<void> {
+  for (const collection of COLLECTIONS) {
+    const rows = (await db.syncedTable(collection).toArray()) as LocalRecord[];
+    for (const row of rows) await track(db, collection, keyOf(collection, row), true, now);
+  }
+  await Promise.all(db.dataTables.map((table) => table.clear()));
+}
+
+/** 用備份檔取代目前全部資料；舊版備份的紀錄沒有 uid，匯入時補上 */
 export async function restoreBackup(file: BackupFile): Promise<void> {
-  await db.transaction('rw', db.tables, async () => {
-    await Promise.all(db.tables.map((table) => table.clear()));
+  await db.transaction('rw', [...db.dataTables, db.outbox], async () => {
+    const now = Date.now();
+    await deleteAllTracked(now);
     const { data } = file;
+    const withUid = <T extends { uid?: string; id?: number }>(rows: unknown[]) =>
+      (rows as T[]).map((row) => ({ ...row, uid: row.uid ?? crypto.randomUUID() }));
+
     await db.progress.bulkPut(data.progress as never[]);
-    await db.attempts.bulkPut(data.attempts as never[]);
+    await db.attempts.bulkPut(withUid<AttemptRecord>(data.attempts));
     await db.notes.bulkPut(data.notes as never[]);
     await db.meta.bulkPut(data.meta as never[]);
     await db.patternNotes.bulkPut(data.patternNotes as never[]);
-    await db.mocks.bulkPut(data.mocks as never[]);
+    await db.mocks.bulkPut(withUid<MockRecord>(data.mocks));
     await db.customProblems.bulkPut(data.customProblems as never[]);
     await db.settings.bulkPut(data.settings as never[]);
+
+    // 匯入的資料視為最新的修改，登入時會覆蓋雲端
+    for (const collection of COLLECTIONS) {
+      const rows = (await db.syncedTable(collection).toArray()) as LocalRecord[];
+      for (const row of rows) await track(db, collection, keyOf(collection, row), false, now);
+    }
   });
 }
 
+/** 清除所有使用者資料；登入時雲端上的資料也會一起刪除 */
 export async function clearAllData(): Promise<void> {
-  await db.transaction('rw', db.tables, async () => {
-    await Promise.all(db.tables.map((table) => table.clear()));
+  await db.transaction('rw', [...db.dataTables, db.outbox], async () => {
+    await deleteAllTracked(Date.now());
   });
 }

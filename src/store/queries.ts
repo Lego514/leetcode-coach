@@ -81,6 +81,10 @@ export function usePatternNote(patternId: PatternId): PatternNoteRecord | null |
   return useLiveQuery(async () => (await db.patternNotes.get(patternId)) ?? null, [patternId]);
 }
 
+export function usePendingChanges(): number {
+  return useLiveQuery(() => db.outbox.count(), []) ?? 0;
+}
+
 export function useMocks(): MockRecord[] | undefined {
   return useLiveQuery(async () => (await db.mocks.orderBy('id').toArray()).reverse(), []);
 }
