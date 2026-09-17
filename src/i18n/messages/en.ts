@@ -7,6 +7,8 @@ const en: Messages = {
   app: {
     name: 'LeetCode Coach',
     homeLabel: 'LeetCode Coach, back to Today',
+    updateReady: 'A new version is ready.',
+    updateNow: 'Reload',
   },
 
   common: {

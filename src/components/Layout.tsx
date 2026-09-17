@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
+import { useEffect } from 'react';
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router';
 import { useI18n, type Messages } from '../i18n';
+import { applyUpdate, canReloadNow, useUpdateReady } from '../lib/appUpdate';
 import { rich } from '../i18n/rich';
 import { useCloud } from '../store/cloud';
 import { useProgressMap, useToday } from '../store/queries';
@@ -37,6 +39,19 @@ function useDueCount(): number {
   let count = 0;
   for (const p of progress.values()) if (p.due <= day) count += 1;
   return count;
+}
+
+/** 練習或模擬面試進行中時，讓使用者自己決定何時更新 */
+function UpdateNotice() {
+  const { t } = useI18n();
+  return (
+    <p className="nav-foot">
+      {t.app.updateReady}{' '}
+      <button type="button" className="link-button" onClick={() => void applyUpdate()}>
+        {t.app.updateNow}
+      </button>
+    </p>
+  );
 }
 
 function Badge({ count }: { count: number }) {
@@ -105,6 +120,14 @@ function SyncFootnote() {
 export function Layout() {
   const { t } = useI18n();
   const due = useDueCount();
+  const updateReady = useUpdateReady();
+  const { pathname } = useLocation();
+  const safeToReload = canReloadNow(pathname);
+
+  // 有新版時自動重新載入；計時中的頁面等離開後再套用
+  useEffect(() => {
+    if (updateReady && safeToReload) void applyUpdate();
+  }, [updateReady, safeToReload]);
 
   return (
     <div className="app">
@@ -132,6 +155,7 @@ export function Layout() {
           ))}
         </div>
         <div className="nav-bottom">
+          {updateReady && !safeToReload && <UpdateNotice />}
           <LanguageSwitch compact />
           <SyncFootnote />
         </div>

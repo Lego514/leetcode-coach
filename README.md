@@ -29,7 +29,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 - **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, and settings between devices. Everything keeps working offline and without an account. Passwords can be reset by email, and the password fields have a show/hide toggle.
   - A reset link works once, expires in an hour, and signs you out on other devices. It needs `BREVO_API_KEY` and `MAIL_FROM`; without them the feature is hidden.
 - **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It follows the browser language by default, and you can switch from the sidebar or Settings.
-- **Installable PWA** that works offline, with light and dark themes and JSON backup/restore.
+- **Installable PWA** that works offline, with light and dark themes and JSON backup/restore. New versions install themselves and reload the page, except during a timed practice or mock session, where a small "reload" link appears instead.
 
 ## Tech stack
 

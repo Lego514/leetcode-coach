@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { applyLocaleToDocument } from './i18n';
 import { applyTheme } from './lib/theme';
+import { initPwaUpdates } from './pwa';
 import { initCloud } from './store/cloud';
 import './styles.css';
 
@@ -18,3 +19,4 @@ createRoot(document.getElementById('root')!).render(
 );
 
 void initCloud();
+initPwaUpdates();
