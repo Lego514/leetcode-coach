@@ -3,6 +3,7 @@ import {
   addCustomProblem,
   deleteCustomProblem,
   deleteMock,
+  markSolvedBefore,
   parseSlug,
   recordAttempt,
   resetProgress,
@@ -221,5 +222,18 @@ describe('backup', () => {
     expect(codeOf('{"app":"other"}')).toBe('not_backup');
     expect(codeOf('{"app":"leetcode-coach","version":2,"data":{}}')).toBe('unsupported_version');
     expect(codeOf('{"app":"leetcode-coach","version":1,"data":{}}')).toBe('incomplete');
+  });
+});
+
+describe('markSolvedBefore', () => {
+  it('schedules untouched problems and skips ones already started', async () => {
+    await recordAttempt(1, 'fail', { day: '2026-09-16' });
+    expect(await markSolvedBefore([1, 15, 15, 42], 'solo')).toBe(2);
+    const attempts = await db.attempts.where('problemId').anyOf(15, 42).toArray();
+    expect(attempts.map((a) => a.mode)).toEqual(['import', 'import']);
+    expect((await db.progress.get(15))?.interval).toBe(4);
+    expect((await db.progress.get(1))?.lastRating).toBe('fail');
+    expect((await db.attempts.where('problemId').equals(1).count())).toBe(1);
+    expect(await outbox()).toEqual(['attempts:put', 'attempts:put', 'attempts:put']);
   });
 });

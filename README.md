@@ -14,6 +14,9 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - When you finish, the minutes are filled in and a self-rating is suggested based on how many hints you used.
 - **Spaced repetition**: after each attempt you rate yourself (solved alone / needed a hint / read the solution / still stuck), and an SM-2–style scheduler picks the next review date.
 - **Daily plan**: the Today page lists the reviews that are due plus N new problems in roadmap order. It also works out how many new problems per day you need to finish before a target date.
+  - Any new problem you start counts toward the daily goal, wherever you start it. **One more problem** adds the next one in roadmap order.
+  - **Record another problem** finds a problem by number, title, or LeetCode URL. If it isn't in your lists yet, you add its details and record it in the same dialog.
+  - **Mark problems I solved before** (on Problems) schedules problems you solved before using the app for review in one go. They don't count toward streaks or session totals.
 - **Notes**: for each problem you can keep a one-line idea, an English explanation script, time and space complexity, pitfalls, and your code. Notes save automatically.
 - **Pattern cards**: each pattern has recognition signals, common mistakes, and a Python template you can edit.
 - **Mock interviews**:
@@ -176,6 +179,8 @@ Notes:
 - 用模擬面試練習把解法講清楚
 
 介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
+
+今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
 
 模擬面試可以開啟英文逐字稿（瀏覽器的語音辨識，Chrome 會把聲音送到 Google 轉成文字）。結束後可以修正內容、看字數、語速和贅詞，再一鍵存成這題的講解稿。
 

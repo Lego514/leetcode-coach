@@ -1,6 +1,7 @@
 import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { toDay, type Day } from '../lib/dates';
+import { parseSlug } from '../lib/catalog';
 import { schedule, type Rating } from '../lib/srs';
 import {
   db,
@@ -57,6 +58,22 @@ export async function recordAttempt(
     });
     await track(db, 'attempts', uid);
     return record;
+  });
+}
+
+/**
+ * 開始使用前就刷過的題目：一次排進複習，已經有紀錄的題目略過。
+ * 回傳實際標記的題數。
+ */
+export async function markSolvedBefore(problemIds: readonly number[], rating: Rating): Promise<number> {
+  return db.transaction('rw', db.progress, db.attempts, db.outbox, async () => {
+    let marked = 0;
+    for (const problemId of new Set(problemIds)) {
+      if (await db.progress.get(problemId)) continue;
+      await recordAttempt(problemId, rating, { mode: 'import' });
+      marked += 1;
+    }
+    return marked;
   });
 }
 
@@ -161,13 +178,7 @@ export interface NewProblemInput {
   premium?: boolean;
 }
 
-/** 從 LeetCode 網址或 slug 取出 slug */
-export function parseSlug(input: string): string {
-  const trimmed = input.trim();
-  const fromUrl = trimmed.match(/leetcode\.(?:com|cn)\/problems\/([a-z0-9-]+)/i);
-  const slug = (fromUrl ? fromUrl[1] : trimmed).toLowerCase();
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : '';
-}
+export { parseSlug };
 
 export async function addCustomProblem(input: NewProblemInput): Promise<Problem> {
   const slug = parseSlug(input.slug);
