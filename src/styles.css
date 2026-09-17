@@ -1957,3 +1957,14 @@ audio {
   color: var(--ink);
   background: var(--rule);
 }
+
+/* 文字裡的按鈕，看起來像連結 */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pen);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

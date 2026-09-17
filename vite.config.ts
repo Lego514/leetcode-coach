@@ -24,6 +24,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // 由 src/pwa.ts 自己註冊，才能決定什麼時候重新載入
+      injectRegister: null,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: '刷題教練',
@@ -45,6 +47,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // API 一律走網路，不要被 service worker 當成頁面回應
         navigateFallbackDenylist: [/^\/api\//],
+        // 新版啟用後立刻接管，不用等所有分頁關掉
+        clientsClaim: true,
+        skipWaiting: true,
       },
     }),
   ],

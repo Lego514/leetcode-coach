@@ -5,6 +5,8 @@ const zhTW = {
   app: {
     name: '刷題教練',
     homeLabel: '刷題教練，回到今天',
+    updateReady: '有新版本。',
+    updateNow: '重新載入',
   },
 
   common: {
