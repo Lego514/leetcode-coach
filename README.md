@@ -138,8 +138,8 @@ npm start            # run the built API (and the web app when NODE_ENV=producti
 `render.yaml` describes a single Render web service that builds both parts and serves them together. Both Render and Neon have free plans.
 
 1. **Database (Neon)**
-   1. Sign in at [neon.tech](https://neon.tech) and create a project. Pick **AWS US West 2 (Oregon)**, the same region as the Render service in `render.yaml`, so queries stay fast.
-   2. On the project dashboard, click **Connect** and copy the connection string. It looks like `postgresql://user:password@ep-xxx.us-west-2.aws.neon.tech/neondb?sslmode=require`. Either the direct or the pooled (`-pooler`) string works; the API turns off prepared statements for pooled connections.
+   1. Sign in at [neon.tech](https://neon.tech) and create a project. Pick **AWS US East 2 (Ohio)**, the same region as the Render service in `render.yaml`, so queries stay fast. If you are closer to another region, change `region` in `render.yaml` to match before creating the service — a service's region cannot be changed later.
+   2. On the project dashboard, click **Connect** and copy the connection string. It looks like `postgresql://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require`. Either the direct or the pooled (`-pooler`) string works; the API turns off prepared statements for pooled connections.
 2. **Web service (Render)**
    1. Sign in at [render.com](https://render.com) with GitHub and allow access to this repository.
    2. Choose **New → Blueprint**, select the repository, and paste the Neon connection string as `DATABASE_URL` when asked.
@@ -195,7 +195,7 @@ Notes:
 
 部署到 Render＋Neon 的步驟：
 
-1. 到 Neon 建立專案（區域選 AWS US West 2 (Oregon)，跟 Render 同一區），複製連線字串（`postgresql://…?sslmode=require`）。
+1. 到 Neon 建立專案（區域選 AWS US East 2 (Ohio)，跟 Render 同一區），複製連線字串（`postgresql://…?sslmode=require`）。
 2. 到 Render 用 GitHub 登入，選 **New → Blueprint**，選這個 repository，`DATABASE_URL` 貼上 Neon 的連線字串。
 3. 部署完成後打開 `onrender.com` 的網址，確認 `/api/health` 回傳 `{"ok":true}`。之後 `main` 的 CI 通過就會自動部署。
 

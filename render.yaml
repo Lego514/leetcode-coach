@@ -6,8 +6,8 @@ services:
     name: leetcode-coach
     runtime: node
     plan: free
-    # 跟 Neon 的 AWS US West 2（Oregon）放在同一區，查詢比較快
-    region: oregon
+    # 跟 Neon 的 AWS US East 2（Ohio）放在同一區，也離美東的使用者比較近
+    region: ohio
     # main 分支的 CI 通過後才部署
     branch: main
     autoDeployTrigger: checksPass
