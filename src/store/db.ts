@@ -80,6 +80,8 @@ export interface MockRecord {
   hints?: number;
   sawSolution?: boolean;
   reflection: string;
+  /** 語音辨識產生的英文逐字稿 */
+  transcript?: string;
   /** 錄音只留在這台裝置，不會同步 */
   audio?: Blob;
 }

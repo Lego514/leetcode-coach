@@ -20,3 +20,46 @@ jobs:
       # 前端單元測試，以及後端與端對端同步測試（PGlite，不需要另外準備資料庫）
       - run: npm test
       - run: npm run build:all
+
+  e2e:
+    runs-on: ubuntu-latest
+    # 用真正的 PostgreSQL 跑正式環境的建置，跟部署後的設定一樣
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: coach
+          POSTGRES_PASSWORD: coach
+          POSTGRES_DB: coach
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U coach"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgres://coach:coach@localhost:5432/coach
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build:all
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7

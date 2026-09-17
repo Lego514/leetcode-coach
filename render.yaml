@@ -1,12 +1,19 @@
 # Render Blueprint：一個 Node 服務同時提供 API 與網頁。
-# 使用前先在 Neon 之類的服務建立 PostgreSQL，再到 Render 的環境變數填入 DATABASE_URL。
+# 使用前先在 Neon 之類的服務建立 PostgreSQL，建立 Blueprint 時填入 DATABASE_URL。
+# 步驟見 README 的 Deploying 一節。
 services:
   - type: web
     name: leetcode-coach
     runtime: node
     plan: free
+    # 跟 Neon 的 AWS US West 2（Oregon）放在同一區，查詢比較快
+    region: oregon
+    # main 分支的 CI 通過後才部署
+    branch: main
+    autoDeployTrigger: checksPass
     buildCommand: npm ci --include=dev && npm run build:all
     startCommand: npm start
+    # 健康檢查不碰資料庫，免得 Neon 一直被喚醒
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
