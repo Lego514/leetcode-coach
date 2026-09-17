@@ -51,20 +51,27 @@ export async function exportBackup(): Promise<BackupFile> {
   });
 }
 
+export type BackupErrorCode = 'not_json' | 'not_backup' | 'unsupported_version' | 'incomplete';
+
+/** 備份檔無法匯入；畫面依 code 顯示對應語言的訊息 */
+export class BackupError extends Error {
+  constructor(readonly code: BackupErrorCode) {
+    super(code);
+  }
+}
+
 export function parseBackup(text: string): BackupFile {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error('這個檔案不是有效的 JSON。');
+    throw new BackupError('not_json');
   }
   const file = parsed as Partial<BackupFile> | null;
-  if (!file || file.app !== APP_ID) throw new Error('這不是刷題教練匯出的備份檔。');
-  if (file.version !== BACKUP_VERSION) throw new Error(`不支援第 ${String(file.version)} 版的備份檔。`);
+  if (!file || file.app !== APP_ID) throw new BackupError('not_backup');
+  if (file.version !== BACKUP_VERSION) throw new BackupError('unsupported_version');
   const data = file.data as Record<string, unknown> | undefined;
-  if (!data || TABLE_KEYS.some((key) => !Array.isArray(data[key]))) {
-    throw new Error('備份檔缺少部分資料，無法匯入。');
-  }
+  if (!data || TABLE_KEYS.some((key) => !Array.isArray(data[key]))) throw new BackupError('incomplete');
   return file as BackupFile;
 }
 

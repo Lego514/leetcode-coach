@@ -12,15 +12,16 @@ import {
   EXPLANATION_SCAFFOLD,
   INTERVIEW_STEPS,
   MOCK_MINUTES,
-  THINK_ALOUD_TIPS,
 } from '../data/interview';
-import { getPattern, PATTERNS, type PatternId } from '../data/patterns';
+import { getPattern, getPatterns, type PatternId } from '../data/patterns';
 import type { Difficulty, Problem } from '../data/problems';
-import { LIST_FILTER_LABELS, problemsInList } from '../lib/catalog';
-import { formatDay, formatDuration, today } from '../lib/dates';
+import { useI18n } from '../i18n';
+import { rich } from '../i18n/rich';
+import { problemsInList } from '../lib/catalog';
+import { formatDuration, today } from '../lib/dates';
 import { HINT_LEVELS, suggestRating } from '../lib/practice';
 import { useRecorder, useStopwatch } from '../lib/session';
-import { masteryOf, RATINGS, ratingLabel, type Rating } from '../lib/srs';
+import { masteryOf, RATINGS, type Rating } from '../lib/srs';
 import { deleteMock, recordAttempt, saveMock } from '../store/actions';
 import type { Clarity, MockKind, MockRecord } from '../store/db';
 import { useCatalog, useMocks, useNote, useProgressMap, useSettings } from '../store/queries';
@@ -46,19 +47,15 @@ type Phase =
   | { name: 'running'; session: Session }
   | { name: 'review'; session: Session; result: SessionResult };
 
-const KIND_LABELS: Record<MockKind, string> = { full: '完整模擬', explain: '講解練習' };
-
 export function MockPage() {
+  const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>({ name: 'setup' });
 
   return (
     <div className="page" style={phase.name === 'setup' ? undefined : { maxWidth: 1180 }}>
       {phase.name === 'setup' && (
         <>
-          <PageHead
-            title="模擬面試"
-            lede="照美國面試的流程計時練習，邊做邊把想法講出來。講解是你最需要練的部分，建議開著錄音，結束後聽一次。"
-          />
+          <PageHead title={t.mock.title} lede={t.mock.lede} />
           <div className="stack">
             <MockSetup onStart={(session) => setPhase({ name: 'running', session })} />
             <MockHistory />
@@ -77,9 +74,9 @@ export function MockPage() {
 
       {phase.name !== 'setup' && (
         <LeaveGuard
-          title="離開這次模擬面試？"
-          message="計時和錄音會停止，這次的紀錄不會儲存。"
-          leaveLabel="離開，不儲存"
+          title={t.leave.mockTitle}
+          message={t.leave.mockMessage}
+          leaveLabel={t.leave.mockLeave}
         />
       )}
     </div>
@@ -90,14 +87,14 @@ export function MockPage() {
 
 type Source = 'unseen' | 'seen' | 'weak' | 'any';
 
-const SOURCE_LABELS: Record<Source, string> = {
-  unseen: '還沒做過的題目',
-  seen: '做過的題目',
-  weak: '做過但最不熟的題目',
-  any: '全部題目',
-};
+const SOURCES: Source[] = ['unseen', 'seen', 'weak', 'any'];
+
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
 
 function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
+  const { t, locale } = useI18n();
   const settings = useSettings();
   const catalog = useCatalog();
   const { progress } = useProgressMap();
@@ -113,7 +110,7 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
   const [patternId, setPatternId] = useState<'any' | PatternId>('any');
   const [minutes, setMinutes] = useState('');
   const [withAudio, setWithAudio] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<'notFound' | 'noMatch' | null>(null);
 
   const listProblems = useMemo(() => problemsInList(catalog, settings.activeList), [catalog, settings.activeList]);
 
@@ -141,20 +138,20 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
 
   function start(e: FormEvent) {
     e.preventDefault();
-    setError('');
+    setError(null);
     let problem: Problem | undefined;
     if (pick === 'specific') {
       problem = specificProblem;
       if (!problem) {
-        setError('找不到這個題號。輸入題號，或從建議清單選一題。');
+        setError('notFound');
         return;
       }
     } else {
       if (pool.length === 0) {
-        setError('沒有符合條件的題目。放寬難度、模式或題目來源再試一次。');
+        setError('noMatch');
         return;
       }
-      problem = pool[Math.floor(Math.random() * pool.length)];
+      problem = pickRandom(pool);
     }
     const auto = kind === 'explain' ? EXPLAIN_SECONDS : MOCK_MINUTES[problem.difficulty] * 60;
     const custom = Number(minutes);
@@ -168,42 +165,40 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
   }
 
   return (
-    <Sheet title="開始一次練習" id="mock-setup">
+    <Sheet title={t.mock.setupTitle} id="mock-setup">
       <form className="sheet-body stack" style={{ gap: 20 }} onSubmit={start}>
         {error && (
           <p className="form-error" role="alert">
-            {error}
+            {t.mock[error]}
           </p>
         )}
 
         <div className="field">
           <span className="field-label" id="kind-label">
-            練習類型
+            {t.mock.kind}
           </span>
           <div className="segmented" role="group" aria-labelledby="kind-label">
             {(['full', 'explain'] as const).map((k) => (
               <button key={k} type="button" aria-pressed={kind === k} onClick={() => chooseKind(k)}>
-                {KIND_LABELS[k]}
+                {t.mock.kinds[k]}
               </button>
             ))}
           </div>
           <span className="field-hint">
-            {kind === 'full'
-              ? `走完釐清題意到分析複雜度的七個步驟。時間依難度：Easy ${MOCK_MINUTES.Easy} 分鐘、Medium ${MOCK_MINUTES.Medium} 分鐘、Hard ${MOCK_MINUTES.Hard} 分鐘。`
-              : '挑一題做過的題目，不寫程式，用兩分鐘把解法用英文講清楚。'}
+            {kind === 'full' ? t.mock.fullHint(MOCK_MINUTES.Easy, MOCK_MINUTES.Medium, MOCK_MINUTES.Hard) : t.mock.explainHint}
           </span>
         </div>
 
         <div className="field">
           <span className="field-label" id="pick-label">
-            選題方式
+            {t.mock.pick}
           </span>
           <div className="segmented" role="group" aria-labelledby="pick-label">
             <button type="button" aria-pressed={pick === 'random'} onClick={() => setPick('random')}>
-              隨機抽題
+              {t.mock.random}
             </button>
             <button type="button" aria-pressed={pick === 'specific'} onClick={() => setPick('specific')}>
-              指定題目
+              {t.mock.specific}
             </button>
           </div>
         </div>
@@ -211,29 +206,29 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
         {pick === 'random' ? (
           <div className="form-grid">
             <label className="field span-2">
-              <span className="field-label">題目來源</span>
+              <span className="field-label">{t.mock.source}</span>
               <select className="select" value={source} onChange={(e) => setSource(e.target.value as Source)}>
-                {(Object.keys(SOURCE_LABELS) as Source[]).map((s) => (
+                {SOURCES.map((s) => (
                   <option key={s} value={s}>
-                    {SOURCE_LABELS[s]}
+                    {t.mock.sources[s]}
                   </option>
                 ))}
               </select>
             </label>
             <label className="field">
-              <span className="field-label">難度</span>
+              <span className="field-label">{t.problems.difficulty}</span>
               <select className="select" value={difficulty} onChange={(e) => setDifficulty(e.target.value as 'any' | Difficulty)}>
-                <option value="any">不限</option>
+                <option value="any">{t.common.anyOption}</option>
                 <option>Easy</option>
                 <option>Medium</option>
                 <option>Hard</option>
               </select>
             </label>
             <label className="field">
-              <span className="field-label">解題模式</span>
+              <span className="field-label">{t.problems.pattern}</span>
               <select className="select" value={patternId} onChange={(e) => setPatternId(e.target.value as 'any' | PatternId)}>
-                <option value="any">不限</option>
-                {PATTERNS.map((p) => (
+                <option value="any">{t.common.anyOption}</option>
+                {getPatterns(locale).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
@@ -241,17 +236,17 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
               </select>
             </label>
             <p className="field-hint span-2">
-              從 {LIST_FILTER_LABELS[settings.activeList]} 抽題，符合條件的有 {pool.length} 題。
+              {t.mock.poolInfo(t.lists.labels[settings.activeList], pool.length)}
             </p>
           </div>
         ) : (
           <label className="field">
-            <span className="field-label">題號</span>
+            <span className="field-label">{t.mock.number}</span>
             <input
               className="input"
               list="mock-problem-options"
               inputMode="numeric"
-              placeholder="例如 15"
+              placeholder={t.mock.numberPlaceholder}
               value={specific}
               onChange={(e) => setSpecific(e.target.value)}
             />
@@ -263,14 +258,14 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
               ))}
             </datalist>
             <span className="field-hint">
-              {specificProblem ? `已選：${specificProblem.title}（${specificProblem.difficulty}）` : '輸入題號，或從建議清單選一題。'}
+              {specificProblem ? t.mock.selected(specificProblem.title, specificProblem.difficulty) : t.mock.numberHint}
             </span>
           </label>
         )}
 
         <div className="form-grid">
           <label className="field">
-            <span className="field-label">時間（分鐘）</span>
+            <span className="field-label">{t.mock.minutes}</span>
             <input
               className="input"
               type="number"
@@ -278,7 +273,7 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
               min={1}
               max={120}
               step="any"
-              placeholder={kind === 'explain' ? '2' : '依難度自動'}
+              placeholder={kind === 'explain' ? '2' : t.mock.autoMinutes}
               value={minutes}
               onChange={(e) => setMinutes(e.target.value)}
             />
@@ -286,15 +281,15 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
           <label className="field" style={{ justifyContent: 'flex-end' }}>
             <span style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 38 }}>
               <input type="checkbox" checked={withAudio} onChange={(e) => setWithAudio(e.target.checked)} />
-              錄下我的講解
+              {t.mock.recordAudio}
             </span>
           </label>
-          <p className="field-hint span-2">錄音只存在這個瀏覽器裡，不會上傳，也不會放進匯出的備份。</p>
+          <p className="field-hint span-2">{t.mock.audioPrivacy}</p>
         </div>
 
         <div className="btn-row">
           <button type="submit" className="btn btn-primary">
-            開始計時
+            {t.mock.startTimer}
           </button>
         </div>
       </form>
@@ -305,6 +300,7 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
 /* ---------- 進行中 ---------- */
 
 function MockSession({ session, onFinish }: { session: Session; onFinish: (result: SessionResult) => void }) {
+  const { t, locale } = useI18n();
   const { elapsedSec, running, start, pause } = useStopwatch();
   const recorder = useRecorder();
   const { start: startRecording, pause: pauseRecording, resume: resumeRecording, stop: stopRecording } = recorder;
@@ -340,7 +336,7 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
     const ms = pause();
     const audio = await stopRecording();
     const steps =
-      session.kind === 'full' ? done : EXPLAIN_CHECKS.filter((c) => checks[`explain:${c.id}`]).map((c) => c.id);
+      session.kind === 'full' ? done : EXPLAIN_CHECKS.filter((c) => checks[`explain:${c}`]);
     onFinish({ usedSec: Math.round(ms / 1000), steps, audio, hints, sawSolution });
   }
 
@@ -361,30 +357,30 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
     <>
       <PageHead title={`${problem.id}. ${problem.title}`}>
         <div className="detail-meta">
-          <span className="chip">{KIND_LABELS[session.kind]}</span>
+          <span className="chip">{t.mock.kinds[session.kind]}</span>
           <DifficultyTag difficulty={problem.difficulty} />
-          {session.kind === 'explain' && <span>{getPattern(problem.pattern).name}</span>}
-          {problem.premium && <span>需要 Premium</span>}
-          <LeetCodeLink slug={problem.slug}>在新分頁打開題目</LeetCodeLink>
+          {session.kind === 'explain' && <span>{getPattern(problem.pattern, locale).name}</span>}
+          {problem.premium && <span>{t.common.premium}</span>}
+          <LeetCodeLink slug={problem.slug}>{t.mock.openProblem}</LeetCodeLink>
         </div>
       </PageHead>
 
       <div className="mock-layout">
         <div className="stack">
-          <section className="sheet sheet-body" aria-label="計時">
+          <section className="sheet sheet-body" aria-label={t.common.timer}>
             <div className="timer">
               <span className="timer-value" data-over={over}>
                 {formatDuration(elapsedSec)}
               </span>
               <span className="timer-limit">
-                {over ? `已超過 ${formatDuration(elapsedSec - limit)}` : `還剩 ${formatDuration(limit - elapsedSec)}`}
-                {!running && !finishing && '，已暫停'}
+                {over ? t.mock.over(formatDuration(elapsedSec - limit)) : t.mock.left(formatDuration(limit - elapsedSec))}
+                {!running && !finishing && t.mock.paused}
               </span>
             </div>
             <div
               className="timer-track"
               role="progressbar"
-              aria-label="已用時間"
+              aria-label={t.common.elapsed}
               aria-valuemin={0}
               aria-valuemax={limit}
               aria-valuenow={Math.min(elapsedSec, limit)}
@@ -392,24 +388,25 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
               <div className="timer-fill" data-over={over} style={{ width: `${Math.min(100, (elapsedSec / limit) * 100)}%` }} />
             </div>
             <p className="visually-hidden" aria-live="assertive">
-              {over ? '時間到了' : ''}
+              {over ? t.mock.timeUp : ''}
             </p>
             <div className="btn-row" style={{ marginTop: 16 }}>
               <button className="btn" onClick={togglePause} disabled={finishing}>
-                {running ? '暫停' : '繼續'}
+                {running ? t.common.pause : t.mock.resume}
               </button>
               <button className="btn btn-primary" onClick={() => void finish()} disabled={finishing}>
-                結束並檢討
+                {t.mock.finish}
               </button>
             </div>
           </section>
 
           {session.kind === 'full' ? (
-            <Sheet title="面試流程" id="steps" note={`完成 ${done.length} / ${INTERVIEW_STEPS.length}`}>
+            <Sheet title={t.mock.stepsTitle} id="steps" note={t.mock.stepsProgress(done.length, INTERVIEW_STEPS.length)}>
               <ol className="steps">
                 {INTERVIEW_STEPS.map((step, i) => {
                   const state = done.includes(step.id) ? 'done' : i === currentStep ? 'current' : 'todo';
                   const open = openStep === i;
+                  const text = t.interview.steps[step.id];
                   return (
                     <li key={step.id} className="step" data-state={state}>
                       <span className="step-index" aria-hidden>
@@ -424,17 +421,17 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
                           onClick={() => setOpenStep(open ? -1 : i)}
                         >
                           <span className="step-name">
-                            {step.name}
-                            <span lang="en">{step.english}</span>
+                            {text.name}
+                            {locale !== 'en' && <span lang="en">{step.english}</span>}
                           </span>
                         </button>
-                        {state === 'done' && <span className="sheet-note">已完成</span>}
+                        {state === 'done' && <span className="sheet-note">{t.mock.stepDone}</span>}
                       </div>
                       {open && (
                         <div className="step-body">
-                          <p className="step-goal">{step.goal}</p>
+                          <p className="step-goal">{text.goal}</p>
                           <ul className="checklist">
-                            {step.checks.map((c, j) => {
+                            {text.checks.map((c, j) => {
                               const key = `${step.id}:${j}`;
                               return (
                                 <li key={key}>
@@ -450,14 +447,14 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
                                 <p className="phrase-en" lang="en">
                                   {ph.en}
                                 </p>
-                                <p className="phrase-zh">{ph.zh}</p>
+                                {locale === 'zh-TW' && <p className="phrase-zh">{ph.zh}</p>}
                               </li>
                             ))}
                           </ul>
                           {state !== 'done' && (
                             <div>
                               <button className="btn btn-primary btn-small" onClick={() => completeStep(i)}>
-                                完成這一步
+                                {t.mock.completeStep}
                               </button>
                             </div>
                           )}
@@ -470,19 +467,19 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
             </Sheet>
           ) : (
             <>
-              <Sheet title="用這個架構講" id="scaffold" note="不要看筆記，講給想像中的面試官聽">
+              <Sheet title={t.mock.scaffoldTitle} id="scaffold" note={t.mock.scaffoldNote}>
                 <pre className="sheet-body prose-block explain-scaffold" lang="en" style={{ margin: 0, fontFamily: 'inherit' }}>
                   {EXPLANATION_SCAFFOLD}
                 </pre>
               </Sheet>
-              <Sheet title="有講到這些嗎？" id="explain-checks">
+              <Sheet title={t.mock.checksTitle} id="explain-checks">
                 <ul className="sheet-body checklist stack" style={{ gap: 8 }}>
                   {EXPLAIN_CHECKS.map((c) => {
-                    const key = `explain:${c.id}`;
+                    const key = `explain:${c}`;
                     return (
                       <li key={key}>
                         <input id={key} type="checkbox" checked={!!checks[key]} onChange={() => toggleCheck(key)} />
-                        <label htmlFor={key}>{c.label}</label>
+                        <label htmlFor={key}>{t.interview.explainChecks[c]}</label>
                       </li>
                     );
                   })}
@@ -502,31 +499,37 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
               onSolution={() => setSawSolution(true)}
             />
           )}
-          <Sheet title="錄音" id="recording">
+          <Sheet title={t.mock.recordingTitle} id="recording">
             <div className="sheet-body">
               {recorder.state === 'recording' && (
                 <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="rec-dot" aria-hidden /> 錄音中
+                  <span className="rec-dot" aria-hidden /> {t.mock.recording}
                 </p>
               )}
-              {recorder.state === 'paused' && <p>錄音已暫停</p>}
+              {recorder.state === 'paused' && <p>{t.mock.recordingPaused}</p>}
               {recorder.state === 'idle' &&
                 (recorder.error ? (
-                  <p className="form-error">{recorder.error}</p>
+                  <p className="form-error">{t.errors.recorder[recorder.error]}</p>
                 ) : (
-                  <p className="sheet-note">{session.withAudio ? '正在開啟麥克風…' : '這次沒有錄音。'}</p>
+                  <p className="sheet-note">{session.withAudio ? t.mock.openingMic : t.mock.noRecording}</p>
                 ))}
             </div>
           </Sheet>
-          <Sheet title="放聲思考" id="tips">
+          <Sheet title={t.mock.tipsTitle} id="tips">
             <ul className="sheet-body bullets">
-              {THINK_ALOUD_TIPS.map((t) => (
-                <li key={t}>{t}</li>
+              {t.interview.tips.map((tip) => (
+                <li key={tip}>{tip}</li>
               ))}
             </ul>
           </Sheet>
           <p className="sheet-note">
-            需要更多句子？<Link to="/phrases" target="_blank">在新分頁打開英文句型</Link>
+            {rich(t.mock.morePhrases, {
+              link: (text) => (
+                <Link to="/phrases" target="_blank">
+                  {text}
+                </Link>
+              ),
+            })}
           </p>
         </div>
       </div>
@@ -537,6 +540,7 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
 /* ---------- 檢討 ---------- */
 
 function MockReview({ session, result, onDone }: { session: Session; result: SessionResult; onDone: () => void }) {
+  const { t } = useI18n();
   const { problem } = session;
   const note = useNote(problem.id);
   const toast = useToast();
@@ -575,7 +579,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
         sawSolution: result.sawSolution,
       });
     }
-    toast('已儲存這次練習。');
+    toast(t.mock.savedToast);
     onDone();
   }
 
@@ -584,89 +588,94 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   return (
     <>
       <PageHead
-        title={`檢討：${problem.title}`}
-        lede={`${KIND_LABELS[session.kind]}，用了 ${formatDuration(result.usedSec)}，${
-          overBy > 0 ? `超過目標 ${formatDuration(overBy)}` : `目標 ${formatDuration(session.limitSec)} 內完成`
-        }。${
+        title={t.mock.reviewTitle(problem.title)}
+        lede={t.mock.reviewLede(
+          t.mock.kinds[session.kind],
+          formatDuration(result.usedSec),
+          overBy > 0 ? formatDuration(overBy) : null,
+          formatDuration(session.limitSec),
           isFull
-            ? `完成 ${result.steps.length} / ${INTERVIEW_STEPS.length} 個步驟${result.hints > 0 ? `，打開 ${result.hints} 層提示` : ''}${result.sawSolution ? '，看過解答' : ''}。`
-            : `講到 ${result.steps.length} / ${EXPLAIN_CHECKS.length} 個重點。`
-        }`}
+            ? t.mock.coverageFull(result.steps.length, INTERVIEW_STEPS.length, result.hints, result.sawSolution)
+            : t.mock.coverageExplain(result.steps.length, EXPLAIN_CHECKS.length),
+        )}
       />
 
       <div className="split">
         <div className="stack">
-          <Sheet title="聽一次錄音" id="playback">
+          <Sheet title={t.mock.playbackTitle} id="playback">
             <div className="sheet-body stack" style={{ gap: 10 }}>
               {result.audio ? (
                 <>
                   <BlobAudio blob={result.audio} />
-                  <p className="sheet-note">注意有沒有長時間沉默、有沒有先講思路再動手，以及複雜度有沒有講出原因。</p>
+                  <p className="sheet-note">{t.mock.playbackHint}</p>
                 </>
               ) : (
-                <p className="sheet-note">這次沒有錄音。下次開著錄音，檢討時會更清楚自己卡在哪裡。</p>
+                <p className="sheet-note">{t.mock.noPlayback}</p>
               )}
             </div>
           </Sheet>
 
           {!isFull && (
-            <Sheet title="對照我的講解稿" id="compare">
+            <Sheet title={t.mock.compareTitle} id="compare">
               <div className="sheet-body">
                 {note?.explanation ? (
                   <p className="prose-block" lang="en">
                     {note.explanation}
                   </p>
                 ) : (
-                  <p className="sheet-note">這題還沒有講解稿。儲存後到題目詳情，把剛才講的內容整理成講解稿。</p>
+                  <p className="sheet-note">{t.mock.noScript}</p>
                 )}
               </div>
             </Sheet>
           )}
 
-          <Sheet title={isFull ? '這題解得怎麼樣？' : '講得怎麼樣？'} id="self-rating">
+          <Sheet title={isFull ? t.mock.rateFull : t.mock.rateExplain} id="self-rating">
             <div className="sheet-body stack" style={{ gap: 16 }}>
               <div className="rating-grid">
                 {isFull
                   ? RATINGS.map((r) => (
-                      <button key={r.id} type="button" className="rating-option" aria-pressed={rating === r.id} onClick={() => setRating(r.id)}>
-                        <span className="rating-label">{r.label}</span>
-                        <span className="rating-detail">{r.detail}</span>
+                      <button key={r} type="button" className="rating-option" aria-pressed={rating === r} onClick={() => setRating(r)}>
+                        <span className="rating-label">{t.ratings[r].label}</span>
+                        <span className="rating-detail">{t.ratings[r].detail}</span>
                       </button>
                     ))
                   : CLARITY_OPTIONS.map((c) => (
-                      <button key={c.id} type="button" className="rating-option" aria-pressed={clarity === c.id} onClick={() => setClarity(c.id)}>
-                        <span className="rating-label">{c.label}</span>
-                        <span className="rating-detail">{c.detail}</span>
+                      <button key={c} type="button" className="rating-option" aria-pressed={clarity === c} onClick={() => setClarity(c)}>
+                        <span className="rating-label">{t.interview.clarity[c].label}</span>
+                        <span className="rating-detail">{t.interview.clarity[c].detail}</span>
                       </button>
                     ))}
               </div>
-              {isFull && <p className="field-hint">已依提示的使用情況先幫你選好，評分會一起更新這題的複習排程。</p>}
+              {isFull && <p className="field-hint">{t.mock.suggestedHint}</p>}
               <label className="field">
-                <span className="field-label">哪裡卡住？下次要怎麼講？</span>
+                <span className="field-label">{t.mock.reflection}</span>
                 <textarea
                   className="textarea"
                   rows={4}
                   value={reflection}
                   onChange={(e) => setReflection(e.target.value)}
-                  placeholder="例如：講暴力解時太快跳過複雜度；忘了先確認輸入可能為空"
+                  placeholder={t.mock.reflectionPlaceholder}
                 />
               </label>
               <div className="btn-row">
                 <button className="btn btn-primary" disabled={!canSave || saving} onClick={() => void save()}>
-                  儲存紀錄
+                  {t.common.saveRecord}
                 </button>
                 <button className="btn btn-quiet" onClick={() => setConfirmDiscard(true)}>
-                  不儲存
+                  {t.mock.discard}
                 </button>
-                {!canSave && <span className="sheet-note">先選一個自評結果</span>}
+                {!canSave && <span className="sheet-note">{t.mock.pickRating}</span>}
               </div>
             </div>
           </Sheet>
         </div>
 
-        <Sheet title={isFull ? '步驟完成情況' : '講到的重點'} id="coverage">
+        <Sheet title={isFull ? t.mock.coverageFullTitle : t.mock.coverageExplainTitle} id="coverage">
           <ul className="sheet-body stack" style={{ gap: 6 }}>
-            {(isFull ? INTERVIEW_STEPS.map((s) => ({ id: s.id, label: s.name })) : EXPLAIN_CHECKS).map((item) => {
+            {(isFull
+              ? INTERVIEW_STEPS.map((s) => ({ id: s.id as string, label: t.interview.steps[s.id].name }))
+              : EXPLAIN_CHECKS.map((c) => ({ id: c as string, label: t.interview.explainChecks[c] }))
+            ).map((item) => {
               const hit = result.steps.includes(item.id);
               return (
                 <li key={item.id} style={{ display: 'flex', gap: 8, color: hit ? undefined : 'var(--ink-3)' }}>
@@ -675,7 +684,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
                   </span>
                   <span>
                     {item.label}
-                    <span className="visually-hidden">{hit ? '（有做到）' : '（沒做到）'}</span>
+                    <span className="visually-hidden">{hit ? t.mock.hit : t.mock.missed}</span>
                   </span>
                 </li>
               );
@@ -687,19 +696,19 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
       <Dialog
         open={confirmDiscard}
         onClose={() => setConfirmDiscard(false)}
-        title="不儲存這次練習？"
+        title={t.mock.discardTitle}
         footer={
           <>
             <button className="btn btn-quiet" onClick={() => setConfirmDiscard(false)}>
-              返回
+              {t.common.back}
             </button>
             <button className="btn btn-danger" onClick={onDone}>
-              不儲存
+              {t.mock.discard}
             </button>
           </>
         }
       >
-        <p>錄音和自評都會捨棄。</p>
+        <p>{t.mock.discardBody}</p>
       </Dialog>
     </>
   );
@@ -708,6 +717,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
 /* ---------- 紀錄 ---------- */
 
 function MockHistory() {
+  const { t, fmt } = useI18n();
   const mocks = useMocks();
   const catalog = useCatalog();
   const toast = useToast();
@@ -716,39 +726,35 @@ function MockHistory() {
   if (!mocks) return null;
 
   return (
-    <Sheet title="過去的練習" count={mocks.length} id="mock-history">
+    <Sheet title={t.mock.historyTitle} count={mocks.length} id="mock-history">
       {mocks.length === 0 ? (
-        <p className="sheet-empty">
-          還沒有紀錄。可以先從講解練習開始：挑一題做過的題目，用兩分鐘把解法講給自己聽。
-        </p>
+        <p className="sheet-empty">{t.mock.historyEmpty}</p>
       ) : (
         <ul className="rows">
           {mocks.map((m) => {
             const p = catalog.byId.get(m.problemId);
-            const clarity = CLARITY_OPTIONS.find((c) => c.id === m.clarity);
+            const clarity = m.clarity ? t.interview.clarity[m.clarity] : undefined;
             const total = m.kind === 'full' ? INTERVIEW_STEPS.length : EXPLAIN_CHECKS.length;
             return (
               <li key={m.id} className="sheet-body stack" style={{ gap: 8 }}>
                 <div className="btn-row" style={{ justifyContent: 'space-between' }}>
                   <div className="problem-title">
                     <span className="problem-num">{m.problemId}</span>
-                    <Link to={`/problems/${m.problemId}`}>{p?.title ?? '已刪除的題目'}</Link>
+                    <Link to={`/problems/${m.problemId}`}>{p?.title ?? t.mock.deletedProblem}</Link>
                   </div>
                   <button className="btn btn-quiet btn-small" onClick={() => setPendingDelete(m)}>
-                    刪除
+                    {t.common.delete}
                   </button>
                 </div>
                 <div className="problem-meta">
-                  <span className="chip">{KIND_LABELS[m.kind]}</span>
-                  <span>{formatDay(m.day)}</span>
+                  <span className="chip">{t.mock.kinds[m.kind]}</span>
+                  <span>{fmt.day(m.day)}</span>
+                  <span>{t.mock.usedOfLimit(formatDuration(m.usedSec), formatDuration(m.limitSec))}</span>
                   <span>
-                    {formatDuration(m.usedSec)}（目標 {formatDuration(m.limitSec)}）
+                    {m.kind === 'full' ? t.mock.stepsCount(m.steps.length, total) : t.mock.pointsCount(m.steps.length, total)}
                   </span>
-                  <span>
-                    {m.kind === 'full' ? '步驟' : '重點'} {m.steps.length} / {total}
-                  </span>
-                  {m.rating && <span>{ratingLabel(m.rating)}</span>}
-                  {m.hints ? <span>{m.hints} 層提示</span> : null}
+                  {m.rating && <span>{t.ratings[m.rating].label}</span>}
+                  {m.hints ? <span>{t.mock.hintsCount(m.hints)}</span> : null}
                   {clarity && <span>{clarity.label}</span>}
                 </div>
                 {m.reflection && <p className="prose-block">{m.reflection}</p>}
@@ -761,38 +767,39 @@ function MockHistory() {
       <Dialog
         open={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
-        title="刪除這筆紀錄？"
+        title={t.mock.deleteTitle}
         footer={
           <>
             <button className="btn btn-quiet" onClick={() => setPendingDelete(null)}>
-              取消
+              {t.common.cancel}
             </button>
             <button
               className="btn btn-danger"
               onClick={async () => {
                 if (pendingDelete?.id !== undefined) await deleteMock(pendingDelete.id);
                 setPendingDelete(null);
-                toast('已刪除紀錄。');
+                toast(t.mock.recordDeleted);
               }}
             >
-              刪除紀錄
+              {t.mock.deleteRecord}
             </button>
           </>
         }
       >
-        <p>錄音也會一起刪除。題目的複習排程不受影響。</p>
+        <p>{t.mock.deleteBody}</p>
       </Dialog>
     </Sheet>
   );
 }
 
 function MockAudio({ blob }: { blob: Blob }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   if (open) return <BlobAudio blob={blob} autoPlay />;
   return (
     <div>
       <button className="btn btn-small" onClick={() => setOpen(true)}>
-        播放錄音
+        {t.mock.playRecording}
       </button>
     </div>
   );

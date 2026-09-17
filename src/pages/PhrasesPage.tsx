@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { PageHead, Sheet } from '../components/ui';
 import { EXPLANATION_SCAFFOLD, EXTRA_PHRASE_GROUPS, INTERVIEW_STEPS, type Phrase } from '../data/interview';
+import { useI18n } from '../i18n';
 
 export function PhrasesPage() {
-  const [quiz, setQuiz] = useState(false);
+  const { t, locale } = useI18n();
+  // 中文翻譯與自我測驗是給中文使用者的學習輔助，英文介面不顯示
+  const showTranslation = locale === 'zh-TW';
+  const [quizOn, setQuiz] = useState(false);
   const [shown, setShown] = useState<Set<string>>(new Set());
+  const quiz = quizOn && showTranslation;
 
   function reveal(en: string) {
     setShown((prev) => new Set(prev).add(en));
@@ -16,25 +21,27 @@ export function PhrasesPage() {
   }
 
   const groups = [
-    ...INTERVIEW_STEPS.map((s) => ({ id: s.id, name: `${s.name}（${s.english}）`, note: s.goal, phrases: s.phrases })),
-    ...EXTRA_PHRASE_GROUPS.map((g) => ({ id: g.id, name: g.name, note: undefined, phrases: g.phrases })),
+    ...INTERVIEW_STEPS.map((s) => {
+      const step = t.interview.steps[s.id];
+      return { id: s.id, name: t.phrases.stepTitle(step.name, s.english), note: step.goal, phrases: s.phrases };
+    }),
+    ...EXTRA_PHRASE_GROUPS.map((g) => ({ id: g.id, name: t.interview.groups[g.id], note: undefined, phrases: g.phrases })),
   ];
 
   return (
     <div className="page">
-      <PageHead
-        title="英文句型"
-        lede="依面試流程整理的常用句子。自我測驗模式會先藏住英文，看著中文試著說出口，再點一下對答案。"
-      >
-        <div className="btn-row" style={{ marginTop: 16 }}>
-          <button className="btn" aria-pressed={quiz} onClick={toggleQuiz}>
-            {quiz ? '結束自我測驗' : '開始自我測驗'}
-          </button>
-        </div>
+      <PageHead title={t.phrases.title} lede={t.phrases.lede}>
+        {showTranslation && (
+          <div className="btn-row" style={{ marginTop: 16 }}>
+            <button className="btn" aria-pressed={quiz} onClick={toggleQuiz}>
+              {quiz ? t.phrases.endQuiz : t.phrases.startQuiz}
+            </button>
+          </div>
+        )}
       </PageHead>
 
       <div className="stack">
-        <Sheet title="講解一題的架構" id="scaffold" note="寫講解稿和講解練習都用這個順序">
+        <Sheet title={t.phrases.scaffoldTitle} id="scaffold" note={t.phrases.scaffoldNote}>
           <pre className="sheet-body prose-block explain-scaffold" lang="en" style={{ margin: 0, fontFamily: 'inherit' }}>
             {EXPLANATION_SCAFFOLD}
           </pre>
@@ -44,7 +51,14 @@ export function PhrasesPage() {
           <Sheet key={g.id} title={g.name} note={g.note} id={`phrases-${g.id}`}>
             <ul className="sheet-body phrase-list" style={{ paddingTop: 4, paddingBottom: 8 }}>
               {g.phrases.map((ph) => (
-                <PhraseItem key={ph.en} phrase={ph} hidden={quiz && !shown.has(ph.en)} onReveal={() => reveal(ph.en)} />
+                <PhraseItem
+                  key={ph.en}
+                  phrase={ph}
+                  hidden={quiz && !shown.has(ph.en)}
+                  showTranslation={showTranslation}
+                  revealLabel={t.phrases.reveal}
+                  onReveal={() => reveal(ph.en)}
+                />
               ))}
             </ul>
           </Sheet>
@@ -54,7 +68,15 @@ export function PhrasesPage() {
   );
 }
 
-function PhraseItem({ phrase, hidden, onReveal }: { phrase: Phrase; hidden: boolean; onReveal: () => void }) {
+interface PhraseItemProps {
+  phrase: Phrase;
+  hidden: boolean;
+  showTranslation: boolean;
+  revealLabel: string;
+  onReveal: () => void;
+}
+
+function PhraseItem({ phrase, hidden, showTranslation, revealLabel, onReveal }: PhraseItemProps) {
   return (
     <li>
       {hidden ? (
@@ -66,14 +88,18 @@ function PhraseItem({ phrase, hidden, onReveal }: { phrase: Phrase; hidden: bool
           onClick={onReveal}
         >
           <span aria-hidden>{phrase.en}</span>
-          <span className="visually-hidden">顯示英文</span>
+          <span className="visually-hidden">{revealLabel}</span>
         </button>
       ) : (
         <p className="phrase-en" lang="en">
           {phrase.en}
         </p>
       )}
-      <p className="phrase-zh">{phrase.zh}</p>
+      {showTranslation && (
+        <p className="phrase-zh" lang="zh-Hant">
+          {phrase.zh}
+        </p>
+      )}
     </li>
   );
 }

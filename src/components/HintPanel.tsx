@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { hintFor } from '../data/hints';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
+import { useI18n } from '../i18n';
+import { bold, rich } from '../i18n/rich';
 import { HINT_LEVELS, solutionsUrl } from '../lib/practice';
 import { useNote, usePatternNote } from '../store/queries';
 import { ExternalIcon, Sheet } from './ui';
@@ -16,22 +18,21 @@ interface HintPanelProps {
 }
 
 export function HintPanel({ problem, used, sawSolution, onReveal, onSolution }: HintPanelProps) {
+  const { t, locale } = useI18n();
   const note = useNote(problem.id);
   const patternNote = usePatternNote(problem.pattern);
-  const pattern = getPattern(problem.pattern);
-  const keyHint = hintFor(problem.id);
+  const pattern = getPattern(problem.pattern, locale);
+  const keyHint = hintFor(problem.id, locale);
   const template = patternNote?.template ?? pattern.template;
   const myIdea = note?.idea?.trim();
+  const patternLabel = t.hints.patternLabel(pattern.name, pattern.english);
 
   const levels: { title: string; body: ReactNode }[] = [
     {
-      title: '往哪個方向想',
+      title: t.hints.directionTitle,
       body: (
         <>
-          <p>
-            這題可以用<strong>{pattern.name}</strong>
-            <span lang="en">（{pattern.english}）</span>。這個模式常見的線索：
-          </p>
+          <p>{rich(t.hints.direction(patternLabel), { b: bold })}</p>
           <ul className="bullets" style={{ marginTop: 6 }}>
             {pattern.signals.map((s) => (
               <li key={s}>{s}</li>
@@ -41,22 +42,16 @@ export function HintPanel({ problem, used, sawSolution, onReveal, onSolution }: 
       ),
     },
     {
-      title: '關鍵觀察',
-      body: keyHint ? (
-        <p>{keyHint}</p>
-      ) : myIdea ? (
-        <p>你之前的筆記：{myIdea}</p>
-      ) : (
-        <p>這題是你新增的，沒有內建的關鍵提示。可以直接看下一層的模板。</p>
-      ),
+      title: t.hints.insightTitle,
+      body: keyHint ? <p>{keyHint}</p> : myIdea ? <p>{t.hints.yourNote(myIdea)}</p> : <p>{t.hints.noBuiltinHint}</p>,
     },
     {
-      title: '套用模板',
+      title: t.hints.templateTitle,
       body: (
         <>
-          {keyHint && myIdea && <p style={{ marginBottom: 8 }}>你之前的筆記：{myIdea}</p>}
+          {keyHint && myIdea && <p style={{ marginBottom: 8 }}>{t.hints.yourNote(myIdea)}</p>}
           <p className="sheet-note" style={{ marginBottom: 6 }}>
-            {pattern.name}的模板{patternNote?.template !== undefined ? '（你的版本）' : ''}，挑跟這題相關的部分改寫：
+            {t.hints.templateIntro(pattern.name, patternNote?.template !== undefined)}
           </p>
           <pre className="code-block hint-code">
             <code>{template}</code>
@@ -69,19 +64,13 @@ export function HintPanel({ problem, used, sawSolution, onReveal, onSolution }: 
   const remaining = HINT_LEVELS - used;
 
   return (
-    <Sheet
-      title="提示"
-      id="hints"
-      note={used === 0 ? '卡住再打開，提示會一層一層給' : `已打開 ${used} / ${HINT_LEVELS} 層`}
-    >
+    <Sheet title={t.hints.title} id="hints" note={used === 0 ? t.hints.closedNote : t.hints.openedNote(used, HINT_LEVELS)}>
       <div className="sheet-body stack" style={{ gap: 14 }}>
         {used > 0 && (
           <ol className="hint-list">
             {levels.slice(0, used).map((level, i) => (
               <li key={level.title} className="hint">
-                <p className="hint-title">
-                  提示 {i + 1}：{level.title}
-                </p>
+                <p className="hint-title">{t.hints.levelTitle(i + 1, level.title)}</p>
                 <div className="hint-body">{level.body}</div>
               </li>
             ))}
@@ -91,8 +80,8 @@ export function HintPanel({ problem, used, sawSolution, onReveal, onSolution }: 
         <div className="btn-row">
           {remaining > 0 && (
             <button type="button" className="btn" onClick={onReveal}>
-              {used === 0 ? '給我一點提示' : '再給一個提示'}
-              <span className="sheet-note">（還有 {remaining} 層）</span>
+              {used === 0 ? t.hints.first : t.hints.next}
+              <span className="sheet-note">{t.hints.remaining(remaining)}</span>
             </button>
           )}
           <a
@@ -102,14 +91,12 @@ export function HintPanel({ problem, used, sawSolution, onReveal, onSolution }: 
             rel="noreferrer"
             onClick={onSolution}
           >
-            {sawSolution ? '再打開 LeetCode 解答' : remaining > 0 ? '直接看解答' : '還是想不出來，看 LeetCode 解答'}
+            {sawSolution ? t.hints.reopenSolution : remaining > 0 ? t.hints.skipToSolution : t.hints.lastResort}
             <ExternalIcon />
-            <span className="visually-hidden">（在新分頁開啟）</span>
+            <span className="visually-hidden">{t.common.opensInNewTab}</span>
           </a>
         </div>
-        {used > 0 && !sawSolution && (
-          <p className="field-hint">用過提示的題目，記錄時會建議選「看了提示」，讓它早點回來複習。</p>
-        )}
+        {used > 0 && !sawSolution && <p className="field-hint">{t.hints.ratingNudge}</p>}
       </div>
     </Sheet>
   );

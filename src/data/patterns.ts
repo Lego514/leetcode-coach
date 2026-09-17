@@ -1,17 +1,24 @@
 import type { PatternId } from '../../shared/constants';
+import type { Locale } from '../i18n/locale';
+import { PATTERN_CONTENT_EN } from './patterns.en';
 
 export type { PatternId };
 
-export interface Pattern {
-  id: PatternId;
+/** 會依語言切換的內容 */
+export interface PatternContent {
   name: string;
-  english: string;
   summary: string;
   /** 題目裡出現這些線索時，優先考慮這個模式 */
   signals: string[];
   pitfalls: string[];
   /** 預設的 Python 模板，使用者可以覆寫 */
   template: string;
+}
+
+export interface Pattern extends PatternContent {
+  id: PatternId;
+  /** 英文名稱，中文介面裡當作副標題 */
+  english: string;
 }
 
 export const PATTERNS: Pattern[] = [
@@ -803,10 +810,19 @@ def count_bits(n):
 
 const PATTERN_MAP = new Map(PATTERNS.map((p) => [p.id, p]));
 
-export function getPattern(id: PatternId): Pattern {
+/** 取得指定語言的模式內容；英文版的名稱就是英文名稱 */
+export function getPattern(id: PatternId, locale: Locale = 'zh-TW'): Pattern {
   const pattern = PATTERN_MAP.get(id);
   if (!pattern) throw new Error(`Unknown pattern: ${id}`);
-  return pattern;
+  return locale === 'en' ? { id, english: pattern.english, ...PATTERN_CONTENT_EN[id] } : pattern;
+}
+
+export function getPatterns(locale: Locale): Pattern[] {
+  return PATTERNS.map((p) => getPattern(p.id, locale));
 }
 
 export const PATTERN_ORDER: PatternId[] = PATTERNS.map((p) => p.id);
+
+export function isPatternId(value: string): value is PatternId {
+  return (PATTERN_ORDER as string[]).includes(value);
+}

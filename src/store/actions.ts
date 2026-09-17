@@ -140,7 +140,17 @@ export async function updateSettings(patch: Partial<Omit<SettingsRecord, 'key'>>
   });
 }
 
-export class ValidationError extends Error {}
+export type ValidationCode = 'invalid_id' | 'missing_title' | 'title_too_long' | 'invalid_url' | 'builtin_exists' | 'already_added';
+
+/** 輸入不合法；畫面依 code 顯示對應語言的訊息 */
+export class ValidationError extends Error {
+  constructor(
+    readonly code: ValidationCode,
+    readonly problemId?: number,
+  ) {
+    super(code);
+  }
+}
 
 export interface NewProblemInput {
   id: number;
@@ -162,13 +172,11 @@ export function parseSlug(input: string): string {
 export async function addCustomProblem(input: NewProblemInput): Promise<Problem> {
   const slug = parseSlug(input.slug);
   const title = input.title.trim();
-  if (!Number.isInteger(input.id) || input.id <= 0 || input.id > 9_999_999) throw new ValidationError('題號要是正整數。');
-  if (!title) throw new ValidationError('請輸入題目名稱。');
-  if (title.length > 200) throw new ValidationError('題目名稱太長了。');
-  if (!slug || slug.length > 120) throw new ValidationError('請貼上 LeetCode 題目網址，例如 https://leetcode.com/problems/two-sum/');
-  if (BUILTIN_PROBLEMS.some((p) => p.id === input.id)) {
-    throw new ValidationError(`第 ${input.id} 題已經在內建題庫裡了。`);
-  }
+  if (!Number.isInteger(input.id) || input.id <= 0 || input.id > 9_999_999) throw new ValidationError('invalid_id');
+  if (!title) throw new ValidationError('missing_title');
+  if (title.length > 200) throw new ValidationError('title_too_long');
+  if (!slug || slug.length > 120) throw new ValidationError('invalid_url');
+  if (BUILTIN_PROBLEMS.some((p) => p.id === input.id)) throw new ValidationError('builtin_exists', input.id);
   const problem: Problem = {
     id: input.id,
     slug,
@@ -179,9 +187,7 @@ export async function addCustomProblem(input: NewProblemInput): Promise<Problem>
     custom: true,
   };
   await db.transaction('rw', db.customProblems, db.outbox, async () => {
-    if (await db.customProblems.get(input.id)) {
-      throw new ValidationError(`第 ${input.id} 題已經新增過了。`);
-    }
+    if (await db.customProblems.get(input.id)) throw new ValidationError('already_added', input.id);
     await db.customProblems.add(problem);
     await track(db, 'customProblems', String(problem.id));
   });

@@ -22,6 +22,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - A two-minute explanation drill.
 - **Progress**: a per-pattern mastery grid, a weekly practice chart, an activity calendar, and a breakdown by difficulty.
 - **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, and settings between devices. Everything keeps working offline and without an account.
+- **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It follows the browser language by default, and you can switch from the sidebar or Settings.
 - **Installable PWA** that works offline, with light and dark themes and JSON backup/restore.
 
 ## Tech stack
@@ -30,6 +31,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 | --- | --- |
 | UI | React 19, TypeScript (strict), hand-written CSS with design tokens |
 | Build | Vite 8, route-level code splitting, `vite-plugin-pwa` |
+| i18n | Typed dictionaries without a library: the English dictionary must match the Chinese one key for key, and sentences with links use inline tags |
 | Routing | React Router 8 data router (lazy routes, navigation blocking during practice and mock sessions) |
 | Local storage | IndexedDB via Dexie 4, reactive reads with `useLiveQuery` |
 | API | Node 24, Hono, zod validation shared with the client |
@@ -49,6 +51,7 @@ src/                 Web app
     tracking.ts          Local record ⇄ sync payload conversion, schedule replay
     sync.ts              Sync engine (push outbox, pull changes, apply)
     cloud.ts             Account state and automatic sync scheduling
+  i18n/                Locale detection, typed dictionaries (zh-TW, en), date formatting
   components/, pages/  UI
 shared/              Code used by both sides: ids and the zod request/response schemas
 server/              API
@@ -154,6 +157,8 @@ Migrations run automatically at startup.
 - 決定今天該刷哪些題
 - 計時作答，卡住時一層一層給提示，再用間隔複習排好每一題的複習日
 - 用模擬面試練習把解法講清楚
+
+介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
 
 不登入也能完整使用，資料存在瀏覽器裡。到「設定」註冊或登入後，練習紀錄、筆記和設定會自動同步到雲端，換電腦或換瀏覽器都能接著用；離線時照常記錄，恢復連線後再上傳。錄音只會留在原本的裝置上。
 

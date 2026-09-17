@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useBeforeUnload, useBlocker } from 'react-router';
+import { useI18n } from '../i18n';
 import { Dialog } from './ui';
 
 interface LeaveGuardProps {
@@ -12,6 +13,7 @@ interface LeaveGuardProps {
 
 /** 掛載期間，切換頁面前先確認；關閉或重新整理分頁時交給瀏覽器詢問 */
 export function LeaveGuard({ title, message, leaveLabel, onLeave }: LeaveGuardProps) {
+  const { t } = useI18n();
   const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname);
   useBeforeUnload(
     useCallback((e: BeforeUnloadEvent) => {
@@ -27,7 +29,7 @@ export function LeaveGuard({ title, message, leaveLabel, onLeave }: LeaveGuardPr
       footer={
         <>
           <button className="btn btn-quiet" onClick={() => blocker.reset?.()}>
-            留在這裡
+            {t.leave.stay}
           </button>
           <button
             className="btn btn-danger"

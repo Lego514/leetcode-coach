@@ -1,7 +1,7 @@
 import { liveQuery, type Subscription } from 'dexie';
 import { useSyncExternalStore } from 'react';
 import type { PublicUser } from '../../shared/protocol';
-import { ApiError, apiRequest, errorMessage, type FetchLike } from './api';
+import { ApiError, apiRequest, errorCode, type ClientErrorCode, type FetchLike } from './api';
 import { db } from './db';
 import { adoptAccount, detachAccount, runSync, SyncAbortedError, wipeLocalData } from './sync';
 import { getSyncState } from './tracking';
@@ -21,7 +21,8 @@ export interface CloudState {
   account: AccountStatus;
   phase: SyncPhase;
   lastSyncedAt?: number;
-  error?: string;
+  /** 最近一次同步失敗的原因 */
+  error?: ClientErrorCode | 'unknown';
 }
 
 const PUSH_DELAY_MS = 1500;
@@ -81,7 +82,7 @@ async function syncLoop() {
         return;
       }
       const offline = err instanceof ApiError && (err.code === 'network_error' || err.code === 'unavailable');
-      setState({ phase: offline ? 'offline' : 'error', error: errorMessage(err) });
+      setState({ phase: offline ? 'offline' : 'error', error: errorCode(err) });
       scheduleRetry();
       return;
     }
@@ -174,7 +175,7 @@ export async function initCloud(): Promise<void> {
         account: { kind: 'signed-in', user: { id: saved.userId, email: saved.email } },
         phase: 'offline',
         lastSyncedAt: saved.lastSyncedAt,
-        error: errorMessage(err),
+        error: errorCode(err),
       });
       startAutoSync();
       scheduleRetry();

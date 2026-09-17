@@ -4,16 +4,18 @@ import { ActivityCalendar, WeeklyChart } from '../components/charts';
 import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
 import { CLARITY_OPTIONS } from '../data/interview';
 import { getPattern } from '../data/patterns';
-import { LIST_FILTER_LABELS, problemsInList, type ListFilter } from '../lib/catalog';
+import { useI18n } from '../i18n';
+import { bold, rich } from '../i18n/rich';
+import { LIST_FILTERS, problemsInList, type ListFilter } from '../lib/catalog';
 import { addDays, startOfWeek } from '../lib/dates';
-import { STAGE_LABELS, stageOf } from '../lib/srs';
+import { stageOf } from '../lib/srs';
 import { countByDay, practiceStreak, summarizeDifficulty, summarizePatterns, weeklyCounts } from '../lib/stats';
 import { useAttempts, useCatalog, useMocks, useProgressMap, useSettings, useToday } from '../store/queries';
 
-const LIST_OPTIONS: ListFilter[] = ['neetcode150', 'blind75', 'grind169', 'custom', 'all'];
 const CALENDAR_WEEKS = 18;
 
 export function ProgressPage() {
+  const { t, locale } = useI18n();
   const day = useToday();
   const settings = useSettings();
   const catalog = useCatalog();
@@ -42,19 +44,19 @@ export function ProgressPage() {
 
   const fullMocks = (mocks ?? []).filter((m) => m.kind === 'full');
   const explainMocks = (mocks ?? []).filter((m) => m.kind === 'explain');
-  const smoothExplains = explainMocks.filter((m) => m.clarity === CLARITY_OPTIONS[0].id).length;
+  const smoothExplains = explainMocks.filter((m) => m.clarity === CLARITY_OPTIONS[0]).length;
 
   return (
     <div className="page">
-      <PageHead title="進度" lede="每個方格是一題，顏色越深代表複習間隔越長、記得越牢。" />
+      <PageHead title={t.progress.title} lede={t.progress.lede} />
 
       <div className="filters">
         <label className="field" style={{ flex: '0 1 220px' }}>
-          <span className="field-label">清單</span>
+          <span className="field-label">{t.progress.list}</span>
           <select className="select" value={list} onChange={(e) => setListChoice(e.target.value as ListFilter)}>
-            {LIST_OPTIONS.map((id) => (
+            {LIST_FILTERS.map((id) => (
               <option key={id} value={id}>
-                {LIST_FILTER_LABELS[id]}
+                {t.lists.labels[id]}
               </option>
             ))}
           </select>
@@ -62,58 +64,58 @@ export function ProgressPage() {
       </div>
 
       <div className="stack">
-        <section className="sheet stat-line" aria-label="總覽">
+        <section className="sheet stat-line" aria-label={t.progress.overview}>
           <div className="stat">
-            <p className="stat-label">做過的題目</p>
+            <p className="stat-label">{t.progress.started}</p>
             <p className="stat-value">
               {started}
               <small>/ {problems.length}</small>
             </p>
           </div>
           <div className="stat">
-            <p className="stat-label">已熟練</p>
+            <p className="stat-label">{t.progress.mastered}</p>
             <p className="stat-value">
               {mastered}
-              <small>題</small>
+              <Unit text={t.progress.unitProblems} />
             </p>
           </div>
           <div className="stat">
-            <p className="stat-label">連續練習</p>
+            <p className="stat-label">{t.progress.streak}</p>
             <p className="stat-value">
               {streak}
-              <small>天</small>
+              <Unit text={t.progress.unitDays} />
             </p>
           </div>
           <div className="stat">
-            <p className="stat-label">累計練習</p>
+            <p className="stat-label">{t.progress.total}</p>
             <p className="stat-value">
               {allAttempts.length}
-              <small>次</small>
+              <Unit text={t.progress.unitTimes} />
             </p>
           </div>
         </section>
 
         <Sheet
-          title="各模式熟練度"
+          title={t.progress.masteryTitle}
           id="mastery"
           note={
-            weakest ? (
-              <>
-                目前最弱：<Link to={`/patterns/${weakest.pattern}`}>{getPattern(weakest.pattern).name}</Link>
-              </>
-            ) : undefined
+            weakest
+              ? rich(t.progress.weakest(getPattern(weakest.pattern, locale).name), {
+                  link: (text) => <Link to={`/patterns/${weakest.pattern}`}>{text}</Link>,
+                })
+              : undefined
           }
         >
           <div className="sheet-body">
             {problems.length === 0 ? (
-              <p className="sheet-note">這份清單沒有題目。</p>
+              <p className="sheet-note">{t.progress.emptyList}</p>
             ) : (
               <>
                 <div className="mastery-rows">
                   {patterns.map((s) => (
                     <div key={s.pattern} className="mastery-row">
                       <Link className="mastery-name" to={`/patterns/${s.pattern}`}>
-                        {getPattern(s.pattern).name}
+                        {getPattern(s.pattern, locale).name}
                       </Link>
                       <div className="mastery-cells">
                         {problems
@@ -121,7 +123,7 @@ export function ProgressPage() {
                           .map((p) => {
                             const state = progress.get(p.id);
                             return (
-                              <Link key={p.id} to={`/problems/${p.id}`} aria-label={`${p.title}，${STAGE_LABELS[stageOf(state)]}`}>
+                              <Link key={p.id} to={`/problems/${p.id}`} aria-label={t.progress.cellLabel(p.title, t.stages[stageOf(state)])}>
                                 <MasteryCell progress={state} />
                               </Link>
                             );
@@ -138,7 +140,7 @@ export function ProgressPage() {
                 </div>
                 {weakest && (
                   <p className="sheet-note" style={{ marginTop: 10 }}>
-                    建議到模擬面試選「做過但最不熟的題目」，並把模式限定為{getPattern(weakest.pattern).name}。
+                    {t.progress.weakestTip(getPattern(weakest.pattern, locale).name)}
                   </p>
                 )}
               </>
@@ -147,18 +149,18 @@ export function ProgressPage() {
         </Sheet>
 
         <div className="split split-even">
-          <Sheet title="每週練習次數" id="weekly" note="含新題、複習與模擬面試">
+          <Sheet title={t.progress.weeklyTitle} id="weekly" note={t.progress.weeklyNote}>
             <div className="sheet-body">
               <WeeklyChart weeks={weeks} />
             </div>
           </Sheet>
           <div className="stack">
-            <Sheet title="練習日曆" id="calendar" note={`最近 ${CALENDAR_WEEKS} 週，共 ${activeDays} 天有練習`}>
+            <Sheet title={t.progress.calendarTitle} id="calendar" note={t.progress.calendarNote(CALENDAR_WEEKS, activeDays)}>
               <div className="sheet-body">
                 <ActivityCalendar counts={byDay} today={day} weeks={CALENDAR_WEEKS} />
               </div>
             </Sheet>
-            <Sheet title="難度分布" id="difficulty">
+            <Sheet title={t.progress.difficultyTitle} id="difficulty">
               <div className="sheet-body difficulty-bars">
                 {difficulty.map((d) => (
                   <div key={d.difficulty} className="meter-row">
@@ -168,7 +170,7 @@ export function ProgressPage() {
                     <div
                       className="meter"
                       role="meter"
-                      aria-label={`${d.difficulty} 做過的題數`}
+                      aria-label={t.progress.difficultyLabel(d.difficulty)}
                       aria-valuemin={0}
                       aria-valuemax={d.total}
                       aria-valuenow={d.started}
@@ -185,18 +187,19 @@ export function ProgressPage() {
           </div>
         </div>
 
-        <Sheet title="模擬面試" id="mock-stats">
+        <Sheet title={t.progress.mockTitle} id="mock-stats">
           <div className="sheet-body inline-stats">
-            <span>
-              完整模擬 <strong>{fullMocks.length}</strong> 次
-            </span>
-            <span>
-              講解練習 <strong>{explainMocks.length}</strong> 次，其中講得很順的有 <strong>{smoothExplains}</strong> 次
-            </span>
-            <Link to="/mock">開始一次練習</Link>
+            <span>{rich(t.progress.mockFull(fullMocks.length), { b: bold })}</span>
+            <span>{rich(t.progress.mockExplain(explainMocks.length, smoothExplains), { b: bold })}</span>
+            <Link to="/mock">{t.progress.startMock}</Link>
           </div>
         </Sheet>
       </div>
     </div>
   );
+}
+
+/** 數字後的單位；英文不需要單位時就不輸出 */
+function Unit({ text }: { text: string }) {
+  return text ? <small>{text}</small> : null;
 }

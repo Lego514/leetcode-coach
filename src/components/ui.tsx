@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Difficulty } from '../data/problems';
 import { masteryOf } from '../lib/srs';
+import { useI18n } from '../i18n';
 import type { ProgressRecord } from '../store/db';
 
 const DIFFICULTY_LABELS: Record<Difficulty, string> = { Easy: 'Easy', Medium: 'Medium', Hard: 'Hard' };
@@ -38,19 +39,20 @@ export function MasteryCell({ progress, label }: { progress: ProgressRecord | un
 }
 
 export function MasteryLegend() {
+  const { t } = useI18n();
   return (
-    <div className="legend" aria-label="方格說明">
+    <div className="legend" aria-label={t.legend.label}>
       <span className="legend-item">
-        <span className="cell" data-level={0} aria-hidden /> 還沒做
+        <span className="cell" data-level={0} aria-hidden /> {t.legend.notStarted}
       </span>
       <span className="legend-item">
         <span className="cell" data-level={1} aria-hidden />
         <span className="cell" data-level={2} aria-hidden />
         <span className="cell" data-level={3} aria-hidden />
-        <span className="cell" data-level={4} aria-hidden /> 越深越熟
+        <span className="cell" data-level={4} aria-hidden /> {t.legend.darker}
       </span>
       <span className="legend-item">
-        <span className="cell" data-level={1} data-lapsed="true" aria-hidden /> 上次沒解出來
+        <span className="cell" data-level={1} data-lapsed="true" aria-hidden /> {t.legend.lapsed}
       </span>
     </div>
   );
@@ -73,11 +75,12 @@ export function LeetCodeLink({
   children?: ReactNode;
   className?: string;
 }) {
+  const { t } = useI18n();
   return (
     <a className={className} href={`https://leetcode.com/problems/${slug}/`} target="_blank" rel="noreferrer">
       {children}
       <ExternalIcon />
-      <span className="visually-hidden">（在新分頁開啟）</span>
+      <span className="visually-hidden">{t.common.opensInNewTab}</span>
     </a>
   );
 }

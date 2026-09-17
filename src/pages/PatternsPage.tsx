@@ -4,14 +4,16 @@ import { SaveStatus, useAutosave } from '../components/autosave';
 import { CodeTextarea } from '../components/CodeTextarea';
 import { ProblemRow } from '../components/ProblemRow';
 import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
-import { PATTERNS, type Pattern } from '../data/patterns';
-import { LIST_FILTER_LABELS, problemsInList } from '../lib/catalog';
+import { getPattern, getPatterns, isPatternId, type Pattern } from '../data/patterns';
+import { useI18n } from '../i18n';
+import { problemsInList } from '../lib/catalog';
 import { summarizePatterns } from '../lib/stats';
 import { savePatternNote } from '../store/actions';
 import type { PatternNoteRecord } from '../store/db';
 import { useCatalog, usePatternNote, useProgressMap, useSettings, useToday } from '../store/queries';
 
 export function PatternsPage() {
+  const { t, locale } = useI18n();
   const settings = useSettings();
   const catalog = useCatalog();
   const { progress } = useProgressMap();
@@ -23,16 +25,13 @@ export function PatternsPage() {
 
   return (
     <div className="page">
-      <PageHead
-        title="模板卡"
-        lede={`每種解題模式的辨識訊號、常見錯誤和 Python 模板。方格是 ${LIST_FILTER_LABELS[settings.activeList]} 裡這個模式的題目。`}
-      />
+      <PageHead title={t.patterns.title} lede={t.patterns.lede(t.lists.labels[settings.activeList])} />
       <div style={{ marginBottom: 16 }}>
         <MasteryLegend />
       </div>
-      <section className="sheet" aria-label="解題模式">
+      <section className="sheet" aria-label={t.patterns.listLabel}>
         <ul className="pattern-list">
-          {PATTERNS.map((p) => {
+          {getPatterns(locale).map((p) => {
             const summary = summaries.get(p.id);
             const problems = listProblems.filter((x) => x.pattern === p.id);
             return (
@@ -40,18 +39,15 @@ export function PatternsPage() {
                 <Link className="pattern-link" to={`/patterns/${p.id}`}>
                   <span className="pattern-name">
                     {p.name}
-                    <span className="pattern-english" lang="en">
-                      {p.english}
-                    </span>
+                    {locale !== 'en' && (
+                      <span className="pattern-english" lang="en">
+                        {p.english}
+                      </span>
+                    )}
                   </span>
                   <span className="pattern-summary">
                     {p.summary}
-                    {summary && (
-                      <>
-                        {' '}
-                        做過 {summary.started} / {summary.total} 題。
-                      </>
-                    )}
+                    {summary && t.patterns.doneCount(summary.started, summary.total)}
                   </span>
                   <span className="pattern-cells" aria-hidden>
                     {problems.map((x) => (
@@ -69,15 +65,16 @@ export function PatternsPage() {
 }
 
 export function PatternDetailPage() {
+  const { t, locale } = useI18n();
   const { id } = useParams();
-  const pattern = PATTERNS.find((p) => p.id === id);
+  const pattern = id && isPatternId(id) ? getPattern(id, locale) : undefined;
   if (!pattern) {
     return (
       <div className="page">
         <Link className="back-link" to="/patterns">
-          回到模板卡
+          {t.patterns.back}
         </Link>
-        <PageHead title="找不到這個模式" />
+        <PageHead title={t.patterns.notFound} />
       </div>
     );
   }
@@ -85,6 +82,7 @@ export function PatternDetailPage() {
 }
 
 function PatternDetail({ pattern }: { pattern: Pattern }) {
+  const { t, locale } = useI18n();
   const day = useToday();
   const catalog = useCatalog();
   const { progress } = useProgressMap();
@@ -94,29 +92,34 @@ function PatternDetail({ pattern }: { pattern: Pattern }) {
   return (
     <div className="page">
       <Link className="back-link" to="/patterns">
-        回到模板卡
+        {t.patterns.back}
       </Link>
       <PageHead
         title={
           <>
-            {pattern.name}{' '}
-            <span lang="en" style={{ fontWeight: 400, color: 'var(--ink-3)' }}>
-              {pattern.english}
-            </span>
+            {pattern.name}
+            {locale !== 'en' && (
+              <>
+                {' '}
+                <span lang="en" style={{ fontWeight: 400, color: 'var(--ink-3)' }}>
+                  {pattern.english}
+                </span>
+              </>
+            )}
           </>
         }
         lede={pattern.summary}
       />
       <div className="stack">
         <div className="split split-even">
-          <Sheet title="看到這些線索就想到它" id="signals">
+          <Sheet title={t.patterns.signalsTitle} id="signals">
             <ul className="sheet-body bullets">
               {pattern.signals.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ul>
           </Sheet>
-          <Sheet title="常見錯誤" id="pitfalls">
+          <Sheet title={t.patterns.pitfallsTitle} id="pitfalls">
             <ul className="sheet-body bullets bullets-warn">
               {pattern.pitfalls.map((s) => (
                 <li key={s}>{s}</li>
@@ -127,7 +130,7 @@ function PatternDetail({ pattern }: { pattern: Pattern }) {
 
         {note === undefined ? null : <PatternNotes pattern={pattern} initial={note} />}
 
-        <Sheet title="這個模式的題目" count={problems.length} id="pattern-problems">
+        <Sheet title={t.patterns.problemsTitle} count={problems.length} id="pattern-problems">
           <ul className="rows">
             {problems.map((p) => {
               const state = progress.get(p.id);
@@ -150,6 +153,7 @@ interface PatternDraft {
 }
 
 function PatternNotes({ pattern, initial }: { pattern: Pattern; initial: PatternNoteRecord | null }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState<PatternDraft>(() => ({ template: initial?.template, notes: initial?.notes ?? '' }));
   const [editing, setEditing] = useState(false);
   const status = useAutosave(draft, (value) => savePatternNote(pattern.id, value));
@@ -159,18 +163,18 @@ function PatternNotes({ pattern, initial }: { pattern: Pattern; initial: Pattern
   return (
     <>
       <Sheet
-        title="模板"
+        title={t.patterns.templateTitle}
         id="template"
-        note={customized ? '已改成你的版本' : 'Python'}
+        note={customized ? t.patterns.customized : 'Python'}
         actions={
           <div className="btn-row">
             {customized && (
               <button className="btn btn-quiet btn-small" onClick={() => setDraft((d) => ({ ...d, template: undefined }))}>
-                還原內建模板
+                {t.patterns.restore}
               </button>
             )}
             <button className="btn btn-small" onClick={() => setEditing((e) => !e)}>
-              {editing ? '完成編輯' : '改成我的版本'}
+              {editing ? t.patterns.doneEditing : t.patterns.edit}
             </button>
           </div>
         }
@@ -190,10 +194,10 @@ function PatternNotes({ pattern, initial }: { pattern: Pattern; initial: Pattern
         </div>
       </Sheet>
 
-      <Sheet title="我的心得" id="pattern-notes" actions={<SaveStatus status={status} />}>
+      <Sheet title={t.patterns.notesTitle} id="pattern-notes" actions={<SaveStatus status={status} />}>
         <div className="sheet-body">
           <label className="visually-hidden" htmlFor="pattern-notes-input">
-            我的心得
+            {t.patterns.notesTitle}
           </label>
           <textarea
             id="pattern-notes-input"
@@ -201,7 +205,7 @@ function PatternNotes({ pattern, initial }: { pattern: Pattern; initial: Pattern
             rows={5}
             value={draft.notes}
             onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-            placeholder={`例如：看到「${pattern.signals[0]}」時，我會先確認……`}
+            placeholder={t.patterns.notesPlaceholder(pattern.signals[0])}
           />
         </div>
       </Sheet>

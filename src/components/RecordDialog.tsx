@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { Problem } from '../data/problems';
-import { formatDay, relativeDay } from '../lib/dates';
+import { useI18n } from '../i18n';
+import { diffDays } from '../lib/dates';
 import { RATINGS, schedule, type Rating } from '../lib/srs';
 import { recordAttempt, saveNote } from '../store/actions';
 import type { AttemptMode, ProgressRecord } from '../store/db';
@@ -17,11 +18,12 @@ interface RecordDialogProps {
 }
 
 export function RecordDialog({ problem, mode = 'practice', askIdea = true, onClose }: RecordDialogProps) {
+  const { t } = useI18n();
   return (
     <Dialog
       open={problem !== null}
       onClose={onClose}
-      title="記錄這次練習"
+      title={t.record.title}
       subtitle={problem ? `${problem.id}. ${problem.title}` : undefined}
     >
       {problem && (
@@ -53,10 +55,11 @@ export function RecordForm({
   initialMinutes,
   hints,
   sawSolution,
-  cancelLabel = '取消',
+  cancelLabel,
   onCancel,
   onSaved,
 }: RecordFormProps) {
+  const { t, fmt } = useI18n();
   const day = useToday();
   const progress = useProgress(problem.id);
   const note = useNote(problem.id);
@@ -82,7 +85,7 @@ export function RecordForm({
       if (idea !== null && idea !== (note?.idea ?? '')) {
         await saveNote(problem.id, { idea: idea.trim() });
       }
-      toast(`已記錄。下次複習：${formatDay(record.due)}，${relativeDay(record.due, day)}`);
+      toast(t.record.saved(fmt.day(record.due), t.date.relative(diffDays(day, record.due))));
       onSaved(record);
     } finally {
       setSaving(false);
@@ -93,27 +96,21 @@ export function RecordForm({
     <form onSubmit={submit} className="stack" style={{ gap: 16 }}>
       <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
         <legend className="field-label" style={{ marginBottom: 8 }}>
-          這次做得怎麼樣？
+          {t.record.question}
         </legend>
         {initialRating && (
           <p className="field-hint" style={{ marginTop: -4, marginBottom: 8 }}>
-            已依提示的使用情況先幫你選好，不對可以改。
+            {t.record.suggested}
           </p>
         )}
         <div className="rating-grid">
-          {RATINGS.map((r) => {
-            const next = progress !== undefined ? schedule(progress ?? undefined, r.id, day) : null;
+          {RATINGS.map((id) => {
+            const next = progress !== undefined ? schedule(progress ?? undefined, id, day) : null;
             return (
-              <button
-                key={r.id}
-                type="button"
-                className="rating-option"
-                aria-pressed={rating === r.id}
-                onClick={() => setRating(r.id)}
-              >
-                <span className="rating-label">{r.label}</span>
-                <span className="rating-detail">{r.detail}</span>
-                {next && <span className="rating-next">{next.interval} 天後再複習</span>}
+              <button key={id} type="button" className="rating-option" aria-pressed={rating === id} onClick={() => setRating(id)}>
+                <span className="rating-label">{t.ratings[id].label}</span>
+                <span className="rating-detail">{t.ratings[id].detail}</span>
+                {next && <span className="rating-next">{t.common.reviewIn(next.interval)}</span>}
               </button>
             );
           })}
@@ -122,7 +119,7 @@ export function RecordForm({
 
       <div className="form-grid">
         <label className="field">
-          <span className="field-label">花了幾分鐘{initialMinutes ? '' : '（選填）'}</span>
+          <span className="field-label">{initialMinutes ? t.record.minutes : t.record.minutesOptional}</span>
           <input
             className="input"
             type="number"
@@ -135,24 +132,24 @@ export function RecordForm({
         </label>
         {askIdea && (
           <label className="field span-2">
-            <span className="field-label">一句話的核心思路</span>
+            <span className="field-label">{t.record.idea}</span>
             <input
               className="input"
               value={currentIdea}
-              placeholder="例如：用 hash map 記錄看過的值，邊走邊查補數"
+              placeholder={t.record.ideaPlaceholder}
               onChange={(e) => setIdea(e.target.value)}
             />
-            <span className="field-hint">複習時會先藏起來，讓你自己回想。</span>
+            <span className="field-hint">{t.record.ideaHint}</span>
           </label>
         )}
       </div>
 
       <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
         <button type="button" className="btn btn-quiet" onClick={onCancel}>
-          {cancelLabel}
+          {cancelLabel ?? t.common.cancel}
         </button>
         <button type="submit" className="btn btn-primary" disabled={!rating || saving}>
-          儲存紀錄
+          {t.common.saveRecord}
         </button>
       </div>
     </form>

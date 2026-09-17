@@ -11,16 +11,8 @@ export type { Rating };
  * - fail：看完解答仍然不太懂
  */
 
-export const RATINGS: { id: Rating; label: string; detail: string }[] = [
-  { id: 'solo', label: '自己解出', detail: '沒看任何提示' },
-  { id: 'hint', label: '看了提示', detail: '有方向後自己寫完' },
-  { id: 'solution', label: '看了解答', detail: '照著解答理解後寫出' },
-  { id: 'fail', label: '還不懂', detail: '看完解答仍然卡住' },
-];
-
-export function ratingLabel(rating: Rating): string {
-  return RATINGS.find((r) => r.id === rating)?.label ?? rating;
-}
+/** 評分選項的顯示順序；文字在 i18n 字典的 ratings */
+export const RATINGS: Rating[] = ['solo', 'hint', 'solution', 'fail'];
 
 export interface ReviewState {
   /** 連續成功的次數，失敗會歸零 */
@@ -79,12 +71,7 @@ export function schedule(prev: ReviewState | undefined, rating: Rating, day: Day
 
 export type Stage = 'new' | 'learning' | 'reviewing' | 'mastered';
 
-export const STAGE_LABELS: Record<Stage, string> = {
-  new: '還沒做',
-  learning: '學習中',
-  reviewing: '複習中',
-  mastered: '已熟練',
-};
+export const STAGES: Stage[] = ['new', 'learning', 'reviewing', 'mastered'];
 
 export function stageOf(state: Pick<ReviewState, 'interval'> | undefined): Stage {
   if (!state) return 'new';

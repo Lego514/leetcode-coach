@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, diffDays, formatDuration, isDay, relativeDay, startOfWeek } from './dates';
+import { addDays, diffDays, formatDuration, isDay, startOfWeek } from './dates';
 
 describe('dates', () => {
   it('adds days across month ends and leap years', () => {
@@ -16,13 +16,6 @@ describe('dates', () => {
     expect(startOfWeek('2026-09-16')).toBe('2026-09-14'); // Wednesday
     expect(startOfWeek('2026-09-20')).toBe('2026-09-14'); // Sunday
     expect(startOfWeek('2026-09-14')).toBe('2026-09-14');
-  });
-
-  it('describes relative days', () => {
-    expect(relativeDay('2026-09-16', '2026-09-16')).toBe('今天');
-    expect(relativeDay('2026-09-17', '2026-09-16')).toBe('明天');
-    expect(relativeDay('2026-09-20', '2026-09-16')).toBe('4 天後');
-    expect(relativeDay('2026-09-13', '2026-09-16')).toBe('逾期 3 天');
   });
 
   it('validates day strings', () => {

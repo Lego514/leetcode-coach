@@ -12,7 +12,7 @@ import {
   updateSettings,
   ValidationError,
 } from './actions';
-import { clearAllData, exportBackup, parseBackup, restoreBackup } from './backup';
+import { BackupError, clearAllData, exportBackup, parseBackup, restoreBackup } from './backup';
 import { db } from './db';
 import { wipeLocalData } from './sync';
 
@@ -131,7 +131,8 @@ describe('custom problems', () => {
   it('rejects duplicates and built-in ids', async () => {
     await addCustomProblem(input);
     await expect(addCustomProblem(input)).rejects.toBeInstanceOf(ValidationError);
-    await expect(addCustomProblem({ ...input, id: 1 })).rejects.toThrow('內建題庫');
+    await expect(addCustomProblem({ ...input, id: 1 })).rejects.toMatchObject({ code: 'builtin_exists', problemId: 1 });
+    await expect(addCustomProblem({ ...input, id: 3001, slug: 'not a url' })).rejects.toMatchObject({ code: 'invalid_url' });
   });
 
   it('deletes everything that belongs to a custom problem', async () => {
@@ -208,8 +209,17 @@ describe('backup', () => {
   });
 
   it('rejects files that are not backups', () => {
-    expect(() => parseBackup('nope')).toThrow('JSON');
-    expect(() => parseBackup('{"app":"other"}')).toThrow('備份檔');
-    expect(() => parseBackup('{"app":"leetcode-coach","version":1,"data":{}}')).toThrow('缺少');
+    const codeOf = (text: string) => {
+      try {
+        parseBackup(text);
+        return 'ok';
+      } catch (err) {
+        return (err as BackupError).code;
+      }
+    };
+    expect(codeOf('nope')).toBe('not_json');
+    expect(codeOf('{"app":"other"}')).toBe('not_backup');
+    expect(codeOf('{"app":"leetcode-coach","version":2,"data":{}}')).toBe('unsupported_version');
+    expect(codeOf('{"app":"leetcode-coach","version":1,"data":{}}')).toBe('incomplete');
   });
 });

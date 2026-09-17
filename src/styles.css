@@ -309,9 +309,16 @@ kbd,
   font-variant-numeric: tabular-nums;
 }
 
-.nav-foot {
+.nav-bottom {
   margin-top: auto;
   padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.nav-foot {
   font-size: 13px;
   color: var(--ink-3);
   overflow-wrap: anywhere;
@@ -954,6 +961,11 @@ kbd,
 
 .segmented button + button {
   border-left: 1px solid var(--rule-strong);
+}
+
+.segmented-compact button {
+  padding: 2px 10px;
+  font-size: 13px;
 }
 
 .segmented button[aria-pressed='true'] {
