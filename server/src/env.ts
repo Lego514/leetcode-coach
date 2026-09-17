@@ -12,6 +12,10 @@ export interface Env {
   trustProxy: boolean;
   /** 前端建置結果的資料夾；有設定時由這個服務一起提供網頁 */
   staticDir?: string;
+  /** 沒有設定就停用 AI 回饋 */
+  anthropicApiKey?: string;
+  /** 每位使用者每天最多幾次 AI 回饋 */
+  aiDailyLimit: number;
 }
 
 export class EnvError extends Error {}
@@ -36,6 +40,11 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
   const defaultStatic = path.resolve(serverRoot, '..', 'dist');
   const staticDir = source.STATIC_DIR ? path.resolve(source.STATIC_DIR) : production && existsSync(defaultStatic) ? defaultStatic : undefined;
 
+  const aiDailyLimit = Number(source.AI_DAILY_LIMIT ?? 20);
+  if (!Number.isInteger(aiDailyLimit) || aiDailyLimit < 1 || aiDailyLimit > 1000) {
+    throw new EnvError(`AI_DAILY_LIMIT is invalid: ${source.AI_DAILY_LIMIT}`);
+  }
+
   return {
     port,
     databaseUrl,
@@ -43,5 +52,7 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
     production,
     trustProxy: source.TRUST_PROXY ? source.TRUST_PROXY === '1' : production,
     staticDir,
+    anthropicApiKey: source.ANTHROPIC_API_KEY?.trim() || undefined,
+    aiDailyLimit,
   };
 }

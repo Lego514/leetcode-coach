@@ -36,6 +36,13 @@ export const ATTEMPT_MODES = ['practice', 'review', 'mock', 'explain', 'import']
 export type AttemptMode = (typeof ATTEMPT_MODES)[number];
 
 export const MOCK_KINDS = ['full', 'explain'] as const;
+
+/** 講解時要講到的五個重點，自我檢查與 AI 回饋共用 */
+export const EXPLAIN_POINTS = ['insight', 'structure', 'walkthrough', 'complexity', 'edge'] as const;
+export type ExplainPoint = (typeof EXPLAIN_POINTS)[number];
+
+/** 介面語言；AI 回饋的說明文字也用這個語言 */
+export const LOCALE_IDS = ['zh-TW', 'en'] as const;
 export type MockKind = (typeof MOCK_KINDS)[number];
 
 /** 會同步到伺服器的資料集合；複習排程由練習紀錄推算，不需要同步 */

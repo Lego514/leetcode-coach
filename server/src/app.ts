@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { authRoutes } from './auth/routes';
+import { aiRoutes, type AiOptions } from './ai/routes';
 import type { Database } from './db/client';
 import { errorBody, HttpError, requestGuard, type AppDeps, type AppEnv } from './http';
 import { syncRoutes } from './sync/routes';
@@ -15,6 +16,8 @@ export interface AppOptions {
   trustProxy?: boolean;
   /** 前端建置結果；有設定時同一個服務也提供網頁 */
   staticDir?: string;
+  /** 沒有設定時 AI 回饋停用 */
+  ai?: AiOptions;
   now?: () => Date;
   log?: (message: string, error?: unknown) => void;
 }
@@ -57,6 +60,7 @@ export function createApp(options: AppOptions) {
   app.get('/api/health', (c) => c.json({ ok: true }));
   app.route('/api/auth', authRoutes(deps));
   app.route('/api/sync', syncRoutes(deps));
+  app.route('/api/ai', aiRoutes(deps, options.ai));
   app.all('/api/*', (c) => c.json(errorBody('not_found', 'Not found'), 404));
 
   if (options.staticDir) {

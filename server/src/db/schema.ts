@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, index, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, date, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 // 資料表結構以 migrations/*.sql 為準，這裡的定義用來產生型別安全的查詢，兩邊要一起改。
 
@@ -43,6 +43,21 @@ export const records = pgTable(
       .default(sql`nextval('record_version_seq')`),
   },
   (t) => [primaryKey({ columns: [t.userId, t.collection, t.key] }), index('records_user_version_idx').on(t.userId, t.version)],
+);
+
+/** 每位使用者每天（UTC）的 AI 用量 */
+export const aiUsage = pgTable(
+  'ai_usage',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    day: date('day', { mode: 'string' }).notNull(),
+    requests: integer('requests').notNull().default(0),
+    inputTokens: bigint('input_tokens', { mode: 'number' }).notNull().default(0),
+    outputTokens: bigint('output_tokens', { mode: 'number' }).notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
 );
 
 export const schemaMigrations = pgTable('schema_migrations', {

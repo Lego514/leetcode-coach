@@ -22,3 +22,8 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+      # AI 講解回饋；留空就停用
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: AI_DAILY_LIMIT
+        value: "20"

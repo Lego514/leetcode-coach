@@ -1,3 +1,5 @@
+import { EXPLAIN_POINTS } from '../../shared/constants';
+
 export interface Phrase {
   en: string;
   zh: string;
@@ -128,7 +130,7 @@ export const MOCK_MINUTES = { Easy: 15, Medium: 25, Hard: 40 } as const;
 export const EXPLAIN_SECONDS = 120;
 
 /** 講解練習：兩分鐘內要講到的重點（文字在 interview.explainChecks） */
-export const EXPLAIN_CHECKS = ['insight', 'structure', 'walkthrough', 'complexity', 'edge'] as const;
+export const EXPLAIN_CHECKS = EXPLAIN_POINTS;
 export type ExplainCheck = (typeof EXPLAIN_CHECKS)[number];
 
 /** 講解練習的自評（文字在 interview.clarity） */

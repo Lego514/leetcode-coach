@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PublicUser, SyncChange, SyncResponse } from '../../shared/protocol';
+import type { AiOptions } from '../src/ai/routes';
 import { createApp, type App } from '../src/app';
 import { openDatabase, type DatabaseHandle } from '../src/db/client';
 import { migrate } from '../src/db/migrate';
@@ -15,7 +16,7 @@ export interface TestServer {
   close: () => Promise<void>;
 }
 
-export async function startTestServer(): Promise<TestServer> {
+export async function startTestServer(options: { ai?: AiOptions } = {}): Promise<TestServer> {
   const database = await openDatabase('pglite:memory');
   await migrate(database.db, MIGRATIONS_DIR);
   const clock = { now: new Date('2026-09-16T12:00:00Z') };
@@ -25,6 +26,7 @@ export async function startTestServer(): Promise<TestServer> {
     secureCookies: false,
     now: () => clock.now,
     log: () => {},
+    ai: options.ai,
   });
   return { app, database, clock, close: () => database.close() };
 }
