@@ -189,6 +189,15 @@ export const credentialsSchema = z.object({
 });
 export type Credentials = z.infer<typeof credentialsSchema>;
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(10).max(200),
+  password: z.string().min(PASSWORD_MIN_LENGTH).max(200),
+});
+
 export const deleteAccountSchema = z.object({
   password: z.string().min(1).max(200),
 });
@@ -212,6 +221,8 @@ export type ApiErrorCode =
   | 'ai_unavailable'
   | 'ai_quota_exceeded'
   | 'ai_failed'
+  | 'mail_unavailable'
+  | 'invalid_token'
   | 'server_error';
 
 export interface ApiErrorBody {

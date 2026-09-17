@@ -19,7 +19,7 @@ describe('migrations', () => {
   it('applies each migration once', async () => {
     const database = await openDatabase('pglite:memory');
     try {
-      expect(await migrate(database.db, MIGRATIONS_DIR)).toEqual(['0001_init.sql', '0002_ai_usage.sql']);
+      expect(await migrate(database.db, MIGRATIONS_DIR)).toEqual(['0001_init.sql', '0002_ai_usage.sql', '0003_password_resets.sql']);
       expect(await migrate(database.db, MIGRATIONS_DIR)).toEqual([]);
     } finally {
       await database.close();

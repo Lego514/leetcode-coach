@@ -12,6 +12,7 @@ export interface AppDeps {
   secureCookies: boolean;
   trustProxy: boolean;
   now: () => Date;
+  log?: (message: string, error?: unknown) => void;
 }
 
 export type AppEnv = {

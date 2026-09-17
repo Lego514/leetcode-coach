@@ -3,7 +3,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
-import { authRoutes } from './auth/routes';
+import { authRoutes, type MailOptions } from './auth/routes';
 import { aiRoutes, type AiOptions } from './ai/routes';
 import type { Database } from './db/client';
 import { errorBody, HttpError, requestGuard, type AppDeps, type AppEnv } from './http';
@@ -18,6 +18,8 @@ export interface AppOptions {
   staticDir?: string;
   /** 沒有設定時 AI 回饋停用 */
   ai?: AiOptions;
+  /** 沒有設定時忘記密碼停用 */
+  mail?: MailOptions;
   now?: () => Date;
   log?: (message: string, error?: unknown) => void;
 }
@@ -29,6 +31,7 @@ export function createApp(options: AppOptions) {
     secureCookies: options.secureCookies,
     trustProxy: options.trustProxy ?? false,
     now: options.now ?? (() => new Date()),
+    log: (message, error) => log(message, error),
   };
   const log = options.log ?? ((message, error) => console.error(message, error));
 
@@ -58,7 +61,7 @@ export function createApp(options: AppOptions) {
   app.use('/api/*', requestGuard(deps.allowedOrigins));
 
   app.get('/api/health', (c) => c.json({ ok: true }));
-  app.route('/api/auth', authRoutes(deps));
+  app.route('/api/auth', authRoutes(deps, options.mail));
   app.route('/api/sync', syncRoutes(deps));
   app.route('/api/ai', aiRoutes(deps, options.ai));
   app.all('/api/*', (c) => c.json(errorBody('not_found', 'Not found'), 404));

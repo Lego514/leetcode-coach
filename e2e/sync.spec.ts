@@ -8,7 +8,15 @@ async function signIn(page: Page, email: string, mode: 'Register' | 'Sign in') {
   const account = page.getByRole('region', { name: 'Account & sync' });
   await account.getByRole('group', { name: 'Sign in or register' }).getByRole('button', { name: mode }).click();
   await account.getByLabel('Email', { exact: true }).fill(email);
-  await account.getByLabel('Password').fill(password);
+  const field = account.getByLabel('Password');
+  await field.fill(password);
+  // 打錯字看得出來，不用等到登入失敗
+  await expect(field).toHaveAttribute('type', 'password');
+  await account.getByRole('button', { name: 'Show' }).click();
+  await expect(field).toHaveAttribute('type', 'text');
+  await expect(field).toHaveValue(password);
+  await account.getByRole('button', { name: 'Hide' }).click();
+  await expect(field).toHaveAttribute('type', 'password');
   await account.getByRole('button', { name: mode === 'Register' ? 'Create account' : 'Sign in' }).last().click();
   await expect(account.getByText(email)).toBeVisible();
   return account;

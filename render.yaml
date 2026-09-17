@@ -27,3 +27,8 @@ services:
         sync: false
       - key: AI_DAILY_LIMIT
         value: "20"
+      # 忘記密碼的重設信；留空就停用
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false

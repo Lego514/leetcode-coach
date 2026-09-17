@@ -200,6 +200,20 @@ export async function signIn(mode: 'login' | 'register', email: string, password
   await enter(user);
 }
 
+/** 寄出重設密碼的信；伺服器一律回成功，不透露 email 是否註冊過 */
+export async function requestPasswordReset(email: string): Promise<void> {
+  await apiRequest(fetchImpl, '/api/auth/forgot-password', { method: 'POST', body: { email } });
+}
+
+/** 用信裡的連結設定新密碼，成功後直接登入 */
+export async function resetPassword(token: string, password: string): Promise<void> {
+  const { user } = await apiRequest<{ user: PublicUser }>(fetchImpl, '/api/auth/reset-password', {
+    method: 'POST',
+    body: { token, password },
+  });
+  await enter(user);
+}
+
 /** 登出；keepData 為 false 時清除這個瀏覽器裡的資料 */
 export async function signOut({ keepData }: { keepData: boolean }): Promise<void> {
   if (signedIn()) await syncNow();

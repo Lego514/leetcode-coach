@@ -18,6 +18,10 @@ const router = createHashRouter([
       { path: 'review', element: <ReviewPage /> },
       { path: 'more', element: <MorePage /> },
       {
+        path: 'reset',
+        lazy: async () => ({ Component: (await import('./pages/ResetPasswordPage')).ResetPasswordPage }),
+      },
+      {
         path: 'problems/:id',
         lazy: async () => ({ Component: (await import('./pages/ProblemDetailPage')).ProblemDetailPage }),
       },

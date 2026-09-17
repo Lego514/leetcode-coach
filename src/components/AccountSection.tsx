@@ -4,7 +4,16 @@ import { PASSWORD_MIN_LENGTH } from '../../shared/constants';
 import { useI18n, type Messages } from '../i18n';
 import type { Formatters } from '../i18n/format';
 import { errorCode } from '../store/api';
-import { deleteAccount, retryConnection, signIn, signOut, syncNow, useCloud, type CloudState } from '../store/cloud';
+import {
+  deleteAccount,
+  requestPasswordReset,
+  retryConnection,
+  signIn,
+  signOut,
+  syncNow,
+  useCloud,
+  type CloudState,
+} from '../store/cloud';
 import { db } from '../store/db';
 import { useToast } from './toast';
 import { Dialog, Sheet } from './ui';
@@ -67,6 +76,39 @@ function Unavailable() {
   );
 }
 
+interface PasswordInputProps {
+  id: string;
+  autoComplete: string;
+  minLength?: number;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+/** 密碼欄位加上顯示／隱藏切換，沒有「忘記密碼」之前，打錯字要看得出來 */
+function PasswordInput({ id, autoComplete, minLength, value, onChange }: PasswordInputProps) {
+  const { t } = useI18n();
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="password-field">
+      <input
+        id={id}
+        className="input"
+        type={visible ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        required
+        minLength={minLength}
+        maxLength={200}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <button type="button" className="password-toggle" aria-pressed={visible} onClick={() => setVisible((v) => !v)}>
+        {visible ? t.account.hidePassword : t.account.showPassword}
+      </button>
+    </div>
+  );
+}
+
 function SignInForm({ expiredEmail }: { expiredEmail?: string }) {
   const { t } = useI18n();
   const toast = useToast();
@@ -75,6 +117,7 @@ function SignInForm({ expiredEmail }: { expiredEmail?: string }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
   const localAttempts = useLiveQuery(() => db.attempts.count(), []) ?? 0;
   const owner = useLiveQuery(async () => (await db.syncState.get('state'))?.email, []);
 
@@ -121,20 +164,19 @@ function SignInForm({ expiredEmail }: { expiredEmail?: string }) {
             <span className="field-label">{t.account.email}</span>
             <input className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </label>
-          <label className="field">
-            <span className="field-label">{t.account.password}</span>
-            <input
-              className="input"
-              type="password"
+          <div className="field">
+            <label className="field-label" htmlFor="account-password">
+              {t.account.password}
+            </label>
+            <PasswordInput
+              id="account-password"
               autoComplete={isRegister ? 'new-password' : 'current-password'}
-              required
               minLength={isRegister ? PASSWORD_MIN_LENGTH : undefined}
-              maxLength={200}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
             />
             {isRegister && <span className="field-hint">{t.account.passwordHint(PASSWORD_MIN_LENGTH)}</span>}
-          </label>
+          </div>
         </div>
         {localAttempts > 0 && (
           <p className="field-hint">
@@ -145,9 +187,87 @@ function SignInForm({ expiredEmail }: { expiredEmail?: string }) {
           <button type="submit" className="btn btn-primary" disabled={busy}>
             {isRegister ? t.account.createAccount : t.account.signIn}
           </button>
+          {!isRegister && (
+            <button type="button" className="btn btn-quiet" onClick={() => setForgot(true)}>
+              {t.account.forgot}
+            </button>
+          )}
         </div>
       </form>
+      <ForgotPasswordDialog key={forgot ? email : 'closed'} open={forgot} email={email} onClose={() => setForgot(false)} />
     </>
+  );
+}
+
+function ForgotPasswordDialog({ open, email, onClose }: { open: boolean; email: string; onClose: () => void }) {
+  const { t } = useI18n();
+  const [value, setValue] = useState(email);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      await requestPasswordReset(value.trim());
+      setSent(true);
+    } catch (err) {
+      setError(t.errors.api[errorCode(err)]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={t.account.forgotTitle}
+      subtitle={sent ? undefined : t.account.forgotIntro}
+      footer={
+        sent ? (
+          <button className="btn btn-primary" onClick={onClose}>
+            {t.common.close}
+          </button>
+        ) : undefined
+      }
+    >
+      {sent ? (
+        <p>{t.account.forgotSent(value.trim())}</p>
+      ) : (
+        <form className="stack" style={{ gap: 14 }} onSubmit={submit}>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="field">
+            <label className="field-label" htmlFor="forgot-email">
+              {t.account.email}
+            </label>
+            <input
+              id="forgot-email"
+              className="input"
+              type="email"
+              autoComplete="email"
+              required
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+            />
+          </div>
+          <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-quiet" onClick={onClose}>
+              {t.common.cancel}
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={busy}>
+              {t.account.forgotSend}
+            </button>
+          </div>
+        </form>
+      )}
+    </Dialog>
   );
 }
 
@@ -242,17 +362,12 @@ function SignedIn({ email, cloud }: { email: string; cloud: CloudState }) {
               {error}
             </p>
           )}
-          <label className="field">
-            <span className="field-label">{t.account.confirmPassword}</span>
-            <input
-              className="input"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
+          <div className="field">
+            <label className="field-label" htmlFor="delete-password">
+              {t.account.confirmPassword}
+            </label>
+            <PasswordInput id="delete-password" autoComplete="current-password" value={password} onChange={setPassword} />
+          </div>
           <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-quiet" onClick={() => setDialog(null)}>
               {t.common.cancel}

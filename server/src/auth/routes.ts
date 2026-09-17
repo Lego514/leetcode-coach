@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { credentialsSchema, deleteAccountSchema } from '../../../shared/protocol';
+import { credentialsSchema, deleteAccountSchema, forgotPasswordSchema, resetPasswordSchema } from '../../../shared/protocol';
 import { users } from '../db/schema';
 import {
   clearSessionCookie,
@@ -13,7 +13,9 @@ import {
   type AppDeps,
   type AppEnv,
 } from '../http';
+import { resetPasswordMail, type Mailer } from '../mail/brevo';
 import { hashPassword, verifyAgainstDummy, verifyPassword } from './password';
+import { consumeReset, createReset, deleteStaleResets, RESET_TTL_MS } from './reset';
 import { RateLimiter } from './rate-limit';
 import { createSession, deleteExpiredSessions, deleteSession, findSession, toPublicUser } from './sessions';
 
@@ -33,13 +35,22 @@ function limitOrThrow(limiter: RateLimiter, key: string): void {
   }
 }
 
-export function authRoutes(deps: AppDeps) {
+export interface MailOptions {
+  send: Mailer;
+  /** 信件裡連結用的網址 */
+  appUrl: string;
+}
+
+export function authRoutes(deps: AppDeps, mail?: MailOptions) {
   const { db } = deps;
   const now = () => deps.now().getTime();
   // 同一個 IP 每小時最多註冊 10 次；同一組 IP 與帳號 15 分鐘內最多試 10 次密碼
   const registerLimiter = new RateLimiter(10, 60 * MINUTE, now);
   const loginLimiter = new RateLimiter(10, 15 * MINUTE, now);
   const loginIpLimiter = new RateLimiter(50, 15 * MINUTE, now);
+  // 重設密碼的信：同一個 IP 每小時 5 封，同一個 email 每小時 3 封
+  const resetIpLimiter = new RateLimiter(5, 60 * MINUTE, now);
+  const resetEmailLimiter = new RateLimiter(3, 60 * MINUTE, now);
 
   return new Hono<AppEnv>()
     .post('/register', async (c) => {
@@ -73,6 +84,40 @@ export function authRoutes(deps: AppDeps) {
       loginLimiter.reset(key);
       await deleteExpiredSessions(db, deps.now());
       const session = await createSession(db, row.id, deps.now());
+      setSessionCookie(c, deps, session.token, session.expiresAt);
+      return c.json({ user: toPublicUser(row) });
+    })
+
+    // 不透露這個 email 有沒有註冊過，一律回 204
+    .post('/forgot-password', async (c) => {
+      if (!mail) throw new HttpError(503, 'mail_unavailable', 'Password reset email is not configured on this server');
+      limitOrThrow(resetIpLimiter, clientIp(c, deps.trustProxy));
+      const { email } = await readJson(c, forgotPasswordSchema);
+      limitOrThrow(resetEmailLimiter, email);
+
+      const [row] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+      if (row) {
+        await deleteStaleResets(db, deps.now());
+        const { token } = await createReset(db, row.id, deps.now());
+        try {
+          await mail.send(resetPasswordMail(email, { appUrl: mail.appUrl, token, minutes: RESET_TTL_MS / MINUTE }));
+        } catch (err) {
+          deps.log?.('Could not send the password reset email', err);
+          throw new HttpError(502, 'mail_unavailable', 'Could not send the email, try again later');
+        }
+      }
+      return c.body(null, 204);
+    })
+
+    // 重設成功後直接登入，並登出這個帳號在其他裝置上的登入
+    .post('/reset-password', async (c) => {
+      limitOrThrow(loginIpLimiter, clientIp(c, deps.trustProxy));
+      const { token, password } = await readJson(c, resetPasswordSchema);
+      const userId = await consumeReset(db, token, password, deps.now());
+      if (!userId) throw new HttpError(400, 'invalid_token', 'This reset link is no longer valid');
+
+      const [row] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const session = await createSession(db, userId, deps.now());
       setSessionCookie(c, deps, session.token, session.expiresAt);
       return c.json({ user: toPublicUser(row) });
     })
