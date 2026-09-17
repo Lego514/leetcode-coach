@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ProblemRow } from '../components/ProblemRow';
+import { QuickRecordDialog } from '../components/QuickRecordDialog';
 import { RecordDialog } from '../components/RecordDialog';
 import { PageHead, Sheet } from '../components/ui';
 import type { Problem } from '../data/problems';
@@ -8,7 +9,7 @@ import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { nextNewProblems, problemsInList } from '../lib/catalog';
 import { startOfWeek, type Day } from '../lib/dates';
-import { dueProblems, finishDay, planToTarget, practiceStreak } from '../lib/stats';
+import { dueProblems, finishDay, newProblemsStartedOn, planToTarget, practiceAttempts, practiceStreak } from '../lib/stats';
 import type { AttemptMode } from '../store/db';
 import { useAttempts, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 
@@ -22,21 +23,29 @@ export function TodayPage() {
   const { progress, loaded } = useProgressMap();
   const attempts = useAttempts();
   const [recording, setRecording] = useState<{ problem: Problem; mode: AttemptMode } | null>(null);
+  const [quickRecord, setQuickRecord] = useState(false);
+  // 「再來一題」多加的題數，只算當天
+  const [extra, setExtra] = useState({ day, count: 0 });
+  const extraToday = extra.day === day ? extra.count : 0;
 
   const listName = t.lists.labels[settings.activeList];
   const listProblems = useMemo(() => problemsInList(catalog, settings.activeList), [catalog, settings.activeList]);
   const due = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
 
-  let startedToday = 0;
-  for (const p of progress.values()) if (p.firstDay === day) startedToday += 1;
-  const newRemaining = Math.max(0, settings.dailyNew - startedToday);
+  // 不管是從今天頁、題庫還是「記錄其他題目」開始的新題，都算進每天的目標
+  const startedToday = newProblemsStartedOn(attempts ?? [], day);
+  const newRemaining = Math.max(0, settings.dailyNew + extraToday - startedToday);
   const newProblems = nextNewProblems(listProblems, (id) => progress.has(id), newRemaining);
   const untouched = listProblems.filter((p) => !progress.has(p.id)).length;
+  const beyondGoal = Math.max(0, startedToday - settings.dailyNew);
 
-  const todayAttempts = (attempts ?? []).filter((a) => a.day === day);
-  const streak = practiceStreak((attempts ?? []).map((a) => a.day), day);
+  const practiced = practiceAttempts(attempts ?? []);
+  const todayAttempts = practiced.filter((a) => a.day === day);
+  const streak = practiceStreak(practiced.map((a) => a.day), day);
   const weekStart = startOfWeek(day);
-  const thisWeek = (attempts ?? []).filter((a) => a.day >= weekStart).length;
+  const thisWeek = practiced.filter((a) => a.day >= weekStart).length;
+
+  const oneMore = () => setExtra({ day, count: extraToday + 1 });
   const firstRun = loaded && progress.size === 0;
 
   const rowActions = (p: Problem, mode: AttemptMode) => (
@@ -101,7 +110,20 @@ export function TodayPage() {
           title={t.today.newTitle}
           count={newProblems.length}
           id="new"
-          note={startedToday > 0 ? t.today.startedToday(startedToday) : t.today.roadmapOrder(listName)}
+          note={
+            beyondGoal > 0
+              ? t.today.extraNote(beyondGoal)
+              : startedToday > 0
+                ? t.today.startedToday(startedToday)
+                : t.today.roadmapOrder(listName)
+          }
+          actions={
+            newProblems.length > 0 && untouched > newProblems.length ? (
+              <button className="btn btn-small btn-quiet" onClick={oneMore}>
+                {t.today.oneMore}
+              </button>
+            ) : undefined
+          }
         >
           {newProblems.length > 0 ? (
             <ul className="rows">
@@ -115,6 +137,11 @@ export function TodayPage() {
             <div className="sheet-empty">
               <p>{untouched === 0 ? t.today.listFinished(listName) : t.today.newDone}</p>
               <div className="btn-row" style={{ marginTop: 12 }}>
+                {untouched > 0 && (
+                  <button className="btn btn-primary" onClick={oneMore}>
+                    {t.today.oneMore}
+                  </button>
+                )}
                 <Link className="btn" to="/problems">
                   {t.today.openProblems}
                 </Link>
@@ -123,7 +150,16 @@ export function TodayPage() {
           )}
         </Sheet>
 
-        <Sheet title={t.today.doneTitle} count={todayAttempts.length} id="done">
+        <Sheet
+          title={t.today.doneTitle}
+          count={todayAttempts.length}
+          id="done"
+          actions={
+            <button className="btn btn-small" onClick={() => setQuickRecord(true)}>
+              {t.today.recordOther}
+            </button>
+          }
+        >
           {todayAttempts.length === 0 ? (
             <p className="sheet-empty">{t.today.doneEmpty}</p>
           ) : (
@@ -147,6 +183,7 @@ export function TodayPage() {
       </div>
 
       <RecordDialog problem={recording?.problem ?? null} mode={recording?.mode} onClose={() => setRecording(null)} />
+      <QuickRecordDialog open={quickRecord} onClose={() => setQuickRecord(false)} />
     </div>
   );
 }

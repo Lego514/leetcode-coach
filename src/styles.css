@@ -1839,3 +1839,41 @@ audio {
 .transcript-interim {
   color: var(--ink-3);
 }
+
+/* 題庫的批次標記 */
+.batch-check {
+  width: 20px;
+  height: 20px;
+  margin: 0 4px;
+  accent-color: var(--pen);
+}
+
+.batch-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+}
+
+.batch-count {
+  font-weight: 600;
+}
+
+.batch-actions {
+  margin-left: auto;
+}
+
+@media (max-width: 899px) {
+  .batch-bar {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}

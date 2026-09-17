@@ -9,7 +9,14 @@ import { bold, rich } from '../i18n/rich';
 import { LIST_FILTERS, problemsInList, type ListFilter } from '../lib/catalog';
 import { addDays, startOfWeek } from '../lib/dates';
 import { stageOf } from '../lib/srs';
-import { countByDay, practiceStreak, summarizeDifficulty, summarizePatterns, weeklyCounts } from '../lib/stats';
+import {
+  countByDay,
+  practiceAttempts,
+  practiceStreak,
+  summarizeDifficulty,
+  summarizePatterns,
+  weeklyCounts,
+} from '../lib/stats';
 import { useAttempts, useCatalog, useMocks, useProgressMap, useSettings, useToday } from '../store/queries';
 
 const CALENDAR_WEEKS = 18;
@@ -28,7 +35,8 @@ export function ProgressPage() {
   const problems = useMemo(() => problemsInList(catalog, list), [catalog, list]);
   const patterns = useMemo(() => summarizePatterns(problems, progress), [problems, progress]);
   const difficulty = useMemo(() => summarizeDifficulty(problems, progress), [problems, progress]);
-  const allAttempts = useMemo(() => attempts ?? [], [attempts]);
+  // 批次標記的舊題不算練習次數
+  const allAttempts = useMemo(() => practiceAttempts(attempts ?? []), [attempts]);
   const weeks = useMemo(() => weeklyCounts(allAttempts, day, 12), [allAttempts, day]);
   const byDay = useMemo(() => countByDay(allAttempts), [allAttempts]);
 

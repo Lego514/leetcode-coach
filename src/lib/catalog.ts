@@ -71,3 +71,42 @@ export function nextNewProblems(problems: Problem[], started: (id: number) => bo
   }
   return result;
 }
+
+/** 從 LeetCode 網址或 slug 取出 slug */
+export function parseSlug(input: string): string {
+  const trimmed = input.trim();
+  const fromUrl = trimmed.match(/leetcode\.(?:com|cn)\/problems\/([a-z0-9-]+)/i);
+  const slug = (fromUrl ? fromUrl[1] : trimmed).toLowerCase();
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : '';
+}
+
+export type ProblemLookup =
+  | { kind: 'empty' }
+  | { kind: 'found'; problem: Problem }
+  /** 看得出是哪一題，但題庫裡還沒有，可以帶著這些資訊去新增 */
+  | { kind: 'missing'; id?: number; url?: string }
+  | { kind: 'unknown' };
+
+/** 依題號、LeetCode 網址或完整題名找題目 */
+export function lookupProblem(catalog: Catalog, input: string): ProblemLookup {
+  const query = input.trim();
+  if (!query) return { kind: 'empty' };
+
+  const numbered = query.match(/^#?(\d+)(?:\.\s*.*)?$/);
+  if (numbered) {
+    const id = Number(numbered[1]);
+    const problem = catalog.byId.get(id);
+    return problem ? { kind: 'found', problem } : { kind: 'missing', id };
+  }
+
+  if (/leetcode\.(?:com|cn)\/problems\//i.test(query)) {
+    const slug = parseSlug(query);
+    const problem = catalog.problems.find((p) => p.slug === slug);
+    if (problem) return { kind: 'found', problem };
+    return slug ? { kind: 'missing', url: `https://leetcode.com/problems/${slug}/` } : { kind: 'unknown' };
+  }
+
+  const lower = query.toLowerCase();
+  const problem = catalog.problems.find((p) => p.title.toLowerCase() === lower || p.slug === lower);
+  return problem ? { kind: 'found', problem } : { kind: 'unknown' };
+}

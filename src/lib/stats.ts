@@ -5,6 +5,30 @@ import { masteryOf, stageOf, type ReviewState } from './srs';
 
 type StateMap = ReadonlyMap<number, Pick<ReviewState, 'interval' | 'due'>>;
 
+interface AttemptLike {
+  problemId: number;
+  day: Day;
+  at: string;
+  mode: string;
+}
+
+/** 真正練習的紀錄；批次標記的舊題不算在連續天數、每週次數和日曆裡 */
+export function practiceAttempts<T extends { mode: string }>(attempts: readonly T[]): T[] {
+  return attempts.filter((a) => a.mode !== 'import');
+}
+
+/** 某天第一次練習的題目數；批次標記的題目不佔每天的新題額度 */
+export function newProblemsStartedOn(attempts: readonly AttemptLike[], day: Day): number {
+  const first = new Map<number, AttemptLike>();
+  for (const a of attempts) {
+    const prev = first.get(a.problemId);
+    if (!prev || a.at < prev.at) first.set(a.problemId, a);
+  }
+  let count = 0;
+  for (const a of first.values()) if (a.day === day && a.mode !== 'import') count += 1;
+  return count;
+}
+
 /** 連續練習天數；今天還沒練習時從昨天往回算，不會因為早上打開就歸零 */
 export function practiceStreak(days: Iterable<Day>, today: Day): number {
   const set = new Set(days);

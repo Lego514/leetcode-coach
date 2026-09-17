@@ -3,7 +3,7 @@ import { LIST_IDS, PATTERN_IDS } from '../../shared/constants';
 import { STUDY_LISTS } from '../data/lists';
 import { PATTERN_ORDER } from '../data/patterns';
 import { BUILTIN_PROBLEMS } from '../data/problems';
-import { buildCatalog, nextNewProblems, problemsInList } from './catalog';
+import { buildCatalog, lookupProblem, nextNewProblems, problemsInList } from './catalog';
 
 describe('built-in data', () => {
   it('has unique ids and slugs', () => {
@@ -69,5 +69,40 @@ describe('catalog', () => {
     const next = nextNewProblems(list, (id) => started.has(id), 2);
     expect(next.map((p) => p.id)).toEqual([list[1].id, list[3].id]);
     expect(nextNewProblems(list, () => false, 0)).toEqual([]);
+  });
+});
+
+describe('lookupProblem', () => {
+  const custom = {
+    id: 3000,
+    slug: 'my-problem',
+    title: 'My Problem',
+    difficulty: 'Easy' as const,
+    pattern: 'arrays' as const,
+    premium: false,
+    custom: true,
+  };
+  const catalog = buildCatalog([custom]);
+
+  it('finds problems by number, "number. title", URL, title, or slug', () => {
+    expect(lookupProblem(catalog, '1')).toMatchObject({ kind: 'found', problem: { title: 'Two Sum' } });
+    expect(lookupProblem(catalog, '#15')).toMatchObject({ kind: 'found', problem: { title: '3Sum' } });
+    expect(lookupProblem(catalog, '1. Two Sum')).toMatchObject({ kind: 'found', problem: { id: 1 } });
+    expect(lookupProblem(catalog, 'https://leetcode.com/problems/two-sum/description/')).toMatchObject({
+      kind: 'found',
+      problem: { id: 1 },
+    });
+    expect(lookupProblem(catalog, '  two sum ')).toMatchObject({ kind: 'found', problem: { id: 1 } });
+    expect(lookupProblem(catalog, 'my-problem')).toMatchObject({ kind: 'found', problem: { id: 3000 } });
+  });
+
+  it('keeps what it can for problems that are not in the catalog', () => {
+    expect(lookupProblem(catalog, '2999')).toEqual({ kind: 'missing', id: 2999 });
+    expect(lookupProblem(catalog, 'https://leetcode.cn/problems/Some-New-Problem/')).toEqual({
+      kind: 'missing',
+      url: 'https://leetcode.com/problems/some-new-problem/',
+    });
+    expect(lookupProblem(catalog, 'something else')).toEqual({ kind: 'unknown' });
+    expect(lookupProblem(catalog, '  ')).toEqual({ kind: 'empty' });
   });
 });

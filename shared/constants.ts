@@ -31,7 +31,8 @@ export type Difficulty = (typeof DIFFICULTIES)[number];
 export const RATING_IDS = ['solo', 'hint', 'solution', 'fail'] as const;
 export type Rating = (typeof RATING_IDS)[number];
 
-export const ATTEMPT_MODES = ['practice', 'review', 'mock', 'explain'] as const;
+/** import：開始使用前就刷過的題目，批次標記進複習排程，不算在練習次數裡 */
+export const ATTEMPT_MODES = ['practice', 'review', 'mock', 'explain', 'import'] as const;
 export type AttemptMode = (typeof ATTEMPT_MODES)[number];
 
 export const MOCK_KINDS = ['full', 'explain'] as const;
