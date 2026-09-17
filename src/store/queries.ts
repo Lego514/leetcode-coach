@@ -27,7 +27,7 @@ export function useSettings(): SettingsRecord {
 
 export function useCatalog(): Catalog {
   const custom = useLiveQuery(() => db.customProblems.toArray(), []);
-  return useMemo(() => buildCatalog(custom ?? []), [custom]);
+  return useMemo(() => buildCatalog(custom ?? [], custom !== undefined), [custom]);
 }
 
 export function useProgressMap(): { progress: ReadonlyMap<number, ProgressRecord>; loaded: boolean } {
@@ -79,6 +79,10 @@ export function useCompanies(): string[] {
 
 export function usePatternNote(patternId: PatternId): PatternNoteRecord | null | undefined {
   return useLiveQuery(async () => (await db.patternNotes.get(patternId)) ?? null, [patternId]);
+}
+
+export function usePendingChanges(): number {
+  return useLiveQuery(() => db.outbox.count(), []) ?? 0;
 }
 
 export function useMocks(): MockRecord[] | undefined {

@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ProblemRow } from '../components/ProblemRow';
 import { RecordDialog } from '../components/RecordDialog';
 import { useToast } from '../components/toast';
@@ -85,7 +85,7 @@ export function ProblemsPage() {
     <div className="page">
       <PageHead
         title="題庫"
-        lede={`${LIST_FILTER_LABELS[list]} 共 ${listTotal.length} 題，做過 ${listStarted} 題。題目本身請到 LeetCode 作答，做完回來記錄。`}
+        lede={`${LIST_FILTER_LABELS[list]} 共 ${listTotal.length} 題，做過 ${listStarted} 題。按「開始」會計時並提供提示，題目本身在 LeetCode 作答。`}
       />
 
       <div className="filters" role="search">
@@ -201,9 +201,14 @@ export function ProblemsPage() {
                         marked={!!state && state.due <= day}
                         companies={metaMap.get(p.id)?.companies}
                         actions={
-                          <button className="btn btn-small" onClick={() => setRecording(p)}>
-                            記錄
-                          </button>
+                          <>
+                            <Link className="btn btn-small" to={`/practice/${p.id}`}>
+                              開始
+                            </Link>
+                            <button className="btn btn-small btn-quiet" onClick={() => setRecording(p)}>
+                              記錄
+                            </button>
+                          </>
                         }
                       />
                     </li>

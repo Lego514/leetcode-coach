@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LIST_IDS, PATTERN_IDS } from '../../shared/constants';
 import { STUDY_LISTS } from '../data/lists';
 import { PATTERN_ORDER } from '../data/patterns';
 import { BUILTIN_PROBLEMS } from '../data/problems';
@@ -14,6 +15,7 @@ describe('built-in data', () => {
     const ids = new Set(BUILTIN_PROBLEMS.map((p) => p.id));
     const sizes = Object.fromEntries(STUDY_LISTS.map((l) => [l.id, l.problemIds.length]));
     expect(sizes).toEqual({ neetcode150: 150, blind75: 75, grind169: 169 });
+    expect(STUDY_LISTS.map((l) => l.id)).toEqual([...LIST_IDS]);
     for (const list of STUDY_LISTS) {
       expect(new Set(list.problemIds).size).toBe(list.problemIds.length);
       expect(list.problemIds.filter((id) => !ids.has(id))).toEqual([]);
@@ -23,6 +25,10 @@ describe('built-in data', () => {
   it('puts every built-in problem in at least one list', () => {
     const listed = new Set(STUDY_LISTS.flatMap((l) => l.problemIds));
     expect(BUILTIN_PROBLEMS.filter((p) => !listed.has(p.id)).map((p) => p.id)).toEqual([]);
+  });
+
+  it('keeps pattern cards in the shared id order', () => {
+    expect(PATTERN_ORDER).toEqual([...PATTERN_IDS]);
   });
 
   it('uses only known patterns', () => {

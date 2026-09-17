@@ -16,5 +16,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run typecheck
+      # 前端單元測試，以及後端與端對端同步測試（PGlite，不需要另外準備資料庫）
       - run: npm test
-      - run: npm run build
+      - run: npm run build:all

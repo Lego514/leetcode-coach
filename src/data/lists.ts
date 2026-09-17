@@ -1,4 +1,6 @@
-export type ListId = 'neetcode150' | 'blind75' | 'grind169';
+import type { ListId } from '../../shared/constants';
+
+export type { ListId };
 
 export interface StudyList {
   id: ListId;

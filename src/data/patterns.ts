@@ -1,22 +1,6 @@
-export type PatternId =
-  | 'arrays'
-  | 'two-pointers'
-  | 'sliding-window'
-  | 'stack'
-  | 'binary-search'
-  | 'linked-list'
-  | 'trees'
-  | 'tries'
-  | 'heap'
-  | 'backtracking'
-  | 'graphs'
-  | 'adv-graphs'
-  | 'dp-1d'
-  | 'dp-2d'
-  | 'greedy'
-  | 'intervals'
-  | 'math'
-  | 'bits';
+import type { PatternId } from '../../shared/constants';
+
+export type { PatternId };
 
 export interface Pattern {
   id: PatternId;

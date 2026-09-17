@@ -3,7 +3,7 @@ import type { Problem } from '../data/problems';
 import { formatDay, relativeDay } from '../lib/dates';
 import { RATINGS, schedule, type Rating } from '../lib/srs';
 import { recordAttempt, saveNote } from '../store/actions';
-import type { AttemptMode } from '../store/db';
+import type { AttemptMode, ProgressRecord } from '../store/db';
 import { useNote, useProgress, useToday } from '../store/queries';
 import { useToast } from './toast';
 import { Dialog } from './ui';
@@ -24,7 +24,9 @@ export function RecordDialog({ problem, mode = 'practice', askIdea = true, onClo
       title="記錄這次練習"
       subtitle={problem ? `${problem.id}. ${problem.title}` : undefined}
     >
-      {problem && <RecordForm key={problem.id} problem={problem} mode={mode} askIdea={askIdea} onDone={onClose} />}
+      {problem && (
+        <RecordForm key={problem.id} problem={problem} mode={mode} askIdea={askIdea} onSaved={onClose} onCancel={onClose} />
+      )}
     </Dialog>
   );
 }
@@ -33,16 +35,34 @@ interface RecordFormProps {
   problem: Problem;
   mode: AttemptMode;
   askIdea: boolean;
-  onDone: () => void;
+  /** 計時練習會依提示使用情況預先選好 */
+  initialRating?: Rating;
+  initialMinutes?: number;
+  hints?: number;
+  sawSolution?: boolean;
+  cancelLabel?: string;
+  onCancel: () => void;
+  onSaved: (record: ProgressRecord) => void;
 }
 
-function RecordForm({ problem, mode, askIdea, onDone }: RecordFormProps) {
+export function RecordForm({
+  problem,
+  mode,
+  askIdea,
+  initialRating,
+  initialMinutes,
+  hints,
+  sawSolution,
+  cancelLabel = '取消',
+  onCancel,
+  onSaved,
+}: RecordFormProps) {
   const day = useToday();
   const progress = useProgress(problem.id);
   const note = useNote(problem.id);
   const toast = useToast();
-  const [rating, setRating] = useState<Rating | null>(null);
-  const [minutes, setMinutes] = useState('');
+  const [rating, setRating] = useState<Rating | null>(initialRating ?? null);
+  const [minutes, setMinutes] = useState(initialMinutes ? String(initialMinutes) : '');
   const [idea, setIdea] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -56,12 +76,14 @@ function RecordForm({ problem, mode, askIdea, onDone }: RecordFormProps) {
       const record = await recordAttempt(problem.id, rating, {
         mode,
         minutes: Number(minutes) || undefined,
+        hints,
+        sawSolution,
       });
       if (idea !== null && idea !== (note?.idea ?? '')) {
         await saveNote(problem.id, { idea: idea.trim() });
       }
       toast(`已記錄。下次複習：${formatDay(record.due)}，${relativeDay(record.due, day)}`);
-      onDone();
+      onSaved(record);
     } finally {
       setSaving(false);
     }
@@ -73,6 +95,11 @@ function RecordForm({ problem, mode, askIdea, onDone }: RecordFormProps) {
         <legend className="field-label" style={{ marginBottom: 8 }}>
           這次做得怎麼樣？
         </legend>
+        {initialRating && (
+          <p className="field-hint" style={{ marginTop: -4, marginBottom: 8 }}>
+            已依提示的使用情況先幫你選好，不對可以改。
+          </p>
+        )}
         <div className="rating-grid">
           {RATINGS.map((r) => {
             const next = progress !== undefined ? schedule(progress ?? undefined, r.id, day) : null;
@@ -95,7 +122,7 @@ function RecordForm({ problem, mode, askIdea, onDone }: RecordFormProps) {
 
       <div className="form-grid">
         <label className="field">
-          <span className="field-label">花了幾分鐘（選填）</span>
+          <span className="field-label">花了幾分鐘{initialMinutes ? '' : '（選填）'}</span>
           <input
             className="input"
             type="number"
@@ -107,22 +134,22 @@ function RecordForm({ problem, mode, askIdea, onDone }: RecordFormProps) {
           />
         </label>
         {askIdea && (
-        <label className="field span-2">
-          <span className="field-label">一句話的核心思路</span>
-          <input
-            className="input"
-            value={currentIdea}
-            placeholder="例如：用 hash map 記錄看過的值，邊走邊查補數"
-            onChange={(e) => setIdea(e.target.value)}
-          />
-          <span className="field-hint">複習時會先藏起來，讓你自己回想。</span>
-        </label>
+          <label className="field span-2">
+            <span className="field-label">一句話的核心思路</span>
+            <input
+              className="input"
+              value={currentIdea}
+              placeholder="例如：用 hash map 記錄看過的值，邊走邊查補數"
+              onChange={(e) => setIdea(e.target.value)}
+            />
+            <span className="field-hint">複習時會先藏起來，讓你自己回想。</span>
+          </label>
         )}
       </div>
 
       <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
-        <button type="button" className="btn btn-quiet" onClick={onDone}>
-          取消
+        <button type="button" className="btn btn-quiet" onClick={onCancel}>
+          {cancelLabel}
         </button>
         <button type="submit" className="btn btn-primary" disabled={!rating || saving}>
           儲存紀錄

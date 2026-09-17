@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useToast } from '../components/toast';
-import { DifficultyTag, LeetCodeLink, PageHead, Sheet } from '../components/ui';
+import { DifficultyTag, PageHead, Sheet } from '../components/ui';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { formatDay, relativeDay } from '../lib/dates';
@@ -123,7 +123,6 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
           </button>
         )}
         <span>上次：{ratingLabel(progress.lastRating)}</span>
-        <LeetCodeLink slug={problem.slug}>在 LeetCode 重寫</LeetCodeLink>
         <Link to={`/problems/${problem.id}`}>題目詳情</Link>
       </div>
 
@@ -139,6 +138,9 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
             <button className="btn btn-primary" onClick={() => setRevealed(true)}>
               想好了，打開筆記
             </button>
+            <Link className="btn" to={`/practice/${problem.id}`}>
+              計時重寫一次
+            </Link>
             <button className="btn btn-quiet" onClick={onSkip}>
               先跳過
             </button>

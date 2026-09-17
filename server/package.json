@@ -1,0 +1,32 @@
+{
+  "name": "@leetcode-coach/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "刷題教練的 API：帳號登入與資料同步",
+  "scripts": {
+    "dev": "node --watch --watch-preserve-output --env-file-if-exists=.env --import tsx src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node24 --format=esm --packages=external --outfile=dist/index.js",
+    "start": "node --env-file-if-exists=.env dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.5",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@hono/node-server": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.8",
+    "postgres": "^3.4.9",
+    "zod": "^4.6.5"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,17 @@
+# Render Blueprint：一個 Node 服務同時提供 API 與網頁。
+# 使用前先在 Neon 之類的服務建立 PostgreSQL，再到 Render 的環境變數填入 DATABASE_URL。
+services:
+  - type: web
+    name: leetcode-coach
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build:all
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false

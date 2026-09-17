@@ -1,6 +1,7 @@
+import type { Difficulty } from '../../shared/constants';
 import type { PatternId } from './patterns';
 
-export type Difficulty = 'Easy' | 'Medium' | 'Hard';
+export type { Difficulty };
 
 export interface Problem {
   id: number;

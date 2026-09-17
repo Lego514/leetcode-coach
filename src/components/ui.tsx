@@ -64,9 +64,17 @@ export function ExternalIcon() {
   );
 }
 
-export function LeetCodeLink({ slug, children = 'LeetCode' }: { slug: string; children?: ReactNode }) {
+export function LeetCodeLink({
+  slug,
+  children = 'LeetCode',
+  className = 'icon-link',
+}: {
+  slug: string;
+  children?: ReactNode;
+  className?: string;
+}) {
   return (
-    <a className="icon-link" href={`https://leetcode.com/problems/${slug}/`} target="_blank" rel="noreferrer">
+    <a className={className} href={`https://leetcode.com/problems/${slug}/`} target="_blank" rel="noreferrer">
       {children}
       <ExternalIcon />
       <span className="visually-hidden">（在新分頁開啟）</span>
