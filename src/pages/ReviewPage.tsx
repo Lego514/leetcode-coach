@@ -4,15 +4,18 @@ import { useToast } from '../components/toast';
 import { DifficultyTag, PageHead, Sheet } from '../components/ui';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
-import { formatDay, relativeDay } from '../lib/dates';
+import { useI18n } from '../i18n';
+import { rich } from '../i18n/rich';
+import { diffDays } from '../lib/dates';
 import { languageLabel } from '../lib/languages';
-import { RATINGS, ratingLabel, schedule, type Rating } from '../lib/srs';
+import { RATINGS, schedule, type Rating } from '../lib/srs';
 import { dueProblems } from '../lib/stats';
 import { recordAttempt } from '../store/actions';
 import type { ProgressRecord } from '../store/db';
 import { useCatalog, useNote, useProgressMap, useToday } from '../store/queries';
 
 export function ReviewPage() {
+  const { t, fmt } = useI18n();
   const day = useToday();
   const catalog = useCatalog();
   const { progress, loaded } = useProgressMap();
@@ -32,10 +35,7 @@ export function ReviewPage() {
 
   return (
     <div className="page">
-      <PageHead
-        title="複習"
-        lede="先不看筆記，自己回想解法並用英文講一遍，再打開筆記對答案。能重寫一次最好。"
-      />
+      <PageHead title={t.review.title} lede={t.review.lede} />
       {!loaded ? null : current ? (
         <ReviewCard
           key={current.id}
@@ -51,21 +51,21 @@ export function ReviewPage() {
           onSkip={() => setSkipped((s) => [...s.filter((id) => id !== current.id), current.id])}
         />
       ) : (
-        <Sheet title={doneCount > 0 ? `今天複習了 ${doneCount} 題` : '目前沒有要複習的題目'} id="review-empty">
+        <Sheet title={doneCount > 0 ? t.review.doneTitle(doneCount) : t.review.emptyTitle} id="review-empty">
           <div className="sheet-empty">
             <p>
               {progress.size === 0
-                ? '先去做幾題新題並記錄結果，到期的題目就會出現在這裡。'
+                ? t.review.emptyFirstRun
                 : nextDue
-                  ? `下一題會在 ${formatDay(nextDue)}到期，${relativeDay(nextDue, day)}。`
-                  : '所有題目都還沒到期。'}
+                  ? t.review.nextDue(fmt.day(nextDue), t.date.relative(diffDays(day, nextDue)))
+                  : t.review.nothingDue}
             </p>
             <div className="btn-row" style={{ marginTop: 12 }}>
               <Link className="btn" to="/">
-                回到今天
+                {t.common.backToToday}
               </Link>
               <Link className="btn" to="/mock">
-                做一次模擬面試
+                {t.review.doMock}
               </Link>
             </div>
           </div>
@@ -86,6 +86,7 @@ interface ReviewCardProps {
 }
 
 function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, onSkip }: ReviewCardProps) {
+  const { t, fmt, locale } = useI18n();
   const note = useNote(problem.id);
   const toast = useToast();
   const [showPattern, setShowPattern] = useState(false);
@@ -96,7 +97,7 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
     if (saving) return;
     setSaving(true);
     const record = await recordAttempt(problem.id, rating, { mode: 'review' });
-    toast(`${problem.title}：下次複習 ${formatDay(record.due)}`);
+    toast(t.review.rated(problem.title, fmt.day(record.due)));
     onRated();
   }
 
@@ -105,8 +106,9 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
   return (
     <section className="sheet review-card" aria-labelledby="review-title">
       <p className="review-progress">
-        還有 {remaining} 題{doneCount > 0 ? `，已完成 ${doneCount} 題` : ''}
-        {progress.due < today && `，這題${relativeDay(progress.due, today)}`}
+        {t.review.remaining(remaining)}
+        {doneCount > 0 && t.review.doneCount(doneCount)}
+        {progress.due < today && t.review.thisOverdue(t.date.relative(diffDays(today, progress.due)))}
       </p>
       <h2 className="review-title" id="review-title">
         <span className="marked">
@@ -116,33 +118,33 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
       <div className="detail-meta">
         <DifficultyTag difficulty={problem.difficulty} />
         {showPattern ? (
-          <span>{getPattern(problem.pattern).name}</span>
+          <span>{getPattern(problem.pattern, locale).name}</span>
         ) : (
           <button className="btn btn-quiet btn-small" onClick={() => setShowPattern(true)}>
-            顯示解題模式
+            {t.common.showPattern}
           </button>
         )}
-        <span>上次：{ratingLabel(progress.lastRating)}</span>
-        <Link to={`/problems/${problem.id}`}>題目詳情</Link>
+        <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>
+        <Link to={`/problems/${problem.id}`}>{t.review.details}</Link>
       </div>
 
       <div className="review-step">
-        <h3>先自己回想</h3>
+        <h3>{t.review.recallTitle}</h3>
         <ul className="bullets">
-          <li>這題屬於哪個解題模式？為什麼？</li>
-          <li>用英文說出核心思路，以及時間與空間複雜度。</li>
-          <li>有哪些邊界情況要處理？</li>
+          {t.review.recall.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
         </ul>
         {!revealed && (
           <div className="btn-row" style={{ marginTop: 16 }}>
             <button className="btn btn-primary" onClick={() => setRevealed(true)}>
-              想好了，打開筆記
+              {t.review.reveal}
             </button>
             <Link className="btn" to={`/practice/${problem.id}`}>
-              計時重寫一次
+              {t.review.redo}
             </Link>
             <button className="btn btn-quiet" onClick={onSkip}>
-              先跳過
+              {t.review.skip}
             </button>
           </div>
         )}
@@ -151,10 +153,12 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
       {revealed && (
         <>
           <div className="review-step">
-            <h3>我的筆記</h3>
+            <h3>{t.review.notesTitle}</h3>
             {!hasNote ? (
               <p className="sheet-note">
-                這題還沒有筆記。複習完到<Link to={`/problems/${problem.id}`}>題目詳情</Link>補上思路和講解稿，下次會更好複習。
+                {rich(t.review.noNotes, {
+                  link: (text) => <Link to={`/problems/${problem.id}`}>{text}</Link>,
+                })}
               </p>
             ) : (
               <div className="stack" style={{ gap: 14 }}>
@@ -166,13 +170,13 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
                 )}
                 {(note.time || note.space) && (
                   <p className="sheet-note">
-                    時間 {note.time || '未填'}，空間 {note.space || '未填'}
+                    {t.review.complexity(note.time || t.common.notFilled, note.space || t.common.notFilled)}
                   </p>
                 )}
-                {note.pitfalls && <p className="prose-block">踩過的坑：{note.pitfalls}</p>}
+                {note.pitfalls && <p className="prose-block">{t.review.pitfalls(note.pitfalls)}</p>}
                 {note.code && (
                   <details>
-                    <summary>顯示程式碼（{languageLabel(note.language)}）</summary>
+                    <summary>{t.review.showCode(languageLabel(note.language))}</summary>
                     <pre className="code-block" style={{ marginTop: 8 }}>
                       <code>{note.code}</code>
                     </pre>
@@ -183,13 +187,13 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
           </div>
 
           <div className="review-step">
-            <h3>這次回想得怎麼樣？</h3>
+            <h3>{t.review.rateTitle}</h3>
             <div className="rating-grid">
               {RATINGS.map((r) => (
-                <button key={r.id} className="rating-option" disabled={saving} onClick={() => void rate(r.id)}>
-                  <span className="rating-label">{r.label}</span>
-                  <span className="rating-detail">{r.detail}</span>
-                  <span className="rating-next">{schedule(progress, r.id, today).interval} 天後再複習</span>
+                <button key={r} className="rating-option" disabled={saving} onClick={() => void rate(r)}>
+                  <span className="rating-label">{t.ratings[r].label}</span>
+                  <span className="rating-detail">{t.ratings[r].detail}</span>
+                  <span className="rating-next">{t.common.reviewIn(schedule(progress, r, today).interval)}</span>
                 </button>
               ))}
             </div>

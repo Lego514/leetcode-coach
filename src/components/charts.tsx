@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { addDays, formatDay, parseDay, startOfWeek, type Day } from '../lib/dates';
+import { useI18n } from '../i18n';
+import { addDays, startOfWeek, type Day } from '../lib/dates';
 import type { WeekCount } from '../lib/stats';
 
 const WIDTH = 640;
@@ -23,6 +24,7 @@ function barPath(x: number, y: number, w: number, h: number): string {
 }
 
 export function WeeklyChart({ weeks }: { weeks: WeekCount[] }) {
+  const { t, fmt } = useI18n();
   const [active, setActive] = useState<number | null>(null);
   const max = niceMax(Math.max(0, ...weeks.map((w) => w.count)));
   const ticks = [0, max / 2, max];
@@ -36,12 +38,12 @@ export function WeeklyChart({ weeks }: { weeks: WeekCount[] }) {
 
   return (
     <figure className="chart">
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="最近 12 週每週練習次數的長條圖，數值請見下方表格">
-        {ticks.map((t) => (
-          <g key={t}>
-            <line className="chart-grid" x1={PAD.left} x2={WIDTH - PAD.right} y1={y(t)} y2={y(t)} />
-            <text className="chart-axis" x={PAD.left - 8} y={y(t)} textAnchor="end" dominantBaseline="middle">
-              {t}
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={t.charts.weeklyLabel}>
+        {ticks.map((tick) => (
+          <g key={tick}>
+            <line className="chart-grid" x1={PAD.left} x2={WIDTH - PAD.right} y1={y(tick)} y2={y(tick)} />
+            <text className="chart-axis" x={PAD.left - 8} y={y(tick)} textAnchor="end" dominantBaseline="middle">
+              {tick}
             </text>
           </g>
         ))}
@@ -59,7 +61,7 @@ export function WeeklyChart({ weeks }: { weeks: WeekCount[] }) {
                 width={band}
                 height={plotH}
                 tabIndex={0}
-                aria-label={`${formatDay(w.start, false)} 那週：${w.count} 次`}
+                aria-label={t.charts.weekBar(fmt.day(w.start, false), w.count)}
                 onPointerEnter={() => setActive(i)}
                 onPointerLeave={() => setActive(null)}
                 onFocus={() => setActive(i)}
@@ -78,7 +80,7 @@ export function WeeklyChart({ weeks }: { weeks: WeekCount[] }) {
               )}
               {showAxis && (
                 <text className="chart-axis" x={cx} y={HEIGHT - 8} textAnchor="middle">
-                  {i === last ? '本週' : formatDay(w.start, false)}
+                  {i === last ? t.date.thisWeek : fmt.day(w.start, false)}
                 </text>
               )}
             </g>
@@ -93,25 +95,25 @@ export function WeeklyChart({ weeks }: { weeks: WeekCount[] }) {
             top: `${(y(weeks[active].count) / HEIGHT) * 100}%`,
           }}
         >
-          <strong>{weeks[active].count} 次</strong>
-          {formatDay(weeks[active].start, false)} 起的一週
+          <strong>{t.charts.count(weeks[active].count)}</strong>
+          {t.charts.weekOf(fmt.day(weeks[active].start, false))}
         </div>
       )}
       <details className="table-toggle">
-        <summary>顯示數據表</summary>
+        <summary>{t.charts.showTable}</summary>
         <table className="data-table">
           <thead>
             <tr>
-              <th scope="col">週（週一開始）</th>
+              <th scope="col">{t.charts.weekColumn}</th>
               <th scope="col" className="num">
-                練習次數
+                {t.charts.countColumn}
               </th>
             </tr>
           </thead>
           <tbody>
             {weeks.map((w) => (
               <tr key={w.start}>
-                <td>{formatDay(w.start)}</td>
+                <td>{fmt.day(w.start)}</td>
                 <td className="num">{w.count}</td>
               </tr>
             ))}
@@ -131,6 +133,7 @@ function activityLevel(count: number): 0 | 1 | 2 | 3 | 4 {
 }
 
 export function ActivityCalendar({ counts, today, weeks = 18 }: { counts: Map<Day, number>; today: Day; weeks?: number }) {
+  const { t, fmt } = useI18n();
   const first = addDays(startOfWeek(today), -7 * (weeks - 1));
   const columns = Array.from({ length: weeks }, (_, w) =>
     Array.from({ length: 7 }, (_, d) => addDays(first, w * 7 + d)),
@@ -143,14 +146,13 @@ export function ActivityCalendar({ counts, today, weeks = 18 }: { counts: Map<Da
           {days.map((day) => {
             const count = counts.get(day) ?? 0;
             const future = day > today;
-            const date = parseDay(day);
             return (
               <span
                 key={day}
                 className="cell"
                 data-level={activityLevel(count)}
                 data-future={future}
-                title={future ? undefined : `${date.getMonth() + 1}/${date.getDate()}：${count} 次`}
+                title={future ? undefined : t.charts.dayCell(fmt.day(day, false), count)}
               />
             );
           })}

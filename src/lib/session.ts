@@ -49,16 +49,19 @@ export function useStopwatch(initial?: StopwatchState) {
 
 export type RecorderState = 'idle' | 'recording' | 'paused';
 
-function describeMediaError(err: unknown): string {
+/** 錄音無法開始的原因；文字在 i18n 字典的 errors.recorder */
+export type RecorderError = 'unsupported' | 'denied' | 'noDevice' | 'failed';
+
+function describeMediaError(err: unknown): RecorderError {
   const name = err instanceof DOMException ? err.name : '';
-  if (name === 'NotAllowedError') return '瀏覽器沒有允許使用麥克風。可以在網址列旁的網站設定開啟，或這次先不錄音。';
-  if (name === 'NotFoundError') return '找不到麥克風。接上麥克風後再試一次，或這次先不錄音。';
-  return `無法開始錄音：${err instanceof Error ? err.message : String(err)}`;
+  if (name === 'NotAllowedError') return 'denied';
+  if (name === 'NotFoundError') return 'noDevice';
+  return 'failed';
 }
 
 export function useRecorder() {
   const [state, setState] = useState<RecorderState>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RecorderError | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -85,7 +88,7 @@ export function useRecorder() {
     if (starting.current || recorder.current) return false;
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setError('這個瀏覽器不支援錄音，這次先不錄音。');
+      setError('unsupported');
       return false;
     }
     starting.current = true;

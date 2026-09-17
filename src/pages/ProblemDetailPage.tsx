@@ -9,11 +9,12 @@ import { EXPLANATION_SCAFFOLD } from '../data/interview';
 import { STUDY_LISTS } from '../data/lists';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
+import { useI18n } from '../i18n';
+import { diffDays } from '../lib/dates';
 import { LANGUAGES } from '../lib/languages';
-import { formatDay, relativeDay } from '../lib/dates';
-import { ratingLabel, stageOf, STAGE_LABELS } from '../lib/srs';
+import { stageOf } from '../lib/srs';
 import { deleteCustomProblem, resetProgress, saveNote, setCompanies } from '../store/actions';
-import type { AttemptMode, NoteRecord } from '../store/db';
+import type { NoteRecord } from '../store/db';
 import {
   useAttemptsFor,
   useCatalog,
@@ -25,14 +26,8 @@ import {
   useToday,
 } from '../store/queries';
 
-const MODE_LABELS: Record<AttemptMode, string> = {
-  practice: '練習',
-  review: '複習',
-  mock: '模擬面試',
-  explain: '講解練習',
-};
-
 export function ProblemDetailPage() {
+  const { t } = useI18n();
   const { id } = useParams();
   const catalog = useCatalog();
   const problem = catalog.byId.get(Number(id));
@@ -42,9 +37,9 @@ export function ProblemDetailPage() {
     return (
       <div className="page">
         <Link className="back-link" to="/problems">
-          回到題庫
+          {t.common.backToProblems}
         </Link>
-        <PageHead title="找不到這一題" lede={`題庫裡沒有第 ${id} 題。可以到題庫用「新增題目」把它加進來。`} />
+        <PageHead title={t.common.problemNotFound} lede={t.detail.notFoundLede(id ?? '')} />
       </div>
     );
   }
@@ -52,20 +47,21 @@ export function ProblemDetailPage() {
 }
 
 function ProblemDetail({ problem }: { problem: Problem }) {
+  const { t, fmt, locale } = useI18n();
   const day = useToday();
   const progress = useProgress(problem.id);
   const [recording, setRecording] = useState(false);
-  const pattern = getPattern(problem.pattern);
+  const pattern = getPattern(problem.pattern, locale);
   const lists = STUDY_LISTS.filter((l) => l.problemIds.includes(problem.id));
 
   return (
     <div className="page">
       <Link className="back-link" to="/problems">
-        回到題庫
+        {t.common.backToProblems}
       </Link>
       <PageHead title={`${problem.id}. ${problem.title}`}>
         <div className="detail-meta">
-          <MasteryCell progress={progress} label={STAGE_LABELS[stageOf(progress ?? undefined)]} />
+          <MasteryCell progress={progress} label={t.stages[stageOf(progress ?? undefined)]} />
           <DifficultyTag difficulty={problem.difficulty} />
           <Link to={`/patterns/${pattern.id}`}>{pattern.name}</Link>
           {lists.map((l) => (
@@ -73,22 +69,22 @@ function ProblemDetail({ problem }: { problem: Problem }) {
               {l.name}
             </span>
           ))}
-          {problem.custom && <span className="chip">我新增的</span>}
-          {problem.premium && <span>需要 Premium</span>}
-          <LeetCodeLink slug={problem.slug}>在 LeetCode 作答</LeetCodeLink>
+          {problem.custom && <span className="chip">{t.common.customTag}</span>}
+          {problem.premium && <span>{t.common.premium}</span>}
+          <LeetCodeLink slug={problem.slug}>{t.common.solveOnLeetCode}</LeetCodeLink>
         </div>
         <div className="btn-row" style={{ marginTop: 16 }}>
           <Link className="btn btn-primary" to={`/practice/${problem.id}`}>
-            開始練習
+            {t.detail.startPractice}
           </Link>
           <button className="btn" onClick={() => setRecording(true)}>
-            直接記錄
+            {t.detail.recordDirectly}
           </button>
           <Link className="btn" to={`/mock?problem=${problem.id}`}>
-            模擬面試這題
+            {t.detail.mockThis}
           </Link>
           <Link className="btn" to={`/mock?problem=${problem.id}&kind=explain`}>
-            練習講解這題
+            {t.detail.explainThis}
           </Link>
         </div>
       </PageHead>
@@ -96,27 +92,27 @@ function ProblemDetail({ problem }: { problem: Problem }) {
       <div className="split">
         <NotesEditor problemId={problem.id} />
         <div className="stack">
-          <Sheet title="複習排程" id="schedule">
+          <Sheet title={t.detail.scheduleTitle} id="schedule">
             <div className="sheet-body">
               {progress ? (
                 <dl className="facts">
-                  <dt>狀態</dt>
-                  <dd>{STAGE_LABELS[stageOf(progress)]}</dd>
-                  <dt>下次複習</dt>
+                  <dt>{t.detail.stage}</dt>
+                  <dd>{t.stages[stageOf(progress)]}</dd>
+                  <dt>{t.detail.nextReview}</dt>
                   <dd className={progress.due < day ? 'overdue' : undefined}>
-                    {formatDay(progress.due)}，{relativeDay(progress.due, day)}
+                    {t.detail.nextReviewValue(fmt.day(progress.due), t.date.relative(diffDays(day, progress.due)))}
                   </dd>
-                  <dt>上次結果</dt>
-                  <dd>{ratingLabel(progress.lastRating)}</dd>
-                  <dt>做過</dt>
-                  <dd>{progress.attempts} 次</dd>
-                  <dt>沒解出來</dt>
-                  <dd>{progress.lapses} 次</dd>
-                  <dt>第一次做</dt>
-                  <dd>{formatDay(progress.firstDay)}</dd>
+                  <dt>{t.detail.lastResult}</dt>
+                  <dd>{t.ratings[progress.lastRating].label}</dd>
+                  <dt>{t.detail.attempts}</dt>
+                  <dd>{t.detail.times(progress.attempts)}</dd>
+                  <dt>{t.detail.lapses}</dt>
+                  <dd>{t.detail.times(progress.lapses)}</dd>
+                  <dt>{t.detail.firstDone}</dt>
+                  <dd>{fmt.day(progress.firstDay)}</dd>
                 </dl>
               ) : (
-                <p className="sheet-note">還沒做過。按「開始練習」計時作答，記錄後系統會排好複習日。</p>
+                <p className="sheet-note">{t.detail.notStarted}</p>
               )}
             </div>
           </Sheet>
@@ -139,10 +135,15 @@ function ProblemDetail({ problem }: { problem: Problem }) {
 type NoteDraft = Omit<NoteRecord, 'problemId' | 'updatedAt'>;
 
 function NotesEditor({ problemId }: { problemId: number }) {
+  const { t } = useI18n();
   const note = useNote(problemId);
   const settings = useSettings();
   if (note === undefined) {
-    return <Sheet title="我的筆記" id="notes"><p className="sheet-empty">載入中…</p></Sheet>;
+    return (
+      <Sheet title={t.detail.notesTitle} id="notes">
+        <p className="sheet-empty">{t.common.loading}</p>
+      </Sheet>
+    );
   }
   return <NotesForm problemId={problemId} initial={note} defaultLanguage={settings.language} />;
 }
@@ -156,6 +157,7 @@ function NotesForm({
   initial: NoteRecord | null;
   defaultLanguage: string;
 }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState<NoteDraft>(() => ({
     idea: initial?.idea ?? '',
     explanation: initial?.explanation ?? '',
@@ -169,24 +171,24 @@ function NotesForm({
   const update = (patch: Partial<NoteDraft>) => setDraft((d) => ({ ...d, ...patch }));
 
   return (
-    <Sheet title="我的筆記" id="notes" actions={<SaveStatus status={status} />}>
+    <Sheet title={t.detail.notesTitle} id="notes" actions={<SaveStatus status={status} />}>
       <div className="sheet-body stack" style={{ gap: 18 }}>
         <label className="field">
-          <span className="field-label">一句話的核心思路</span>
+          <span className="field-label">{t.detail.idea}</span>
           <input
             className="input"
             value={draft.idea}
             onChange={(e) => update({ idea: e.target.value })}
-            placeholder="例如：排序後用雙指標，固定一個數再夾擠另外兩個"
+            placeholder={t.detail.ideaPlaceholder}
           />
         </label>
 
         <div className="field">
           <label className="field-label" htmlFor="explanation">
-            英文講解稿
+            {t.detail.explanation}
           </label>
           <span className="field-hint" id="explanation-hint">
-            面試時要說出口的版本。寫完後到「模擬面試」用講解練習念一遍。
+            {t.detail.explanationHint}
           </span>
           <textarea
             id="explanation"
@@ -201,7 +203,7 @@ function NotesForm({
           {!draft.explanation && (
             <div>
               <button type="button" className="btn btn-small" onClick={() => update({ explanation: EXPLANATION_SCAFFOLD })}>
-                填入講解架構
+                {t.detail.insertScaffold}
               </button>
             </div>
           )}
@@ -209,33 +211,33 @@ function NotesForm({
 
         <div className="form-grid">
           <label className="field">
-            <span className="field-label">時間複雜度</span>
+            <span className="field-label">{t.detail.time}</span>
             <input className="input" value={draft.time} onChange={(e) => update({ time: e.target.value })} placeholder="O(n)" />
           </label>
           <label className="field">
-            <span className="field-label">空間複雜度</span>
+            <span className="field-label">{t.detail.space}</span>
             <input className="input" value={draft.space} onChange={(e) => update({ space: e.target.value })} placeholder="O(n)" />
           </label>
         </div>
 
         <label className="field">
-          <span className="field-label">踩過的坑</span>
+          <span className="field-label">{t.detail.pitfalls}</span>
           <textarea
             className="textarea"
             rows={3}
             value={draft.pitfalls}
             onChange={(e) => update({ pitfalls: e.target.value })}
-            placeholder="例如：忘了跳過重複值；邊界 l < r 寫成 l <= r"
+            placeholder={t.detail.pitfallsPlaceholder}
           />
         </label>
 
         <div className="field">
           <div className="btn-row" style={{ justifyContent: 'space-between' }}>
             <label className="field-label" htmlFor="code">
-              我的程式碼
+              {t.detail.code}
             </label>
             <label className="visually-hidden" htmlFor="code-language">
-              程式語言
+              {t.detail.codeLanguage}
             </label>
             <select
               id="code-language"
@@ -256,10 +258,10 @@ function NotesForm({
             value={draft.code}
             onChange={(code) => update({ code })}
             aria-describedby="code-hint"
-            placeholder="把通過的解法貼在這裡"
+            placeholder={t.detail.codePlaceholder}
           />
           <span className="field-hint" id="code-hint">
-            Tab 會插入空白。要離開輸入框，先按 Esc 再按 Tab。
+            {t.detail.codeHint}
           </span>
         </div>
       </div>
@@ -268,6 +270,7 @@ function NotesForm({
 }
 
 function CompanyEditor({ problemId }: { problemId: number }) {
+  const { t } = useI18n();
   const metaMap = useMetaMap();
   const known = useCompanies();
   const [text, setText] = useState('');
@@ -288,7 +291,7 @@ function CompanyEditor({ problemId }: { problemId: number }) {
   }
 
   return (
-    <Sheet title="公司標籤" id="companies" note="自己記錄哪些公司考過">
+    <Sheet title={t.detail.companiesTitle} id="companies" note={t.detail.companiesNote}>
       <div className="sheet-body">
         <div className="tag-editor">
           {companies.map((c) => (
@@ -297,7 +300,7 @@ function CompanyEditor({ problemId }: { problemId: number }) {
               <button
                 type="button"
                 className="chip-remove"
-                aria-label={`移除 ${c}`}
+                aria-label={t.detail.removeCompany(c)}
                 onClick={() => void setCompanies(problemId, companies.filter((x) => x !== c))}
               >
                 ×
@@ -307,8 +310,8 @@ function CompanyEditor({ problemId }: { problemId: number }) {
           <input
             className="input"
             list="company-options"
-            aria-label="新增公司"
-            placeholder="輸入公司後按 Enter"
+            aria-label={t.detail.addCompany}
+            placeholder={t.detail.companyPlaceholder}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
@@ -327,26 +330,22 @@ function CompanyEditor({ problemId }: { problemId: number }) {
 }
 
 function History({ problemId }: { problemId: number }) {
+  const { t, fmt } = useI18n();
   const attempts = useAttemptsFor(problemId);
   return (
-    <Sheet title="練習紀錄" count={attempts?.length} id="history">
+    <Sheet title={t.detail.historyTitle} count={attempts?.length} id="history">
       <div className="sheet-body">
         {!attempts?.length ? (
-          <p className="sheet-note">還沒有紀錄。</p>
+          <p className="sheet-note">{t.detail.historyEmpty}</p>
         ) : (
           <ul className="history">
             {attempts.map((a) => (
               <li key={a.id}>
                 <span>
-                  {ratingLabel(a.rating)}
-                  <span className="history-when">
-                    （{MODE_LABELS[a.mode]}
-                    {a.minutes ? `，${a.minutes} 分鐘` : ''}
-                    {a.hints ? `，${a.hints} 層提示` : ''}
-                    {a.sawSolution ? '，看過解答' : ''}）
-                  </span>
+                  {t.ratings[a.rating].label}
+                  <span className="history-when">{t.detail.historyDetail(t.modes[a.mode], a.minutes, a.hints, a.sawSolution)}</span>
                 </span>
-                <span className="history-when history-date">{formatDay(a.day)}</span>
+                <span className="history-when history-date">{fmt.day(a.day)}</span>
               </li>
             ))}
           </ul>
@@ -357,6 +356,7 @@ function History({ problemId }: { problemId: number }) {
 }
 
 function DangerZone({ problem, hasProgress }: { problem: Problem; hasProgress: boolean }) {
+  const { t } = useI18n();
   const [confirm, setConfirm] = useState<'reset' | 'delete' | null>(null);
   const toast = useToast();
   const navigate = useNavigate();
@@ -366,49 +366,45 @@ function DangerZone({ problem, hasProgress }: { problem: Problem; hasProgress: b
   async function run() {
     if (confirm === 'reset') {
       await resetProgress(problem.id);
-      toast('已清除這題的練習紀錄，筆記仍然保留。');
+      toast(t.detail.resetDone);
     } else if (confirm === 'delete') {
       await deleteCustomProblem(problem.id);
-      toast(`已刪除 ${problem.title}`);
+      toast(t.detail.deleted(problem.title));
       navigate('/problems?list=custom');
     }
     setConfirm(null);
   }
 
   return (
-    <Sheet title="重來" id="danger">
+    <Sheet title={t.detail.resetTitle} id="danger">
       <div className="sheet-body btn-row">
         {hasProgress && (
           <button className="btn btn-danger" onClick={() => setConfirm('reset')}>
-            清除練習紀錄
+            {t.detail.resetProgress}
           </button>
         )}
         {problem.custom && (
           <button className="btn btn-danger" onClick={() => setConfirm('delete')}>
-            刪除這題
+            {t.detail.deleteProblem}
           </button>
         )}
       </div>
       <Dialog
         open={confirm !== null}
         onClose={() => setConfirm(null)}
-        title={confirm === 'delete' ? '刪除這題？' : '清除練習紀錄？'}
+        title={confirm === 'delete' ? t.detail.confirmDeleteTitle : t.detail.confirmResetTitle}
         footer={
           <>
             <button className="btn btn-quiet" onClick={() => setConfirm(null)}>
-              取消
+              {t.common.cancel}
             </button>
             <button className="btn btn-danger" onClick={() => void run()}>
-              {confirm === 'delete' ? '刪除這題' : '清除練習紀錄'}
+              {confirm === 'delete' ? t.detail.deleteProblem : t.detail.resetProgress}
             </button>
           </>
         }
       >
-        <p>
-          {confirm === 'delete'
-            ? '題目、筆記、練習紀錄和模擬面試紀錄都會一起刪除，無法復原。'
-            : '複習排程和練習紀錄會清掉，這題會回到「還沒做」。筆記會保留。'}
-        </p>
+        <p>{confirm === 'delete' ? t.detail.confirmDelete : t.detail.confirmReset}</p>
       </Dialog>
     </Sheet>
   );

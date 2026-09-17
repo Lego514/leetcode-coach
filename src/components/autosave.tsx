@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useI18n } from '../i18n';
 
 export interface AutosaveStatus {
   pending: boolean;
@@ -44,11 +45,12 @@ export function useAutosave<T>(value: T, save: (value: T) => Promise<void>, dela
 }
 
 export function SaveStatus({ status }: { status: AutosaveStatus }) {
+  const { t, fmt } = useI18n();
   const text = status.pending
-    ? '儲存中…'
+    ? t.autosave.saving
     : status.savedAt
-      ? `已儲存（${status.savedAt.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}）`
-      : '輸入後會自動儲存';
+      ? t.autosave.saved(fmt.time(status.savedAt.getTime()))
+      : t.autosave.idle;
   return (
     <span className="saved-note" aria-live="polite">
       {text}

@@ -1,37 +1,44 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { AccountSection } from '../components/AccountSection';
+import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useToast } from '../components/toast';
 import { Dialog, PageHead, Sheet } from '../components/ui';
 import { STUDY_LISTS, type ListId } from '../data/lists';
-import { formatDay, isDay, toDay } from '../lib/dates';
+import { useI18n } from '../i18n';
+import { isDay, toDay } from '../lib/dates';
 import { LANGUAGES } from '../lib/languages';
 import { useTheme, type ThemeChoice } from '../lib/theme';
 import { updateSettings } from '../store/actions';
-import { clearAllData, exportBackup, parseBackup, restoreBackup, type BackupFile } from '../store/backup';
+import {
+  BackupError,
+  clearAllData,
+  exportBackup,
+  parseBackup,
+  restoreBackup,
+  type BackupErrorCode,
+  type BackupFile,
+} from '../store/backup';
 import { useCloud } from '../store/cloud';
 import { useSettings, useToday } from '../store/queries';
 
-const THEMES: { id: ThemeChoice; label: string }[] = [
-  { id: 'system', label: '跟隨系統' },
-  { id: 'light', label: '淺色' },
-  { id: 'dark', label: '深色' },
-];
+const THEMES: ThemeChoice[] = ['system', 'light', 'dark'];
 
 export function SettingsPage() {
+  const { t } = useI18n();
   const settings = useSettings();
   const day = useToday();
   const [theme, setTheme] = useTheme();
 
   return (
     <div className="page">
-      <PageHead title="設定" />
+      <PageHead title={t.settings.title} />
       <div className="stack">
         <AccountSection />
-        <Sheet title="刷題計畫" id="plan">
+        <Sheet title={t.settings.planTitle} id="plan">
           <div className="sheet-body stack" style={{ gap: 20 }}>
             <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
               <legend className="field-label" style={{ marginBottom: 8 }}>
-                主要清單
+                {t.settings.mainList}
               </legend>
               <div className="stack" style={{ gap: 8 }}>
                 {STUDY_LISTS.map((list) => (
@@ -49,10 +56,10 @@ export function SettingsPage() {
                     />
                     <span>
                       <span className="rating-label">
-                        {list.name}（{list.problemIds.length} 題）
+                        {t.lists.withCount(list.name, list.problemIds.length)}
                       </span>
                       <span className="rating-detail" style={{ display: 'block' }}>
-                        {list.description}
+                        {t.lists.descriptions[list.id]}
                       </span>
                     </span>
                   </label>
@@ -62,7 +69,7 @@ export function SettingsPage() {
 
             <div className="form-grid">
               <label className="field">
-                <span className="field-label">每天的新題數</span>
+                <span className="field-label">{t.settings.dailyNew}</span>
                 <input
                   className="input"
                   type="number"
@@ -75,17 +82,23 @@ export function SettingsPage() {
                     if (Number.isFinite(n) && n >= 0 && n <= 20) void updateSettings({ dailyNew: n });
                   }}
                 />
-                <span className="field-hint">複習題不算在內。複習量多的時候，可以暫時設成 0。</span>
+                <span className="field-hint">{t.settings.dailyNewHint}</span>
               </label>
               <TargetDateField value={settings.targetDate} today={day} />
             </div>
           </div>
         </Sheet>
 
-        <Sheet title="筆記與外觀" id="appearance">
+        <Sheet title={t.settings.appearanceTitle} id="appearance">
           <div className="sheet-body form-grid">
+            <div className="field">
+              <span className="field-label">{t.common.languageLabel}</span>
+              <div style={{ alignSelf: 'flex-start' }}>
+                <LanguageSwitch />
+              </div>
+            </div>
             <label className="field">
-              <span className="field-label">程式碼預設語言</span>
+              <span className="field-label">{t.settings.codeLanguage}</span>
               <select
                 className="select"
                 value={settings.language}
@@ -100,12 +113,12 @@ export function SettingsPage() {
             </label>
             <div className="field">
               <span className="field-label" id="theme-label">
-                外觀
+                {t.settings.theme}
               </span>
               <div className="segmented" role="group" aria-labelledby="theme-label" style={{ alignSelf: 'flex-start' }}>
-                {THEMES.map((t) => (
-                  <button key={t.id} type="button" aria-pressed={theme === t.id} onClick={() => setTheme(t.id)}>
-                    {t.label}
+                {THEMES.map((id) => (
+                  <button key={id} type="button" aria-pressed={theme === id} onClick={() => setTheme(id)}>
+                    {t.settings.themes[id]}
                   </button>
                 ))}
               </div>
@@ -120,10 +133,11 @@ export function SettingsPage() {
 }
 
 function TargetDateField({ value, today }: { value?: string; today: string }) {
+  const { t, fmt } = useI18n();
   return (
     <div className="field">
       <label className="field-label" htmlFor="target-date">
-        目標日期
+        {t.settings.targetDate}
       </label>
       <div className="btn-row" style={{ flexWrap: 'nowrap' }}>
         <input
@@ -139,25 +153,24 @@ function TargetDateField({ value, today }: { value?: string; today: string }) {
         />
         {value && (
           <button type="button" className="btn btn-quiet" onClick={() => void updateSettings({ targetDate: undefined })}>
-            清除
+            {t.common.clear}
           </button>
         )}
       </div>
       <span className="field-hint">
-        {value
-          ? `今天頁會計算到 ${formatDay(value)} 前每天要做幾題。`
-          : '還沒有面試日期也沒關係，可以設一個想刷完第一輪的日子。'}
+        {value ? t.settings.targetHint(fmt.day(value)) : t.settings.targetEmptyHint}
       </span>
     </div>
   );
 }
 
 function BackupSection() {
+  const { t, fmt } = useI18n();
   const toast = useToast();
   const signedIn = useCloud().account.kind === 'signed-in';
   const fileInput = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<BackupFile | null>(null);
-  const [importError, setImportError] = useState('');
+  const [importError, setImportError] = useState<BackupErrorCode | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
   async function download() {
@@ -169,18 +182,19 @@ function BackupSection() {
     a.download = `leetcode-coach-${toDay(new Date())}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast('已匯出備份檔。');
+    toast(t.settings.exported);
   }
 
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
-    setImportError('');
+    setImportError(null);
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     try {
       setPending(parseBackup(await file.text()));
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : String(err));
+      if (err instanceof BackupError) setImportError(err.code);
+      else throw err;
     }
   }
 
@@ -188,38 +202,36 @@ function BackupSection() {
     if (!pending) return;
     await restoreBackup(pending);
     setPending(null);
-    toast('已匯入備份。');
+    toast(t.settings.imported);
   }
 
   async function clear() {
     await clearAllData();
     setConfirmClear(false);
-    toast('已清除所有資料。');
+    toast(t.settings.cleared);
   }
 
   return (
-    <Sheet title="備份與資料" id="backup">
+    <Sheet title={t.settings.backupTitle} id="backup">
       <div className="sheet-body stack" style={{ gap: 16 }}>
         <p className="sheet-note">
-          {signedIn
-            ? '資料會自動同步到雲端。備份檔可以留一份在自己的電腦，以防萬一。錄音檔太大，不會放進備份。'
-            : '沒有登入時，資料只存在這個瀏覽器裡。換電腦、換瀏覽器或清除瀏覽紀錄前，先匯出備份。錄音檔太大，不會放進備份。'}
+          {signedIn ? t.settings.backupSynced : t.settings.backupLocal}
         </p>
         {importError && (
           <p className="form-error" role="alert">
-            {importError}
+            {t.errors.backup[importError]}
           </p>
         )}
         <div className="btn-row">
           <button className="btn" onClick={() => void download()}>
-            匯出備份
+            {t.settings.export}
           </button>
           <button className="btn" onClick={() => fileInput.current?.click()}>
-            從備份匯入
+            {t.settings.import}
           </button>
           <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={(e) => void onFile(e)} />
           <button className="btn btn-danger" onClick={() => setConfirmClear(true)}>
-            清除所有資料
+            {t.settings.clearAll}
           </button>
         </div>
       </div>
@@ -227,45 +239,38 @@ function BackupSection() {
       <Dialog
         open={pending !== null}
         onClose={() => setPending(null)}
-        title="用備份取代目前的資料？"
-        subtitle={pending ? `備份時間：${new Date(pending.exportedAt).toLocaleString('zh-TW')}` : undefined}
+        title={t.settings.importTitle}
+        subtitle={pending ? t.settings.importTime(fmt.dateTime(pending.exportedAt)) : undefined}
         footer={
           <>
             <button className="btn btn-quiet" onClick={() => setPending(null)}>
-              取消
+              {t.common.cancel}
             </button>
             <button className="btn btn-primary" onClick={() => void confirmImport()}>
-              匯入並取代
+              {t.settings.importReplace}
             </button>
           </>
         }
       >
-        <p>
-          目前的練習紀錄、筆記和設定會被備份檔的內容取代，模擬面試的錄音也會一起清除
-          {signedIn ? '，雲端上的資料也會改成備份的內容' : ''}。備份裡有 {pending?.data.progress.length ?? 0} 題的複習排程、
-          {pending?.data.attempts.length ?? 0} 筆練習紀錄。
-        </p>
+        <p>{t.settings.importBody(signedIn, pending?.data.progress.length ?? 0, pending?.data.attempts.length ?? 0)}</p>
       </Dialog>
 
       <Dialog
         open={confirmClear}
         onClose={() => setConfirmClear(false)}
-        title="清除所有資料？"
+        title={t.settings.clearTitle}
         footer={
           <>
             <button className="btn btn-quiet" onClick={() => setConfirmClear(false)}>
-              取消
+              {t.common.cancel}
             </button>
             <button className="btn btn-danger" onClick={() => void clear()}>
-              清除所有資料
+              {t.settings.clearAll}
             </button>
           </>
         }
       >
-        <p>
-          練習紀錄、筆記、模擬面試與錄音、自訂題目和設定都會刪除，無法復原
-          {signedIn ? '。你已登入，雲端上的資料也會一起刪除' : ''}。建議先匯出備份。
-        </p>
+        <p>{t.settings.clearBody(signedIn)}</p>
       </Dialog>
     </Sheet>
   );

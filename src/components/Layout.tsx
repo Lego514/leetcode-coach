@@ -1,29 +1,34 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration } from 'react-router';
+import { useI18n, type Messages } from '../i18n';
+import { rich } from '../i18n/rich';
 import { useCloud } from '../store/cloud';
 import { useProgressMap, useToday } from '../store/queries';
 import { syncStatusText } from './AccountSection';
+import { LanguageSwitch } from './LanguageSwitch';
+
+type NavKey = keyof Pick<Messages['nav'], 'today' | 'review' | 'mock' | 'problems' | 'patterns' | 'phrases' | 'progress' | 'settings'>;
 
 interface NavItem {
   to: string;
-  label: string;
+  key: NavKey;
   end?: boolean;
   badge?: 'due';
 }
 
 const NAV_GROUPS: NavItem[][] = [
   [
-    { to: '/', label: '今天', end: true },
-    { to: '/review', label: '複習', badge: 'due' },
-    { to: '/mock', label: '模擬面試' },
+    { to: '/', key: 'today', end: true },
+    { to: '/review', key: 'review', badge: 'due' },
+    { to: '/mock', key: 'mock' },
   ],
   [
-    { to: '/problems', label: '題庫' },
-    { to: '/patterns', label: '模板卡' },
-    { to: '/phrases', label: '英文句型' },
-    { to: '/progress', label: '進度' },
+    { to: '/problems', key: 'problems' },
+    { to: '/patterns', key: 'patterns' },
+    { to: '/phrases', key: 'phrases' },
+    { to: '/progress', key: 'progress' },
   ],
-  [{ to: '/settings', label: '設定' }],
+  [{ to: '/settings', key: 'settings' }],
 ];
 
 function useDueCount(): number {
@@ -35,9 +40,10 @@ function useDueCount(): number {
 }
 
 function Badge({ count }: { count: number }) {
+  const { t } = useI18n();
   if (count === 0) return null;
   return (
-    <span className="nav-count" aria-label={`${count} 題待複習`}>
+    <span className="nav-count" aria-label={t.nav.dueBadge(count)}>
       {count > 99 ? '99+' : count}
     </span>
   );
@@ -62,6 +68,7 @@ function TabIcon({ children }: { children: ReactNode }) {
 }
 
 function SyncFootnote() {
+  const { t, fmt } = useI18n();
   const cloud = useCloud();
   const { account } = cloud;
   if (account.kind === 'loading') return null;
@@ -72,19 +79,23 @@ function SyncFootnote() {
           {account.user.email}
         </Link>
         <br />
-        <span className={cloud.phase === 'error' ? 'overdue' : undefined}>{syncStatusText(cloud)}</span>
+        <span className={cloud.phase === 'error' ? 'overdue' : undefined}>{syncStatusText(cloud, t, fmt)}</span>
       </p>
     );
   }
   return (
     <p className="nav-foot">
-      資料只存在這個瀏覽器。
+      {t.nav.localOnly}
       {account.kind === 'signed-out' && (
         <>
-          <Link to="/settings" className="nav-foot-link">
-            登入
-          </Link>
-          後可以跨裝置同步。
+          {' '}
+          {rich(t.nav.signInToSync, {
+            link: (text) => (
+              <Link to="/settings" className="nav-foot-link">
+                {text}
+              </Link>
+            ),
+          })}
         </>
       )}
     </p>
@@ -92,18 +103,19 @@ function SyncFootnote() {
 }
 
 export function Layout() {
+  const { t } = useI18n();
   const due = useDueCount();
 
   return (
     <div className="app">
-      <nav className="nav" aria-label="主要導覽">
-        <NavLink to="/" className="wordmark" aria-label="刷題教練，回到今天">
+      <nav className="nav" aria-label={t.nav.main}>
+        <NavLink to="/" className="wordmark" aria-label={t.app.homeLabel}>
           <span className="wordmark-glyph" aria-hidden>
             {Array.from({ length: 9 }, (_, i) => (
               <span key={i} />
             ))}
           </span>
-          刷題教練
+          {t.app.name}
         </NavLink>
         <div className="nav-groups">
           {NAV_GROUPS.map((group, i) => (
@@ -111,7 +123,7 @@ export function Layout() {
               {group.map((item) => (
                 <li key={item.to}>
                   <NavLink to={item.to} end={item.end} className="nav-link">
-                    {item.label}
+                    {t.nav[item.key]}
                     {item.badge === 'due' && <Badge count={due} />}
                   </NavLink>
                 </li>
@@ -119,34 +131,37 @@ export function Layout() {
             </ul>
           ))}
         </div>
-        <SyncFootnote />
+        <div className="nav-bottom">
+          <LanguageSwitch compact />
+          <SyncFootnote />
+        </div>
       </nav>
 
       <main className="main" id="main">
         <Outlet />
       </main>
 
-      <nav className="tabbar" aria-label="主要導覽">
+      <nav className="tabbar" aria-label={t.nav.main}>
         <NavLink to="/" end className="tab">
           <TabIcon>{Icons.today}</TabIcon>
-          今天
+          {t.nav.today}
         </NavLink>
         <NavLink to="/problems" className="tab">
           <TabIcon>{Icons.problems}</TabIcon>
-          題庫
+          {t.nav.problems}
         </NavLink>
         <NavLink to="/review" className="tab">
           <TabIcon>{Icons.review}</TabIcon>
-          複習
+          {t.nav.review}
           <Badge count={due} />
         </NavLink>
         <NavLink to="/mock" className="tab">
           <TabIcon>{Icons.mock}</TabIcon>
-          模擬
+          {t.nav.mockShort}
         </NavLink>
         <NavLink to="/more" className="tab">
           <TabIcon>{Icons.more}</TabIcon>
-          更多
+          {t.nav.more}
         </NavLink>
       </nav>
       <ScrollRestoration />

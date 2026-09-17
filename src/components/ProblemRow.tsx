@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
-import { formatDay, relativeDay, type Day } from '../lib/dates';
-import { ratingLabel, stageOf, STAGE_LABELS } from '../lib/srs';
+import { useI18n } from '../i18n';
+import { diffDays, type Day } from '../lib/dates';
+import { stageOf } from '../lib/srs';
 import type { ProgressRecord } from '../store/db';
 import { DifficultyTag, LeetCodeLink, MasteryCell } from './ui';
 
@@ -19,12 +20,13 @@ interface ProblemRowProps {
 }
 
 export function ProblemRow({ problem, progress, today, marked, showPattern, companies, actions }: ProblemRowProps) {
+  const { t, fmt, locale } = useI18n();
   const stage = stageOf(progress);
   const overdue = progress && progress.due < today;
 
   return (
     <div className="problem-row">
-      <MasteryCell progress={progress} label={STAGE_LABELS[stage]} />
+      <MasteryCell progress={progress} label={t.stages[stage]} />
       <div className="problem-main">
         <div className="problem-title">
           <span className="problem-num">{problem.id}</span>
@@ -34,17 +36,19 @@ export function ProblemRow({ problem, progress, today, marked, showPattern, comp
         </div>
         <div className="problem-meta">
           <DifficultyTag difficulty={problem.difficulty} />
-          {showPattern && <span>{getPattern(problem.pattern).name}</span>}
+          {showPattern && <span>{getPattern(problem.pattern, locale).name}</span>}
           {progress ? (
             <span className={overdue ? 'overdue' : undefined}>
-              {progress.due <= today
-                ? `該複習了${overdue ? `（${relativeDay(progress.due, today)}）` : ''}`
-                : `下次複習 ${formatDay(progress.due, false)}`}
+              {progress.due > today
+                ? t.row.nextReview(fmt.day(progress.due, false))
+                : overdue
+                  ? t.row.dueOverdue(t.date.relative(diffDays(today, progress.due)))
+                  : t.row.dueNow}
             </span>
           ) : null}
-          {progress && <span>上次：{ratingLabel(progress.lastRating)}</span>}
-          {problem.premium && <span>需要 Premium</span>}
-          {problem.custom && <span>我新增的</span>}
+          {progress && <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>}
+          {problem.premium && <span>{t.common.premium}</span>}
+          {problem.custom && <span>{t.common.customTag}</span>}
           {companies?.map((c) => (
             <span key={c} className="chip">
               {c}

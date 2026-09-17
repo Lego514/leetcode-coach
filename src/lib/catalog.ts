@@ -4,13 +4,7 @@ import { BUILTIN_PROBLEMS, type Difficulty, type Problem } from '../data/problem
 
 export type ListFilter = ListId | 'custom' | 'all';
 
-export const LIST_FILTER_LABELS: Record<ListFilter, string> = {
-  neetcode150: 'NeetCode 150',
-  blind75: 'Blind 75',
-  grind169: 'Grind 169',
-  custom: '我新增的題目',
-  all: '全部題目',
-};
+export const LIST_FILTERS: ListFilter[] = ['neetcode150', 'blind75', 'grind169', 'custom', 'all'];
 
 export interface Catalog {
   problems: Problem[];

@@ -5,7 +5,6 @@ export type { ListId };
 export interface StudyList {
   id: ListId;
   name: string;
-  description: string;
   problemIds: number[];
 }
 
@@ -13,7 +12,6 @@ export const STUDY_LISTS: StudyList[] = [
   {
     id: 'neetcode150',
     name: 'NeetCode 150',
-    description: '依解題模式分組，最適合重新打底。Blind 75 的題目幾乎都在裡面。',
     problemIds: [
       217, 242, 1, 49, 347, 271, 238, 36, 128,
       125, 167, 15, 11, 42,
@@ -38,7 +36,6 @@ export const STUDY_LISTS: StudyList[] = [
   {
     id: 'blind75',
     name: 'Blind 75',
-    description: '最經典的精簡清單，時間很少時優先刷這份。',
     problemIds: [
       1, 121, 217, 238, 53, 152, 153, 33, 15, 11,
       371, 191, 338, 268, 190,
@@ -55,7 +52,6 @@ export const STUDY_LISTS: StudyList[] = [
   {
     id: 'grind169',
     name: 'Grind 169',
-    description: 'Tech Interview Handbook 的完整版清單，題型最廣，適合打完底之後擴充。',
     problemIds: [
       1, 121, 169, 217, 252, 283, 977, 57, 15, 238, 39, 56, 75, 11, 134, 128, 189, 525, 560, 253,
       16, 435, 759, 239, 20, 232, 844, 150, 155, 739, 394, 735, 227, 42, 224, 84, 895, 32, 21, 141,

@@ -3,12 +3,12 @@ export interface Phrase {
   zh: string;
 }
 
+export type StepId = 'clarify' | 'examples' | 'brute' | 'optimize' | 'code' | 'test' | 'complexity';
+
+/** 名稱、目標與檢查項目在 i18n 字典的 interview.steps */
 export interface InterviewStep {
-  id: string;
-  name: string;
+  id: StepId;
   english: string;
-  goal: string;
-  checks: string[];
   phrases: Phrase[];
 }
 
@@ -16,10 +16,7 @@ export interface InterviewStep {
 export const INTERVIEW_STEPS: InterviewStep[] = [
   {
     id: 'clarify',
-    name: '釐清題意',
     english: 'Clarify',
-    goal: '用自己的話重述題目，問清楚輸入範圍與限制。大約 2–3 分鐘。',
-    checks: ['用自己的話重述題目', '問輸入大小、型別、是否可能為空', '問有沒有重複值或負數', '確認要回傳的格式'],
     phrases: [
       { en: 'Let me restate the problem to make sure I understand it correctly.', zh: '我先重述一次題目，確認我理解正確。' },
       { en: "Can the input be empty, or can I assume there's at least one element?", zh: '輸入可能是空的嗎？還是可以假設至少有一個元素？' },
@@ -32,10 +29,7 @@ export const INTERVIEW_STEPS: InterviewStep[] = [
   },
   {
     id: 'examples',
-    name: '舉例與邊界',
     english: 'Examples',
-    goal: '自己寫一個例子算出答案，並列出邊界情況，跟面試官對齊預期。',
-    checks: ['寫一個一般例子並算出答案', '列出邊界情況', '跟面試官確認例子的答案'],
     phrases: [
       { en: 'Let me walk through a small example first.', zh: '我先用一個小例子走一遍。' },
       { en: "For this input, I'd expect the output to be 4, because…", zh: '這個輸入我預期輸出是 4，因為……' },
@@ -45,10 +39,7 @@ export const INTERVIEW_STEPS: InterviewStep[] = [
   },
   {
     id: 'brute',
-    name: '暴力解',
     english: 'Brute force',
-    goal: '先講出最直覺的做法和它的複雜度，證明你至少有一個可行解。',
-    checks: ['說出最直覺的做法', '說出時間與空間複雜度', '先講，不急著寫'],
     phrases: [
       { en: 'The most straightforward approach would be to check every pair.', zh: '最直接的做法是檢查每一對。' },
       { en: 'That would be O(n²) time and O(1) space.', zh: '這樣是 O(n²) 時間、O(1) 空間。' },
@@ -57,10 +48,7 @@ export const INTERVIEW_STEPS: InterviewStep[] = [
   },
   {
     id: 'optimize',
-    name: '優化',
     english: 'Optimize',
-    goal: '找出暴力解重複做的工作，換成更好的資料結構或模式，得到同意再動手寫。',
-    checks: ['指出暴力解的瓶頸', '提出對應的資料結構或模式', '說出新做法的複雜度', '確認面試官同意再開始寫'],
     phrases: [
       { en: 'The bottleneck is that we keep looking up the same values.', zh: '瓶頸在於我們一直重複查找同樣的值。' },
       { en: "If I store what I've seen in a hash map, each lookup becomes O(1).", zh: '如果把看過的值存進 hash map，每次查找就變成 O(1)。' },
@@ -71,10 +59,7 @@ export const INTERVIEW_STEPS: InterviewStep[] = [
   },
   {
     id: 'code',
-    name: '寫程式',
     english: 'Code',
-    goal: '邊寫邊講每一段在做什麼，命名清楚，複雜的部分拆成 helper。',
-    checks: ['邊寫邊說明每一段', '變數命名清楚', '複雜的部分拆成 helper function'],
     phrases: [
       { en: "I'll start by initializing a dictionary to keep track of the indices.", zh: '我先初始化一個 dictionary 來記錄 index。' },
       { en: 'This loop goes through each element once.', zh: '這個迴圈會把每個元素走過一次。' },
@@ -84,10 +69,7 @@ export const INTERVIEW_STEPS: InterviewStep[] = [
   },
   {
     id: 'test',
-    name: '驗證',
     english: 'Test',
-    goal: '用例子逐行追蹤程式，再跑邊界情況；找到 bug 時先講原因再修。',
-    checks: ['用剛才的例子逐行追蹤', '跑邊界情況', '發現 bug 時說明原因再修正'],
     phrases: [
       { en: 'Now let me trace through the code with our example.', zh: '我現在用剛才的例子追蹤一次程式。' },
       { en: 'At this point, left is 0 and right is 3, so the sum is 7.', zh: '這時候 left 是 0、right 是 3，所以總和是 7。' },
@@ -97,10 +79,7 @@ export const INTERVIEW_STEPS: InterviewStep[] = [
   },
   {
     id: 'complexity',
-    name: '複雜度與延伸',
     english: 'Complexity',
-    goal: '說出最終的時間與空間複雜度和原因，並回應 follow-up。',
-    checks: ['說出時間複雜度並解釋原因', '說出空間複雜度', '提出可能的改進或取捨'],
     phrases: [
       { en: 'The time complexity is O(n log n) because of the sorting step.', zh: '因為排序，時間複雜度是 O(n log n)。' },
       { en: 'The space complexity is O(n) because of the hash map.', zh: '因為 hash map，空間複雜度是 O(n)。' },
@@ -111,8 +90,7 @@ export const INTERVIEW_STEPS: InterviewStep[] = [
 ];
 
 export interface PhraseGroup {
-  id: string;
-  name: string;
+  id: 'stuck' | 'wrap-up';
   phrases: Phrase[];
 }
 
@@ -120,7 +98,6 @@ export interface PhraseGroup {
 export const EXTRA_PHRASE_GROUPS: PhraseGroup[] = [
   {
     id: 'stuck',
-    name: '卡住時',
     phrases: [
       { en: 'Let me think about this for a moment.', zh: '讓我想一下。' },
       { en: "I'm considering two options: a heap or sorting. Let me compare them.", zh: '我在考慮兩個方向：heap 或排序，我比較一下。' },
@@ -131,7 +108,6 @@ export const EXTRA_PHRASE_GROUPS: PhraseGroup[] = [
   },
   {
     id: 'wrap-up',
-    name: '收尾與反問',
     phrases: [
       { en: 'Thanks, I enjoyed working through that problem.', zh: '謝謝，這題解起來很有意思。' },
       { en: 'What does a typical week look like for engineers on your team?', zh: '你們團隊的工程師，一週通常在做什麼？' },
@@ -151,24 +127,9 @@ This gives O(...) time and O(...) space.`;
 export const MOCK_MINUTES = { Easy: 15, Medium: 25, Hard: 40 } as const;
 export const EXPLAIN_SECONDS = 120;
 
-/** 講解練習：兩分鐘內要講到的重點 */
-export const EXPLAIN_CHECKS = [
-  { id: 'insight', label: '說出關鍵觀察，也就是為什麼這個做法會對' },
-  { id: 'structure', label: '說出用了什麼資料結構，以及為什麼' },
-  { id: 'walkthrough', label: '用一個小例子走一遍流程' },
-  { id: 'complexity', label: '說出時間與空間複雜度' },
-  { id: 'edge', label: '提到至少一個邊界情況' },
-];
+/** 講解練習：兩分鐘內要講到的重點（文字在 interview.explainChecks） */
+export const EXPLAIN_CHECKS = ['insight', 'structure', 'walkthrough', 'complexity', 'edge'] as const;
+export type ExplainCheck = (typeof EXPLAIN_CHECKS)[number];
 
-export const CLARITY_OPTIONS = [
-  { id: 1, label: '講得很順', detail: '沒有長時間停頓' },
-  { id: 2, label: '有卡住', detail: '停下來想了一陣子' },
-  { id: 3, label: '講不出來', detail: '要回去整理講解稿' },
-] as const;
-
-export const THINK_ALOUD_TIPS = [
-  '沉默超過 20 秒，就把你正在想的事說出來。',
-  '還沒想到最佳解時，先把暴力解講完整。',
-  '寫程式前先問面試官：這個做法可以嗎？',
-  '講複雜度時，說出是哪一段程式造成的。',
-];
+/** 講解練習的自評（文字在 interview.clarity） */
+export const CLARITY_OPTIONS = [1, 2, 3] as const;

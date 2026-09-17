@@ -7,6 +7,7 @@ import { DifficultyTag, LeetCodeLink, PageHead, Sheet } from '../components/ui';
 import { MOCK_MINUTES } from '../data/interview';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
+import { getI18n, useI18n } from '../i18n';
 import { formatDuration } from '../lib/dates';
 import {
   clearPracticeSession,
@@ -16,12 +17,10 @@ import {
   suggestRating,
 } from '../lib/practice';
 import { useStopwatch } from '../lib/session';
-import { ratingLabel } from '../lib/srs';
 import { useCatalog, useProgress } from '../store/queries';
 
-const APP_TITLE = '刷題教練';
-
 export function PracticePage() {
+  const { t } = useI18n();
   const { id } = useParams();
   const catalog = useCatalog();
   const problem = catalog.byId.get(Number(id));
@@ -30,10 +29,10 @@ export function PracticePage() {
   if (!problem) {
     return (
       <div className="page">
-        <PageHead title="找不到這一題" lede={`題庫裡沒有第 ${id} 題。`}>
+        <PageHead title={t.common.problemNotFound} lede={t.common.problemNotFoundLede(id ?? '')}>
           <div className="btn-row" style={{ marginTop: 16 }}>
             <Link className="btn" to="/problems">
-              回到題庫
+              {t.common.backToProblems}
             </Link>
           </div>
         </PageHead>
@@ -44,6 +43,7 @@ export function PracticePage() {
 }
 
 function PracticeSession({ problem }: { problem: Problem }) {
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const progress = useProgress(problem.id);
   const [restored] = useState(() => loadPracticeSession(problem.id));
@@ -74,9 +74,9 @@ function PracticeSession({ problem }: { problem: Problem }) {
 
   // 在 LeetCode 分頁作答時，從分頁標題就能看到時間
   useEffect(() => {
-    document.title = `${formatDuration(elapsedSec)}${running ? '' : '（暫停）'} ${problem.title}｜${APP_TITLE}`;
-  }, [elapsedSec, running, problem.title]);
-  useEffect(() => () => void (document.title = APP_TITLE), []);
+    document.title = t.practice.tabTitle(formatDuration(elapsedSec), !running, problem.title, t.app.name);
+  }, [elapsedSec, running, problem.title, t]);
+  useEffect(() => () => void (document.title = getI18n().t.app.name), []);
 
   // 儲存後等離開保護卸載，再回到上一頁
   useEffect(() => {
@@ -107,48 +107,50 @@ function PracticeSession({ problem }: { problem: Problem }) {
   }
 
   const minutes = Math.max(1, Math.round(elapsedSec / 60));
-  const pattern = getPattern(problem.pattern);
+  const pattern = getPattern(problem.pattern, locale);
 
   return (
     <div className="page">
       <PageHead title={`${problem.id}. ${problem.title}`}>
         <div className="detail-meta">
-          <span className="chip">{isReview ? '複習' : '新題'}</span>
+          <span className="chip">{isReview ? t.practice.reviewChip : t.practice.newChip}</span>
           <DifficultyTag difficulty={problem.difficulty} />
           {showPattern || hints > 0 ? (
             <span>{pattern.name}</span>
           ) : (
             <button className="btn btn-quiet btn-small" onClick={() => setShowPattern(true)}>
-              顯示解題模式
+              {t.common.showPattern}
             </button>
           )}
-          {progress && <span>上次：{ratingLabel(progress.lastRating)}</span>}
-          {problem.premium && <span>需要 Premium</span>}
+          {progress && <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>}
+          {problem.premium && <span>{t.common.premium}</span>}
         </div>
         <div className="btn-row" style={{ marginTop: 16 }}>
           <LeetCodeLink slug={problem.slug} className="btn">
-            在 LeetCode 作答
+            {t.common.solveOnLeetCode}
           </LeetCodeLink>
-          <span className="sheet-note">分頁標題會顯示計時，切過去寫也看得到。</span>
+          <span className="sheet-note">{t.practice.tabHint}</span>
         </div>
       </PageHead>
 
       <div className="stack">
-        <section className="sheet sheet-body" aria-label="計時">
+        <section className="sheet sheet-body" aria-label={t.common.timer}>
           <div className="timer">
             <span className="timer-value" data-over={over}>
               {formatDuration(elapsedSec)}
             </span>
             <span className="timer-limit">
-              目標 {MOCK_MINUTES[problem.difficulty]} 分鐘，
-              {over ? `已超過 ${formatDuration(elapsedSec - targetSec)}` : `還剩 ${formatDuration(targetSec - elapsedSec)}`}
-              {!running && !finished && '，已暫停'}
+              {t.practice.target(MOCK_MINUTES[problem.difficulty])}
+              {over
+                ? t.practice.over(formatDuration(elapsedSec - targetSec))
+                : t.practice.left(formatDuration(targetSec - elapsedSec))}
+              {!running && !finished && t.practice.paused}
             </span>
           </div>
           <div
             className="timer-track"
             role="progressbar"
-            aria-label="已用時間"
+            aria-label={t.common.elapsed}
             aria-valuemin={0}
             aria-valuemax={targetSec}
             aria-valuenow={Math.min(elapsedSec, targetSec)}
@@ -158,10 +160,10 @@ function PracticeSession({ problem }: { problem: Problem }) {
           {!finished && (
             <div className="btn-row" style={{ marginTop: 16 }}>
               <button className="btn" onClick={togglePause}>
-                {running ? '暫停' : '繼續計時'}
+                {running ? t.common.pause : t.practice.resume}
               </button>
               <button className="btn btn-primary" onClick={finish}>
-                寫完了
+                {t.practice.finish}
               </button>
             </div>
           )}
@@ -169,9 +171,9 @@ function PracticeSession({ problem }: { problem: Problem }) {
 
         {finished ? (
           <Sheet
-            title="記錄這次練習"
+            title={t.record.title}
             id="record"
-            note={`花了 ${minutes} 分鐘${hints > 0 ? `，打開 ${hints} 層提示` : '，沒有用提示'}${sawSolution ? '，看過解答' : ''}`}
+            note={t.practice.summary(minutes, hints, sawSolution)}
           >
             <div className="sheet-body">
               <RecordForm
@@ -182,7 +184,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
                 initialMinutes={minutes}
                 hints={hints}
                 sawSolution={sawSolution}
-                cancelLabel="還沒寫完，繼續計時"
+                cancelLabel={t.practice.keepGoing}
                 onCancel={keepGoing}
                 onSaved={() => {
                   clearPracticeSession();
@@ -204,9 +206,9 @@ function PracticeSession({ problem }: { problem: Problem }) {
 
       {!saved && (
         <LeaveGuard
-          title="離開這次練習？"
-          message="計時會停止，這次不會留下紀錄。想保留的話，先按「寫完了」再儲存。"
-          leaveLabel="離開，不記錄"
+          title={t.leave.practiceTitle}
+          message={t.leave.practiceMessage}
+          leaveLabel={t.leave.practiceLeave}
           onLeave={clearPracticeSession}
         />
       )}

@@ -4,14 +4,18 @@ import { ProblemRow } from '../components/ProblemRow';
 import { RecordDialog } from '../components/RecordDialog';
 import { PageHead, Sheet } from '../components/ui';
 import type { Problem } from '../data/problems';
-import { LIST_FILTER_LABELS, nextNewProblems, problemsInList } from '../lib/catalog';
-import { formatDay, formatFullDay, startOfWeek } from '../lib/dates';
-import { ratingLabel } from '../lib/srs';
+import { useI18n } from '../i18n';
+import { bold, rich } from '../i18n/rich';
+import { nextNewProblems, problemsInList } from '../lib/catalog';
+import { startOfWeek, type Day } from '../lib/dates';
 import { dueProblems, finishDay, planToTarget, practiceStreak } from '../lib/stats';
 import type { AttemptMode } from '../store/db';
 import { useAttempts, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 
+const settingsLink = (text: string) => <Link to="/settings">{text}</Link>;
+
 export function TodayPage() {
+  const { t, fmt } = useI18n();
   const day = useToday();
   const settings = useSettings();
   const catalog = useCatalog();
@@ -19,7 +23,7 @@ export function TodayPage() {
   const attempts = useAttempts();
   const [recording, setRecording] = useState<{ problem: Problem; mode: AttemptMode } | null>(null);
 
-  const listName = LIST_FILTER_LABELS[settings.activeList];
+  const listName = t.lists.labels[settings.activeList];
   const listProblems = useMemo(() => problemsInList(catalog, settings.activeList), [catalog, settings.activeList]);
   const due = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
 
@@ -35,22 +39,33 @@ export function TodayPage() {
   const thisWeek = (attempts ?? []).filter((a) => a.day >= weekStart).length;
   const firstRun = loaded && progress.size === 0;
 
+  const rowActions = (p: Problem, mode: AttemptMode) => (
+    <>
+      <Link className="btn btn-small btn-primary" to={`/practice/${p.id}`}>
+        {t.common.start}
+      </Link>
+      <button className="btn btn-small btn-quiet" onClick={() => setRecording({ problem: p, mode })}>
+        {t.common.record}
+      </button>
+    </>
+  );
+
   return (
     <div className="page">
-      <PageHead title="今天要做的事" lede={formatFullDay(day)}>
-        {loaded && <PlanSentence day={day} listName={listName} untouched={untouched} dailyNew={settings.dailyNew} targetDate={settings.targetDate} />}
+      <PageHead title={t.today.title} lede={fmt.fullDay(day)}>
+        {loaded && (
+          <PlanSentence day={day} listName={listName} untouched={untouched} dailyNew={settings.dailyNew} targetDate={settings.targetDate} />
+        )}
       </PageHead>
 
       <div className="stack">
         {firstRun && (
-          <Sheet title="開始之前" id="welcome">
+          <Sheet title={t.today.welcomeTitle} id="welcome">
             <div className="sheet-empty">
-              <p>
-                目前的清單是 <strong>{listName}</strong>，每天 {settings.dailyNew} 題新題。以前做過但忘記的題目，就當成新題重做，照實評分，系統會幫你排好複習日。
-              </p>
+              <p>{rich(t.today.welcome(listName, settings.dailyNew), { b: bold })}</p>
               <div className="btn-row" style={{ marginTop: 12 }}>
                 <Link className="btn" to="/settings">
-                  調整清單和每日題數
+                  {t.today.adjustPlan}
                 </Link>
               </div>
             </div>
@@ -58,42 +73,24 @@ export function TodayPage() {
         )}
 
         <Sheet
-          title="該複習的題目"
+          title={t.today.dueTitle}
           count={due.length}
           id="due"
           actions={
             due.length > 0 ? (
               <Link className="btn btn-primary btn-small" to="/review">
-                逐題複習
+                {t.today.reviewAll}
               </Link>
             ) : undefined
           }
         >
           {due.length === 0 ? (
-            <p className="sheet-empty">
-              {firstRun ? '做完新題後，系統會依你的表現排好複習日，到期的題目會出現在這裡。' : '今天沒有到期的題目。'}
-            </p>
+            <p className="sheet-empty">{firstRun ? t.today.dueEmptyFirstRun : t.today.dueEmpty}</p>
           ) : (
             <ul className="rows">
               {due.map((p) => (
                 <li key={p.id}>
-                  <ProblemRow
-                    problem={p}
-                    progress={progress.get(p.id)}
-                    today={day}
-                    marked
-                    showPattern
-                    actions={
-                      <>
-                        <Link className="btn btn-small btn-primary" to={`/practice/${p.id}`}>
-                          開始
-                        </Link>
-                        <button className="btn btn-small btn-quiet" onClick={() => setRecording({ problem: p, mode: 'review' })}>
-                          記錄
-                        </button>
-                      </>
-                    }
-                  />
+                  <ProblemRow problem={p} progress={progress.get(p.id)} today={day} marked showPattern actions={rowActions(p, 'review')} />
                 </li>
               ))}
             </ul>
@@ -101,73 +98,50 @@ export function TodayPage() {
         </Sheet>
 
         <Sheet
-          title="今天的新題"
+          title={t.today.newTitle}
           count={newProblems.length}
           id="new"
-          note={startedToday > 0 ? `今天已開始 ${startedToday} 題新題` : `依 ${listName} 的模式順序`}
+          note={startedToday > 0 ? t.today.startedToday(startedToday) : t.today.roadmapOrder(listName)}
         >
           {newProblems.length > 0 ? (
             <ul className="rows">
               {newProblems.map((p) => (
                 <li key={p.id}>
-                  <ProblemRow
-                    problem={p}
-                    progress={undefined}
-                    today={day}
-                    marked
-                    showPattern
-                    actions={
-                      <>
-                        <Link className="btn btn-small btn-primary" to={`/practice/${p.id}`}>
-                          開始
-                        </Link>
-                        <button className="btn btn-small btn-quiet" onClick={() => setRecording({ problem: p, mode: 'practice' })}>
-                          記錄
-                        </button>
-                      </>
-                    }
-                  />
+                  <ProblemRow problem={p} progress={undefined} today={day} marked showPattern actions={rowActions(p, 'practice')} />
                 </li>
               ))}
             </ul>
           ) : (
             <div className="sheet-empty">
-              {untouched === 0 ? (
-                <p>{listName} 的題目都做過一輪了。可以到設定換一份清單，或專心把複習做完。</p>
-              ) : (
-                <p>今天的新題做完了。想多做的話，可以到題庫挑題。</p>
-              )}
+              <p>{untouched === 0 ? t.today.listFinished(listName) : t.today.newDone}</p>
               <div className="btn-row" style={{ marginTop: 12 }}>
                 <Link className="btn" to="/problems">
-                  打開題庫
+                  {t.today.openProblems}
                 </Link>
               </div>
             </div>
           )}
         </Sheet>
 
-        <Sheet title="今天做過的" count={todayAttempts.length} id="done">
+        <Sheet title={t.today.doneTitle} count={todayAttempts.length} id="done">
           {todayAttempts.length === 0 ? (
-            <p className="sheet-empty">還沒有紀錄。按「開始」會計時並提供提示；已經在 LeetCode 寫完的話，直接按「記錄」。</p>
+            <p className="sheet-empty">{t.today.doneEmpty}</p>
           ) : (
             <ul className="done-list">
               {todayAttempts.map((a) => {
                 const p = catalog.byId.get(a.problemId);
                 return (
                   <li key={a.id} className="chip">
-                    <Link to={`/problems/${a.problemId}`}>{p?.title ?? `#${a.problemId}`}</Link>（{ratingLabel(a.rating)}）
+                    <Link to={`/problems/${a.problemId}`}>{p?.title ?? `#${a.problemId}`}</Link>
+                    {t.today.doneItem(t.ratings[a.rating].label)}
                   </li>
                 );
               })}
             </ul>
           )}
           <div className="inline-stats" style={{ padding: '0 20px 16px' }}>
-            <span>
-              連續練習 <strong>{streak}</strong> 天
-            </span>
-            <span>
-              本週練習 <strong>{thisWeek}</strong> 次
-            </span>
+            <span>{rich(t.today.streak(streak), { b: bold })}</span>
+            <span>{rich(t.today.thisWeek(thisWeek), { b: bold })}</span>
           </div>
         </Sheet>
       </div>
@@ -177,39 +151,36 @@ export function TodayPage() {
   );
 }
 
-function PlanSentence({
-  day,
-  listName,
-  untouched,
-  dailyNew,
-  targetDate,
-}: {
-  day: string;
+interface PlanSentenceProps {
+  day: Day;
   listName: string;
   untouched: number;
   dailyNew: number;
-  targetDate?: string;
-}) {
+  targetDate?: Day;
+}
+
+function PlanSentence({ day, listName, untouched, dailyNew, targetDate }: PlanSentenceProps) {
+  const { t, fmt, locale } = useI18n();
+  const tags = { b: bold, link: settingsLink };
+  // 英文句子之間要空格，中文不用
+  const sep = locale === 'en' ? ' ' : '';
+
   if (untouched === 0) {
-    return <p className="today-plan">{listName} 的每一題都做過了，接下來以複習為主。</p>;
+    return <p className="today-plan">{t.today.planAllDone(listName)}</p>;
   }
 
   if (targetDate) {
     const plan = planToTarget(untouched, day, targetDate);
     if (plan.perDay === null) {
-      return (
-        <p className="today-plan">
-          目標日 {formatDay(targetDate)} 已經到了。<Link to="/settings">設定新的目標日期</Link>
-        </p>
-      );
+      return <p className="today-plan">{rich(t.today.planTargetPassed(fmt.day(targetDate)), tags)}</p>;
     }
     return (
       <p className="today-plan">
-        距離目標日 {formatDay(targetDate)} 還有 <strong>{plan.daysLeft}</strong> 天，{listName} 還有 <strong>{untouched}</strong> 題沒做，每天要做{' '}
-        <strong>{plan.perDay}</strong> 題新題才來得及。
+        {rich(t.today.planTarget(fmt.day(targetDate), plan.daysLeft, listName, untouched, plan.perDay), tags)}
         {plan.perDay > dailyNew && (
           <>
-            {' '}目前設定是每天 {dailyNew} 題，<Link to="/settings">調高每日題數</Link>。
+            {sep}
+            {rich(t.today.planRaise(dailyNew), tags)}
           </>
         )}
       </p>
@@ -219,13 +190,14 @@ function PlanSentence({
   const finish = finishDay(untouched, dailyNew, day);
   return (
     <p className="today-plan">
-      {listName} 還有 <strong>{untouched}</strong> 題沒做。
+      {rich(t.today.planRemaining(listName, untouched), tags)}
       {finish && (
         <>
-          照每天 {dailyNew} 題的速度，會在 <strong>{formatDay(finish)}</strong>做完第一輪。
+          {sep}
+          {rich(t.today.planFinish(dailyNew, fmt.day(finish)), tags)}
         </>
       )}{' '}
-      <Link to="/settings">設定目標日期</Link>
+      {rich(t.today.planSetTarget, tags)}
     </p>
   );
 }

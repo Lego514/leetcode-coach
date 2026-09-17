@@ -44,22 +44,7 @@ export async function apiRequest<T>(
   throw new ApiError(res.status, 'unavailable', `Server responded with ${res.status}`);
 }
 
-const MESSAGES: Record<ClientErrorCode, string> = {
-  invalid_request: '輸入的資料格式不正確。',
-  unsupported_media_type: '請求格式不正確。',
-  forbidden_origin: '這個網址不被允許使用同步功能。',
-  email_taken: '這個 email 已經註冊過了，請直接登入。',
-  invalid_credentials: 'Email 或密碼不正確。',
-  unauthorized: '登入已過期，請重新登入。',
-  rate_limited: '嘗試太多次了，請過幾分鐘再試。',
-  payload_too_large: '資料太大，無法上傳。',
-  not_found: '找不到同步伺服器。',
-  server_error: '伺服器發生錯誤，請稍後再試。',
-  network_error: '連不到伺服器，請確認網路連線。',
-  unavailable: '目前連不到同步伺服器。',
-};
-
-export function errorMessage(err: unknown): string {
-  if (err instanceof ApiError) return MESSAGES[err.code];
-  return err instanceof Error ? err.message : String(err);
+/** 畫面依這個代碼顯示對應語言的訊息（i18n 字典的 errors.api） */
+export function errorCode(err: unknown): ClientErrorCode | 'unknown' {
+  return err instanceof ApiError ? err.code : 'unknown';
 }

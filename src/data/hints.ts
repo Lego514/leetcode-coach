@@ -1,3 +1,6 @@
+import type { Locale } from '../i18n/locale';
+import { HINTS_EN } from './hints.en';
+
 /**
  * 每題一句「關鍵觀察」提示：指出方向，但不直接給完整解法。
  * 內容為自行撰寫，未收錄 LeetCode 題目或官方提示。
@@ -253,6 +256,6 @@ export const HINTS: Record<number, string> = {
   7: '逐位取出最後一位組成新的數字，組完後檢查有沒有超出 32 位元範圍。',
 };
 
-export function hintFor(problemId: number): string | undefined {
-  return HINTS[problemId];
+export function hintFor(problemId: number, locale: Locale = 'zh-TW'): string | undefined {
+  return (locale === 'en' ? HINTS_EN : HINTS)[problemId];
 }
