@@ -21,8 +21,10 @@ import { problemsInList } from '../lib/catalog';
 import { formatDuration, today } from '../lib/dates';
 import { HINT_LEVELS, suggestRating } from '../lib/practice';
 import { useRecorder, useStopwatch } from '../lib/session';
+import { speechSupported, useSpeechTranscript } from '../lib/speech';
 import { masteryOf, RATINGS, type Rating } from '../lib/srs';
-import { deleteMock, recordAttempt, saveMock } from '../store/actions';
+import { transcriptStats } from '../lib/transcript';
+import { deleteMock, recordAttempt, saveMock, saveNote } from '../store/actions';
 import type { Clarity, MockKind, MockRecord } from '../store/db';
 import { useCatalog, useMocks, useNote, useProgressMap, useSettings } from '../store/queries';
 
@@ -31,6 +33,7 @@ interface Session {
   kind: MockKind;
   limitSec: number;
   withAudio: boolean;
+  withTranscript: boolean;
   startedAt: string;
 }
 
@@ -38,6 +41,8 @@ interface SessionResult {
   usedSec: number;
   steps: string[];
   audio: Blob | null;
+  /** 沒有開啟逐字稿時為 null */
+  transcript: string | null;
   hints: number;
   sawSolution: boolean;
 }
@@ -110,6 +115,8 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
   const [patternId, setPatternId] = useState<'any' | PatternId>('any');
   const [minutes, setMinutes] = useState('');
   const [withAudio, setWithAudio] = useState(true);
+  const [canTranscribe] = useState(speechSupported);
+  const [withTranscript, setWithTranscript] = useState(false);
   const [error, setError] = useState<'notFound' | 'noMatch' | null>(null);
 
   const listProblems = useMemo(() => problemsInList(catalog, settings.activeList), [catalog, settings.activeList]);
@@ -160,6 +167,7 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
       kind,
       limitSec: custom > 0 ? Math.round(custom * 60) : auto,
       withAudio,
+      withTranscript: canTranscribe && withTranscript,
       startedAt: new Date().toISOString(),
     });
   }
@@ -285,6 +293,21 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
             </span>
           </label>
           <p className="field-hint span-2">{t.mock.audioPrivacy}</p>
+          <div className="field span-2">
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={canTranscribe && withTranscript}
+                disabled={!canTranscribe}
+                aria-describedby="transcript-hint"
+                onChange={(e) => setWithTranscript(e.target.checked)}
+              />
+              {t.mock.transcriptOption}
+            </label>
+            <span className="field-hint" id="transcript-hint">
+              {canTranscribe ? t.mock.transcriptHint : t.mock.transcriptUnsupported}
+            </span>
+          </div>
         </div>
 
         <div className="btn-row">
@@ -304,6 +327,8 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
   const { elapsedSec, running, start, pause } = useStopwatch();
   const recorder = useRecorder();
   const { start: startRecording, pause: pauseRecording, resume: resumeRecording, stop: stopRecording } = recorder;
+  const speech = useSpeechTranscript();
+  const { start: startSpeech, pause: pauseSpeech, resume: resumeSpeech, stop: stopSpeech } = speech;
   const [done, setDone] = useState<string[]>([]);
   const [openStep, setOpenStep] = useState(0);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
@@ -318,15 +343,18 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
     started.current = true;
     start();
     if (session.withAudio) void startRecording();
-  }, [start, startRecording, session.withAudio]);
+    if (session.withTranscript) startSpeech();
+  }, [start, startRecording, startSpeech, session.withAudio, session.withTranscript]);
 
   function togglePause() {
     if (running) {
       pause();
       pauseRecording();
+      pauseSpeech();
     } else {
       start();
       resumeRecording();
+      resumeSpeech();
     }
   }
 
@@ -334,10 +362,13 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
     if (finishing) return;
     setFinishing(true);
     const ms = pause();
-    const audio = await stopRecording();
+    const [audio, transcript] = await Promise.all([
+      stopRecording(),
+      session.withTranscript ? stopSpeech() : Promise.resolve(null),
+    ]);
     const steps =
       session.kind === 'full' ? done : EXPLAIN_CHECKS.filter((c) => checks[`explain:${c}`]);
-    onFinish({ usedSec: Math.round(ms / 1000), steps, audio, hints, sawSolution });
+    onFinish({ usedSec: Math.round(ms / 1000), steps, audio, transcript, hints, sawSolution });
   }
 
   function completeStep(index: number) {
@@ -515,6 +546,33 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
                 ))}
             </div>
           </Sheet>
+          {session.withTranscript && (
+            <Sheet
+              title={t.mock.transcriptTitle}
+              id="transcript"
+              note={
+                speech.state === 'listening' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span className="rec-dot" aria-hidden /> {t.mock.transcriptListening}
+                  </span>
+                ) : speech.state === 'paused' ? (
+                  t.mock.transcriptPaused
+                ) : undefined
+              }
+            >
+              <div className="sheet-body stack" style={{ gap: 10 }}>
+                {speech.error && <p className="form-error">{t.errors.speech[speech.error]}</p>}
+                {speech.finalText || speech.interim ? (
+                  <p className="prose-block transcript-live" lang="en">
+                    {speech.finalText}
+                    {speech.interim && <span className="transcript-interim"> {speech.interim}</span>}
+                  </p>
+                ) : (
+                  !speech.error && <p className="sheet-note">{t.mock.transcriptWaiting}</p>
+                )}
+              </div>
+            </Sheet>
+          )}
           <Sheet title={t.mock.tipsTitle} id="tips">
             <ul className="sheet-body bullets">
               {t.interview.tips.map((tip) => (
@@ -548,6 +606,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   const [rating, setRating] = useState<Rating | null>(isFull ? suggestRating(result.hints, result.sawSolution) : null);
   const [clarity, setClarity] = useState<Clarity | null>(null);
   const [reflection, setReflection] = useState('');
+  const [transcript, setTranscript] = useState(result.transcript ?? '');
   const [saving, setSaving] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const canSave = isFull ? rating !== null : clarity !== null;
@@ -570,6 +629,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
     if (result.hints > 0) record.hints = result.hints;
     if (result.sawSolution) record.sawSolution = true;
     if (result.audio) record.audio = result.audio;
+    if (transcript.trim()) record.transcript = transcript.trim();
     await saveMock(record);
     if (isFull && rating) {
       await recordAttempt(problem.id, rating, {
@@ -614,6 +674,16 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
               )}
             </div>
           </Sheet>
+
+          {result.transcript !== null && (
+            <TranscriptReview
+              problemId={problem.id}
+              value={transcript}
+              onChange={setTranscript}
+              usedSec={result.usedSec}
+              currentScript={note?.explanation ?? ''}
+            />
+          )}
 
           {!isFull && (
             <Sheet title={t.mock.compareTitle} id="compare">
@@ -714,6 +784,87 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   );
 }
 
+interface TranscriptReviewProps {
+  problemId: number;
+  value: string;
+  onChange: (value: string) => void;
+  usedSec: number;
+  currentScript: string;
+}
+
+function TranscriptReview({ problemId, value, onChange, usedSec, currentScript }: TranscriptReviewProps) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const [confirmReplace, setConfirmReplace] = useState(false);
+  const text = value.trim();
+  const stats = useMemo(() => transcriptStats(text, usedSec), [text, usedSec]);
+
+  async function saveScript() {
+    setConfirmReplace(false);
+    await saveNote(problemId, { explanation: text });
+    toast(t.mock.scriptSaved);
+  }
+
+  function requestSave() {
+    if (currentScript.trim() && currentScript.trim() !== text) setConfirmReplace(true);
+    else void saveScript();
+  }
+
+  return (
+    <Sheet title={t.mock.transcriptTitle} id="transcript-review" note={t.mock.transcriptReviewNote}>
+      <div className="sheet-body stack" style={{ gap: 12 }}>
+        <label className="visually-hidden" htmlFor="transcript-input">
+          {t.mock.transcriptLabel}
+        </label>
+        <textarea
+          id="transcript-input"
+          className="textarea"
+          rows={6}
+          lang="en"
+          value={value}
+          placeholder={t.mock.transcriptNone}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {text && (
+          <ul className="bullets">
+            <li>
+              {t.mock.transcriptStats(stats.words, stats.wpm)}
+              {stats.wpm !== null && ` ${t.mock.pace(stats.wpm)}`}
+            </li>
+            <li>
+              {stats.fillers.length > 0
+                ? t.mock.fillers(stats.fillers.map((f) => t.mock.fillerItem(f.word, f.count)).join(', '))
+                : t.mock.noFillers}
+            </li>
+          </ul>
+        )}
+        <div>
+          <button type="button" className="btn btn-small" disabled={!text} onClick={requestSave}>
+            {t.mock.saveAsScript}
+          </button>
+        </div>
+      </div>
+      <Dialog
+        open={confirmReplace}
+        onClose={() => setConfirmReplace(false)}
+        title={t.mock.replaceScriptTitle}
+        footer={
+          <>
+            <button className="btn btn-quiet" onClick={() => setConfirmReplace(false)}>
+              {t.common.cancel}
+            </button>
+            <button className="btn btn-primary" onClick={() => void saveScript()}>
+              {t.mock.replaceScript}
+            </button>
+          </>
+        }
+      >
+        <p>{t.mock.replaceScriptBody}</p>
+      </Dialog>
+    </Sheet>
+  );
+}
+
 /* ---------- 紀錄 ---------- */
 
 function MockHistory() {
@@ -758,6 +909,14 @@ function MockHistory() {
                   {clarity && <span>{clarity.label}</span>}
                 </div>
                 {m.reflection && <p className="prose-block">{m.reflection}</p>}
+                {m.transcript && (
+                  <details>
+                    <summary>{t.mock.showTranscript}</summary>
+                    <p className="prose-block" lang="en" style={{ marginTop: 8 }}>
+                      {m.transcript}
+                    </p>
+                  </details>
+                )}
                 {m.audio && <MockAudio blob={m.audio} />}
               </li>
             );

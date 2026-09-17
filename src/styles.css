@@ -1829,3 +1829,13 @@ audio {
   overflow: auto;
   background: var(--sheet);
 }
+
+/* 模擬面試的即時逐字稿 */
+.transcript-live {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.transcript-interim {
+  color: var(--ink-3);
+}

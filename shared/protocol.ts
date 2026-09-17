@@ -41,6 +41,7 @@ export const mockDataSchema = z.object({
   hints: z.number().int().min(0).max(10).optional(),
   sawSolution: z.boolean().optional(),
   reflection: text(5000),
+  transcript: text(20000).optional(),
 });
 
 export const noteDataSchema = z.object({

@@ -188,6 +188,13 @@ const zhTW = {
       noDevice: '找不到麥克風。接上麥克風後再試一次，或這次先不錄音。',
       failed: '無法開始錄音，這次先不錄音。',
     },
+    speech: {
+      unsupported: '這個瀏覽器不支援語音辨識，這次沒有逐字稿。可以改用 Chrome 或 Edge。',
+      denied: '瀏覽器沒有允許使用麥克風，這次沒有逐字稿。',
+      noDevice: '找不到麥克風，這次沒有逐字稿。',
+      network: '語音辨識需要連上網路，連線中斷後逐字稿就停止了。',
+      failed: '語音辨識停止了，後面的內容沒有逐字稿。',
+    },
   },
 
   sync: {
@@ -498,6 +505,34 @@ const zhTW = {
     recordDeleted: '已刪除紀錄。',
     playRecording: '播放錄音',
     audioLabel: '錄音',
+    transcriptOption: '產生英文逐字稿',
+    transcriptHint:
+      '使用瀏覽器的語音辨識，Chrome 會把聲音送到 Google 的伺服器轉成文字。逐字稿會跟著紀錄儲存，登入時也會同步。',
+    transcriptUnsupported: '這個瀏覽器不支援語音辨識，想要逐字稿可以改用 Chrome 或 Edge。',
+    transcriptTitle: '逐字稿',
+    transcriptListening: '正在聽',
+    transcriptPaused: '已暫停',
+    transcriptWaiting: '開始用英文講，辨識出來的句子會出現在這裡。',
+    transcriptReviewNote: '語音辨識難免有錯，可以先修正再儲存。',
+    transcriptNone: '這次沒有辨識到任何句子。',
+    transcriptLabel: '這次的逐字稿',
+    transcriptStats: (words: number, wpm: number | null) =>
+      wpm === null ? `${words} 個字` : `${words} 個字，每分鐘約 ${wpm} 字`,
+    pace: (wpm: number): string =>
+      wpm < 100
+        ? '語速偏慢，可以多練幾次讓講解更流暢。'
+        : wpm > 170
+          ? '語速偏快，面試官可能跟不上，關鍵的地方放慢一點。'
+          : '語速適中，面試時大約每分鐘 120 到 150 字。',
+    fillers: (list: string) => `贅詞：${list}`,
+    fillerItem: (word: string, count: number) => `${word}（${count} 次）`,
+    noFillers: '沒有偵測到常見的贅詞。',
+    saveAsScript: '存成這題的講解稿',
+    replaceScriptTitle: '取代原本的講解稿？',
+    replaceScriptBody: '這題已經有講解稿，會被這份逐字稿取代。',
+    replaceScript: '取代',
+    scriptSaved: '已存成講解稿。',
+    showTranscript: '顯示逐字稿',
   },
 
   interview: {

@@ -194,6 +194,13 @@ const en: Messages = {
       noDevice: 'No microphone found. Connect one and try again, or continue without recording.',
       failed: 'Recording couldn’t start, so this session won’t be recorded.',
     },
+    speech: {
+      unsupported: 'This browser doesn’t support speech recognition, so there’s no transcript this time. Chrome and Edge do.',
+      denied: 'The browser didn’t allow microphone access, so there’s no transcript this time.',
+      noDevice: 'No microphone found, so there’s no transcript this time.',
+      network: 'Speech recognition needs an internet connection. The transcript stopped when the connection dropped.',
+      failed: 'Speech recognition stopped, so the rest of the session has no transcript.',
+    },
   },
 
   sync: {
@@ -507,6 +514,34 @@ const en: Messages = {
     recordDeleted: 'Session deleted.',
     playRecording: 'Play recording',
     audioLabel: 'Recording',
+    transcriptOption: 'Transcribe what I say',
+    transcriptHint:
+      'Uses the browser’s speech recognition. Chrome sends the audio to Google’s servers to turn it into text. The transcript is saved with the session and synced when you’re signed in.',
+    transcriptUnsupported: 'This browser doesn’t support speech recognition. Use Chrome or Edge to get a transcript.',
+    transcriptTitle: 'Transcript',
+    transcriptListening: 'Listening',
+    transcriptPaused: 'Paused',
+    transcriptWaiting: 'Start explaining in English. Recognized sentences show up here.',
+    transcriptReviewNote: 'Speech recognition makes mistakes, so fix anything wrong before saving.',
+    transcriptNone: 'No speech was recognized this time.',
+    transcriptLabel: 'Transcript of this session',
+    transcriptStats: (words, wpm) =>
+      wpm === null ? count(words, 'word') : `${count(words, 'word')}, about ${wpm} per minute`,
+    pace: (wpm) =>
+      wpm < 100
+        ? 'That’s on the slow side. A few more run-throughs will make it smoother.'
+        : wpm > 170
+          ? 'That’s fast. Slow down on the key points so the interviewer can follow.'
+          : 'Good pace. Interview explanations usually run 120 to 150 words per minute.',
+    fillers: (list) => `Filler words: ${list}`,
+    fillerItem: (word, n) => `“${word}” ×${n}`,
+    noFillers: 'No common filler words detected.',
+    saveAsScript: 'Save as this problem’s script',
+    replaceScriptTitle: 'Replace your explanation script?',
+    replaceScriptBody: 'This problem already has an explanation script. It will be replaced by this transcript.',
+    replaceScript: 'Replace',
+    scriptSaved: 'Saved as your explanation script.',
+    showTranscript: 'Show transcript',
   },
 
   interview: {

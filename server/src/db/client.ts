@@ -18,6 +18,23 @@ export interface DatabaseHandle {
 }
 
 /**
+ * PostgreSQL 連線設定，針對 Neon 這類會自動休眠的服務調整：
+ * - 閒置連線 60 秒後關閉，資料庫才能休眠，不會一直消耗運算時數
+ * - 資料庫從休眠喚醒需要幾秒，連線逾時放寬到 30 秒
+ * - 經過 PgBouncer 連線池（Neon 的 -pooler 主機）時不使用具名 prepared statement
+ */
+export function postgresOptions(url: string): postgres.Options<Record<string, never>> {
+  const host = new URL(url).hostname;
+  return {
+    max: 10,
+    idle_timeout: 60,
+    connect_timeout: 30,
+    prepare: !host.includes('-pooler.'),
+    onnotice: () => {},
+  };
+}
+
+/**
  * 依連線字串開啟資料庫：
  * - `postgres://…`：正式環境的 PostgreSQL
  * - `pglite:<資料夾>`：本機開發用，資料存在該資料夾
@@ -42,7 +59,7 @@ export async function openDatabase(url: string): Promise<DatabaseHandle> {
   }
 
   if (!/^postgres(ql)?:\/\//.test(url)) throw new Error('DATABASE_URL must start with postgres:// or pglite:');
-  const client = postgres(url, { max: 10, onnotice: () => {} });
+  const client = postgres(url, postgresOptions(url));
   return {
     db: drizzlePostgres(client, { schema }) as unknown as Database,
     kind: 'postgres',

@@ -20,6 +20,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
   - A two-minute explanation drill.
+  - An optional live English transcript (Web Speech API). Afterwards you can fix it, see your word count, speaking pace, and filler words, and save it as the problem's explanation script.
 - **Progress**: a per-pattern mastery grid, a weekly practice chart, an activity calendar, and a breakdown by difficulty.
 - **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, and settings between devices. Everything keeps working offline and without an account.
 - **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It follows the browser language by default, and you can switch from the sidebar or Settings.
@@ -36,7 +37,8 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 | Local storage | IndexedDB via Dexie 4, reactive reads with `useLiveQuery` |
 | API | Node 24, Hono, zod validation shared with the client |
 | Database | PostgreSQL through Drizzle ORM; embedded PGlite for local development and tests |
-| Quality | Vitest (unit, API, and end-to-end sync tests), ESLint, GitHub Actions CI |
+| Quality | Vitest (unit, API, and two-device sync tests), Playwright end-to-end tests against the production build and a real PostgreSQL, ESLint, GitHub Actions CI |
+| Hosting | Render (one Node service for the API and the web app), Neon PostgreSQL |
 
 ## Architecture
 
@@ -61,6 +63,7 @@ server/              API
   src/db/              Drizzle schema, database client (PostgreSQL or PGlite), migration runner
   migrations/          Plain SQL migrations, applied in order at startup
   test/                API tests and two-device end-to-end sync tests
+e2e/                 Playwright tests: practice and review, mock interview with a transcript, language, sync between two browsers
 ```
 
 In production a single Node service serves both `/api` and the built web app. The browser only talks to its own origin, so the session cookie can be `SameSite=Lax` and the API needs no CORS. In development, Vite proxies `/api` to the API server.
@@ -111,6 +114,7 @@ Requires Node 24. No database install is needed for development.
 npm install
 npm run dev          # web on http://localhost:5173 and API on http://localhost:8787
 npm test             # web unit tests, then API and end-to-end sync tests
+npm run test:e2e     # build, then run the Playwright tests in Chromium
 npm run lint
 npm run typecheck
 npm run build:all    # web app into dist/ and API into server/dist/
@@ -121,16 +125,27 @@ npm start            # run the built API (and the web app when NODE_ENV=producti
 - Server settings are read from `server/.env`. See `server/.env.example`.
 - The web app still works as a static site without the API: sign-in shows as unavailable and data stays in the browser.
 - To regenerate the PWA icons, run `node scripts/generate-icons.mjs`.
+- The Playwright tests start the built server on port 4310 with an in-memory PGlite database. Set `E2E_DATABASE_URL` to run them against PostgreSQL, as CI does. The first time, run `npx playwright install chromium`.
 
 ## Deploying
 
-`render.yaml` describes a single Render web service that builds both parts and serves them together.
+`render.yaml` describes a single Render web service that builds both parts and serves them together. Both Render and Neon have free plans.
 
-1. Create a PostgreSQL database, for example on Neon, and copy its connection string.
-2. On Render, create a Blueprint from this repository and set `DATABASE_URL`.
-3. Render provides `RENDER_EXTERNAL_URL`, which the API uses as its allowed origin. On other hosts, set `APP_ORIGINS`.
+1. **Database (Neon)**
+   1. Sign in at [neon.tech](https://neon.tech) and create a project. Pick **AWS US West 2 (Oregon)**, the same region as the Render service in `render.yaml`, so queries stay fast.
+   2. On the project dashboard, click **Connect** and copy the connection string. It looks like `postgresql://user:password@ep-xxx.us-west-2.aws.neon.tech/neondb?sslmode=require`. Either the direct or the pooled (`-pooler`) string works; the API turns off prepared statements for pooled connections.
+2. **Web service (Render)**
+   1. Sign in at [render.com](https://render.com) with GitHub and allow access to this repository.
+   2. Choose **New → Blueprint**, select the repository, and paste the Neon connection string as `DATABASE_URL` when asked.
+   3. Render builds and starts the service. Migrations run automatically at startup. When the deploy finishes, open the `onrender.com` URL and check `/api/health`.
+3. **Later deploys** happen automatically when a commit on `main` passes CI (`autoDeployTrigger: checksPass`).
 
-Migrations run automatically at startup.
+Notes:
+
+- Render provides `RENDER_EXTERNAL_URL`, which the API uses as its allowed origin. With a custom domain, or on another host, set `APP_ORIGINS` (comma-separated).
+- On the free plan the service sleeps after 15 minutes without traffic, so the first request after that takes about a minute.
+- Idle database connections close after 60 seconds so Neon can suspend, and the health check doesn't touch the database.
+- Settings: `DATABASE_URL` (required), `APP_ORIGINS`, `PORT`, `TRUST_PROXY` (default on in production), `STATIC_DIR`.
 
 ## Data and privacy
 
@@ -138,6 +153,8 @@ Migrations run automatically at startup.
 - **With an account**:
   - Attempts, notes, tags, pattern notes, custom problems, and settings sync to the server.
   - Audio recordings never leave the device, and backups don't include them either.
+  - Transcripts are saved with the mock session and sync like the rest of your data.
+- **Transcripts** are optional and use the browser's speech recognition. Chrome sends the audio to Google's servers to turn it into text.
   - Deleting the account removes it and all of its server data.
 - **Signing out** can either keep the local copy or clear it (for shared computers).
 - **Problem statements are not included.** The app stores only titles and links to leetcode.com.
@@ -160,6 +177,16 @@ Migrations run automatically at startup.
 
 介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
 
+模擬面試可以開啟英文逐字稿（瀏覽器的語音辨識，Chrome 會把聲音送到 Google 轉成文字）。結束後可以修正內容、看字數、語速和贅詞，再一鍵存成這題的講解稿。
+
 不登入也能完整使用，資料存在瀏覽器裡。到「設定」註冊或登入後，練習紀錄、筆記和設定會自動同步到雲端，換電腦或換瀏覽器都能接著用；離線時照常記錄，恢復連線後再上傳。錄音只會留在原本的裝置上。
 
-本機開發執行 `npm run dev`，會同時啟動網頁（http://localhost:5173）和後端（內建 PGlite 資料庫，不需要另外安裝）。
+本機開發執行 `npm run dev`，會同時啟動網頁（http://localhost:5173）和後端（內建 PGlite 資料庫，不需要另外安裝）。`npm run test:e2e` 會先建置，再用 Playwright 跑端對端測試。
+
+部署到 Render＋Neon 的步驟：
+
+1. 到 Neon 建立專案（區域選 AWS US West 2 (Oregon)，跟 Render 同一區），複製連線字串（`postgresql://…?sslmode=require`）。
+2. 到 Render 用 GitHub 登入，選 **New → Blueprint**，選這個 repository，`DATABASE_URL` 貼上 Neon 的連線字串。
+3. 部署完成後打開 `onrender.com` 的網址，確認 `/api/health` 回傳 `{"ok":true}`。之後 `main` 的 CI 通過就會自動部署。
+
+免費方案閒置 15 分鐘會休眠，之後第一次開啟大約要等一分鐘。

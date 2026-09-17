@@ -5,6 +5,10 @@ dev-dist
 .DS_Store
 coverage
 
+# Playwright
+test-results
+playwright-report
+
 # 本機工具設定
 .claude/
 

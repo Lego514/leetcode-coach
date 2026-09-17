@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { openDatabase } from '../src/db/client';
+import { openDatabase, postgresOptions } from '../src/db/client';
 import { migrate, splitStatements } from '../src/db/migrate';
 import { EnvError, loadEnv } from '../src/env';
 import { MIGRATIONS_DIR } from './helpers';
@@ -70,5 +70,17 @@ describe('loadEnv', () => {
 
   it('rejects an invalid port', () => {
     expect(() => loadEnv({ PORT: 'abc' }, root)).toThrow(EnvError);
+  });
+});
+
+describe('postgresOptions', () => {
+  it('lets idle connections close so the database can suspend', () => {
+    const options = postgresOptions('postgres://u:p@ep-cool-1.us-east-2.aws.neon.tech/app?sslmode=require');
+    expect(options.idle_timeout).toBeGreaterThan(0);
+    expect(options.prepare).toBe(true);
+  });
+
+  it('turns off prepared statements behind a connection pooler', () => {
+    expect(postgresOptions('postgres://u:p@ep-cool-1-pooler.us-east-2.aws.neon.tech/app').prepare).toBe(false);
   });
 });
