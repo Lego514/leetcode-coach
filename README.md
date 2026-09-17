@@ -24,6 +24,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
   - A two-minute explanation drill.
   - An optional live English transcript (Web Speech API). Afterwards you can fix it, see your word count, speaking pace, and filler words, and save it as the problem's explanation script.
+  - **AI feedback (Claude)** on the transcript: a 0–2 score for each of the five explanation points with comments, strengths, concrete rewrites of unclear phrases, and a model answer you can save as your script. Requires an account; the server holds the API key and enforces a daily limit per user.
 - **Progress**: a per-pattern mastery grid, a weekly practice chart, an activity calendar, and a breakdown by difficulty.
 - **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, and settings between devices. Everything keeps working offline and without an account.
 - **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It follows the browser language by default, and you can switch from the sidebar or Settings.
@@ -41,6 +42,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 | API | Node 24, Hono, zod validation shared with the client |
 | Database | PostgreSQL through Drizzle ORM; embedded PGlite for local development and tests |
 | Quality | Vitest (unit, API, and two-device sync tests), Playwright end-to-end tests against the production build and a real PostgreSQL, ESLint, GitHub Actions CI |
+| AI | Claude Opus 5 through the Anthropic TypeScript SDK, JSON-schema structured output, server-side refusal fallback, per-user daily quota stored in PostgreSQL |
 | Hosting | Render (one Node service for the API and the web app), Neon PostgreSQL |
 
 ## Architecture
@@ -63,6 +65,7 @@ server/              API
   src/app.ts           Hono app: security middleware, routes, static files
   src/auth/            Password hashing, sessions, rate limiting, auth routes
   src/sync/            Sync endpoint and last-write-wins upserts
+  src/ai/              Explanation feedback: Claude prompt and output schema, quota-limited route
   src/db/              Drizzle schema, database client (PostgreSQL or PGlite), migration runner
   migrations/          Plain SQL migrations, applied in order at startup
   test/                API tests and two-device end-to-end sync tests
@@ -148,7 +151,8 @@ Notes:
 - Render provides `RENDER_EXTERNAL_URL`, which the API uses as its allowed origin. With a custom domain, or on another host, set `APP_ORIGINS` (comma-separated).
 - On the free plan the service sleeps after 15 minutes without traffic, so the first request after that takes about a minute.
 - Idle database connections close after 60 seconds so Neon can suspend, and the health check doesn't touch the database.
-- Settings: `DATABASE_URL` (required), `APP_ORIGINS`, `PORT`, `TRUST_PROXY` (default on in production), `STATIC_DIR`.
+- Settings: `DATABASE_URL` (required), `APP_ORIGINS`, `PORT`, `TRUST_PROXY` (default on in production), `STATIC_DIR`, `ANTHROPIC_API_KEY` (optional; AI feedback is off without it), `AI_DAILY_LIMIT` (default 20 per user per day).
+- **AI feedback** needs an API key from the [Claude Console](https://platform.claude.com). Add it as `ANTHROPIC_API_KEY` on Render (or in `server/.env` locally). Each request costs roughly US$0.03–0.08 with Claude Opus 5, so 20 drills a month is about US$1–2. Setting a monthly spend limit in the Console is a good safety net.
 
 ## Data and privacy
 
@@ -158,6 +162,7 @@ Notes:
   - Audio recordings never leave the device, and backups don't include them either.
   - Transcripts are saved with the mock session and sync like the rest of your data.
 - **Transcripts** are optional and use the browser's speech recognition. Chrome sends the audio to Google's servers to turn it into text.
+- **AI feedback** sends the transcript text and the problem's title to Anthropic's API only when you press the button. The server stores daily request and token counts per user, not the transcript itself.
   - Deleting the account removes it and all of its server data.
 - **Signing out** can either keep the local copy or clear it (for shared computers).
 - **Problem statements are not included.** The app stores only titles and links to leetcode.com.
@@ -182,7 +187,7 @@ Notes:
 
 今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
 
-模擬面試可以開啟英文逐字稿（瀏覽器的語音辨識，Chrome 會把聲音送到 Google 轉成文字）。結束後可以修正內容、看字數、語速和贅詞，再一鍵存成這題的講解稿。
+模擬面試可以開啟英文逐字稿（瀏覽器的語音辨識，Chrome 會把聲音送到 Google 轉成文字）。結束後可以修正內容、看字數、語速和贅詞，再一鍵存成這題的講解稿。登入後還可以按「取得 AI 回饋」，由 Claude 依五個重點評分、指出講不清楚的句子並給參考講法（逐字稿會送到 Anthropic；伺服器要設定 `ANTHROPIC_API_KEY`，每人每天預設 20 次，一次約 1～3 元台幣）。
 
 不登入也能完整使用，資料存在瀏覽器裡。到「設定」註冊或登入後，練習紀錄、筆記和設定會自動同步到雲端，換電腦或換瀏覽器都能接著用；離線時照常記錄，恢復連線後再上傳。錄音只會留在原本的裝置上。
 

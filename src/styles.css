@@ -1877,3 +1877,52 @@ audio {
     bottom: calc(76px + env(safe-area-inset-bottom));
   }
 }
+
+/* AI 講解回饋 */
+.ai-feedback {
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+
+.ai-feedback-title,
+.ai-subtitle {
+  margin: 0;
+  font-size: 15px;
+}
+
+.ai-subtitle {
+  margin-bottom: 6px;
+}
+
+.ai-points {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-points li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.ai-score {
+  flex: none;
+  min-width: 40px;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  font-weight: 700;
+  text-align: center;
+  color: var(--hard);
+  border: 1px solid currentColor;
+}
+
+.ai-score[data-score='1'] {
+  color: var(--medium);
+}
+
+.ai-score[data-score='2'] {
+  color: var(--good);
+}

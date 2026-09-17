@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
 import type { AttemptMode, Collection, MockKind } from '../../shared/constants';
+import type { ExplanationFeedback } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -82,6 +83,8 @@ export interface MockRecord {
   reflection: string;
   /** 語音辨識產生的英文逐字稿 */
   transcript?: string;
+  /** Claude 對逐字稿的講解回饋 */
+  feedback?: ExplanationFeedback;
   /** 錄音只留在這台裝置，不會同步 */
   audio?: Blob;
 }

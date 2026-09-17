@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import type { ExplanationFeedback } from '../../shared/protocol';
+import { AiFeedbackPanel, FeedbackView } from '../components/AiFeedbackPanel';
 import { BlobAudio } from '../components/BlobAudio';
 import { HintPanel } from '../components/HintPanel';
 import { LeaveGuard } from '../components/LeaveGuard';
@@ -607,6 +609,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   const [clarity, setClarity] = useState<Clarity | null>(null);
   const [reflection, setReflection] = useState('');
   const [transcript, setTranscript] = useState(result.transcript ?? '');
+  const [feedback, setFeedback] = useState<ExplanationFeedback | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const canSave = isFull ? rating !== null : clarity !== null;
@@ -630,6 +633,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
     if (result.sawSolution) record.sawSolution = true;
     if (result.audio) record.audio = result.audio;
     if (transcript.trim()) record.transcript = transcript.trim();
+    if (feedback) record.feedback = feedback;
     await saveMock(record);
     if (isFull && rating) {
       await recordAttempt(problem.id, rating, {
@@ -677,7 +681,9 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
 
           {result.transcript !== null && (
             <TranscriptReview
-              problemId={problem.id}
+              problem={problem}
+              feedback={feedback}
+              onFeedback={setFeedback}
               value={transcript}
               onChange={setTranscript}
               usedSec={result.usedSec}
@@ -785,29 +791,32 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
 }
 
 interface TranscriptReviewProps {
-  problemId: number;
+  problem: Problem;
+  feedback: ExplanationFeedback | null;
+  onFeedback: (feedback: ExplanationFeedback) => void;
   value: string;
   onChange: (value: string) => void;
   usedSec: number;
   currentScript: string;
 }
 
-function TranscriptReview({ problemId, value, onChange, usedSec, currentScript }: TranscriptReviewProps) {
+function TranscriptReview({ problem, feedback, onFeedback, value, onChange, usedSec, currentScript }: TranscriptReviewProps) {
   const { t } = useI18n();
   const toast = useToast();
-  const [confirmReplace, setConfirmReplace] = useState(false);
+  // 等待確認要存成講解稿的文字：逐字稿本身或 AI 的參考講法
+  const [pendingScript, setPendingScript] = useState<string | null>(null);
   const text = value.trim();
   const stats = useMemo(() => transcriptStats(text, usedSec), [text, usedSec]);
 
-  async function saveScript() {
-    setConfirmReplace(false);
-    await saveNote(problemId, { explanation: text });
+  async function saveScript(script: string) {
+    setPendingScript(null);
+    await saveNote(problem.id, { explanation: script });
     toast(t.mock.scriptSaved);
   }
 
-  function requestSave() {
-    if (currentScript.trim() && currentScript.trim() !== text) setConfirmReplace(true);
-    else void saveScript();
+  function requestSave(script: string) {
+    if (currentScript.trim() && currentScript.trim() !== script.trim()) setPendingScript(script);
+    else void saveScript(script);
   }
 
   return (
@@ -839,21 +848,29 @@ function TranscriptReview({ problemId, value, onChange, usedSec, currentScript }
           </ul>
         )}
         <div>
-          <button type="button" className="btn btn-small" disabled={!text} onClick={requestSave}>
+          <button type="button" className="btn btn-small" disabled={!text} onClick={() => requestSave(text)}>
             {t.mock.saveAsScript}
           </button>
         </div>
+        <AiFeedbackPanel
+          problem={problem}
+          transcript={value}
+          usedSec={usedSec}
+          feedback={feedback}
+          onFeedback={onFeedback}
+          onUseScript={requestSave}
+        />
       </div>
       <Dialog
-        open={confirmReplace}
-        onClose={() => setConfirmReplace(false)}
+        open={pendingScript !== null}
+        onClose={() => setPendingScript(null)}
         title={t.mock.replaceScriptTitle}
         footer={
           <>
-            <button className="btn btn-quiet" onClick={() => setConfirmReplace(false)}>
+            <button className="btn btn-quiet" onClick={() => setPendingScript(null)}>
               {t.common.cancel}
             </button>
-            <button className="btn btn-primary" onClick={() => void saveScript()}>
+            <button className="btn btn-primary" onClick={() => pendingScript !== null && void saveScript(pendingScript)}>
               {t.mock.replaceScript}
             </button>
           </>
@@ -915,6 +932,14 @@ function MockHistory() {
                     <p className="prose-block" lang="en" style={{ marginTop: 8 }}>
                       {m.transcript}
                     </p>
+                  </details>
+                )}
+                {m.feedback && (
+                  <details>
+                    <summary>{t.mock.showFeedback}</summary>
+                    <div style={{ marginTop: 8 }}>
+                      <FeedbackView feedback={m.feedback} />
+                    </div>
                   </details>
                 )}
                 {m.audio && <MockAudio blob={m.audio} />}

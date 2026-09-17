@@ -4,7 +4,9 @@ import {
   ATTEMPT_MODES,
   COLLECTIONS,
   DIFFICULTIES,
+  EXPLAIN_POINTS,
   LIST_IDS,
+  LOCALE_IDS,
   MOCK_KINDS,
   PASSWORD_MIN_LENGTH,
   PATTERN_IDS,
@@ -28,6 +30,31 @@ export const attemptDataSchema = z.object({
   sawSolution: z.boolean().optional(),
 });
 
+/** AI 對一次講解的回饋；分數 0 沒講到、1 講得不完整、2 講清楚 */
+export const explanationFeedbackSchema = z.object({
+  summary: text(1000),
+  points: z
+    .array(
+      z.object({
+        id: z.enum(EXPLAIN_POINTS),
+        score: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        comment: text(600),
+      }),
+    )
+    .max(EXPLAIN_POINTS.length),
+  strengths: z.array(text(300)).max(5),
+  improvements: z
+    .array(
+      z.object({
+        quote: text(300),
+        suggestion: text(600),
+      }),
+    )
+    .max(6),
+  improvedScript: text(4000),
+});
+export type ExplanationFeedback = z.infer<typeof explanationFeedbackSchema>;
+
 export const mockDataSchema = z.object({
   problemId: z.number().int().positive(),
   kind: z.enum(MOCK_KINDS),
@@ -42,6 +69,7 @@ export const mockDataSchema = z.object({
   sawSolution: z.boolean().optional(),
   reflection: text(5000),
   transcript: text(20000).optional(),
+  feedback: explanationFeedbackSchema.optional(),
 });
 
 export const noteDataSchema = z.object({
@@ -181,8 +209,37 @@ export type ApiErrorCode =
   | 'rate_limited'
   | 'payload_too_large'
   | 'not_found'
+  | 'ai_unavailable'
+  | 'ai_quota_exceeded'
+  | 'ai_failed'
   | 'server_error';
 
 export interface ApiErrorBody {
   error: { code: ApiErrorCode; message: string };
+}
+
+export const feedbackRequestSchema = z.object({
+  problem: z.object({
+    id: z.number().int().positive().max(9_999_999),
+    title: z.string().trim().min(1).max(200),
+    difficulty: z.enum(DIFFICULTIES),
+    pattern: z.string().trim().min(1).max(80),
+  }),
+  /** 語音辨識出來、使用者可能修正過的英文逐字稿 */
+  transcript: z.string().trim().min(20).max(20_000),
+  seconds: z.number().int().min(0).max(24 * 3600),
+  language: z.enum(LOCALE_IDS),
+});
+export type FeedbackRequest = z.infer<typeof feedbackRequestSchema>;
+
+export interface AiStatus {
+  available: boolean;
+  dailyLimit: number;
+  usedToday: number;
+}
+
+export interface FeedbackResponse {
+  feedback: ExplanationFeedback;
+  usedToday: number;
+  dailyLimit: number;
 }
