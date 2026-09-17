@@ -45,6 +45,21 @@ export const records = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.collection, t.key] }), index('records_user_version_idx').on(t.userId, t.version)],
 );
 
+/** 忘記密碼的重設連結；只存 token 的雜湊 */
+export const passwordResets = pgTable(
+  'password_resets',
+  {
+    id: text('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('password_resets_user_idx').on(t.userId)],
+);
+
 /** 每位使用者每天（UTC）的 AI 用量 */
 export const aiUsage = pgTable(
   'ai_usage',

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { serve } from '@hono/node-server';
 import { createClaudeFeedback } from './ai/feedback';
 import { createApp } from './app';
+import { createBrevoMailer } from './mail/brevo';
 import { openDatabase } from './db/client';
 import { migrate } from './db/migrate';
 import { loadEnv } from './env';
@@ -20,6 +21,13 @@ const app = createApp({
   secureCookies: env.production,
   trustProxy: env.trustProxy,
   staticDir: env.staticDir,
+  mail:
+    env.brevoApiKey && env.mailFrom && env.appUrl
+      ? {
+          send: createBrevoMailer({ apiKey: env.brevoApiKey, fromEmail: env.mailFrom, fromName: env.mailFromName }),
+          appUrl: env.appUrl,
+        }
+      : undefined,
   ai: env.anthropicApiKey
     ? {
         generate: createClaudeFeedback(env.anthropicApiKey, (message, error) => console.error(message, error)),
@@ -33,6 +41,11 @@ const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
   console.log(`API listening on http://localhost:${info.port}，資料庫：${storage}`);
   if (env.staticDir) console.log(`Serving web app from ${env.staticDir}`);
   console.log(env.anthropicApiKey ? `AI feedback on, ${env.aiDailyLimit} per user per day` : 'AI feedback off (ANTHROPIC_API_KEY not set)');
+  console.log(
+    env.brevoApiKey && env.mailFrom
+      ? `Password reset email on, from ${env.mailFrom}`
+      : 'Password reset email off (BREVO_API_KEY / MAIL_FROM not set)',
+  );
 });
 
 server.on('error', async (err: NodeJS.ErrnoException) => {

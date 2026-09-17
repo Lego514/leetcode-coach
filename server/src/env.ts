@@ -16,6 +16,12 @@ export interface Env {
   anthropicApiKey?: string;
   /** 每位使用者每天最多幾次 AI 回饋 */
   aiDailyLimit: number;
+  /** 沒有設定就停用忘記密碼 */
+  brevoApiKey?: string;
+  mailFrom?: string;
+  mailFromName: string;
+  /** 信件裡連結用的網址 */
+  appUrl?: string;
 }
 
 export class EnvError extends Error {}
@@ -53,6 +59,10 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
     trustProxy: source.TRUST_PROXY ? source.TRUST_PROXY === '1' : production,
     staticDir,
     anthropicApiKey: source.ANTHROPIC_API_KEY?.trim() || undefined,
+    brevoApiKey: source.BREVO_API_KEY?.trim() || undefined,
+    mailFrom: source.MAIL_FROM?.trim() || undefined,
+    mailFromName: source.MAIL_FROM_NAME?.trim() || 'LeetCode Coach',
+    appUrl: source.APP_URL?.trim() || allowedOrigins[0],
     aiDailyLimit,
   };
 }
