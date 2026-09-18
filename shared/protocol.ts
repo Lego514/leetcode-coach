@@ -220,6 +220,7 @@ export type ApiErrorCode =
   | 'not_found'
   | 'ai_unavailable'
   | 'ai_quota_exceeded'
+  | 'ai_not_allowed'
   | 'ai_failed'
   | 'mail_unavailable'
   | 'invalid_token'
@@ -245,6 +246,8 @@ export type FeedbackRequest = z.infer<typeof feedbackRequestSchema>;
 
 export interface AiStatus {
   available: boolean;
+  /** available 為 false 的原因：伺服器沒設定 API key，或這個帳號不在允許名單 */
+  reason?: 'not_configured' | 'not_allowed';
   dailyLimit: number;
   usedToday: number;
 }

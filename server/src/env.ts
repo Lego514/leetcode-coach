@@ -16,6 +16,11 @@ export interface Env {
   anthropicApiKey?: string;
   /** 每位使用者每天最多幾次 AI 回饋 */
   aiDailyLimit: number;
+  /**
+   * 可以使用 AI 回饋的帳號 email；'*' 表示所有登入的帳號。
+   * 沒設定就是空名單，沒有人能用，免得忘了設定時費用被別人用掉。
+   */
+  aiAllowedEmails: string[] | '*';
   /** 沒有設定就停用忘記密碼 */
   brevoApiKey?: string;
   mailFrom?: string;
@@ -64,5 +69,15 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
     mailFromName: source.MAIL_FROM_NAME?.trim() || 'LeetCode Coach',
     appUrl: source.APP_URL?.trim() || allowedOrigins[0],
     aiDailyLimit,
+    aiAllowedEmails: parseAllowedEmails(source.AI_ALLOWED_EMAILS),
   };
+}
+
+export function parseAllowedEmails(value: string | undefined): string[] | '*' {
+  const trimmed = value?.trim() ?? '';
+  if (trimmed === '*') return '*';
+  return trimmed
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
 }

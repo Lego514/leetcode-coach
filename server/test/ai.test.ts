@@ -32,10 +32,10 @@ afterEach(async () => {
   server = undefined;
 });
 
-async function signedIn(ai?: { generate: FeedbackGenerator; dailyLimit: number }) {
-  server = await startTestServer({ ai });
+async function signedIn(ai?: { generate: FeedbackGenerator; dailyLimit: number }, email = `user-${Math.random()}@example.com`) {
+  server = await startTestServer({ ai: ai && { allowedEmails: '*', ...ai } });
   const client = new TestClient(server.app);
-  expect((await client.register(`user-${Math.random()}@example.com`)).status).toBe(201);
+  expect((await client.register(email)).status).toBe(201);
   return client;
 }
 
@@ -50,7 +50,7 @@ describe('explanation feedback API', () => {
   it('reports that AI is off when no API key is configured', async () => {
     const client = await signedIn();
     const status = (await (await client.request('GET', '/api/ai/status')).json()) as AiStatus;
-    expect(status).toEqual({ available: false, dailyLimit: 0, usedToday: 0 });
+    expect(status).toEqual({ available: false, reason: 'not_configured', dailyLimit: 0, usedToday: 0 });
     const res = await client.request('POST', '/api/ai/explanation-feedback', request);
     expect(res.status).toBe(503);
     expect((await res.json()).error.code).toBe('ai_unavailable');
@@ -156,5 +156,58 @@ describe('feedback prompt and output', () => {
     expect(normalized.strengths).toEqual(['a', 'b', 'c']);
     expect(normalized.improvements.map((i) => i.quote)).toEqual(['q0', 'q1', 'q2', 'q3']);
     expect(normalized.improvedScript).toHaveLength(4000);
+  });
+});
+
+describe('AI allowlist', () => {
+  const generate: FeedbackGenerator = async () => ({ feedback, usage: { inputTokens: 1, outputTokens: 1 } });
+
+  async function withAllowlist(allowedEmails: string[] | '*', email: string) {
+    server = await startTestServer({ ai: { generate, dailyLimit: 5, allowedEmails } });
+    const client = new TestClient(server.app);
+    expect((await client.register(email)).status).toBe(201);
+    return client;
+  }
+
+  it('lets listed accounts use AI, ignoring case', async () => {
+    const client = await withAllowlist(['ray@example.com'], 'Ray@Example.com');
+    const status = (await (await client.request('GET', '/api/ai/status')).json()) as AiStatus;
+    expect(status).toEqual({ available: true, dailyLimit: 5, usedToday: 0 });
+    expect((await client.request('POST', '/api/ai/explanation-feedback', request)).status).toBe(200);
+  });
+
+  it('turns other accounts away before spending anything', async () => {
+    let called = false;
+    server = await startTestServer({
+      ai: {
+        dailyLimit: 5,
+        allowedEmails: ['ray@example.com'],
+        generate: async () => {
+          called = true;
+          return { feedback, usage: { inputTokens: 1, outputTokens: 1 } };
+        },
+      },
+    });
+    const friend = new TestClient(server.app);
+    await friend.register('friend@example.com');
+
+    const status = (await (await friend.request('GET', '/api/ai/status')).json()) as AiStatus;
+    expect(status).toEqual({ available: false, reason: 'not_allowed', dailyLimit: 0, usedToday: 0 });
+    const res = await friend.request('POST', '/api/ai/explanation-feedback', request);
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('ai_not_allowed');
+    expect(called).toBe(false);
+    const [usage] = await server.database.db.select().from(aiUsage);
+    expect(usage).toBeUndefined();
+  });
+
+  it('lets nobody in when the list is empty', async () => {
+    const client = await withAllowlist([], 'ray@example.com');
+    expect((await client.request('POST', '/api/ai/explanation-feedback', request)).status).toBe(403);
+  });
+
+  it('lets every account in with *', async () => {
+    const client = await withAllowlist('*', 'anyone@example.com');
+    expect((await client.request('POST', '/api/ai/explanation-feedback', request)).status).toBe(200);
   });
 });

@@ -5,7 +5,7 @@ import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { openDatabase, postgresOptions } from '../src/db/client';
 import { migrate, splitStatements } from '../src/db/migrate';
-import { EnvError, loadEnv } from '../src/env';
+import { EnvError, loadEnv, parseAllowedEmails } from '../src/env';
 import { MIGRATIONS_DIR } from './helpers';
 
 describe('migrations', () => {
@@ -82,5 +82,17 @@ describe('postgresOptions', () => {
 
   it('turns off prepared statements behind a connection pooler', () => {
     expect(postgresOptions('postgres://u:p@ep-cool-1-pooler.us-east-2.aws.neon.tech/app').prepare).toBe(false);
+  });
+});
+
+describe('parseAllowedEmails', () => {
+  it('reads a comma-separated list, lowercased', () => {
+    expect(parseAllowedEmails(' Ray@Example.com, friend@example.com ,')).toEqual(['ray@example.com', 'friend@example.com']);
+  });
+
+  it('treats * as everyone and a missing value as nobody', () => {
+    expect(parseAllowedEmails('*')).toBe('*');
+    expect(parseAllowedEmails(undefined)).toEqual([]);
+    expect(parseAllowedEmails('  ')).toEqual([]);
   });
 });

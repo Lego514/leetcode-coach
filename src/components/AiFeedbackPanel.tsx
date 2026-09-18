@@ -74,7 +74,7 @@ export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeed
   } else if (!status) {
     action = <p className="sheet-note">{t.common.loading}</p>;
   } else if (!status.available) {
-    action = <p className="sheet-note">{t.mock.aiOff}</p>;
+    action = <p className="sheet-note">{status.reason === 'not_allowed' ? t.mock.aiNotAllowed : t.mock.aiOff}</p>;
   } else {
     const remaining = Math.max(0, status.dailyLimit - status.usedToday);
     const tooShort = text.length < MIN_TRANSCRIPT_LENGTH;

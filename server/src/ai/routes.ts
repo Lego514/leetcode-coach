@@ -10,6 +10,12 @@ export interface AiOptions {
   generate: FeedbackGenerator;
   /** 每位使用者每天（UTC）最多呼叫幾次 */
   dailyLimit: number;
+  /** 可以使用的帳號 email（小寫）；'*' 表示所有登入的帳號 */
+  allowedEmails: string[] | '*';
+}
+
+export function isAllowed(ai: AiOptions, email: string): boolean {
+  return ai.allowedEmails === '*' || ai.allowedEmails.includes(email.toLowerCase());
 }
 
 const MINUTE = 60 * 1000;
@@ -30,15 +36,21 @@ export function aiRoutes(deps: AppDeps, ai: AiOptions | undefined) {
 
   return new Hono<AppEnv>()
     .get('/status', requireUser(deps), async (c) => {
+      const user = c.get('user');
+      const allowed = ai !== undefined && isAllowed(ai, user.email);
       const body: AiStatus = {
-        available: ai !== undefined,
-        dailyLimit: ai?.dailyLimit ?? 0,
-        usedToday: await usedToday(c.get('user').id),
+        available: allowed,
+        ...(ai === undefined ? { reason: 'not_configured' as const } : allowed ? {} : { reason: 'not_allowed' as const }),
+        dailyLimit: allowed ? ai.dailyLimit : 0,
+        usedToday: await usedToday(user.id),
       };
       return c.json(body);
     })
     .post('/explanation-feedback', requireUser(deps), async (c) => {
       if (!ai) throw new HttpError(503, 'ai_unavailable', 'AI feedback is not configured on this server');
+      if (!isAllowed(ai, c.get('user').email)) {
+        throw new HttpError(403, 'ai_not_allowed', 'AI feedback is not enabled for this account');
+      }
       const userId = c.get('user').id;
       const burst = burstLimiter.hit(userId);
       if (!burst.allowed) {

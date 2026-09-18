@@ -27,6 +27,9 @@ services:
         sync: false
       - key: AI_DAILY_LIMIT
         value: "20"
+      # 可以用 AI 回饋的帳號 email，用逗號分隔；留空就沒有人能用，* 表示所有帳號
+      - key: AI_ALLOWED_EMAILS
+        sync: false
       # 忘記密碼的重設信；留空就停用
       - key: BREVO_API_KEY
         sync: false
