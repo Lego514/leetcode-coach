@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useToast } from '../components/toast';
+import { ReferenceExplanation } from '../components/ReferenceExplanation';
 import { DifficultyTag, PageHead, Sheet } from '../components/ui';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -184,6 +185,10 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
                 )}
               </div>
             )}
+          </div>
+
+          <div className="review-step">
+            <ReferenceExplanation problemId={problem.id} />
           </div>
 
           <div className="review-step">

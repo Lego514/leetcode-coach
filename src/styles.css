@@ -1968,3 +1968,18 @@ audio {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* 參考講法：一句一行 */
+.reference-line {
+  display: block;
+}
+
+.reference-line + .reference-line {
+  margin-top: 8px;
+}
+
+.reference-details summary {
+  cursor: pointer;
+  color: var(--pen);
+  font-weight: 600;
+}

@@ -661,6 +661,13 @@ const zhTW = {
     ],
   },
 
+  reference: {
+    title: '參考講法',
+    show: '顯示參考講法',
+    hint: '先用自己的話講一次再看，比較記得住。五句依序是：關鍵觀察、資料結構、例子、複雜度、邊界情況。',
+    compareNote: '跟你剛才的講法對照看看',
+  },
+
   patterns: {
     title: '模板卡',
     lede: (list: string) => `每種解題模式的辨識訊號、常見錯誤和 Python 模板。方格是 ${list} 裡這個模式的題目。`,

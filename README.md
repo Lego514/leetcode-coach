@@ -23,6 +23,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - **Mark problems I solved before** (on Problems) schedules problems you solved before using the app for review in one go. They don't count toward streaks or session totals.
 - **Notes**: for each problem you can keep a one-line idea, an English explanation script, time and space complexity, pitfalls, and your code. Notes save automatically.
 - **Pattern cards**: each pattern has recognition signals, common mistakes, and a Python template you can edit.
+- **Reference explanations**: a hand-written model answer in English for each of the 213 problems, in five sentences (key insight, data structure, example, complexity, edge case). It stays collapsed until you've tried explaining it yourself, and it's shown next to your own attempt after an explanation drill.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
@@ -193,6 +194,8 @@ Notes:
 介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
 
 今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
+
+每一題都有一份英文參考講法（關鍵觀察、資料結構、例子、複雜度、邊界情況五句），預設收起，自己講過之後再展開對照；講解練習結束後會直接顯示在旁邊。
 
 模擬面試可以開啟英文逐字稿（瀏覽器的語音辨識，Chrome 會把聲音送到 Google 轉成文字）。結束後可以修正內容、看字數、語速和贅詞，再一鍵存成這題的講解稿。登入後還可以按「取得 AI 回饋」，由 Claude 依五個重點評分、指出講不清楚的句子並給參考講法（逐字稿會送到 Anthropic；伺服器要設定 `ANTHROPIC_API_KEY`，每人每天預設 20 次，一次約 1～3 元台幣）。
 

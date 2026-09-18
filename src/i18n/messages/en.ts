@@ -680,6 +680,13 @@ const en: Messages = {
     ],
   },
 
+  reference: {
+    title: 'Reference explanation',
+    show: 'Show reference explanation',
+    hint: 'Try explaining it in your own words first; it sticks better. The five sentences cover the key insight, data structure, example, complexity, and an edge case.',
+    compareNote: 'Compare it with how you just explained it',
+  },
+
   patterns: {
     title: 'Patterns',
     lede: (list) => `Recognition signals, common mistakes, and a Python template for each pattern. The squares are this pattern’s problems in ${list}.`,
