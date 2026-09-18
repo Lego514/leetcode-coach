@@ -4,6 +4,8 @@ A local-first study coach for LeetCode interview prep. It decides what to practi
 
 You still solve problems on LeetCode. This app handles the parts around solving: planning, remembering, and explaining.
 
+![Architecture: a React PWA stores data in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL; the API calls Claude for feedback and Brevo for email; GitHub Actions tests every change before Render deploys](docs/architecture.svg)
+
 ## Features
 
 - **Study lists**: NeetCode 150, Blind 75 and Grind 169 (213 unique problems), grouped into 18 patterns. You can add any other LeetCode problem.

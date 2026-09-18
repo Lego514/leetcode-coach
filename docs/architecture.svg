@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-labelledby="title desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <title id="title">LeetCode Coach architecture</title>
+  <desc id="desc">An installable React PWA stores data locally in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL. The API calls the Claude API for explanation feedback and Brevo for password reset email. GitHub Actions runs lint, type checks, unit, API and Playwright tests before Render deploys main.</desc>
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .panel { fill: #f5f7fb; stroke: #c9d2e1; stroke-width: 1.5; }
+      .item { fill: #ffffff; stroke: #dbe2ee; stroke-width: 1; }
+      .ext { fill: #fbf7f0; stroke: #e2d3b8; stroke-width: 1.5; }
+      .ci { fill: #f3f8f4; stroke: #c3dbc9; stroke-width: 1.5; }
+      .h1 { font-size: 24px; font-weight: 700; fill: #16233a; }
+      .h2 { font-size: 16px; font-weight: 700; fill: #16233a; }
+      .sub { font-size: 12px; fill: #6f7c91; }
+      .t { font-size: 13px; font-weight: 600; fill: #16233a; }
+      .d { font-size: 12px; fill: #47556d; }
+      .label { font-size: 11px; fill: #47556d; }
+      .wire { stroke: #2346a0; stroke-width: 1.8; fill: none; }
+      .head { fill: #2346a0; }
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #0d1626; }
+        .panel { fill: #131f34; stroke: #2b3a55; }
+        .item { fill: #0f1a2d; stroke: #25344e; }
+        .ext { fill: #1f1a12; stroke: #4d3f28; }
+        .ci { fill: #12211a; stroke: #2b4a36; }
+        .h1, .h2, .t { fill: #e8eef8; }
+        .sub, .label { fill: #8593ab; }
+        .d { fill: #b0bdd2; }
+        .wire { stroke: #8fb0ff; }
+        .head { fill: #8fb0ff; }
+      }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="head" d="M0,0 L10,5 L0,10 z" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="800" />
+  <text class="h1" x="30" y="46">LeetCode Coach — Architecture</text>
+  <text class="sub" x="30" y="66">Offline-first study tracker for coding interviews · React PWA + Node/PostgreSQL sync API</text>
+
+  <!-- Browser -->
+  <rect class="panel" x="30" y="84" width="370" height="496" rx="10" />
+  <text class="h2" x="50" y="114">Browser — installable PWA</text>
+  <g>
+    <rect class="item" x="50" y="130" width="330" height="72" rx="6" />
+    <text class="t" x="66" y="158">UI</text>
+    <text class="d" x="66" y="180">React 19 · TypeScript · React Router 8 · Vite 8</text>
+
+    <rect class="item" x="50" y="218" width="330" height="72" rx="6" />
+    <text class="t" x="66" y="246">Local-first data</text>
+    <text class="d" x="66" y="268">Dexie 4 on IndexedDB · change outbox</text>
+
+    <rect class="item" x="50" y="306" width="330" height="72" rx="6" />
+    <text class="t" x="66" y="334">Offline &amp; updates</text>
+    <text class="d" x="66" y="356">Service worker (Workbox) · self-updating</text>
+
+    <rect class="item" x="50" y="394" width="330" height="72" rx="6" />
+    <text class="t" x="66" y="422">Speech</text>
+    <text class="d" x="66" y="444">Web Speech API · live English transcripts</text>
+
+    <rect class="item" x="50" y="482" width="330" height="72" rx="6" />
+    <text class="t" x="66" y="510">Localization</text>
+    <text class="d" x="66" y="532">English + Traditional Chinese dictionaries</text>
+  </g>
+
+  <!-- Render -->
+  <rect class="panel" x="470" y="84" width="340" height="496" rx="10" />
+  <text class="h2" x="490" y="114">Render — Node 24 web service</text>
+  <g>
+    <rect class="item" x="490" y="128" width="300" height="62" rx="6" />
+    <text class="t" x="506" y="153">Hono API</text>
+    <text class="d" x="506" y="174">zod schemas shared with the client</text>
+
+    <rect class="item" x="490" y="202" width="300" height="62" rx="6" />
+    <text class="t" x="506" y="227">Auth</text>
+    <text class="d" x="506" y="248">scrypt · HttpOnly sessions · email reset</text>
+
+    <rect class="item" x="490" y="276" width="300" height="62" rx="6" />
+    <text class="t" x="506" y="301">Sync</text>
+    <text class="d" x="506" y="322">Outbox push/pull · last-write-wins</text>
+
+    <rect class="item" x="490" y="350" width="300" height="62" rx="6" />
+    <text class="t" x="506" y="375">AI feedback</text>
+    <text class="d" x="506" y="396">Per-user daily quota in PostgreSQL</text>
+
+    <rect class="item" x="490" y="424" width="300" height="62" rx="6" />
+    <text class="t" x="506" y="449">Static hosting</text>
+    <text class="d" x="506" y="470">Serves the built PWA on the same origin</text>
+
+    <rect class="item" x="490" y="498" width="300" height="62" rx="6" />
+    <text class="t" x="506" y="523">Data access</text>
+    <text class="d" x="506" y="544">Drizzle ORM · plain SQL migrations</text>
+  </g>
+
+  <!-- External services -->
+  <rect class="ext" x="880" y="84" width="290" height="176" rx="10" />
+  <text class="h2" x="900" y="114">Neon PostgreSQL</text>
+  <text class="d" x="900" y="142">users · sessions</text>
+  <text class="d" x="900" y="164">records (jsonb, one row per item)</text>
+  <text class="d" x="900" y="186">password_resets · ai_usage</text>
+  <text class="d" x="900" y="208">Serverless, scales to zero when idle</text>
+  <text class="sub" x="900" y="240">AWS US East 2 (Ohio)</text>
+
+  <rect class="ext" x="880" y="290" width="290" height="130" rx="10" />
+  <text class="h2" x="900" y="320">Anthropic Claude API</text>
+  <text class="d" x="900" y="348">Claude Opus 5</text>
+  <text class="d" x="900" y="370">JSON-schema structured output</text>
+  <text class="d" x="900" y="392">Server-side refusal fallback</text>
+
+  <rect class="ext" x="880" y="450" width="290" height="110" rx="10" />
+  <text class="h2" x="900" y="480">Brevo</text>
+  <text class="d" x="900" y="508">Transactional email</text>
+  <text class="d" x="900" y="530">One-time password reset links</text>
+
+  <!-- Connections -->
+  <line class="wire" x1="402" y1="330" x2="468" y2="330" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text class="label" x="435" y="318" text-anchor="middle">HTTPS</text>
+  <text class="label" x="435" y="350" text-anchor="middle">/api JSON</text>
+
+  <line class="wire" x1="812" y1="172" x2="878" y2="172" marker-end="url(#arrow)" />
+  <text class="label" x="845" y="162" text-anchor="middle">SQL</text>
+
+  <line class="wire" x1="812" y1="355" x2="878" y2="355" marker-end="url(#arrow)" />
+  <text class="label" x="845" y="345" text-anchor="middle">HTTPS</text>
+
+  <line class="wire" x1="812" y1="505" x2="878" y2="505" marker-end="url(#arrow)" />
+  <text class="label" x="845" y="495" text-anchor="middle">HTTPS</text>
+
+  <!-- CI/CD -->
+  <rect class="ci" x="30" y="610" width="1140" height="166" rx="10" />
+  <text class="h2" x="50" y="640">CI/CD</text>
+
+  <rect class="item" x="60" y="660" width="300" height="96" rx="6" />
+  <text class="t" x="78" y="690">GitHub</text>
+  <text class="d" x="78" y="712">Pull requests into main</text>
+  <text class="d" x="78" y="734">github.com/Lego514/leetcode-coach</text>
+
+  <rect class="item" x="440" y="660" width="340" height="96" rx="6" />
+  <text class="t" x="458" y="690">GitHub Actions</text>
+  <text class="d" x="458" y="712">ESLint · tsc · Vitest (129 unit &amp; API tests)</text>
+  <text class="d" x="458" y="734">Playwright e2e (16) against PostgreSQL 17</text>
+
+  <rect class="item" x="860" y="660" width="290" height="96" rx="6" />
+  <text class="t" x="878" y="690">Render</text>
+  <text class="d" x="878" y="712">Deploys main after CI passes</text>
+  <text class="d" x="878" y="734">Migrations run on startup</text>
+
+  <line class="wire" x1="362" y1="708" x2="438" y2="708" marker-end="url(#arrow)" />
+  <line class="wire" x1="782" y1="708" x2="858" y2="708" marker-end="url(#arrow)" />
+</svg>
