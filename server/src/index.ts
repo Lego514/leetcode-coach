@@ -32,6 +32,7 @@ const app = createApp({
     ? {
         generate: createClaudeFeedback(env.anthropicApiKey, (message, error) => console.error(message, error)),
         dailyLimit: env.aiDailyLimit,
+        allowedEmails: env.aiAllowedEmails,
       }
     : undefined,
 });
@@ -40,7 +41,10 @@ const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
   const storage = database.kind === 'pglite' ? `PGlite（${env.databaseUrl.slice('pglite:'.length)}）` : 'PostgreSQL';
   console.log(`API listening on http://localhost:${info.port}，資料庫：${storage}`);
   if (env.staticDir) console.log(`Serving web app from ${env.staticDir}`);
-  console.log(env.anthropicApiKey ? `AI feedback on, ${env.aiDailyLimit} per user per day` : 'AI feedback off (ANTHROPIC_API_KEY not set)');
+  if (!env.anthropicApiKey) console.log('AI feedback off (ANTHROPIC_API_KEY not set)');
+  else if (env.aiAllowedEmails === '*') console.log(`AI feedback on for every account, ${env.aiDailyLimit} per user per day`);
+  else if (env.aiAllowedEmails.length === 0) console.log('AI feedback on, but AI_ALLOWED_EMAILS is empty, so no account can use it');
+  else console.log(`AI feedback on for ${env.aiAllowedEmails.length} account(s), ${env.aiDailyLimit} per user per day`);
   console.log(
     env.brevoApiKey && env.mailFrom
       ? `Password reset email on, from ${env.mailFrom}`
