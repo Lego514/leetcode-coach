@@ -90,6 +90,11 @@ test.describe('explanation drill with a transcript', () => {
     await replace.getByRole('button', { name: 'Replace' }).click();
     await expect(page.getByRole('status')).toContainText('Saved as your explanation script.');
 
+    // 講完之後直接顯示參考講法對照
+    const reference = page.getByRole('region', { name: /^Reference explanation/ });
+    await expect(reference).toContainText('Compare it with how you just explained it');
+    await expect(reference).toContainText('The key insight is that for each number x');
+
     await page.getByRole('button', { name: /^Smooth/ }).click();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
 

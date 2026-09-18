@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { SaveStatus, useAutosave } from '../components/autosave';
 import { CodeTextarea } from '../components/CodeTextarea';
 import { RecordDialog } from '../components/RecordDialog';
+import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
 import { useToast } from '../components/toast';
 import { DifficultyTag, Dialog, LeetCodeLink, MasteryCell, PageHead, Sheet } from '../components/ui';
 import { EXPLANATION_SCAFFOLD } from '../data/interview';
@@ -90,7 +91,10 @@ function ProblemDetail({ problem }: { problem: Problem }) {
       </PageHead>
 
       <div className="split">
-        <NotesEditor problemId={problem.id} />
+        <div className="stack">
+          <NotesEditor problemId={problem.id} />
+          <ReferenceSheet problemId={problem.id} />
+        </div>
         <div className="stack">
           <Sheet title={t.detail.scheduleTitle} id="schedule">
             <div className="sheet-body">
@@ -129,6 +133,19 @@ function ProblemDetail({ problem }: { problem: Problem }) {
         onClose={() => setRecording(false)}
       />
     </div>
+  );
+}
+
+function ReferenceSheet({ problemId }: { problemId: number }) {
+  const { t } = useI18n();
+  const hasExplanation = useHasExplanation(problemId);
+  if (!hasExplanation) return null;
+  return (
+    <Sheet title={t.reference.title} id="reference">
+      <div className="sheet-body">
+        <ReferenceExplanation problemId={problemId} />
+      </div>
+    </Sheet>
   );
 }
 

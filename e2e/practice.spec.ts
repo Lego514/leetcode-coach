@@ -35,7 +35,12 @@ test('practice a new problem with hints, then review it once it is due', async (
   await page.goto('/#/review');
   await expect(page.getByRole('heading', { level: 2, name: '1. Two Sum' })).toBeVisible();
   await page.getByRole('button', { name: 'Show my notes' }).click();
-  await expect(page.getByText('Hash map from value to index')).toBeVisible();
+  await expect(page.getByText('Hash map from value to index', { exact: true })).toBeVisible();
+  // 參考講法預設收起，自己想過再展開
+  const reference = page.getByText('The key insight is that for each number x');
+  await expect(reference).toBeHidden();
+  await page.getByText('Show reference explanation').click();
+  await expect(reference).toBeVisible();
   await page.getByRole('button', { name: /Solved alone/ }).click();
   await expect(page.getByRole('heading', { name: 'Reviewed 1 problem today' })).toBeVisible();
 });

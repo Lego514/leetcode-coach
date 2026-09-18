@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import type { ExplanationFeedback } from '../../shared/protocol';
 import { AiFeedbackPanel, FeedbackView } from '../components/AiFeedbackPanel';
 import { BlobAudio } from '../components/BlobAudio';
+import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
 import { HintPanel } from '../components/HintPanel';
 import { LeaveGuard } from '../components/LeaveGuard';
 import { useToast } from '../components/toast';
@@ -705,6 +706,8 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
             </Sheet>
           )}
 
+          <ReviewReference problemId={problem.id} />
+
           <Sheet title={isFull ? t.mock.rateFull : t.mock.rateExplain} id="self-rating">
             <div className="sheet-body stack" style={{ gap: 16 }}>
               <div className="rating-grid">
@@ -787,6 +790,19 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
         <p>{t.mock.discardBody}</p>
       </Dialog>
     </>
+  );
+}
+
+function ReviewReference({ problemId }: { problemId: number }) {
+  const { t } = useI18n();
+  const hasExplanation = useHasExplanation(problemId);
+  if (!hasExplanation) return null;
+  return (
+    <Sheet title={t.reference.title} id="reference" note={t.reference.compareNote}>
+      <div className="sheet-body">
+        <ReferenceExplanation problemId={problemId} open />
+      </div>
+    </Sheet>
   );
 }
 
