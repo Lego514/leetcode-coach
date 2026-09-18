@@ -4,6 +4,8 @@ A local-first study coach for LeetCode interview prep. It decides what to practi
 
 You still solve problems on LeetCode. This app handles the parts around solving: planning, remembering, and explaining.
 
+**Live app:** https://leetcode-coach-f6q7.onrender.com — it runs on free hosting that sleeps when idle, so the first visit after a while can take about a minute to wake up. After that it's fast, and once loaded it keeps working offline.
+
 ![Architecture: a React PWA stores data in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL; the API calls Claude for feedback and Brevo for email; GitHub Actions tests every change before Render deploys](docs/architecture.svg)
 
 ## Features
@@ -204,4 +206,4 @@ Notes:
 2. 到 Render 用 GitHub 登入，選 **New → Blueprint**，選這個 repository，`DATABASE_URL` 貼上 Neon 的連線字串。
 3. 部署完成後打開 `onrender.com` 的網址，確認 `/api/health` 回傳 `{"ok":true}`。之後 `main` 的 CI 通過就會自動部署。
 
-免費方案閒置 15 分鐘會休眠，之後第一次開啟大約要等一分鐘。
+線上版本：https://leetcode-coach-f6q7.onrender.com 。免費方案閒置 15 分鐘會休眠，之後第一次開啟大約要等一分鐘，醒來之後就很快；頁面載入過一次後也能離線使用。
