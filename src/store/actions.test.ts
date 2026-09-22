@@ -15,6 +15,7 @@ import {
 } from './actions';
 import { BackupError, clearAllData, exportBackup, parseBackup, restoreBackup } from './backup';
 import { db } from './db';
+import { distinctCompanies } from './queries';
 import { wipeLocalData } from './sync';
 
 beforeEach(async () => {
@@ -235,5 +236,18 @@ describe('markSolvedBefore', () => {
     expect((await db.progress.get(1))?.lastRating).toBe('fail');
     expect((await db.attempts.where('problemId').equals(1).count())).toBe(1);
     expect(await outbox()).toEqual(['attempts:put', 'attempts:put', 'attempts:put']);
+  });
+});
+
+describe('distinctCompanies', () => {
+  it('lists every tagged company once, sorted', async () => {
+    await setCompanies(1, ['Meta', 'Google']);
+    await setCompanies(15, ['Amazon', 'Google']);
+    await setCompanies(20, []);
+    expect(distinctCompanies(await db.meta.toArray())).toEqual(['Amazon', 'Google', 'Meta']);
+  });
+
+  it('is empty when nothing is tagged', () => {
+    expect(distinctCompanies([])).toEqual([]);
   });
 });

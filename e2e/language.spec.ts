@@ -11,7 +11,7 @@ test.describe('with a Chinese browser', () => {
   });
 });
 
-test('switches language and remembers the choice', async ({ page }) => {
+test('switches language and remembers the choice', { tag: '@desktop' }, async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible();
 

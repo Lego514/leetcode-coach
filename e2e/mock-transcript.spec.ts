@@ -132,7 +132,7 @@ test('disables the transcript option when the browser cannot recognize speech', 
   await expect(page.getByText('This browser doesn’t support speech recognition')).toBeVisible();
 });
 
-test('gets AI feedback for the transcript and saves the model answer', async ({ page }) => {
+test('gets AI feedback for the transcript and saves the model answer', { tag: '@desktop' }, async ({ page }) => {
   await page.addInitScript(installFakeRecognition);
   const email = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
   await page.goto('/#/settings');
