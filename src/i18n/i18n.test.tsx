@@ -7,7 +7,7 @@ import { BUILTIN_PROBLEMS } from '../data/problems';
 import { ValidationError } from '../store/actions';
 import { validationMessage } from './errors';
 import { createFormatters } from './format';
-import { detectLocale } from './locale';
+import { initialLocale } from './locale';
 import en from './messages/en';
 import zhTW from './messages/zh-TW';
 import { bold, rich } from './rich';
@@ -35,14 +35,9 @@ function collectStrings(value: unknown, path = ''): [string, string][] {
   return [];
 }
 
-describe('detectLocale', () => {
-  it('follows the first Chinese or English preference', () => {
-    expect(detectLocale(['zh-TW', 'en-US'])).toBe('zh-TW');
-    expect(detectLocale(['zh-CN'])).toBe('zh-TW');
-    expect(detectLocale(['en-US', 'zh-TW'])).toBe('en');
-    expect(detectLocale(['ja', 'zh-HK'])).toBe('zh-TW');
-    expect(detectLocale(['fr'])).toBe('en');
-    expect(detectLocale([])).toBe('en');
+describe('initialLocale', () => {
+  it('defaults to English when no language has been chosen', () => {
+    expect(initialLocale()).toBe('en');
   });
 });
 

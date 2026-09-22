@@ -3,11 +3,12 @@ import { expect, test } from '@playwright/test';
 test.describe('with a Chinese browser', () => {
   test.use({ locale: 'zh-TW' });
 
-  test('starts in Traditional Chinese', async ({ page }) => {
+  // 不看瀏覽器語言，沒選過就是英文
+  test('still starts in English', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1, name: '今天' })).toBeVisible();
-    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant-TW');
-    await expect(page).toHaveTitle('刷題教練');
+    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page).toHaveTitle('LeetCode Coach');
   });
 });
 

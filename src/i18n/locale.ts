@@ -25,15 +25,8 @@ export function isLocale(value: unknown): value is Locale {
   return typeof value === 'string' && (LOCALES as readonly string[]).includes(value);
 }
 
-/** 依瀏覽器偏好順序，第一個中文或英文決定介面語言；都沒有就用英文 */
-export function detectLocale(languages: readonly string[]): Locale {
-  for (const lang of languages) {
-    const code = lang.toLowerCase();
-    if (code.startsWith('zh')) return 'zh-TW';
-    if (code.startsWith('en')) return 'en';
-  }
-  return 'en';
-}
+/** 沒選過語言時用英文：面試用英文，介面也跟著用英文練習 */
+export const DEFAULT_LOCALE: Locale = 'en';
 
 export function readStoredLocale(): Locale | null {
   try {
@@ -52,9 +45,7 @@ export function storeLocale(locale: Locale): void {
   }
 }
 
+/** 這台裝置選過的語言；沒選過就是英文，不看瀏覽器的語言設定 */
 export function initialLocale(): Locale {
-  const stored = readStoredLocale();
-  if (stored) return stored;
-  const languages = typeof navigator === 'undefined' ? [] : navigator.languages?.length ? navigator.languages : [navigator.language];
-  return detectLocale(languages.filter(Boolean));
+  return readStoredLocale() ?? DEFAULT_LOCALE;
 }

@@ -33,7 +33,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 - **Progress**: a per-pattern mastery grid, a weekly practice chart, an activity calendar, and a breakdown by difficulty.
 - **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, and settings between devices. Everything keeps working offline and without an account. Passwords can be reset by email, and the password fields have a show/hide toggle.
   - A reset link works once, expires in an hour, and signs you out on other devices. It needs `BREVO_API_KEY` and `MAIL_FROM`; without them the feature is hidden.
-- **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It follows the browser language by default, and you can switch from the sidebar or Settings.
+- **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It starts in English, since interviews are in English, and you can switch to Chinese from the sidebar, More, or Settings. Each device remembers its choice.
 - **Installable PWA** that works offline, with light and dark themes and JSON backup/restore. New versions install themselves and reload the page, except during a timed practice or mock session, where a small "reload" link appears instead.
 
 ## Tech stack
@@ -191,7 +191,7 @@ Notes:
 - 計時作答，卡住時一層一層給提示，再用間隔複習排好每一題的複習日
 - 用模擬面試練習把解法講清楚
 
-介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
+介面有英文和繁體中文，預設是英文（面試用英文，介面也跟著練習），可以在側邊欄、「更多」或「設定」切換成中文，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
 
 今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
 
