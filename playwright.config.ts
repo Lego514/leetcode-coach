@@ -20,7 +20,11 @@ export default defineConfig({
     serviceWorkers: 'block',
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // iPhone 上所有瀏覽器都用 WebKit，IndexedDB 的行為跟 Chromium 不完全一樣
+    { name: 'iphone', use: { ...devices['iPhone 13'] } },
+  ],
   webServer: {
     command: 'npm start',
     url: `${baseURL}/api/health`,
