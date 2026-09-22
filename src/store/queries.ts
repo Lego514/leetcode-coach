@@ -69,12 +69,16 @@ export function useMetaMap(): ReadonlyMap<number, MetaRecord> {
   return useMemo(() => new Map((rows ?? []).map((r) => [r.problemId, r])), [rows]);
 }
 
+/** 標過的公司名稱，去掉重複並依字母排序 */
+export function distinctCompanies(rows: readonly MetaRecord[]): string[] {
+  return [...new Set(rows.flatMap((r) => r.companies))].sort((a, b) => a.localeCompare(b));
+}
+
 export function useCompanies(): string[] {
-  const companies = useLiveQuery(() => db.meta.orderBy('companies').uniqueKeys(), []);
-  return useMemo(
-    () => ((companies ?? []) as string[]).slice().sort((a, b) => a.localeCompare(b)),
-    [companies],
-  );
+  // 不用多值索引的 uniqueKeys()：iOS 上的 WebKit 在那種 key cursor 會丟出
+  // "UnknownError: Unable to open cursor"，整個題庫頁因此打不開。資料量很小，整張讀出來就好。
+  const rows = useLiveQuery(() => db.meta.toArray(), []);
+  return useMemo(() => distinctCompanies(rows ?? []), [rows]);
 }
 
 export function usePatternNote(patternId: PatternId): PatternNoteRecord | null | undefined {

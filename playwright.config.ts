@@ -20,7 +20,13 @@ export default defineConfig({
     serviceWorkers: 'block',
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // iPhone 上所有瀏覽器都用 WebKit，IndexedDB 的行為跟 Chromium 不完全一樣。
+    // 標 @desktop 的測試不在這裡跑：它們需要登入，而 WebKit 在 http://localhost 上
+    // 不接受 Secure cookie（正式站是 HTTPS，不受影響）；或是用到只在桌面版側邊欄的按鈕。
+    { name: 'iphone', use: { ...devices['iPhone 13'] }, grepInvert: /@desktop/ },
+  ],
   webServer: {
     command: 'npm start',
     url: `${baseURL}/api/health`,

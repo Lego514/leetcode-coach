@@ -56,3 +56,17 @@ test('filters the problem list and keeps filters in the URL', async ({ page }) =
   await page.reload();
   await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveValue('median');
 });
+
+test('filters the problem list by a tagged company', async ({ page }) => {
+  await page.goto('/#/problems/1');
+  const companies = page.getByRole('region', { name: /^Companies/ });
+  await companies.getByLabel('Add company').fill('Google');
+  await companies.getByLabel('Add company').press('Enter');
+  await expect(companies).toContainText('Google');
+
+  await page.goto('/#/problems');
+  await expect(page.getByRole('heading', { level: 1, name: 'Problems' })).toBeVisible();
+  await page.getByLabel('Company').selectOption('Google');
+  await expect(page.getByRole('link', { name: 'Two Sum' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Valid Anagram' })).toHaveCount(0);
+});

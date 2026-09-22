@@ -31,7 +31,7 @@ async function recordSolved(page: Page, problemId: number) {
   await expect(dialog).toBeHidden();
 }
 
-test('syncs attempts between two browsers, including ones recorded offline', async ({ browser }) => {
+test('syncs attempts between two browsers, including ones recorded offline', { tag: '@desktop' }, async ({ browser }) => {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
   const laptop = await browser.newContext();
   const phone = await browser.newContext();
