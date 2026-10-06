@@ -134,6 +134,24 @@ describe('POST /api/sync', () => {
     expect(res.changes).toEqual([{ collection: 'cardReviews', key, updatedAt: 1, deleted: false, data }]);
   });
 
+  it('stores whiteboards and rejects bad keys or elements', async () => {
+    const data = {
+      doc: { elements: [{ type: 'list', id: 'a1', x: 0, y: 0, variant: 'array', label: 'nums', items: ['1', '2'] }] },
+      updatedAt: '2026-10-06T12:00:00.000Z',
+    };
+    const ok = await client.sync(0, [{ collection: 'boards', key: 'p1', updatedAt: 1, deleted: false, data }]);
+    expect(ok.changes).toEqual([{ collection: 'boards', key: 'p1', updatedAt: 1, deleted: false, data }]);
+
+    const bad: unknown[] = [
+      { collection: 'boards', key: 'board-1', updatedAt: 1, deleted: false, data },
+      { collection: 'boards', key: 'scratch', updatedAt: 1, deleted: false, data: { ...data, doc: { elements: [{ type: 'laser', id: 'x' }] } } },
+    ];
+    for (const change of bad) {
+      const res = await client.request('POST', '/api/sync', { cursor: 0, changes: [change] });
+      expect(res.status, JSON.stringify(change)).toBe(400);
+    }
+  });
+
   it('drops unknown fields from stored data', async () => {
     const res = await client.sync(0, [{ collection: 'meta', key: '7', updatedAt: 1, deleted: false, data: { companies: ['Google'], secret: 'x' } }]);
     expect(res.changes[0].data).toEqual({ companies: ['Google'] });

@@ -7,6 +7,7 @@ import {
   db,
   DEFAULT_SETTINGS,
   type AttemptRecord,
+  type BoardRecord,
   type CardReviewRecord,
   type MetaRecord,
   type MockRecord,
@@ -58,6 +59,11 @@ export function useAttemptsOn(day: Day): AttemptRecord[] | undefined {
 
 export function useCardReviews(): CardReviewRecord[] | undefined {
   return useLiveQuery(() => db.cardReviews.toArray(), []);
+}
+
+/** 白板內容；undefined 代表還在載入，null 代表還沒有這張白板 */
+export function useBoard(id: string): BoardRecord | null | undefined {
+  return useLiveQuery(async () => (await db.boards.get(id)) ?? null, [id]);
 }
 
 export function useNote(problemId: number): NoteRecord | null | undefined {

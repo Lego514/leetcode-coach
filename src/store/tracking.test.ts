@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { COLLECTION_SCHEMAS } from '../../shared/protocol';
-import { recordAttempt, recordCardReview, saveNote, setCompanies, updateSettings } from './actions';
+import { recordAttempt, recordCardReview, saveBoard, saveNote, setCompanies, updateSettings } from './actions';
 import { CoachDB, db } from './db';
 import { adoptAccount, wipeLocalData } from './sync';
 import { applyRemote, findLocal, getSyncState, keyOf, markAllDirty, rebuildProgress, toSyncData } from './tracking';
@@ -88,6 +88,24 @@ describe('flashcard answers', () => {
     await applyRemote(db, 'cardReviews', uid, true, undefined);
     expect(await findLocal(db, 'cardReviews', uid)).toBeUndefined();
     expect(await db.cardReviews.count()).toBe(1);
+  });
+});
+
+describe('whiteboards', () => {
+  it('sync the whole board and round-trip from the server', async () => {
+    const doc = { elements: [{ type: 'var' as const, id: 'v1', x: 10, y: 20, name: 'ans', value: '0' }] };
+    await saveBoard('p1', doc, new Date('2026-10-06T12:00:00Z'));
+    expect(await db.outbox.get('boards:p1')).toMatchObject({ deleted: false, updatedAt: Date.parse('2026-10-06T12:00:00Z') });
+    const record = (await db.boards.get('p1'))!;
+    const data = toSyncData('boards', record);
+    expect(data).toEqual({ doc, updatedAt: '2026-10-06T12:00:00.000Z' });
+    expect(COLLECTION_SCHEMAS.boards.data.parse(data)).toEqual(data);
+    expect(keyOf('boards', record)).toBe('p1');
+
+    await applyRemote(db, 'boards', 'scratch', false, { doc: { elements: [] }, updatedAt: '2026-10-06T13:00:00.000Z' });
+    expect(await findLocal(db, 'boards', 'scratch')).toMatchObject({ id: 'scratch', doc: { elements: [] } });
+    await applyRemote(db, 'boards', 'scratch', true, undefined);
+    expect(await findLocal(db, 'boards', 'scratch')).toBeUndefined();
   });
 });
 

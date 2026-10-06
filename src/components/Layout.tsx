@@ -11,7 +11,7 @@ import { LanguageSwitch } from './LanguageSwitch';
 
 type NavKey = keyof Pick<
   Messages['nav'],
-  'today' | 'review' | 'cards' | 'mock' | 'problems' | 'patterns' | 'phrases' | 'progress' | 'settings'
+  'today' | 'review' | 'cards' | 'mock' | 'problems' | 'patterns' | 'phrases' | 'board' | 'progress' | 'settings'
 >;
 
 interface NavItem {
@@ -32,6 +32,7 @@ const NAV_GROUPS: NavItem[][] = [
     { to: '/problems', key: 'problems' },
     { to: '/patterns', key: 'patterns' },
     { to: '/phrases', key: 'phrases' },
+    { to: '/board', key: 'board' },
     { to: '/progress', key: 'progress' },
   ],
   [{ to: '/settings', key: 'settings' }],

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { HintPanel } from '../components/HintPanel';
 import { LeaveGuard } from '../components/LeaveGuard';
@@ -18,6 +18,9 @@ import {
 } from '../lib/practice';
 import { useStopwatch } from '../lib/session';
 import { useCatalog, useProgress } from '../store/queries';
+
+// 白板第一次打開時才下載
+const BoardEditor = lazy(async () => ({ default: (await import('../components/board/BoardEditor')).BoardEditor }));
 
 export function PracticePage() {
   const { t } = useI18n();
@@ -53,6 +56,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
   const [finished, setFinished] = useState(restored?.finished ?? false);
   const [saved, setSaved] = useState(false);
   const [showPattern, setShowPattern] = useState(false);
+  const [boardOpen, setBoardOpen] = useState(false);
   const autoStarted = useRef(false);
 
   const targetSec = MOCK_MINUTES[problem.difficulty] * 60;
@@ -129,6 +133,9 @@ function PracticeSession({ problem }: { problem: Problem }) {
           <LeetCodeLink slug={problem.slug} className="btn">
             {t.common.solveOnLeetCode}
           </LeetCodeLink>
+          <button type="button" className="btn" onClick={() => setBoardOpen(true)}>
+            {t.practice.board}
+          </button>
           <span className="sheet-note">{t.practice.tabHint}</span>
         </div>
       </PageHead>
@@ -211,6 +218,16 @@ function PracticeSession({ problem }: { problem: Problem }) {
           leaveLabel={t.leave.practiceLeave}
           onLeave={clearPracticeSession}
         />
+      )}
+
+      {boardOpen && (
+        <Suspense fallback={null}>
+          <BoardEditor
+            boardId={`p${problem.id}`}
+            title={t.board.problemTitle(problem.id, problem.title)}
+            onClose={() => setBoardOpen(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

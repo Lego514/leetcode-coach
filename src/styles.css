@@ -2440,3 +2440,939 @@ audio {
     bottom: calc(62px + env(safe-area-inset-bottom));
   }
 }
+
+/* ---------- 白板 ---------- */
+
+:root {
+  --board-red: #c62828;
+  --board-blue: #1d4ed8;
+  --board-green: #15803d;
+  --board-orange: #c2410c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --board-red: #f08579;
+    --board-blue: #8fb0ff;
+    --board-green: #5cc79a;
+    --board-orange: #f0a35e;
+  }
+}
+
+:root[data-theme='dark'] {
+  --board-red: #f08579;
+  --board-blue: #8fb0ff;
+  --board-green: #5cc79a;
+  --board-orange: #f0a35e;
+}
+
+/* 全螢幕蓋在 app 上面，練習頁打開時計時照常 */
+.board {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.board-loading {
+  padding: 24px;
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 12px;
+  padding-top: max(6px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--rule);
+  background: var(--sheet);
+}
+
+.board-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.board-save {
+  margin-left: auto;
+  flex: none;
+  max-width: 50%;
+  color: var(--ink-3);
+  font-size: 13px;
+  text-align: right;
+}
+
+.board-body {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  min-height: 0;
+}
+
+/* 左側元件庫 */
+.board-palette {
+  overflow-y: auto;
+  padding: 12px;
+  border-right: 1px solid var(--rule);
+  background: var(--sheet);
+}
+
+.board-palette-hint {
+  margin: 0 0 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.board-palette-group h2 {
+  margin: 12px 0 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.board-palette-items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.board-palette-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink-2);
+  font-size: 12px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+@media (hover: hover) {
+  .board-palette-item:hover {
+    background: var(--sheet-2);
+    color: var(--ink);
+  }
+}
+
+.board-palette-icon {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.board-palette-icon[data-kind='sticky'] {
+  background: var(--marker);
+  color: var(--marker-ink);
+}
+
+/* 畫布 */
+.board-viewport {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, var(--rule-strong) 1px, transparent 1.3px);
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.board-viewport[data-tool='hand'] {
+  cursor: grab;
+}
+
+.board-viewport[data-tool='pen'],
+.board-viewport[data-tool='arrow'] {
+  cursor: crosshair;
+}
+
+.board-viewport[data-tool='eraser'] {
+  cursor: cell;
+}
+
+.board-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.board-ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.board-stroke {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.board-arrow {
+  stroke-width: 2;
+}
+
+.board-arrow-draft {
+  stroke-dasharray: 6 4;
+}
+
+.board-empty {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  max-width: 320px;
+  margin: 0;
+  color: var(--ink-3);
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* 元件 */
+.board-el {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: move;
+}
+
+.board-el[data-selected] {
+  outline: 2px solid var(--pen);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.board-el[data-editing] {
+  cursor: auto;
+}
+
+.board-label {
+  display: block;
+  height: 22px;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+input.board-label-input {
+  width: 100%;
+  padding: 0 4px;
+  border: 1px dashed var(--pen);
+  background: var(--sheet);
+}
+
+.board-cells {
+  display: flex;
+}
+
+/* 每格剛好 44px：只畫右邊和上下的框，第一格再補左邊，指標才會對準格子 */
+.board-cell {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  flex: none;
+  overflow: hidden;
+  padding: 0 2px;
+  border: 1px solid var(--ink-3);
+  border-left-width: 0;
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.board-cell:first-child {
+  border-left-width: 1px;
+}
+
+.board-cell[data-snap] {
+  background: var(--pen-soft);
+}
+
+input.board-cell-input {
+  border-color: var(--pen);
+  text-align: center;
+  outline: none;
+}
+
+input.board-cell-input:focus {
+  background: var(--pen-soft);
+}
+
+.board-indices {
+  display: flex;
+  height: 18px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.board-indices span {
+  flex: none;
+  text-align: center;
+}
+
+/* 堆疊：直的，上面開口 */
+.board-el-list[data-variant='stack'] .board-cells {
+  flex-direction: column;
+}
+
+.board-el-list[data-variant='stack'] .board-cell {
+  border-width: 0 2px 1px;
+}
+
+.board-el-list[data-variant='stack'] .board-cell:last-child {
+  border-bottom-width: 2px;
+}
+
+/* 集合：圓角的小卡 */
+.board-el-list[data-variant='set'] .board-cell {
+  border-left-width: 1px;
+  border-radius: 999px;
+  margin-right: 0;
+  transform: scale(0.88);
+}
+
+/* 字典、表格、二維陣列 */
+.board-row {
+  display: flex;
+}
+
+.board-row + .board-row .board-cell {
+  border-top-width: 0;
+}
+
+.board-row[data-header] .board-cell {
+  background: var(--sheet-2);
+  font-weight: 700;
+}
+
+.board-el-table[data-variant='dict'] .board-cell:first-child {
+  background: var(--sheet-2);
+  font-weight: 600;
+}
+
+.board-row-index {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.board-el-table[data-variant='grid'] .board-row .board-cell:nth-child(2) {
+  border-left-width: 1px;
+}
+
+/* 變數 */
+.board-var {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--ink-3);
+  border-radius: 18px;
+  background: var(--sheet);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.board-var-name {
+  color: var(--ink-2);
+}
+
+.board-var-value {
+  font-weight: 700;
+}
+
+input.board-var-input {
+  padding: 2px 4px;
+  border: 1px dashed var(--pen);
+  background: var(--sheet);
+  font-family: var(--font-mono);
+}
+
+/* 節點 */
+.board-el-node {
+  display: flex;
+}
+
+.board-node-value,
+input.board-node-input {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 2px solid var(--ink-2);
+  background: var(--sheet);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.board-el-node[data-variant='tree'] .board-node-value,
+.board-el-node[data-variant='tree'] .board-node-input,
+.board-el-node[data-variant='graph'] .board-node-value,
+.board-el-node[data-variant='graph'] .board-node-input {
+  border-radius: 50%;
+}
+
+.board-el-node[data-variant='graph'] .board-node-value,
+.board-el-node[data-variant='graph'] .board-node-input {
+  border-color: var(--good);
+}
+
+.board-el-node[data-variant='list'] .board-node-value,
+.board-el-node[data-variant='list'] .board-node-input {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.board-node-next {
+  position: relative;
+  box-sizing: border-box;
+  width: 24px;
+  height: 44px;
+  border: 2px solid var(--ink-2);
+  border-left-width: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--sheet-2);
+}
+
+.board-node-next::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-2);
+  transform: translate(-50%, -50%);
+}
+
+/* 指標：上面一個三角形指向格子，下面是名字 */
+.board-el-pointer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board-pointer-tip {
+  width: 0;
+  height: 0;
+  border-right: 7px solid transparent;
+  border-bottom: 12px solid var(--board-orange);
+  border-left: 7px solid transparent;
+}
+
+.board-pointer-name,
+input.board-pointer-input {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--board-orange);
+  color: var(--sheet);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+input.board-pointer-input {
+  border: 0;
+  text-align: center;
+}
+
+/* 文字 */
+.board-text {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font: inherit;
+  color: inherit;
+}
+
+textarea.board-text-input {
+  display: block;
+  min-height: 36px;
+  padding: 0;
+  border: 1px dashed var(--pen);
+  background: transparent;
+  resize: none;
+  outline: none;
+}
+
+.board-el-text[data-variant='heading'] {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.board-el-text[data-variant='text'] {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.board-el-text[data-variant='code'] {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--sheet-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.board-el-text[data-variant='code'] .board-text {
+  tab-size: 4;
+}
+
+.board-el-text[data-variant='sticky'] {
+  padding: 12px;
+  background: var(--marker);
+  color: var(--marker-ink);
+  font-size: 15px;
+  line-height: 1.5;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.15);
+}
+
+/* 選取時的操作列、工具列、縮放 */
+/* 置中又不被擠窄：左右都設 0，寬度跟內容一樣 */
+.board-selbar {
+  position: absolute;
+  top: 12px;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  width: max-content;
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+}
+
+.board-tools {
+  position: absolute;
+  right: 0;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 2;
+  width: max-content;
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  max-width: calc(100% - 24px);
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+}
+
+.board-tool {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-2);
+  font-size: 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.board-tool:hover:not(:disabled) {
+  background: var(--sheet-2);
+  color: var(--ink);
+}
+
+.board-tool[aria-pressed='true'] {
+  background: var(--pen);
+  color: var(--on-pen);
+}
+
+.board-tool:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.board-tools-sep {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--rule);
+}
+
+/* 顏色：用 color 傳顏色，畫成圓點 */
+.board-swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.board-swatch::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.board-swatch[aria-pressed='true'] {
+  border-color: var(--pen);
+}
+
+.board-zoom {
+  position: absolute;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--sheet);
+}
+
+.board-zoom-value {
+  min-width: 52px;
+  height: 32px;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.board-help {
+  position: absolute;
+  right: 16px;
+  bottom: 72px;
+  z-index: 3;
+  width: min(360px, calc(100% - 32px));
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.16);
+  font-size: 14px;
+}
+
+.board-help h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.board-help ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.board-help li + li {
+  margin-top: 6px;
+}
+
+/* 從元件庫拖出來時跟著手指的標籤 */
+.board-ghost {
+  position: fixed;
+  z-index: 60;
+  padding: 4px 10px;
+  border: 1px solid var(--pen);
+  border-radius: var(--radius-sm);
+  background: var(--pen-soft);
+  color: var(--pen);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+/* 陣列最後的「＋」格、表格的「＋列」「＋欄」：選取時才出現 */
+.board-add {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1.5px dashed var(--ink-3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.board-add:hover {
+  border-color: var(--pen);
+  color: var(--pen);
+}
+
+.board-add-cell {
+  top: 22px;
+  left: calc(100% + 6px);
+  width: 44px;
+  height: 44px;
+}
+
+.board-add-row {
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  height: 26px;
+}
+
+.board-add-col {
+  left: calc(100% + 6px);
+  width: 26px;
+}
+
+/* 格子底色 */
+:root {
+  --cell-yellow: #fff1a8;
+  --cell-green: #cdeedb;
+  --cell-blue: #d6e3ff;
+  --cell-red: #fcdcd8;
+  --cell-purple: #e8dcfb;
+  --cell-gray: #e3e7ed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --cell-yellow: #5c4c0f;
+    --cell-green: #1c4a35;
+    --cell-blue: #223a6e;
+    --cell-red: #5c2a29;
+    --cell-purple: #402d66;
+    --cell-gray: #34405a;
+  }
+}
+
+:root[data-theme='dark'] {
+  --cell-yellow: #5c4c0f;
+  --cell-green: #1c4a35;
+  --cell-blue: #223a6e;
+  --cell-red: #5c2a29;
+  --cell-purple: #402d66;
+  --cell-gray: #34405a;
+}
+
+.board-cell[data-color='yellow'],
+.board-cell-swatch[data-color='yellow'] {
+  background: var(--cell-yellow);
+}
+
+.board-cell[data-color='green'],
+.board-cell-swatch[data-color='green'] {
+  background: var(--cell-green);
+}
+
+.board-cell[data-color='blue'],
+.board-cell-swatch[data-color='blue'] {
+  background: var(--cell-blue);
+}
+
+.board-cell[data-color='red'],
+.board-cell-swatch[data-color='red'] {
+  background: var(--cell-red);
+}
+
+.board-cell[data-color='purple'],
+.board-cell-swatch[data-color='purple'] {
+  background: var(--cell-purple);
+}
+
+.board-cell[data-color='gray'],
+.board-cell-swatch[data-color='gray'] {
+  background: var(--cell-gray);
+}
+
+/* 選取的那一格 */
+.board-cell[data-picked] {
+  position: relative;
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px var(--pen);
+}
+
+.board-selbar-title {
+  align-self: center;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.board-cell-colors {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.board-cell-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  background: var(--sheet);
+  cursor: pointer;
+}
+
+/* 不上色：白底加一條斜線 */
+.board-cell-swatch[data-color='none'] {
+  background: linear-gradient(135deg, transparent 45%, var(--hard) 45%, var(--hard) 55%, transparent 55%), var(--sheet);
+}
+
+.board-cell-swatch[aria-pressed='true'] {
+  outline: 2px solid var(--pen);
+  outline-offset: 1px;
+}
+
+/* 手機和直立的平板：元件庫改成上方一條，可以左右滑 */
+@media (max-width: 760px) {
+  .board-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .board-palette {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .board-palette-hint,
+  .board-palette-group h2 {
+    display: none;
+  }
+
+  .board-palette-items {
+    display: flex;
+    gap: 2px;
+  }
+
+  .board-palette-item {
+    flex: none;
+    min-width: 56px;
+    padding: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .board-palette-icon {
+    height: 26px;
+  }
+
+  /* 390px 寬的手機也要排成一行 */
+  .board-tools {
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .board-tools-sep {
+    display: none;
+  }
+
+  .board-tool {
+    width: 30px;
+    height: 30px;
+  }
+
+  .board-swatch {
+    width: 22px;
+    height: 22px;
+  }
+
+  .board-swatch::before {
+    width: 12px;
+    height: 12px;
+  }
+
+  .board-zoom {
+    top: 12px;
+    right: 12px;
+    bottom: auto;
+  }
+
+  .board-help {
+    top: 60px;
+    bottom: auto;
+  }
+
+  .board-selbar {
+    top: auto;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 60px);
+  }
+}
