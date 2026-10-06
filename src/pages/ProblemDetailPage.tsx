@@ -87,6 +87,9 @@ function ProblemDetail({ problem }: { problem: Problem }) {
           <Link className="btn" to={`/mock?problem=${problem.id}&kind=explain`}>
             {t.detail.explainThis}
           </Link>
+          <Link className="btn" to={`/board/${problem.id}`}>
+            {t.detail.board}
+          </Link>
         </div>
       </PageHead>
 

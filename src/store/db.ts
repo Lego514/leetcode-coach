@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
 import type { AttemptMode, CardResult, Collection, MockKind } from '../../shared/constants';
-import type { ExplanationFeedback } from '../../shared/protocol';
+import type { BoardDoc, ExplanationFeedback } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -103,6 +103,14 @@ export interface CardReviewRecord {
   result: CardResult;
 }
 
+/** 一張白板：scratch 是自由白板，p 加題號是那一題的白板 */
+export interface BoardRecord {
+  id: string;
+  doc: BoardDoc;
+  /** ISO 時間戳 */
+  updatedAt: string;
+}
+
 export type CustomProblemRecord = Problem;
 
 export interface SettingsRecord {
@@ -154,6 +162,7 @@ export class CoachDB extends Dexie {
   outbox!: EntityTable<OutboxRecord, 'id'>;
   syncState!: EntityTable<SyncStateRecord, 'key'>;
   cardReviews!: EntityTable<CardReviewRecord, 'id'>;
+  boards!: EntityTable<BoardRecord, 'id'>;
 
   constructor(name = 'leetcode-coach') {
     super(name);
@@ -186,6 +195,10 @@ export class CoachDB extends Dexie {
     this.version(3).stores({
       cardReviews: '++id, cardId, day, &uid',
     });
+    // 第 4 版：白板
+    this.version(4).stores({
+      boards: 'id',
+    });
   }
 
   /** 會同步的資料表，依集合名稱查 */
@@ -205,6 +218,7 @@ export class CoachDB extends Dexie {
       this.customProblems,
       this.settings,
       this.cardReviews,
+      this.boards,
     ];
   }
 }

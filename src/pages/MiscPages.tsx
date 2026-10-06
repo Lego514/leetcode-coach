@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 
 const MORE_LINKS = [
   { to: '/cards', key: 'cards' },
+  { to: '/board', key: 'board' },
   { to: '/progress', key: 'progress' },
   { to: '/patterns', key: 'patterns' },
   { to: '/phrases', key: 'phrases' },

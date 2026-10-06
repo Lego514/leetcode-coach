@@ -4,6 +4,7 @@ import { toDay, type Day } from '../lib/dates';
 import { parseSlug } from '../lib/catalog';
 import { schedule, spreadDelays, type Rating } from '../lib/srs';
 import type { CardResult } from '../../shared/constants';
+import type { BoardDoc } from '../../shared/protocol';
 import {
   db,
   DEFAULT_SETTINGS,
@@ -277,5 +278,21 @@ export async function recordCardReview(cardId: string, result: CardResult, at = 
     record.id = await db.cardReviews.add(record);
     await track(db, 'cardReviews', record.uid);
     return record;
+  });
+}
+
+/** 白板自動存檔；整張白板一起存，同步時較新的版本勝出 */
+export async function saveBoard(id: string, doc: BoardDoc, at = new Date()): Promise<void> {
+  await db.transaction('rw', db.boards, db.outbox, async () => {
+    await db.boards.put({ id, doc, updatedAt: at.toISOString() });
+    await track(db, 'boards', id, false, at.getTime());
+  });
+}
+
+export async function deleteBoard(id: string): Promise<void> {
+  await db.transaction('rw', db.boards, db.outbox, async () => {
+    if (!(await db.boards.get(id))) return;
+    await db.boards.delete(id);
+    await track(db, 'boards', id, true);
   });
 }

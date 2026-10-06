@@ -2440,3 +2440,1118 @@ audio {
     bottom: calc(62px + env(safe-area-inset-bottom));
   }
 }
+
+/* ---------- 白板 ---------- */
+
+:root {
+  --board-red: #c62828;
+  --board-blue: #1d4ed8;
+  --board-green: #15803d;
+  --board-orange: #c2410c;
+  --board-purple: #7c3aed;
+  --ptr-orange-soft: #ffe4d1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --board-red: #f08579;
+    --board-blue: #8fb0ff;
+    --board-green: #5cc79a;
+    --board-orange: #f0a35e;
+    --board-purple: #b9a0f7;
+    --ptr-orange-soft: #5a3317;
+  }
+}
+
+:root[data-theme='dark'] {
+  --board-red: #f08579;
+  --board-blue: #8fb0ff;
+  --board-green: #5cc79a;
+  --board-orange: #f0a35e;
+  --board-purple: #b9a0f7;
+  --ptr-orange-soft: #5a3317;
+}
+
+/* 全螢幕蓋在 app 上面，練習頁打開時計時照常 */
+.board {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.board-loading {
+  padding: 24px;
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 12px;
+  padding-top: max(6px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--rule);
+  background: var(--sheet);
+}
+
+.board-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.board-caption {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.board-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.board-title > span:first-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 我的白板 */
+.board-storage-note {
+  max-width: 64ch;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--pen);
+  background: var(--pen-soft);
+  font-size: 14px;
+}
+
+.board-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board-list-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--rule);
+}
+
+.board-list-link {
+  font-weight: 600;
+}
+
+.board-list-meta {
+  flex: 1;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.board-save {
+  margin-left: auto;
+  flex: none;
+  max-width: 50%;
+  color: var(--ink-3);
+  font-size: 13px;
+  text-align: right;
+}
+
+.board-body {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  min-height: 0;
+}
+
+/* 左側元件庫 */
+.board-palette {
+  overflow-y: auto;
+  padding: 12px;
+  border-right: 1px solid var(--rule);
+  background: var(--sheet);
+}
+
+.board-palette-hint {
+  margin: 0 0 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.board-palette-group h2 {
+  margin: 12px 0 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.board-palette-items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.board-palette-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink-2);
+  font-size: 12px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+@media (hover: hover) {
+  .board-palette-item:hover {
+    background: var(--sheet-2);
+    color: var(--ink);
+  }
+}
+
+.board-palette-icon {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.board-palette-icon[data-kind='sticky'] {
+  background: var(--marker);
+  color: var(--marker-ink);
+}
+
+/* 畫布 */
+.board-viewport {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, var(--rule-strong) 1px, transparent 1.3px);
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.board-viewport[data-tool='hand'] {
+  cursor: grab;
+}
+
+.board-viewport[data-tool='pen'],
+.board-viewport[data-tool='arrow'] {
+  cursor: crosshair;
+}
+
+.board-viewport[data-tool='eraser'] {
+  cursor: cell;
+}
+
+.board-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.board-ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.board-stroke {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.board-arrow {
+  stroke-width: 2;
+}
+
+.board-arrow-draft {
+  stroke-dasharray: 6 4;
+}
+
+.board-empty {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  max-width: 320px;
+  margin: 0;
+  color: var(--ink-3);
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* 元件 */
+.board-el {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: move;
+}
+
+.board-el[data-selected] {
+  outline: 2px solid var(--pen);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.board-el[data-editing] {
+  cursor: auto;
+}
+
+.board-label {
+  display: block;
+  height: 22px;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+input.board-label-input {
+  width: 100%;
+  padding: 0 4px;
+  border: 1px dashed var(--pen);
+  background: var(--sheet);
+}
+
+.board-cells {
+  display: flex;
+}
+
+/* 每格剛好 44px：只畫右邊和上下的框，第一格再補左邊，指標才會對準格子 */
+.board-cell {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  flex: none;
+  overflow: hidden;
+  padding: 0 2px;
+  border: 1px solid var(--ink-3);
+  border-left-width: 0;
+  background: var(--sheet);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.board-cell:first-child {
+  border-left-width: 1px;
+}
+
+.board-cell[data-snap] {
+  background: var(--pen-soft);
+}
+
+input.board-cell-input {
+  border-color: var(--pen);
+  text-align: center;
+  outline: none;
+}
+
+input.board-cell-input:focus {
+  background: var(--pen-soft);
+}
+
+.board-indices {
+  display: flex;
+  height: 18px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.board-indices span {
+  flex: none;
+  text-align: center;
+}
+
+/* 堆疊：直的，每格都有完整的框，最下面加粗當底座 */
+.board-el-list[data-variant='stack'] .board-cells {
+  flex-direction: column;
+}
+
+.board-el-list[data-variant='stack'] .board-cell {
+  border-width: 1px;
+}
+
+.board-el-list[data-variant='stack'] .board-cell + .board-cell {
+  border-top-width: 0;
+}
+
+.board-el-list[data-variant='stack'] .board-cell:last-child {
+  border-bottom: 3px solid var(--ink-2);
+}
+
+/* 集合：圓角的小卡 */
+.board-el-list[data-variant='set'] .board-cell {
+  border-left-width: 1px;
+  border-radius: 999px;
+  margin-right: 0;
+  transform: scale(0.88);
+}
+
+/* 字典、表格、二維陣列 */
+.board-row {
+  display: flex;
+}
+
+.board-row + .board-row .board-cell {
+  border-top-width: 0;
+}
+
+.board-row[data-header] .board-cell {
+  background: var(--sheet-2);
+  font-weight: 700;
+}
+
+.board-el-table[data-variant='dict'] .board-cell:first-child {
+  background: var(--sheet-2);
+  font-weight: 600;
+}
+
+.board-row-index {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.board-el-table[data-variant='grid'] .board-row .board-cell:nth-child(2) {
+  border-left-width: 1px;
+}
+
+/* 變數 */
+.board-var {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--ink-3);
+  border-radius: 18px;
+  background: var(--sheet);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.board-var-name {
+  color: var(--ink-2);
+}
+
+.board-var-value {
+  font-weight: 700;
+}
+
+input.board-var-input {
+  padding: 2px 4px;
+  border: 1px dashed var(--pen);
+  background: var(--sheet);
+  font-family: var(--font-mono);
+}
+
+/* 節點 */
+.board-el-node {
+  display: flex;
+}
+
+.board-node-value,
+input.board-node-input {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 2px solid var(--ink-2);
+  background: var(--sheet);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.board-el-node[data-variant='tree'] .board-node-value,
+.board-el-node[data-variant='tree'] .board-node-input,
+.board-el-node[data-variant='graph'] .board-node-value,
+.board-el-node[data-variant='graph'] .board-node-input {
+  border-radius: 50%;
+}
+
+.board-el-node[data-variant='graph'] .board-node-value,
+.board-el-node[data-variant='graph'] .board-node-input {
+  border-color: var(--good);
+}
+
+.board-el-node[data-variant='list'] .board-node-value,
+.board-el-node[data-variant='list'] .board-node-input {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.board-node-next {
+  position: relative;
+  box-sizing: border-box;
+  width: 24px;
+  height: 44px;
+  border: 2px solid var(--ink-2);
+  border-left-width: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--sheet-2);
+}
+
+.board-node-next::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-2);
+  transform: translate(-50%, -50%);
+}
+
+/*
+ * 指標：一支細箭頭加一個膠囊名牌。淡色底、有色框和有色字，
+ * 顏色依名字（i 藍、j 橘、k 綠、l 紫），好幾個指標也分得清楚。
+ */
+.board-el-pointer {
+  --ptr: var(--board-blue);
+  --ptr-soft: var(--cell-blue);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: grab;
+}
+
+.board-el-pointer[data-tone='orange'] {
+  --ptr: var(--board-orange);
+  --ptr-soft: var(--ptr-orange-soft);
+}
+
+.board-el-pointer[data-tone='green'] {
+  --ptr: var(--board-green);
+  --ptr-soft: var(--cell-green);
+}
+
+.board-el-pointer[data-tone='purple'] {
+  --ptr: var(--board-purple);
+  --ptr-soft: var(--cell-purple);
+}
+
+.board-pointer-arrow {
+  display: block;
+  flex: none;
+  fill: var(--ptr);
+}
+
+.board-pointer-name,
+input.board-pointer-input {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 30px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1.5px solid var(--ptr);
+  border-radius: 999px;
+  background: var(--ptr-soft);
+  color: var(--ptr);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+input.board-pointer-input {
+  text-align: center;
+  outline: none;
+}
+
+/* 選取時不框整支指標，只在名牌外面加一圈 */
+.board-el-pointer[data-selected] {
+  outline: none;
+}
+
+.board-el-pointer[data-selected] .board-pointer-name,
+.board-el-pointer[data-selected] .board-pointer-input {
+  box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 3px var(--pen);
+}
+
+/* 文字 */
+.board-text {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font: inherit;
+  color: inherit;
+}
+
+textarea.board-text-input {
+  display: block;
+  min-height: 36px;
+  padding: 0;
+  border: 1px dashed var(--pen);
+  background: transparent;
+  resize: none;
+  outline: none;
+}
+
+.board-el-text[data-variant='heading'] {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.board-el-text[data-variant='text'] {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.board-el-text[data-variant='code'] {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--sheet-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.board-el-text[data-variant='code'] .board-text {
+  tab-size: 4;
+}
+
+.board-el-text[data-variant='sticky'] {
+  padding: 12px;
+  background: var(--marker);
+  color: var(--marker-ink);
+  font-size: 15px;
+  line-height: 1.5;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.15);
+}
+
+/* 選取時的操作列、工具列、縮放 */
+/* 置中又不被擠窄：左右都設 0，寬度跟內容一樣 */
+.board-selbar {
+  position: absolute;
+  top: 12px;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  width: max-content;
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+}
+
+.board-tools {
+  position: absolute;
+  right: 0;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 2;
+  width: max-content;
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  max-width: calc(100% - 24px);
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+}
+
+.board-tool {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-2);
+  font-size: 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) {
+  .board-tool:hover:not(:disabled) {
+    background: var(--sheet-2);
+    color: var(--ink);
+  }
+}
+
+.board-tool[aria-pressed='true'] {
+  background: var(--pen);
+  color: var(--on-pen);
+}
+
+.board-tool:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .board-tool-danger:hover:not(:disabled) {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+}
+
+.board-tools-sep {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--rule);
+}
+
+/* 矩形框、圓形框：裡面可以點穿，只有框線點得到 */
+.board-el-shape {
+  pointer-events: none;
+}
+
+.board-shape {
+  display: block;
+  overflow: visible;
+}
+
+.board-shape-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+  cursor: move;
+}
+
+.board-shape-line {
+  fill: none;
+  stroke-width: 2.5;
+  pointer-events: none;
+}
+
+.board-shape-draft {
+  fill: none;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.board-resize {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--pen);
+  border-radius: 3px;
+  background: var(--sheet);
+  cursor: nwse-resize;
+  pointer-events: auto;
+}
+
+/* 手機上展開顏色時，五種顏色浮在工具列上方 */
+.board-colors {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 顏色：用 color 傳顏色，畫成圓點 */
+.board-swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.board-swatch::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.board-swatch[aria-pressed='true'] {
+  border-color: var(--pen);
+}
+
+.board-zoom {
+  position: absolute;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--sheet);
+}
+
+.board-zoom-value {
+  min-width: 40px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.board-help {
+  position: absolute;
+  right: 72px;
+  bottom: 16px;
+  z-index: 3;
+  width: min(360px, calc(100% - 32px));
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.16);
+  font-size: 14px;
+}
+
+.board-help h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.board-help ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.board-help li + li {
+  margin-top: 6px;
+}
+
+/* 從元件庫拖出來時跟著手指的標籤 */
+.board-ghost {
+  position: fixed;
+  z-index: 60;
+  padding: 4px 10px;
+  border: 1px solid var(--pen);
+  border-radius: var(--radius-sm);
+  background: var(--pen-soft);
+  color: var(--pen);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+/* 陣列最後的「＋」格、表格的「＋列」「＋欄」：選取時才出現 */
+.board-add {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1.5px dashed var(--ink-3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.board-add:hover {
+  border-color: var(--pen);
+  color: var(--pen);
+}
+
+.board-add-cell {
+  top: 22px;
+  left: calc(100% + 6px);
+  width: 44px;
+  height: 44px;
+}
+
+.board-add-row {
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  height: 26px;
+}
+
+.board-add-col {
+  left: calc(100% + 6px);
+  width: 26px;
+}
+
+/* 格子底色 */
+:root {
+  --cell-yellow: #fff1a8;
+  --cell-green: #cdeedb;
+  --cell-blue: #d6e3ff;
+  --cell-red: #fcdcd8;
+  --cell-purple: #e8dcfb;
+  --cell-gray: #e3e7ed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --cell-yellow: #5c4c0f;
+    --cell-green: #1c4a35;
+    --cell-blue: #223a6e;
+    --cell-red: #5c2a29;
+    --cell-purple: #402d66;
+    --cell-gray: #34405a;
+  }
+}
+
+:root[data-theme='dark'] {
+  --cell-yellow: #5c4c0f;
+  --cell-green: #1c4a35;
+  --cell-blue: #223a6e;
+  --cell-red: #5c2a29;
+  --cell-purple: #402d66;
+  --cell-gray: #34405a;
+}
+
+.board-cell[data-color='yellow'],
+.board-cell-swatch[data-color='yellow'] {
+  background: var(--cell-yellow);
+}
+
+.board-cell[data-color='green'],
+.board-cell-swatch[data-color='green'] {
+  background: var(--cell-green);
+}
+
+.board-cell[data-color='blue'],
+.board-cell-swatch[data-color='blue'] {
+  background: var(--cell-blue);
+}
+
+.board-cell[data-color='red'],
+.board-cell-swatch[data-color='red'] {
+  background: var(--cell-red);
+}
+
+.board-cell[data-color='purple'],
+.board-cell-swatch[data-color='purple'] {
+  background: var(--cell-purple);
+}
+
+.board-cell[data-color='gray'],
+.board-cell-swatch[data-color='gray'] {
+  background: var(--cell-gray);
+}
+
+/* 選取的那一格 */
+.board-cell[data-picked] {
+  position: relative;
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px var(--pen);
+}
+
+.board-selbar-title {
+  align-self: center;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.board-cell-colors {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.board-cell-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  background: var(--sheet);
+  cursor: pointer;
+}
+
+/* 不上色：白底加一條斜線 */
+.board-cell-swatch[data-color='none'] {
+  background: linear-gradient(135deg, transparent 45%, var(--hard) 45%, var(--hard) 55%, transparent 55%), var(--sheet);
+}
+
+.board-cell-swatch[aria-pressed='true'] {
+  outline: 2px solid var(--pen);
+  outline-offset: 1px;
+}
+
+/* 手機和直立的平板：元件庫改成上方一條，可以左右滑 */
+@media (max-width: 760px) {
+  .board-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .board-palette {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .board-palette-hint,
+  .board-palette-group h2 {
+    display: none;
+  }
+
+  .board-palette-items {
+    display: flex;
+    gap: 2px;
+  }
+
+  .board-palette-item {
+    flex: none;
+    min-width: 56px;
+    padding: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .board-palette-icon {
+    height: 26px;
+  }
+
+  /* 390px 寬的手機也要排成一行 */
+  .board-tools {
+    gap: 0;
+    padding: 4px;
+  }
+
+  .board-tools-sep {
+    display: none;
+  }
+
+  .board-tool {
+    width: 28px;
+    height: 30px;
+  }
+
+  .board-swatch {
+    width: 22px;
+    height: 22px;
+  }
+
+  .board-colors {
+    position: relative;
+  }
+
+  .board-colors:not([data-open]) .board-swatch:not([aria-pressed='true']) {
+    display: none;
+  }
+
+  .board-colors[data-open] {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    padding: 6px;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--sheet);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 0.16);
+    transform: translateX(-50%);
+  }
+
+  .board-swatch::before {
+    width: 12px;
+    height: 12px;
+  }
+
+  .board-zoom {
+    top: 12px;
+    right: 12px;
+    bottom: auto;
+    flex-direction: row;
+  }
+
+  .board-help {
+    top: 60px;
+    right: 12px;
+    bottom: auto;
+  }
+
+  .board-selbar {
+    top: auto;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 60px);
+  }
+}

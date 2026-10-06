@@ -2,7 +2,10 @@
 import { z } from 'zod';
 import {
   ATTEMPT_MODES,
+  BOARD_COLORS,
+  BOARD_MAX_BYTES,
   CARD_RESULTS,
+  CELL_COLORS,
   COLLECTIONS,
   DIFFICULTIES,
   EXPLAIN_POINTS,
@@ -118,6 +121,63 @@ export const cardReviewDataSchema = z.object({
   result: z.enum(CARD_RESULTS),
 });
 
+// ---------- 白板 ----------
+
+const boardElementId = z.string().regex(/^[a-z0-9]{1,12}$/);
+const coord = z.number().min(-1e6).max(1e6);
+const cell = text(40);
+const boardEnd = z.union([z.object({ id: boardElementId }), z.object({ x: coord, y: coord })]);
+const placed = { id: boardElementId, x: coord, y: coord };
+
+/** 白板上的一個元件；陣列、表格這些結構化元件存的是內容，畫面依內容排版 */
+export const boardElementSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('text'), ...placed, variant: z.enum(['heading', 'text', 'code', 'sticky']), text: text(2000), w: z.number().min(40).max(2000) }),
+  z.object({
+    type: z.literal('list'),
+    ...placed,
+    variant: z.enum(['array', 'stack', 'queue', 'set']),
+    label: text(40),
+    items: z.array(cell).max(64),
+    /** 每一格的底色，跟 items 一一對應；沒有上色就沒有這一項 */
+    colors: z.array(z.enum(CELL_COLORS).nullable()).max(64).optional(),
+  }),
+  z.object({ type: z.literal('table'), ...placed, variant: z.enum(['dict', 'grid', 'table']), label: text(40), rows: z.array(z.array(cell).max(26)).min(1).max(26) }),
+  z.object({ type: z.literal('var'), ...placed, name: text(40), value: text(80) }),
+  z.object({ type: z.literal('node'), ...placed, variant: z.enum(['tree', 'list', 'graph']), value: cell }),
+  /** 框出重點用的矩形框或圓形框；裡面是空的，不會擋到框住的元件 */
+  z.object({
+    type: z.literal('shape'),
+    ...placed,
+    variant: z.enum(['rect', 'ellipse']),
+    w: z.number().min(8).max(4000),
+    h: z.number().min(8).max(4000),
+    color: z.enum(BOARD_COLORS),
+  }),
+  z.object({
+    type: z.literal('pointer'),
+    ...placed,
+    name: text(12),
+    /** 吸附在陣列的哪一格；有吸附時位置跟著陣列走 */
+    attach: z.object({ id: boardElementId, index: z.number().int().min(0).max(63) }).optional(),
+  }),
+  z.object({ type: z.literal('arrow'), id: boardElementId, from: boardEnd, to: boardEnd, color: z.enum(BOARD_COLORS) }),
+  z.object({
+    type: z.literal('stroke'),
+    id: boardElementId,
+    color: z.enum(BOARD_COLORS),
+    /** 攤平的整數座標 x0, y0, x1, y1, … */
+    points: z.array(z.number().int().min(-1e6).max(1e6)).min(2).max(4000),
+  }),
+]);
+
+export const boardDocSchema = z.object({ elements: z.array(boardElementSchema).max(800) });
+export type BoardDoc = z.infer<typeof boardDocSchema>;
+export type BoardElement = BoardDoc['elements'][number];
+
+export const boardDataSchema = z
+  .object({ doc: boardDocSchema, updatedAt: timestamp })
+  .refine((data) => JSON.stringify(data).length <= BOARD_MAX_BYTES, 'Board is too large');
+
 const uuidKey = z.uuid();
 const problemKey = z.string().regex(/^[1-9]\d{0,6}$/);
 
@@ -131,6 +191,8 @@ export const COLLECTION_SCHEMAS = {
   customProblems: { key: problemKey, data: customProblemDataSchema },
   settings: { key: z.literal('app'), data: settingsDataSchema },
   cardReviews: { key: uuidKey, data: cardReviewDataSchema },
+  /** scratch 是自由白板，p 加題號是那一題的白板 */
+  boards: { key: z.string().regex(/^(scratch|p[1-9]\d{0,6})$/), data: boardDataSchema },
 } satisfies Record<Collection, { key: z.ZodType<string>; data: z.ZodType }>;
 
 export type CollectionData = { [C in Collection]: z.infer<(typeof COLLECTION_SCHEMAS)[C]['data']> };

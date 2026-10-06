@@ -3,6 +3,7 @@ import type { PatternId } from '../data/patterns';
 import { schedule, type ReviewState } from '../lib/srs';
 import type {
   AttemptRecord,
+  BoardRecord,
   CardReviewRecord,
   CoachDB,
   CustomProblemRecord,
@@ -24,7 +25,8 @@ export type LocalRecord =
   | PatternNoteRecord
   | CustomProblemRecord
   | SettingsRecord
-  | CardReviewRecord;
+  | CardReviewRecord
+  | BoardRecord;
 
 export function outboxId(collection: Collection, key: string): string {
   return `${collection}:${key}`;
@@ -53,6 +55,8 @@ export function keyOf(collection: Collection, record: LocalRecord): string {
       return (record as PatternNoteRecord).patternId;
     case 'settings':
       return 'app';
+    case 'boards':
+      return (record as BoardRecord).id;
   }
 }
 
@@ -80,6 +84,8 @@ export function toSyncData(collection: Collection, record: LocalRecord): unknown
       return omit(record as SettingsRecord, 'key');
     case 'cardReviews':
       return omit(record as CardReviewRecord, 'id', 'uid');
+    case 'boards':
+      return omit(record as BoardRecord, 'id');
   }
 }
 
@@ -101,6 +107,8 @@ export async function findLocal(database: CoachDB, collection: Collection, key: 
       return database.settings.get('app');
     case 'cardReviews':
       return database.cardReviews.where('uid').equals(key).first();
+    case 'boards':
+      return database.boards.get(key);
   }
 }
 
@@ -174,6 +182,10 @@ export async function applyRemote(
       });
       return undefined;
     }
+    case 'boards':
+      if (deleted) await database.boards.delete(key);
+      else await database.boards.put({ ...(data as Omit<BoardRecord, 'id'>), id: key });
+      return undefined;
   }
 }
 
@@ -192,7 +204,8 @@ export function knownUpdatedAt(collection: Collection, record: LocalRecord): num
       return parse((record as CardReviewRecord).at);
     case 'notes':
     case 'patternNotes':
-      return parse((record as NoteRecord | PatternNoteRecord).updatedAt);
+    case 'boards':
+      return parse((record as NoteRecord | PatternNoteRecord | BoardRecord).updatedAt);
     default:
       return 0;
   }
