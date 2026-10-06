@@ -3055,6 +3055,11 @@ textarea.board-text-input {
   cursor: default;
 }
 
+.board-tool-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .board-tools-sep {
   width: 1px;
   height: 24px;
@@ -3337,7 +3342,7 @@ textarea.board-text-input {
 
   /* 390px 寬的手機也要排成一行 */
   .board-tools {
-    gap: 2px;
+    gap: 0;
     padding: 4px;
   }
 
@@ -3346,7 +3351,7 @@ textarea.board-text-input {
   }
 
   .board-tool {
-    width: 30px;
+    width: 28px;
     height: 30px;
   }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
 import { BOARD_COLORS, BOARD_MAX_BYTES, CELL_COLORS, type BoardColor, type CellColor } from '../../../shared/constants';
 import { useI18n } from '../../i18n';
 import * as m from '../../lib/board/model';
+import { Dialog } from '../ui';
 import { saveBoard } from '../../store/actions';
 import { useBoard } from '../../store/queries';
 import { ElementView } from './BoardElements';
@@ -81,6 +82,7 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
   const [snap, setSnap] = useState<{ id: string; index: number } | null>(null);
   const [ghost, setGhost] = useState<{ kind: m.PaletteKind; x: number; y: number } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [savedDoc, setSavedDoc] = useState(initial);
   const [tooLarge, setTooLarge] = useState(false);
 
@@ -291,6 +293,15 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
     const { doc: next, ids } = m.duplicateElements(doc, selected);
     apply(next);
     setSelection(new Set(ids));
+  };
+
+  /** 清空整張白板；跟其他修改一樣可以復原 */
+  const clearBoard = () => {
+    setConfirmClear(false);
+    setEditingId(null);
+    setCellSel(null);
+    setSelection(new Set());
+    apply(m.EMPTY_DOC);
   };
 
   const undo = () => {
@@ -798,6 +809,17 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
             <button type="button" className="board-tool" aria-label={t.board.redo} title={t.board.redo} disabled={history.future.length === 0} onClick={redo}>
               {ICON_REDO}
             </button>
+            <span className="board-tools-sep" aria-hidden />
+            <button
+              type="button"
+              className="board-tool board-tool-danger"
+              aria-label={t.board.clear}
+              title={t.board.clear}
+              disabled={doc.elements.length === 0}
+              onClick={() => setConfirmClear(true)}
+            >
+              {ICON_CLEAR}
+            </button>
           </div>
 
           <div className="board-zoom" data-ui>
@@ -836,6 +858,24 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
           )}
         </div>
       </div>
+
+      <Dialog
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        title={t.board.clearTitle}
+        footer={
+          <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="btn" onClick={() => setConfirmClear(false)}>
+              {t.common.cancel}
+            </button>
+            <button type="button" className="btn btn-danger" onClick={clearBoard}>
+              {t.board.clearConfirm}
+            </button>
+          </div>
+        }
+      >
+        <p>{t.board.clearBody}</p>
+      </Dialog>
 
       {ghost && (
         <div className="board-ghost" style={{ left: ghost.x, top: ghost.y }} aria-hidden>
@@ -988,6 +1028,12 @@ const ICON_UNDO = (
 const ICON_REDO = (
   <Icon>
     <path d="M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" />
+  </Icon>
+);
+
+const ICON_CLEAR = (
+  <Icon>
+    <path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
   </Icon>
 );
 

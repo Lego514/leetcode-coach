@@ -106,3 +106,26 @@ test('keeps the view where it is after adding something', async ({ page }) => {
   await page.waitForTimeout(300);
   expect(await world.getAttribute('style')).toBe(panned);
 });
+
+test('clears the canvas after confirming, and undo brings it back', async ({ page }) => {
+  await page.goto('/#/board');
+  const clear = page.getByRole('button', { name: 'Clear canvas' });
+  await expect(clear).toBeDisabled();
+  await page.getByRole('button', { name: 'Array', exact: true }).click();
+  await page.getByRole('button', { name: 'Sticky note', exact: true }).click();
+
+  // 先問一次；取消就什麼都不動
+  await clear.click();
+  const confirm = page.getByRole('dialog', { name: 'Clear the whole whiteboard?' });
+  await confirm.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('group', { name: /^Array nums/ })).toBeVisible();
+
+  await clear.click();
+  await confirm.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(page.getByText('Click or drag in an element')).toBeVisible();
+  await expect(clear).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Undo (Ctrl+Z)' }).click();
+  await expect(page.getByRole('group', { name: /^Array nums/ })).toBeVisible();
+  await expect(page.getByRole('group', { name: /^Sticky note/ })).toBeVisible();
+});
