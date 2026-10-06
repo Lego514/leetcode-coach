@@ -4,6 +4,7 @@ import { PageHead } from '../components/ui';
 import { useI18n } from '../i18n';
 
 const MORE_LINKS = [
+  { to: '/cards', key: 'cards' },
   { to: '/progress', key: 'progress' },
   { to: '/patterns', key: 'patterns' },
   { to: '/phrases', key: 'phrases' },

@@ -9,9 +9,17 @@ import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { nextNewProblems, problemsInList } from '../lib/catalog';
 import { startOfWeek, type Day } from '../lib/dates';
-import { dueProblems, finishDay, newProblemsStartedOn, planToTarget, practiceAttempts, practiceStreak } from '../lib/stats';
+import {
+  dueProblems,
+  finishDay,
+  newProblemsStartedOn,
+  planToTarget,
+  practiceAttempts,
+  practiceStreak,
+  streakDays,
+} from '../lib/stats';
 import type { AttemptMode } from '../store/db';
-import { useAttempts, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
+import { useAttempts, useCardReviews, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 
 const settingsLink = (text: string) => <Link to="/settings">{text}</Link>;
 
@@ -22,6 +30,7 @@ export function TodayPage() {
   const catalog = useCatalog();
   const { progress, loaded } = useProgressMap();
   const attempts = useAttempts();
+  const cardReviews = useCardReviews();
   const [recording, setRecording] = useState<{ problem: Problem; mode: AttemptMode } | null>(null);
   const [quickRecord, setQuickRecord] = useState(false);
   // 「再來一題」多加的題數，只算當天
@@ -41,7 +50,9 @@ export function TodayPage() {
 
   const practiced = practiceAttempts(attempts ?? []);
   const todayAttempts = practiced.filter((a) => a.day === day);
-  const streak = practiceStreak(practiced.map((a) => a.day), day);
+  // 做過微複習的日子也算連續天數
+  const streak = practiceStreak(streakDays(practiced, cardReviews ?? []), day);
+  const cardsToday = (cardReviews ?? []).filter((r) => r.day === day).length;
   const weekStart = startOfWeek(day);
   const thisWeek = practiced.filter((a) => a.day >= weekStart).length;
 
@@ -80,6 +91,19 @@ export function TodayPage() {
             </div>
           </Sheet>
         )}
+
+        <Sheet
+          title={t.today.cardsTitle}
+          id="cards"
+          note={cardsToday > 0 ? t.today.cardsDone(cardsToday) : undefined}
+          actions={
+            <Link className="btn btn-primary btn-small" to="/cards">
+              {t.common.start}
+            </Link>
+          }
+        >
+          <p className="sheet-empty">{t.today.cardsLede}</p>
+        </Sheet>
 
         <Sheet
           title={t.today.dueTitle}

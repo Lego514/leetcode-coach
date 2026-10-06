@@ -41,6 +41,11 @@ export function practiceStreak(days: Iterable<Day>, today: Day): number {
   return count;
 }
 
+/** 算連續天數用的日子：有練習題目，或做過微複習 */
+export function streakDays(practiced: readonly { day: Day }[], cardReviews: readonly { day: Day }[]): Day[] {
+  return [...practiced, ...cardReviews].map((item) => item.day);
+}
+
 export function countByDay(items: Iterable<{ day: Day }>): Map<Day, number> {
   const map = new Map<Day, number>();
   for (const { day } of items) map.set(day, (map.get(day) ?? 0) + 1);

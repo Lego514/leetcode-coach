@@ -45,8 +45,21 @@ export type ExplainPoint = (typeof EXPLAIN_POINTS)[number];
 export const LOCALE_IDS = ['zh-TW', 'en'] as const;
 export type MockKind = (typeof MOCK_KINDS)[number];
 
+/** 微複習卡片的作答結果：答對或記得、有點模糊、答錯或忘了 */
+export const CARD_RESULTS = ['good', 'fuzzy', 'again'] as const;
+export type CardResult = (typeof CARD_RESULTS)[number];
+
 /** 會同步到伺服器的資料集合；複習排程由練習紀錄推算，不需要同步 */
-export const COLLECTIONS = ['attempts', 'mocks', 'notes', 'meta', 'patternNotes', 'customProblems', 'settings'] as const;
+export const COLLECTIONS = [
+  'attempts',
+  'mocks',
+  'notes',
+  'meta',
+  'patternNotes',
+  'customProblems',
+  'settings',
+  'cardReviews',
+] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 
 /** 一次同步最多上傳、下載幾筆 */

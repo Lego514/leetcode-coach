@@ -6,6 +6,7 @@ import {
   markSolvedBefore,
   parseSlug,
   recordAttempt,
+  recordCardReview,
   resetProgress,
   saveMock,
   saveNote,
@@ -177,6 +178,15 @@ describe('backup', () => {
     expect((await db.notes.get(1))?.idea).toBe('hash map');
     expect(await db.mocks.count()).toBe(1);
     expect(await outbox()).toEqual(['attempts:put', 'mocks:put', 'notes:put']);
+  });
+
+  it('keeps flashcard answers', async () => {
+    await recordCardReview('tip:heap-min', 'good', new Date('2026-10-05T12:00:00Z'));
+    const file = parseBackup(JSON.stringify(await exportBackup()));
+    await wipeLocalData(db);
+    await restoreBackup(file);
+    expect(await db.cardReviews.toArray()).toMatchObject([{ cardId: 'tip:heap-min', day: '2026-10-05', result: 'good' }]);
+    expect(await outbox()).toEqual(['cardReviews:put']);
   });
 
   it('adds uids to attempts from older backups', async () => {

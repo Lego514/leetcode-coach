@@ -9,7 +9,10 @@ import { useProgressMap, useToday } from '../store/queries';
 import { syncStatusText } from './AccountSection';
 import { LanguageSwitch } from './LanguageSwitch';
 
-type NavKey = keyof Pick<Messages['nav'], 'today' | 'review' | 'mock' | 'problems' | 'patterns' | 'phrases' | 'progress' | 'settings'>;
+type NavKey = keyof Pick<
+  Messages['nav'],
+  'today' | 'review' | 'cards' | 'mock' | 'problems' | 'patterns' | 'phrases' | 'progress' | 'settings'
+>;
 
 interface NavItem {
   to: string;
@@ -22,6 +25,7 @@ const NAV_GROUPS: NavItem[][] = [
   [
     { to: '/', key: 'today', end: true },
     { to: '/review', key: 'review', badge: 'due' },
+    { to: '/cards', key: 'cards' },
     { to: '/mock', key: 'mock' },
   ],
   [

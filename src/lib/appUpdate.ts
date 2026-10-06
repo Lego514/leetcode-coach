@@ -46,9 +46,9 @@ export async function applyUpdate(): Promise<void> {
   await handler();
 }
 
-/** 計時中的頁面不自動重新載入；其餘頁面隨時可以 */
+/** 計時中的頁面和進行中的微複習不自動重新載入；其餘頁面隨時可以 */
 export function canReloadNow(pathname: string): boolean {
-  return !/^\/(practice|mock)\b/.test(pathname);
+  return !/^\/(practice|mock|cards)\b/.test(pathname);
 }
 
 /** 測試用：清掉狀態 */

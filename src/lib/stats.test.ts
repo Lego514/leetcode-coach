@@ -7,6 +7,7 @@ import {
   planToTarget,
   practiceAttempts,
   practiceStreak,
+  streakDays,
   summarizePatterns,
   weeklyCounts,
 } from './stats';
@@ -16,6 +17,13 @@ describe('practiceStreak', () => {
     expect(practiceStreak(['2026-09-14', '2026-09-15', '2026-09-16'], '2026-09-16')).toBe(3);
     expect(practiceStreak(['2026-09-14', '2026-09-15'], '2026-09-16')).toBe(2);
     expect(practiceStreak(['2026-09-13'], '2026-09-16')).toBe(0);
+  });
+
+  it('counts days with only flashcards', () => {
+    const practiced = [{ day: '2026-09-14' }, { day: '2026-09-16' }];
+    const cards = [{ day: '2026-09-15' }, { day: '2026-09-16' }];
+    expect(practiceStreak(streakDays(practiced, cards), '2026-09-16')).toBe(3);
+    expect(practiceStreak(streakDays(practiced, []), '2026-09-16')).toBe(1);
   });
 });
 

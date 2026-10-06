@@ -3,6 +3,7 @@ import type { PatternId } from '../data/patterns';
 import { schedule, type ReviewState } from '../lib/srs';
 import type {
   AttemptRecord,
+  CardReviewRecord,
   CoachDB,
   CustomProblemRecord,
   MetaRecord,
@@ -22,7 +23,8 @@ export type LocalRecord =
   | MetaRecord
   | PatternNoteRecord
   | CustomProblemRecord
-  | SettingsRecord;
+  | SettingsRecord
+  | CardReviewRecord;
 
 export function outboxId(collection: Collection, key: string): string {
   return `${collection}:${key}`;
@@ -40,7 +42,8 @@ export function keyOf(collection: Collection, record: LocalRecord): string {
   switch (collection) {
     case 'attempts':
     case 'mocks':
-      return (record as AttemptRecord | MockRecord).uid;
+    case 'cardReviews':
+      return (record as AttemptRecord | MockRecord | CardReviewRecord).uid;
     case 'notes':
     case 'meta':
       return String((record as NoteRecord | MetaRecord).problemId);
@@ -75,6 +78,8 @@ export function toSyncData(collection: Collection, record: LocalRecord): unknown
       return omit(record as CustomProblemRecord, 'id', 'custom');
     case 'settings':
       return omit(record as SettingsRecord, 'key');
+    case 'cardReviews':
+      return omit(record as CardReviewRecord, 'id', 'uid');
   }
 }
 
@@ -94,6 +99,8 @@ export async function findLocal(database: CoachDB, collection: Collection, key: 
       return database.patternNotes.get(key as PatternId);
     case 'settings':
       return database.settings.get('app');
+    case 'cardReviews':
+      return database.cardReviews.where('uid').equals(key).first();
   }
 }
 
@@ -154,6 +161,19 @@ export async function applyRemote(
       if (deleted) await database.settings.delete('app');
       else await database.settings.put({ ...(data as Omit<SettingsRecord, 'key'>), key: 'app' });
       return undefined;
+    case 'cardReviews': {
+      const local = existing as CardReviewRecord | undefined;
+      if (deleted) {
+        if (local?.id !== undefined) await database.cardReviews.delete(local.id);
+        return undefined;
+      }
+      await database.cardReviews.put({
+        ...(data as Omit<CardReviewRecord, 'id' | 'uid'>),
+        uid: key,
+        ...(local?.id !== undefined ? { id: local.id } : {}),
+      });
+      return undefined;
+    }
   }
 }
 
@@ -168,6 +188,8 @@ export function knownUpdatedAt(collection: Collection, record: LocalRecord): num
       return parse((record as AttemptRecord).at);
     case 'mocks':
       return parse((record as MockRecord).startedAt);
+    case 'cardReviews':
+      return parse((record as CardReviewRecord).at);
     case 'notes':
     case 'patternNotes':
       return parse((record as NoteRecord | PatternNoteRecord).updatedAt);

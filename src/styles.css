@@ -1983,3 +1983,338 @@ audio {
   color: var(--pen);
   font-weight: 600;
 }
+
+/* ---------- 微複習 ---------- */
+
+/* 題目在上、答案在下：手機上答案按鈕落在拇指搆得到的下半部 */
+.flash {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+  min-height: calc(100vh - 120px);
+  min-height: calc(100dvh - 120px);
+}
+
+.flash-top {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.flash-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.flash-count {
+  font-size: 14px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.flash-top .btn {
+  margin-left: auto;
+}
+
+.flash-dots {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flash-dots li {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--rule);
+}
+
+.flash-dots li[data-current] {
+  background: var(--pen);
+}
+
+.flash-dots li[data-result='good'] {
+  background: var(--good);
+}
+
+.flash-dots li[data-result='fuzzy'] {
+  background: var(--medium);
+}
+
+.flash-dots li[data-result='again'] {
+  background: var(--hard);
+}
+
+.flash-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* 卡片以下的選項和按鈕推到畫面底部 */
+  margin-bottom: auto;
+  padding: 20px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+}
+
+.flash-card p {
+  margin: 0;
+}
+
+.flash-kind {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pen);
+}
+
+.flash-problem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.flash-question {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.flash-question:focus {
+  outline: none;
+}
+
+.flash-clue {
+  padding: 10px 14px;
+  border-left: 3px solid var(--marker);
+  background: var(--sheet-2);
+  font-size: 16px;
+}
+
+.flash-code {
+  font-size: 14px;
+}
+
+.flash-reference {
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.flash-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.flash-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flash-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* 只有滑鼠才有 hover；觸控裝置點過之後 hover 會一直留著，看起來像選了 */
+@media (hover: hover) {
+  .flash-option:hover:not(:disabled) {
+    border-color: var(--pen);
+    background: var(--pen-soft);
+  }
+}
+
+.flash-option:disabled {
+  cursor: default;
+}
+
+.flash-option[data-state='correct'] {
+  border-color: var(--good);
+  box-shadow: inset 0 0 0 1px var(--good);
+}
+
+.flash-option[data-state='wrong'] {
+  border-color: var(--hard);
+  box-shadow: inset 0 0 0 1px var(--hard);
+}
+
+.flash-option[data-state='dim'] {
+  opacity: 0.55;
+}
+
+.flash-key {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.flash-option[data-state='correct'] .flash-key {
+  border-color: var(--good);
+  background: var(--good);
+  color: var(--sheet);
+}
+
+.flash-option[data-state='wrong'] .flash-key {
+  border-color: var(--hard);
+  background: var(--hard);
+  color: var(--sheet);
+}
+
+.flash-option-text {
+  min-width: 0;
+  padding-top: 1px;
+  overflow-wrap: anywhere;
+}
+
+.flash-mono {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.flash-feedback {
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--sheet-2);
+}
+
+.flash-panel {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0 12px;
+  background: var(--paper);
+}
+
+.flash-solution {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.flash-verdict {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+.flash-feedback[data-correct='true'] .flash-verdict {
+  color: var(--good);
+}
+
+.flash-feedback[data-correct='false'] .flash-verdict {
+  color: var(--hard);
+}
+
+.flash-detail {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.flash-big {
+  width: 100%;
+  min-height: 52px;
+  font-size: 16px;
+  touch-action: manipulation;
+}
+
+.flash-rate-question {
+  margin: 0;
+  font-weight: 600;
+}
+
+.flash-rates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.flash-rate {
+  min-height: 52px;
+  white-space: normal;
+  touch-action: manipulation;
+}
+
+.flash-rate[data-result='good'] {
+  border-color: var(--good);
+}
+
+.flash-rate[data-result='again'] {
+  border-color: var(--hard);
+}
+
+.flash-hint {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.flash-done {
+  gap: 14px;
+}
+
+/* 觸控裝置和手機沒有鍵盤，不顯示快捷鍵 */
+@media (hover: none), (pointer: coarse), (max-width: 599px) {
+  .flash-hint,
+  .flash-rate .flash-key {
+    display: none;
+  }
+}
+
+@media (max-width: 899px) {
+  .flash {
+    min-height: calc(100vh - 108px - env(safe-area-inset-bottom));
+    min-height: calc(100dvh - 108px - env(safe-area-inset-bottom));
+  }
+
+  .flash-card {
+    padding: 16px;
+  }
+
+  .flash-question {
+    font-size: 18px;
+  }
+
+  /* 貼在底部導覽列上方 */
+  .flash-panel {
+    bottom: calc(62px + env(safe-area-inset-bottom));
+  }
+}
