@@ -24,6 +24,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 - **Notes**: for each problem you can keep a one-line idea, an English explanation script, time and space complexity, pitfalls, and your code. Notes save automatically.
 - **Pattern cards**: each pattern has recognition signals, common mistakes, and a Python template you can edit.
 - **Reference explanations**: a hand-written model answer in English for each of the 213 problems, in five sentences (key insight, data structure, example, complexity, edge case). It stays collapsed until you've tried explaining it yourself, and it's shown next to your own attempt after an explanation drill.
+- **Flashcards for spare minutes**: five tap-only cards per round, about a minute, sized for a phone between gym sets. Cards are generated from your own data: which pattern a problem uses, its key insight and its complexity (distractors come from the same pattern), an "explain it out loud, then flip" card, the pattern signals, and 59 Python tips whose answers were checked by running the code. Answers save one at a time, sync like attempts, and count toward the streak.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
@@ -118,6 +119,7 @@ Known limitation: conflicts are decided by each device's clock.
 
 - Ease stays between 1.3 and 3.0, and no interval is longer than 120 days.
 - Intervals of 30 days or more count as "mastered".
+- Flashcards use separate Leitner boxes (1, 3, 7, 14, then 30 days). A wrong answer sends a card back to box 0, so it returns in a later round the same day. Flashcards never move a problem's review date: recognizing a pattern is not the same as solving the problem.
 
 ## Getting started
 

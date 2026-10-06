@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
-import type { AttemptMode, Collection, MockKind } from '../../shared/constants';
+import type { AttemptMode, CardResult, Collection, MockKind } from '../../shared/constants';
 import type { ExplanationFeedback } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
@@ -89,6 +89,18 @@ export interface MockRecord {
   audio?: Blob;
 }
 
+/** 微複習的一次作答；卡片的複習排程由這些紀錄推算 */
+export interface CardReviewRecord {
+  id?: number;
+  uid: string;
+  /** 卡片 id，例如 pattern:217、tip:heap-max */
+  cardId: string;
+  day: Day;
+  /** ISO 時間戳 */
+  at: string;
+  result: CardResult;
+}
+
 export type CustomProblemRecord = Problem;
 
 export interface SettingsRecord {
@@ -139,6 +151,7 @@ export class CoachDB extends Dexie {
   settings!: EntityTable<SettingsRecord, 'key'>;
   outbox!: EntityTable<OutboxRecord, 'id'>;
   syncState!: EntityTable<SyncStateRecord, 'key'>;
+  cardReviews!: EntityTable<CardReviewRecord, 'id'>;
 
   constructor(name = 'leetcode-coach') {
     super(name);
@@ -167,6 +180,10 @@ export class CoachDB extends Dexie {
         await tx.table('attempts').toCollection().modify(addUid);
         await tx.table('mocks').toCollection().modify(addUid);
       });
+    // 第 3 版：微複習的作答紀錄
+    this.version(3).stores({
+      cardReviews: '++id, cardId, day, &uid',
+    });
   }
 
   /** 會同步的資料表，依集合名稱查 */
@@ -176,7 +193,17 @@ export class CoachDB extends Dexie {
 
   /** 使用者資料（不含同步用的表） */
   get dataTables(): Table[] {
-    return [this.progress, this.attempts, this.notes, this.meta, this.patternNotes, this.mocks, this.customProblems, this.settings];
+    return [
+      this.progress,
+      this.attempts,
+      this.notes,
+      this.meta,
+      this.patternNotes,
+      this.mocks,
+      this.customProblems,
+      this.settings,
+      this.cardReviews,
+    ];
   }
 }
 

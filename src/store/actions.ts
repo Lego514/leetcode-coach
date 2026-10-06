@@ -3,10 +3,12 @@ import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { toDay, type Day } from '../lib/dates';
 import { parseSlug } from '../lib/catalog';
 import { schedule, type Rating } from '../lib/srs';
+import type { CardResult } from '../../shared/constants';
 import {
   db,
   DEFAULT_SETTINGS,
   type AttemptMode,
+  type CardReviewRecord,
   type MockRecord,
   type NoteRecord,
   type PatternNoteRecord,
@@ -240,5 +242,15 @@ export async function deleteMock(id: number): Promise<void> {
     if (!mock) return;
     await db.mocks.delete(id);
     await track(db, 'mocks', mock.uid, true);
+  });
+}
+
+/** 微複習答完一張卡就存，中途離開也不會遺失 */
+export async function recordCardReview(cardId: string, result: CardResult, at = new Date()): Promise<CardReviewRecord> {
+  return db.transaction('rw', db.cardReviews, db.outbox, async () => {
+    const record: CardReviewRecord = { uid: crypto.randomUUID(), cardId, day: toDay(at), at: at.toISOString(), result };
+    record.id = await db.cardReviews.add(record);
+    await track(db, 'cardReviews', record.uid);
+    return record;
   });
 }

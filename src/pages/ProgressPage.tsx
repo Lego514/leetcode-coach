@@ -13,11 +13,12 @@ import {
   countByDay,
   practiceAttempts,
   practiceStreak,
+  streakDays,
   summarizeDifficulty,
   summarizePatterns,
   weeklyCounts,
 } from '../lib/stats';
-import { useAttempts, useCatalog, useMocks, useProgressMap, useSettings, useToday } from '../store/queries';
+import { useAttempts, useCardReviews, useCatalog, useMocks, useProgressMap, useSettings, useToday } from '../store/queries';
 
 const CALENDAR_WEEKS = 18;
 
@@ -29,6 +30,7 @@ export function ProgressPage() {
   const { progress } = useProgressMap();
   const attempts = useAttempts();
   const mocks = useMocks();
+  const cardReviews = useCardReviews();
   const [listChoice, setListChoice] = useState<ListFilter | null>(null);
   const list = listChoice ?? settings.activeList;
 
@@ -42,7 +44,8 @@ export function ProgressPage() {
 
   const started = problems.filter((p) => progress.has(p.id)).length;
   const mastered = problems.filter((p) => stageOf(progress.get(p.id)) === 'mastered').length;
-  const streak = practiceStreak(byDay.keys(), day);
+  // 做過微複習的日子也算連續天數
+  const streak = practiceStreak(streakDays(allAttempts, cardReviews ?? []), day);
   const calendarStart = addDays(startOfWeek(day), -7 * (CALENDAR_WEEKS - 1));
   const activeDays = [...byDay.keys()].filter((d) => d >= calendarStart && d <= day).length;
 

@@ -17,6 +17,7 @@ describe('app updates', () => {
     expect(canReloadNow('/problems/1')).toBe(true);
     expect(canReloadNow('/review')).toBe(true);
     expect(canReloadNow('/practice/15')).toBe(false);
+    expect(canReloadNow('/cards')).toBe(false);
     expect(canReloadNow('/mock')).toBe(false);
   });
 

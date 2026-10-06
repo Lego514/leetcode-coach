@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { COLLECTION_SCHEMAS } from '../../shared/protocol';
-import { recordAttempt, saveNote, setCompanies, updateSettings } from './actions';
+import { recordAttempt, recordCardReview, saveNote, setCompanies, updateSettings } from './actions';
 import { CoachDB, db } from './db';
 import { adoptAccount, wipeLocalData } from './sync';
 import { applyRemote, findLocal, getSyncState, keyOf, markAllDirty, rebuildProgress, toSyncData } from './tracking';
@@ -69,6 +69,25 @@ describe('sync payloads', () => {
     expect(await findLocal(db, 'customProblems', '4000')).toMatchObject({ id: 4000, custom: true });
     await applyRemote(db, 'customProblems', '4000', true, undefined);
     expect(await findLocal(db, 'customProblems', '4000')).toBeUndefined();
+  });
+});
+
+describe('flashcard answers', () => {
+  it('sync without local-only fields and round-trip from the server', async () => {
+    const saved = await recordCardReview('pattern:1', 'again', new Date('2026-10-05T12:00:00Z'));
+    expect(await db.outbox.get(`cardReviews:${saved.uid}`)).toMatchObject({ deleted: false });
+
+    const data = toSyncData('cardReviews', saved);
+    expect(data).toEqual({ cardId: 'pattern:1', day: '2026-10-05', at: '2026-10-05T12:00:00.000Z', result: 'again' });
+    expect(COLLECTION_SCHEMAS.cardReviews.data.parse(data)).toEqual(data);
+    expect(keyOf('cardReviews', saved)).toBe(saved.uid);
+
+    const uid = crypto.randomUUID();
+    await applyRemote(db, 'cardReviews', uid, false, { cardId: 'tip:heap-min', day: '2026-10-04', at: '2026-10-04T08:00:00.000Z', result: 'good' });
+    expect(await findLocal(db, 'cardReviews', uid)).toMatchObject({ uid, cardId: 'tip:heap-min' });
+    await applyRemote(db, 'cardReviews', uid, true, undefined);
+    expect(await findLocal(db, 'cardReviews', uid)).toBeUndefined();
+    expect(await db.cardReviews.count()).toBe(1);
   });
 });
 

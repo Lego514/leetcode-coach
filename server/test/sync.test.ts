@@ -112,6 +112,8 @@ describe('POST /api/sync', () => {
       { collection: 'settings', key: 'other', updatedAt: 1, deleted: false, data: { activeList: 'blind75', dailyNew: 1, language: 'go' } },
       { collection: 'progress', key: '1', updatedAt: 1, deleted: true },
       { collection: 'notes', key: '1', updatedAt: -1, deleted: true },
+      { collection: 'cardReviews', key: randomUUID(), updatedAt: 1, deleted: false, data: { cardId: 'Bad Id', day: '2026-10-05', at: '2026-10-05T12:00:00.000Z', result: 'good' } },
+      { collection: 'cardReviews', key: randomUUID(), updatedAt: 1, deleted: false, data: { cardId: 'tip:heap-min', day: '2026-10-05', at: '2026-10-05T12:00:00.000Z', result: 'perfect' } },
     ];
     for (const change of cases) {
       const res = await client.request('POST', '/api/sync', { cursor: 0, changes: [change] });
@@ -122,6 +124,14 @@ describe('POST /api/sync', () => {
       changes: Array.from({ length: SYNC_BATCH_SIZE + 1 }, (_, i) => noteChange(String(i + 1), 'x', 1)),
     });
     expect(tooMany.status).toBe(400);
+  });
+
+  it('stores flashcard answers', async () => {
+    const key = randomUUID();
+    const data = { cardId: 'signal:arrays:0', day: '2026-10-05', at: '2026-10-05T12:00:00.000Z', result: 'fuzzy' };
+    const res = await client.sync(0, [{ collection: 'cardReviews', key, updatedAt: 1, deleted: false, data }]);
+    expect(res.rejected).toEqual([]);
+    expect(res.changes).toEqual([{ collection: 'cardReviews', key, updatedAt: 1, deleted: false, data }]);
   });
 
   it('drops unknown fields from stored data', async () => {

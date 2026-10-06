@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import {
   ATTEMPT_MODES,
+  CARD_RESULTS,
   COLLECTIONS,
   DIFFICULTIES,
   EXPLAIN_POINTS,
@@ -108,6 +109,14 @@ export const settingsDataSchema = z.object({
   targetDate: day.optional(),
 });
 
+/** 微複習的一次作答；卡片 id 像 pattern:217、tip:heap-max、signal:arrays:0 */
+export const cardReviewDataSchema = z.object({
+  cardId: z.string().regex(/^[a-z]+(?::[a-z0-9-]+)+$/).max(80),
+  day,
+  at: timestamp,
+  result: z.enum(CARD_RESULTS),
+});
+
 const uuidKey = z.uuid();
 const problemKey = z.string().regex(/^[1-9]\d{0,6}$/);
 
@@ -120,6 +129,7 @@ export const COLLECTION_SCHEMAS = {
   patternNotes: { key: z.enum(PATTERN_IDS), data: patternNoteDataSchema },
   customProblems: { key: problemKey, data: customProblemDataSchema },
   settings: { key: z.literal('app'), data: settingsDataSchema },
+  cardReviews: { key: uuidKey, data: cardReviewDataSchema },
 } satisfies Record<Collection, { key: z.ZodType<string>; data: z.ZodType }>;
 
 export type CollectionData = { [C in Collection]: z.infer<(typeof COLLECTION_SCHEMAS)[C]['data']> };

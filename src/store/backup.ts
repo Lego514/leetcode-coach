@@ -1,5 +1,5 @@
 import { COLLECTIONS } from '../../shared/constants';
-import { db, type AttemptRecord, type MockRecord } from './db';
+import { db, type AttemptRecord, type CardReviewRecord, type MockRecord } from './db';
 import { keyOf, track, type LocalRecord } from './tracking';
 
 const APP_ID = 'leetcode-coach';
@@ -20,6 +20,8 @@ export interface BackupFile {
     mocks: MockWithoutAudio[];
     customProblems: unknown[];
     settings: unknown[];
+    /** 加入微複習之前的備份沒有這一項 */
+    cardReviews?: unknown[];
   };
 }
 
@@ -46,6 +48,7 @@ export async function exportBackup(): Promise<BackupFile> {
         }),
         customProblems: await db.customProblems.toArray(),
         settings: await db.settings.toArray(),
+        cardReviews: await db.cardReviews.toArray(),
       },
     };
   });
@@ -72,6 +75,7 @@ export function parseBackup(text: string): BackupFile {
   if (file.version !== BACKUP_VERSION) throw new BackupError('unsupported_version');
   const data = file.data as Record<string, unknown> | undefined;
   if (!data || TABLE_KEYS.some((key) => !Array.isArray(data[key]))) throw new BackupError('incomplete');
+  if (data.cardReviews !== undefined && !Array.isArray(data.cardReviews)) throw new BackupError('incomplete');
   return file as BackupFile;
 }
 
@@ -101,6 +105,7 @@ export async function restoreBackup(file: BackupFile): Promise<void> {
     await db.mocks.bulkPut(withUid<MockRecord>(data.mocks));
     await db.customProblems.bulkPut(data.customProblems as never[]);
     await db.settings.bulkPut(data.settings as never[]);
+    await db.cardReviews.bulkPut(withUid<CardReviewRecord>(data.cardReviews ?? []));
 
     // 匯入的資料視為最新的修改，登入時會覆蓋雲端
     for (const collection of COLLECTIONS) {

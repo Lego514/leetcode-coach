@@ -7,6 +7,7 @@ import {
   db,
   DEFAULT_SETTINGS,
   type AttemptRecord,
+  type CardReviewRecord,
   type MetaRecord,
   type MockRecord,
   type NoteRecord,
@@ -53,6 +54,10 @@ export function useAttemptsFor(problemId: number): AttemptRecord[] | undefined {
 
 export function useAttemptsOn(day: Day): AttemptRecord[] | undefined {
   return useLiveQuery(() => db.attempts.where('day').equals(day).sortBy('at'), [day]);
+}
+
+export function useCardReviews(): CardReviewRecord[] | undefined {
+  return useLiveQuery(() => db.cardReviews.toArray(), []);
 }
 
 export function useNote(problemId: number): NoteRecord | null | undefined {
