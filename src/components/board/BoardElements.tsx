@@ -2,6 +2,7 @@ import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'rea
 import { useI18n } from '../../i18n';
 import {
   CELL,
+  colorVar,
   INDEX_H,
   isIndexed,
   LABEL_H,
@@ -9,6 +10,7 @@ import {
   LIST_NODE_W,
   NODE_D,
   pointerPosition,
+  pointerTone,
   POINTER_H,
   POINTER_W,
   ROW_INDEX_W,
@@ -53,6 +55,7 @@ export function ElementView({ el, doc, selected, editing, register, ...rest }: E
       className={`board-el board-el-${el.type}`}
       data-el={el.id}
       data-variant={'variant' in el ? el.variant : undefined}
+      data-tone={el.type === 'pointer' ? pointerTone(el.name) : undefined}
       data-selected={selected || undefined}
       data-editing={editing || undefined}
       role="group"
@@ -63,8 +66,30 @@ export function ElementView({ el, doc, selected, editing, register, ...rest }: E
         ...(fixedSize ? { width: fixedSize.w, height: fixedSize.h } : el.type === 'text' ? { width: el.w } : {}),
       }}
     >
-      <Body el={el} editing={editing} {...rest} />
+      {el.type === 'shape' ? <ShapeBody el={el} selected={selected} /> : <Body el={el} editing={editing} {...rest} />}
     </div>
+  );
+}
+
+/**
+ * 矩形框、圓形框。整個元件不接收點擊（框住的東西照樣點得到），
+ * 只有框線上一條看不見的粗線可以點，選取後右下角有調整大小的把手。
+ */
+function ShapeBody({ el, selected }: { el: ElementOf<'shape'>; selected: boolean }) {
+  const { t } = useI18n();
+  const stroke = colorVar(el.color);
+  const outline =
+    el.variant === 'rect'
+      ? (className: string) => <rect className={className} x={1} y={1} width={el.w - 2} height={el.h - 2} rx={8} />
+      : (className: string) => <ellipse className={className} cx={el.w / 2} cy={el.h / 2} rx={el.w / 2 - 1} ry={el.h / 2 - 1} />;
+  return (
+    <>
+      <svg className="board-shape" width={el.w} height={el.h} style={{ stroke }} aria-hidden>
+        {outline('board-shape-hit')}
+        {outline('board-shape-line')}
+      </svg>
+      {selected && <span className="board-resize" data-handle="resize" title={t.board.resize} />}
+    </>
   );
 }
 
@@ -72,6 +97,8 @@ type BodyProps = Omit<ElementViewProps, 'doc' | 'selected' | 'register'>;
 
 function Body({ el, editing, onChange, onDoneEditing, ...rest }: BodyProps) {
   switch (el.type) {
+    case 'shape':
+      return null;
     case 'text':
       return <TextBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} />;
     case 'list':
@@ -382,7 +409,10 @@ function PointerBody({ el, editing, onChange, onDoneEditing }: { el: ElementOf<'
   const { t } = useI18n();
   return (
     <>
-      <span className="board-pointer-tip" aria-hidden />
+      {/* 一支往上指的細箭頭，箭頭尖剛好碰到格子下方的索引 */}
+      <svg className="board-pointer-arrow" width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+        <path d="M6 0.5 10.5 6H7.25V12H4.75V6H1.5Z" />
+      </svg>
       {editing ? (
         <input
           className="board-pointer-input"
@@ -418,5 +448,7 @@ function describe(el: Placed, t: ReturnType<typeof useI18n>['t']): string {
       return `${t.board.kinds[el.variant === 'tree' ? 'treeNode' : el.variant === 'list' ? 'listNode' : 'graphNode']} ${el.value}`;
     case 'pointer':
       return el.attach ? t.board.pointerAt(el.name, el.attach.index) : `${t.board.kinds.pointer} ${el.name}`;
+    case 'shape':
+      return t.board.shapes[el.variant];
   }
 }

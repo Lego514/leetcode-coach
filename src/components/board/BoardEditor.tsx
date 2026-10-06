@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { BOARD_COLORS, BOARD_MAX_BYTES, CELL_COLORS, type BoardColor, type CellColor } from '../../../shared/constants';
+import type { Difficulty } from '../../data/problems';
 import { useI18n } from '../../i18n';
 import * as m from '../../lib/board/model';
-import { Dialog } from '../ui';
+import { useCloud } from '../../store/cloud';
+import { DifficultyTag, Dialog } from '../ui';
 import { saveBoard } from '../../store/actions';
 import { useBoard } from '../../store/queries';
 import { ElementView } from './BoardElements';
@@ -10,7 +12,7 @@ import { ElementView } from './BoardElements';
 // 自己寫的數位白板：左邊拖元件、中間是可以平移縮放的畫布、下面是工具列。
 // 元件是一般的 HTML（文字清楚、可以直接編輯），箭頭和筆跡畫在同一層的 SVG 上。
 
-type Tool = 'select' | 'hand' | 'arrow' | 'pen' | 'eraser';
+type Tool = 'select' | 'hand' | 'arrow' | 'rect' | 'ellipse' | 'pen' | 'eraser';
 
 interface View {
   x: number;
@@ -20,8 +22,8 @@ interface View {
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3;
-const TOOLS: Tool[] = ['select', 'hand', 'arrow', 'pen', 'eraser'];
-const TOOL_KEYS: Record<string, Tool> = { v: 'select', h: 'hand', a: 'arrow', p: 'pen', e: 'eraser' };
+const TOOLS: Tool[] = ['select', 'hand', 'arrow', 'rect', 'ellipse', 'pen', 'eraser'];
+const TOOL_KEYS: Record<string, Tool> = { v: 'select', h: 'hand', a: 'arrow', r: 'rect', o: 'ellipse', p: 'pen', e: 'eraser' };
 
 type Gesture =
   | { kind: 'pan'; pointerId: number; start: m.Point; view: View }
@@ -38,20 +40,28 @@ type Gesture =
   | { kind: 'pen'; pointerId: number; points: number[] }
   | { kind: 'erase'; pointerId: number; erased: boolean }
   | { kind: 'arrow'; pointerId: number; from: m.ArrowEnd; fromPoint: m.Point }
+  | { kind: 'shape'; pointerId: number; variant: m.ShapeVariant; from: m.Point }
+  | { kind: 'resize'; pointerId: number; id: string; start: m.Point; base: m.BoardDoc; w: number; h: number; moved: boolean }
   | { kind: 'pinch'; startDistance: number; startMid: m.Point; view: View };
 
-type Draft = { kind: 'pen'; points: number[] } | { kind: 'arrow'; from: m.Point; to: m.Point };
+type Draft =
+  | { kind: 'pen'; points: number[] }
+  | { kind: 'arrow'; from: m.Point; to: m.Point }
+  | { kind: 'shape'; shape: m.ElementOf<'shape'> };
 
 const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
 interface BoardEditorProps {
   boardId: string;
   title: string;
+  /** 標題上面的小字：題目白板，或自由白板 */
+  caption: string;
+  difficulty?: Difficulty;
   onClose: () => void;
 }
 
 /** 全螢幕的白板；內容自動存檔，登入時會同步 */
-export function BoardEditor({ boardId, title, onClose }: BoardEditorProps) {
+export function BoardEditor({ boardId, onClose, ...heading }: BoardEditorProps) {
   const { t } = useI18n();
   const record = useBoard(boardId);
   if (record === undefined) {
@@ -61,11 +71,12 @@ export function BoardEditor({ boardId, title, onClose }: BoardEditorProps) {
       </div>
     );
   }
-  return <Editor key={boardId} boardId={boardId} title={title} initial={record?.doc ?? m.EMPTY_DOC} onClose={onClose} />;
+  return <Editor key={boardId} boardId={boardId} {...heading} initial={record?.doc ?? m.EMPTY_DOC} onClose={onClose} />;
 }
 
-function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initial: m.BoardDoc }) {
+function Editor({ boardId, title, caption, difficulty, initial, onClose }: BoardEditorProps & { initial: m.BoardDoc }) {
   const { t } = useI18n();
+  const signedIn = useCloud().account.kind === 'signed-in';
   const [history, setHistory] = useState(() => m.initHistory(initial));
   const doc = history.present;
   const [view, setView] = useState<View>({ x: 0, y: 0, zoom: 1 });
@@ -83,6 +94,8 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
   const [ghost, setGhost] = useState<{ kind: m.PaletteKind; x: number; y: number } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  /** 手機上顏色收成一顆，點了才展開 */
+  const [colorsOpen, setColorsOpen] = useState(false);
   const [savedDoc, setSavedDoc] = useState(initial);
   const [tooLarge, setTooLarge] = useState(false);
 
@@ -295,6 +308,17 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
     setSelection(new Set(ids));
   };
 
+  const pickColor = (c: BoardColor) => {
+    // 手機上顏色只顯示一顆：點目前的顏色展開或收起，點別的顏色就選它
+    if (c === color) {
+      setColorsOpen((open) => !open);
+      return;
+    }
+    setColor(c);
+    setColorsOpen(false);
+    if ([...selected].some((id) => m.findElement(doc, id)?.type === 'shape')) apply(m.recolorShapes(doc, selected, c));
+  };
+
   /** 清空整張白板；跟其他修改一樣可以復原 */
   const clearBoard = () => {
     setConfirmClear(false);
@@ -366,6 +390,14 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
     if (editingId && elId !== editingId) stopEditing();
     if (editingId && elId === editingId) return;
 
+    // 拖框框右下角的把手調整大小
+    const handleOf = target.closest<HTMLElement>('[data-handle]') ? elId : undefined;
+    const handled = handleOf ? m.findElement(doc, handleOf) : undefined;
+    if (tool === 'select' && handled?.type === 'shape') {
+      gesture.current = { kind: 'resize', pointerId: e.pointerId, id: handled.id, start: world, base: doc, w: handled.w, h: handled.h, moved: false };
+      return;
+    }
+
     const pan = tool === 'hand' || spaceDown.current || e.button === 1 || (tool === 'select' && !elId);
     if (pan) {
       if (tool === 'select' && !elId && !e.shiftKey) {
@@ -386,7 +418,7 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
         const tap = lastTap.current;
         if (tap?.id === elId && tap.cell === cell && now - tap.time < 350) {
           lastTap.current = null;
-          startEditing(elId, cell);
+          if (m.findElement(doc, elId)?.type !== 'shape') startEditing(elId, cell);
           return;
         }
         if (e.shiftKey) {
@@ -413,6 +445,12 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
         const g = { kind: 'erase' as const, pointerId: e.pointerId, erased: false };
         gesture.current = g;
         eraseAt(world, g);
+        return;
+      }
+      case 'rect':
+      case 'ellipse': {
+        gesture.current = { kind: 'shape', pointerId: e.pointerId, variant: tool, from: world };
+        setDraft({ kind: 'shape', shape: m.shapeFromDrag('draft', tool, world, world, color) });
         return;
       }
       case 'arrow': {
@@ -472,6 +510,19 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
       case 'arrow':
         setDraft({ kind: 'arrow', from: g.fromPoint, to: world });
         return;
+      case 'shape':
+        setDraft({ kind: 'shape', shape: m.shapeFromDrag('draft', g.variant, g.from, world, color, e.shiftKey) });
+        return;
+      case 'resize': {
+        const dx = world.x - g.start.x;
+        const dy = world.y - g.start.y;
+        if (!g.moved) {
+          g.moved = true;
+          setHistory((h) => m.checkpoint(h));
+        }
+        setHistory((h) => m.replace(h, m.resizeShape(g.base, g.id, g.w + dx, g.h + dy)));
+        return;
+      }
     }
   };
 
@@ -505,6 +556,16 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
         // 只點一下也留一個點
         const points = g.points.length === 2 ? [...g.points, ...g.points] : g.points;
         apply(m.addElement(doc, { type: 'stroke', id: m.newId(doc), color, points }));
+        return;
+      }
+      case 'shape': {
+        const world = toWorld(e.clientX, e.clientY);
+        // 只是點一下（沒拖出大小）就不畫
+        if (Math.hypot(world.x - g.from.x, world.y - g.from.y) * view.zoom < 6) return;
+        const shape = m.shapeFromDrag(m.newId(doc), g.variant, g.from, world, color, e.shiftKey);
+        apply(m.addElement(doc, shape));
+        setSelection(new Set([shape.id]));
+        setTool('select');
         return;
       }
       case 'arrow': {
@@ -606,7 +667,7 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
         setCellSel(null);
         setSelection(new Set());
         setTool('select');
-      } else if (e.key === 'Enter' && single && m.isPlaced(single)) {
+      } else if (e.key === 'Enter' && single && m.isPlaced(single) && single.type !== 'shape') {
         e.preventDefault();
         startEditing(single.id);
       } else if (e.key.startsWith('Arrow') && selected.size > 0) {
@@ -640,7 +701,8 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
 
   // 只有單獨選取時才顯示「＋」格，平常畫面保持乾淨
   const canAdd = (el: m.Placed) => tool === 'select' && selected.size === 1 && selected.has(el.id);
-  const placed = doc.elements.filter(m.isPlaced);
+  // 框框畫在最上層，框線才不會被格子的底色蓋住；框裡面點得穿，不會擋到框住的東西
+  const placed = [...doc.elements.filter((el) => m.isPlaced(el) && el.type !== 'shape'), ...doc.elements.filter((el) => el.type === 'shape')] as m.Placed[];
   const ink = doc.elements.filter((el): el is m.ElementOf<'arrow'> | m.ElementOf<'stroke'> => !m.isPlaced(el));
   const saving = doc !== savedDoc;
   const grid = 24 * view.zoom;
@@ -651,9 +713,16 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
         <button type="button" className="btn btn-quiet btn-small" onClick={onClose}>
           {t.board.close}
         </button>
-        <h1 className="board-title">{title}</h1>
+        <div className="board-heading">
+          <span className="board-caption">{caption}</span>
+          <h1 className="board-title">
+            <span>{title}</span>
+            {difficulty && <DifficultyTag difficulty={difficulty} />}
+          </h1>
+        </div>
+        {/* 說清楚存在哪裡：沒登入只在這台裝置，登入後會同步到雲端 */}
         <span className="board-save" aria-live="polite">
-          {tooLarge ? t.board.tooLarge : saving ? t.board.saving : t.board.saved}
+          {tooLarge ? t.board.tooLarge : saving ? t.board.saving : signedIn ? t.board.savedSynced : t.board.savedLocal}
         </span>
       </header>
 
@@ -734,6 +803,27 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
                 );
               })}
               {draft?.kind === 'pen' && <path d={strokePath(draft.points)} stroke={m.colorVar(color)} className="board-stroke" />}
+              {draft?.kind === 'shape' &&
+                (draft.shape.variant === 'rect' ? (
+                  <rect
+                    className="board-shape-draft"
+                    x={draft.shape.x}
+                    y={draft.shape.y}
+                    width={draft.shape.w}
+                    height={draft.shape.h}
+                    rx={8}
+                    stroke={m.colorVar(color)}
+                  />
+                ) : (
+                  <ellipse
+                    className="board-shape-draft"
+                    cx={draft.shape.x + draft.shape.w / 2}
+                    cy={draft.shape.y + draft.shape.h / 2}
+                    rx={draft.shape.w / 2}
+                    ry={draft.shape.h / 2}
+                    stroke={m.colorVar(color)}
+                  />
+                ))}
               {draft?.kind === 'arrow' && (
                 <line
                   x1={draft.from.x}
@@ -790,18 +880,20 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
               </button>
             ))}
             <span className="board-tools-sep" aria-hidden />
-            {BOARD_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className="board-swatch"
-                aria-pressed={color === c}
-                aria-label={t.board.colors[c]}
-                title={t.board.colors[c]}
-                style={{ color: m.colorVar(c) }}
-                onClick={() => setColor(c)}
-              />
-            ))}
+            <span className="board-colors" data-open={colorsOpen || undefined}>
+              {BOARD_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className="board-swatch"
+                  aria-pressed={color === c}
+                  aria-label={t.board.colors[c]}
+                  title={t.board.colors[c]}
+                  style={{ color: m.colorVar(c) }}
+                  onClick={() => pickColor(c)}
+                />
+              ))}
+            </span>
             <span className="board-tools-sep" aria-hidden />
             <button type="button" className="board-tool" aria-label={t.board.undo} title={t.board.undo} disabled={history.past.length === 0} onClick={undo}>
               {ICON_UNDO}
@@ -951,7 +1043,7 @@ function SelectionActions({ el, doc, apply, onEdit }: { el: m.BoardElement; doc:
   const { t } = useI18n();
   const a = t.board.actions;
   const buttons: [string, () => void][] = [];
-  if (m.isPlaced(el)) buttons.push([a.edit, onEdit]);
+  if (m.isPlaced(el) && el.type !== 'shape') buttons.push([a.edit, onEdit]);
   // 加格子、加列、加欄用元件旁邊的「＋」；陣列刪格子先點那一格
   if (el.type === 'table') {
     buttons.push([a.removeRow, () => apply(m.resizeTable(doc, el.id, 'row', -1))], [a.removeCol, () => apply(m.resizeTable(doc, el.id, 'col', -1))]);
@@ -1005,6 +1097,16 @@ const TOOL_ICONS: Record<Tool, ReactNode> = {
   arrow: (
     <Icon>
       <path d="M5 19L19 5M11 5h8v8" />
+    </Icon>
+  ),
+  rect: (
+    <Icon>
+      <rect x="4" y="6" width="16" height="12" rx="2" />
+    </Icon>
+  ),
+  ellipse: (
+    <Icon>
+      <ellipse cx="12" cy="12" rx="8.5" ry="6.5" />
     </Icon>
   ),
   pen: (

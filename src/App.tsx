@@ -31,7 +31,7 @@ const router = createHashRouter([
       },
       {
         path: 'board',
-        lazy: async () => ({ Component: (await import('./pages/BoardPage')).BoardPage }),
+        lazy: async () => ({ Component: (await import('./pages/BoardPage')).BoardListPage }),
       },
       {
         path: 'board/:id',

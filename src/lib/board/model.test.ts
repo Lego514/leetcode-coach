@@ -10,6 +10,7 @@ import {
   commit,
   contentBounds,
   createElement,
+  distanceToShapeEdge,
   deleteCell,
   dropEmptyCheckpoint,
   dropPointer,
@@ -24,15 +25,20 @@ import {
   nextPointerName,
   PALETTE,
   placeAtCenter,
+  recolorShapes,
   pointerPosition,
+  pointerTone,
+  POINTER_TONES,
   POINTER_H,
   POINTER_W,
   redo,
   removeElements,
   replace,
   resizeList,
+  resizeShape,
   resizeTable,
   setCellColor,
+  shapeFromDrag,
   shiftPointer,
   sizeOf,
   undo,
@@ -86,6 +92,12 @@ describe('creating elements', () => {
         expect(apart, `${a.id} and ${b.id}`).toBe(true);
       }
     }
+  });
+
+  it('gives each common pointer name its own color, and any name a stable one', () => {
+    expect(['i', 'j', 'k', 'l'].map(pointerTone)).toEqual(['blue', 'orange', 'green', 'purple']);
+    expect(pointerTone('left')).toBe(pointerTone('left'));
+    expect(POINTER_TONES).toContain(pointerTone('whatever'));
   });
 
   it('names new pointers i, j, k and so on', () => {
@@ -268,6 +280,44 @@ describe('arrows and ink', () => {
     const inked = addElement(doc, { type: 'stroke', id: 's', color: 'red', points: [-50, 300, 10, 310] });
     expect(contentBounds(inked)).toEqual({ x: -50, y: 0, w: 326, h: 310 });
     expect(contentBounds(EMPTY_DOC)).toBeNull();
+  });
+});
+
+describe('rectangles and ellipses', () => {
+  it('draws from any corner and squares up with Shift', () => {
+    expect(shapeFromDrag('r', 'rect', { x: 100, y: 100 }, { x: 40, y: 60 }, 'red')).toMatchObject({ x: 40, y: 60, w: 60, h: 40 });
+    expect(shapeFromDrag('e', 'ellipse', { x: 0, y: 0 }, { x: 30, y: 80 }, 'blue', true)).toMatchObject({ w: 80, h: 80 });
+    expect(shapeFromDrag('t', 'rect', { x: 0, y: 0 }, { x: 1, y: 1 }, 'ink')).toMatchObject({ w: 8, h: 8 });
+  });
+
+  it('only counts the outline, so whatever is framed stays clickable', () => {
+    const rect = shapeFromDrag('r', 'rect', { x: 0, y: 0 }, { x: 100, y: 60 }, 'ink');
+    expect(distanceToShapeEdge(rect, { x: 50, y: 2 })).toBe(2);
+    expect(distanceToShapeEdge(rect, { x: 50, y: 30 })).toBe(30);
+    expect(distanceToShapeEdge(rect, { x: 110, y: 30 })).toBe(10);
+    const circle = shapeFromDrag('c', 'ellipse', { x: 0, y: 0 }, { x: 100, y: 100 }, 'ink');
+    expect(distanceToShapeEdge(circle, { x: 50, y: 0 })).toBeCloseTo(0);
+    expect(distanceToShapeEdge(circle, { x: 50, y: 50 })).toBeCloseTo(50);
+
+    const doc: BoardDoc = { elements: [rect] };
+    expect(hitInk(doc, { x: 50, y: 4 }, 6)).toEqual(['r']);
+    expect(hitInk(doc, { x: 50, y: 30 }, 6)).toEqual([]);
+  });
+
+  it('resizes, recolors, and stops arrows on an ellipse', () => {
+    const circle = shapeFromDrag('c', 'ellipse', { x: 0, y: 0 }, { x: 100, y: 50 }, 'ink');
+    const node = createElement('treeNode', { x: 300, y: 1 }, 'n', texts);
+    let doc: BoardDoc = { elements: [circle, node, { type: 'arrow', id: 'a', from: { id: 'c' }, to: { id: 'n' }, color: 'ink' }] };
+    const [start] = arrowPoints(doc, doc.elements[2] as ElementOf<'arrow'>)!;
+    // 橢圓中心 (50, 25)、半軸 50 和 25：起點要落在橢圓上
+    expect(((start.x - 50) / 50) ** 2 + ((start.y - 25) / 25) ** 2).toBeCloseTo(1);
+
+    doc = resizeShape(doc, 'c', 3, 400);
+    expect(doc.elements[0]).toMatchObject({ w: 8, h: 400 });
+    doc = recolorShapes(doc, new Set(['c', 'n']), 'green');
+    expect(doc.elements[0]).toMatchObject({ color: 'green' });
+    expect(doc.elements[1]).not.toHaveProperty('color');
+    expect(boardDocSchema.safeParse(doc).success).toBe(true);
   });
 });
 

@@ -144,6 +144,15 @@ export const boardElementSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('table'), ...placed, variant: z.enum(['dict', 'grid', 'table']), label: text(40), rows: z.array(z.array(cell).max(26)).min(1).max(26) }),
   z.object({ type: z.literal('var'), ...placed, name: text(40), value: text(80) }),
   z.object({ type: z.literal('node'), ...placed, variant: z.enum(['tree', 'list', 'graph']), value: cell }),
+  /** 框出重點用的矩形框或圓形框；裡面是空的，不會擋到框住的元件 */
+  z.object({
+    type: z.literal('shape'),
+    ...placed,
+    variant: z.enum(['rect', 'ellipse']),
+    w: z.number().min(8).max(4000),
+    h: z.number().min(8).max(4000),
+    color: z.enum(BOARD_COLORS),
+  }),
   z.object({
     type: z.literal('pointer'),
     ...placed,

@@ -84,6 +84,8 @@ export function sizeOf(el: Placed, measured?: { w: number; h: number }): { w: nu
       return measured ?? { w: el.w, h: el.variant === 'heading' ? 36 : 44 };
     case 'var':
       return measured ?? { w: 110, h: 36 };
+    case 'shape':
+      return { w: el.w, h: el.h };
   }
 }
 
@@ -251,6 +253,16 @@ export function placeAtCenter(doc: BoardDoc, el: Placed, center: Point, sizes?: 
 /** 常用的指標名稱，新指標用第一個還沒用過的 */
 const POINTER_NAMES = ['i', 'j', 'k', 'l', 'r', 'lo', 'hi', 'mid', 'slow', 'fast'];
 
+export const POINTER_TONES = ['blue', 'orange', 'green', 'purple'] as const;
+export type PointerTone = (typeof POINTER_TONES)[number];
+
+/** 指標的顏色由名字決定：i 藍、j 橘、k 綠、l 紫，其他名字依字元算出固定的顏色 */
+export function pointerTone(name: string): PointerTone {
+  const known = POINTER_NAMES.indexOf(name);
+  const index = known >= 0 ? known : [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return POINTER_TONES[index % POINTER_TONES.length];
+}
+
 export function nextPointerName(doc: BoardDoc): string {
   const used = new Set(doc.elements.flatMap((el) => (el.type === 'pointer' ? [el.name] : [])));
   return POINTER_NAMES.find((name) => !used.has(name)) ?? `p${used.size + 1}`;
@@ -408,8 +420,8 @@ function edgePoint(rect: Rect, round: boolean, toward: Point): Point {
   const dy = toward.y - cy;
   if (dx === 0 && dy === 0) return { x: cx, y: cy };
   if (round) {
-    const length = Math.hypot(dx, dy);
-    return { x: cx + (dx / length) * (rect.w / 2), y: cy + (dy / length) * (rect.h / 2) };
+    const t = 1 / Math.hypot(dx / (rect.w / 2), dy / (rect.h / 2));
+    return { x: cx + dx * t, y: cy + dy * t };
   }
   const scale = Math.min(dx === 0 ? Infinity : rect.w / 2 / Math.abs(dx), dy === 0 ? Infinity : rect.h / 2 / Math.abs(dy));
   return { x: cx + dx * scale, y: cy + dy * scale };
@@ -422,7 +434,8 @@ export function arrowPoints(doc: BoardDoc, arrow: ElementOf<'arrow'>, sizes?: Si
     const el = findElement(doc, end.id);
     if (!el || !isPlaced(el)) return null;
     const rect = rectOf(doc, el, sizes);
-    return { point: { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 }, rect, round: el.type === 'node' && el.variant !== 'list' };
+    const round = (el.type === 'node' && el.variant !== 'list') || (el.type === 'shape' && el.variant === 'ellipse');
+    return { point: { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 }, rect, round };
   };
   const from = resolve(arrow.from);
   const to = resolve(arrow.to);
@@ -466,9 +479,49 @@ export function hitInk(doc: BoardDoc, at: Point, radius: number, sizes?: Sizes):
     } else if (el.type === 'arrow') {
       const ends = arrowPoints(doc, el, sizes);
       if (ends && distanceToSegment(at, ends[0], ends[1]) <= radius) hits.push(el.id);
+    } else if (el.type === 'shape' && distanceToShapeEdge(el, at) <= radius) {
+      hits.push(el.id);
     }
   }
   return hits;
+}
+
+/** 點到框線的距離；框裡面是空的，只算框線 */
+export function distanceToShapeEdge(shape: ElementOf<'shape'>, p: Point): number {
+  const a = shape.w / 2;
+  const b = shape.h / 2;
+  const dx = p.x - (shape.x + a);
+  const dy = p.y - (shape.y + b);
+  if (shape.variant === 'ellipse') {
+    // 換算成單位圓上的距離，再乘回短軸，橢圓不太扁時夠準
+    return Math.abs(Math.hypot(dx / a, dy / b) - 1) * Math.min(a, b);
+  }
+  const outX = Math.abs(dx) - a;
+  const outY = Math.abs(dy) - b;
+  if (outX > 0 || outY > 0) return Math.hypot(Math.max(outX, 0), Math.max(outY, 0));
+  return Math.min(-outX, -outY);
+}
+
+export type ShapeVariant = ElementOf<'shape'>['variant'];
+
+/** 從 from 拖到 to 畫出來的框；square 時畫成正方形或正圓 */
+export function shapeFromDrag(id: string, variant: ShapeVariant, from: Point, to: Point, color: BoardColor, square = false): ElementOf<'shape'> {
+  let w = Math.abs(to.x - from.x);
+  let h = Math.abs(to.y - from.y);
+  if (square) w = h = Math.max(w, h);
+  const x = to.x < from.x ? from.x - w : from.x;
+  const y = to.y < from.y ? from.y - h : from.y;
+  return { type: 'shape', id, variant, x: Math.round(x), y: Math.round(y), w: Math.round(Math.max(8, w)), h: Math.round(Math.max(8, h)), color };
+}
+
+/** 拖右下角調整框的大小 */
+export function resizeShape(doc: BoardDoc, id: string, w: number, h: number): BoardDoc {
+  return updateElement<ElementOf<'shape'>>(doc, id, { w: Math.round(Math.max(8, w)), h: Math.round(Math.max(8, h)) });
+}
+
+/** 幫選取的框換顏色；其他元件沒有顏色，不受影響 */
+export function recolorShapes(doc: BoardDoc, ids: ReadonlySet<string>, color: BoardColor): BoardDoc {
+  return { elements: doc.elements.map((el) => (el.type === 'shape' && ids.has(el.id) ? { ...el, color } : el)) };
 }
 
 /** 所有內容的範圍，「全部顯示」用；白板是空的時回傳 null */

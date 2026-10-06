@@ -61,9 +61,17 @@ export function useCardReviews(): CardReviewRecord[] | undefined {
   return useLiveQuery(() => db.cardReviews.toArray(), []);
 }
 
-/** 白板內容；undefined 代表還在載入，null 代表還沒有這張白板 */
+export function useBoards(): BoardRecord[] | undefined {
+  return useLiveQuery(() => db.boards.toArray(), []);
+}
+
+/**
+ * 白板內容；undefined 代表還在載入，null 代表還沒有這張白板。
+ * 換到另一張白板時，查詢結果會先留著上一張的，所以結果帶著 id，對得上才算數。
+ */
 export function useBoard(id: string): BoardRecord | null | undefined {
-  return useLiveQuery(async () => (await db.boards.get(id)) ?? null, [id]);
+  const result = useLiveQuery(async () => ({ id, record: (await db.boards.get(id)) ?? null }), [id]);
+  return result?.id === id ? result.record : undefined;
 }
 
 export function useNote(problemId: number): NoteRecord | null | undefined {

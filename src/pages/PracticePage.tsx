@@ -225,6 +225,8 @@ function PracticeSession({ problem }: { problem: Problem }) {
           <BoardEditor
             boardId={`p${problem.id}`}
             title={t.board.problemTitle(problem.id, problem.title)}
+            caption={t.board.problemCaption}
+            difficulty={problem.difficulty}
             onClose={() => setBoardOpen(false)}
           />
         </Suspense>
