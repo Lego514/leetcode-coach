@@ -271,11 +271,11 @@ export function nextPointerName(doc: BoardDoc): string {
 // ---------- 修改 ----------
 
 function mapElement(doc: BoardDoc, id: string, fn: (el: BoardElement) => BoardElement): BoardDoc {
-  return { elements: doc.elements.map((el) => (el.id === id ? fn(el) : el)) };
+  return { ...doc, elements: doc.elements.map((el) => (el.id === id ? fn(el) : el)) };
 }
 
 export function addElement(doc: BoardDoc, el: BoardElement): BoardDoc {
-  return { elements: [...doc.elements, el] };
+  return { ...doc, elements: [...doc.elements, el] };
 }
 
 export function updateElement<T extends BoardElement>(doc: BoardDoc, id: string, patch: Partial<T>): BoardDoc {
@@ -283,18 +283,28 @@ export function updateElement<T extends BoardElement>(doc: BoardDoc, id: string,
 }
 
 /**
- * 移動選取的元件。被拖動的指標會脫離陣列，從畫面上的位置開始移動；
- * 陣列移動時，吸附在上面的指標自然跟著走。
+ * 移動選取的東西。單獨拖動的指標會脫離陣列，從畫面上的位置開始移動；
+ * 指標和它的陣列一起移動時維持吸附。筆跡整條平移，箭頭連在元件上的那端跟著元件走。
  */
 export function moveElements(doc: BoardDoc, ids: ReadonlySet<string>, dx: number, dy: number): BoardDoc {
+  const shift = (end: ArrowEnd): ArrowEnd => ('id' in end ? end : { x: Math.round(end.x + dx), y: Math.round(end.y + dy) });
   return {
+    ...doc,
     elements: doc.elements.map((el) => {
-      if (!ids.has(el.id) || !isPlaced(el)) return el;
-      if (el.type === 'pointer') {
-        const at = pointerPosition(doc, el);
-        return { ...el, x: Math.round(at.x + dx), y: Math.round(at.y + dy), attach: undefined };
+      if (!ids.has(el.id)) return el;
+      switch (el.type) {
+        case 'stroke':
+          return { ...el, points: el.points.map((v, i) => Math.round(v + (i % 2 === 0 ? dx : dy))) };
+        case 'arrow':
+          return { ...el, from: shift(el.from), to: shift(el.to) };
+        case 'pointer': {
+          if (el.attach && ids.has(el.attach.id)) return el;
+          const at = pointerPosition(doc, el);
+          return { ...el, x: Math.round(at.x + dx), y: Math.round(at.y + dy), attach: undefined };
+        }
+        default:
+          return { ...el, x: Math.round(el.x + dx), y: Math.round(el.y + dy) };
       }
-      return { ...el, x: Math.round(el.x + dx), y: Math.round(el.y + dy) };
     }),
   };
 }
@@ -311,6 +321,7 @@ export function dropPointer(doc: BoardDoc, id: string): BoardDoc {
 export function removeElements(doc: BoardDoc, ids: ReadonlySet<string>): BoardDoc {
   const touches = (end: ElementOf<'arrow'>['from']) => 'id' in end && ids.has(end.id);
   return {
+    ...doc,
     elements: doc.elements
       .filter((el) => !ids.has(el.id) && !(el.type === 'arrow' && (touches(el.from) || touches(el.to))))
       .map((el) => {
@@ -321,16 +332,60 @@ export function removeElements(doc: BoardDoc, ids: ReadonlySet<string>): BoardDo
   };
 }
 
-/** 複製選取的元件，往右下錯開；回傳新文件和新元件的 id */
+const COPY_OFFSET = 24;
+
+/**
+ * 複製選取的東西，往右下錯開；回傳新文件和新東西的 id。
+ * 陣列和它的指標一起複製時，新指標吸附在新陣列上；
+ * 箭頭只有兩端連著的元件都有複製（或那端沒連元件）才複製，並接到新元件上。
+ */
 export function duplicateElements(doc: BoardDoc, ids: ReadonlySet<string>): { doc: BoardDoc; ids: string[] } {
   let next = doc;
   const created: string[] = [];
+  const copies = new Map<string, string>();
   for (const el of doc.elements) {
     if (!ids.has(el.id) || !isPlaced(el)) continue;
-    const at = el.type === 'pointer' ? pointerPosition(doc, el) : el;
     const id = newId(next);
-    next = addElement(next, { ...el, id, x: at.x + 24, y: at.y + 24, ...(el.type === 'pointer' ? { attach: undefined } : {}) } as Placed);
+    copies.set(el.id, id);
+    let copy: Placed;
+    if (el.type === 'pointer' && el.attach && ids.has(el.attach.id)) {
+      copy = { ...el, id };
+    } else if (el.type === 'pointer') {
+      const at = pointerPosition(doc, el);
+      copy = { ...el, id, x: at.x + COPY_OFFSET, y: at.y + COPY_OFFSET, attach: undefined };
+    } else {
+      copy = { ...el, id, x: el.x + COPY_OFFSET, y: el.y + COPY_OFFSET };
+    }
+    next = addElement(next, copy);
     created.push(id);
+  }
+  next = {
+    ...next,
+    elements: next.elements.map((el) =>
+      el.type === 'pointer' && el.attach && created.includes(el.id) && copies.has(el.attach.id)
+        ? { ...el, attach: { ...el.attach, id: copies.get(el.attach.id)! } }
+        : el,
+    ),
+  };
+  const copyEnd = (end: ArrowEnd): ArrowEnd | null => {
+    if (!('id' in end)) return { x: end.x + COPY_OFFSET, y: end.y + COPY_OFFSET };
+    const id = copies.get(end.id);
+    return id ? { id } : null;
+  };
+  for (const el of doc.elements) {
+    if (!ids.has(el.id)) continue;
+    if (el.type === 'stroke') {
+      const id = newId(next);
+      next = addElement(next, { ...el, id, points: el.points.map((v) => v + COPY_OFFSET) });
+      created.push(id);
+    } else if (el.type === 'arrow') {
+      const from = copyEnd(el.from);
+      const to = copyEnd(el.to);
+      if (!from || !to) continue;
+      const id = newId(next);
+      next = addElement(next, { ...el, id, from, to });
+      created.push(id);
+    }
   }
   return { doc: next, ids: created };
 }
@@ -340,6 +395,7 @@ export const MAX_CELLS = 64;
 /** 吸附在這個陣列上的指標，依新的位置移動 */
 function mapPointers(doc: BoardDoc, listId: string, fn: (index: number) => number): BoardDoc {
   return {
+    ...doc,
     elements: doc.elements.map((p) =>
       p.type === 'pointer' && p.attach?.id === listId ? { ...p, attach: { ...p.attach, index: fn(p.attach.index) } } : p,
     ),
@@ -519,9 +575,67 @@ export function resizeShape(doc: BoardDoc, id: string, w: number, h: number): Bo
   return updateElement<ElementOf<'shape'>>(doc, id, { w: Math.round(Math.max(8, w)), h: Math.round(Math.max(8, h)) });
 }
 
-/** 幫選取的框換顏色；其他元件沒有顏色，不受影響 */
-export function recolorShapes(doc: BoardDoc, ids: ReadonlySet<string>, color: BoardColor): BoardDoc {
-  return { elements: doc.elements.map((el) => (el.type === 'shape' && ids.has(el.id) ? { ...el, color } : el)) };
+/** 幫選取的框、箭頭、直線和筆跡換顏色；其他元件沒有顏色，不受影響 */
+export function recolorElements(doc: BoardDoc, ids: ReadonlySet<string>, color: BoardColor): BoardDoc {
+  return {
+    ...doc,
+    elements: doc.elements.map((el) => (hasColor(el) && ids.has(el.id) ? ({ ...el, color } as BoardElement) : el)),
+  };
+}
+
+/** 有沒有可以換顏色的東西：框、箭頭、直線、筆跡 */
+export function hasColor(el: BoardElement | undefined): boolean {
+  return el?.type === 'shape' || el?.type === 'arrow' || el?.type === 'stroke';
+}
+
+/** 箭頭和直線互換 */
+export function setArrowHead(doc: BoardDoc, id: string, head: 'end' | 'none'): BoardDoc {
+  return updateElement<ElementOf<'arrow'>>(doc, id, { head: head === 'end' ? undefined : head });
+}
+
+/** 點到的箭頭或直線（上面的優先），讓連線也能選取 */
+export function hitConnector(doc: BoardDoc, at: Point, radius: number, sizes?: Sizes): string | undefined {
+  for (let i = doc.elements.length - 1; i >= 0; i -= 1) {
+    const el = doc.elements[i];
+    if (el.type !== 'arrow') continue;
+    const ends = arrowPoints(doc, el, sizes);
+    if (ends && distanceToSegment(at, ends[0], ends[1]) <= radius) return el.id;
+  }
+  return undefined;
+}
+
+/** 一個東西佔的範圍；箭頭連的元件不見了就是 null */
+export function elementBounds(doc: BoardDoc, el: BoardElement, sizes?: Sizes): Rect | null {
+  if (isPlaced(el)) return rectOf(doc, el, sizes);
+  let xs: number[];
+  let ys: number[];
+  if (el.type === 'stroke') {
+    xs = el.points.filter((_, i) => i % 2 === 0);
+    ys = el.points.filter((_, i) => i % 2 === 1);
+  } else {
+    const ends = arrowPoints(doc, el, sizes);
+    if (!ends) return null;
+    xs = ends.map((p) => p.x);
+    ys = ends.map((p) => p.y);
+  }
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+/** 兩個角拉出的框 */
+export function rectFromCorners(a: Point, b: Point): Rect {
+  return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
+}
+
+/** 框選：完全落在框裡的東西 */
+export function elementsInRect(doc: BoardDoc, rect: Rect, sizes?: Sizes): string[] {
+  return doc.elements
+    .filter((el) => {
+      const b = elementBounds(doc, el, sizes);
+      return b !== null && b.x >= rect.x && b.y >= rect.y && b.x + b.w <= rect.x + rect.w && b.y + b.h <= rect.y + rect.h;
+    })
+    .map((el) => el.id);
 }
 
 /** 所有內容的範圍，「全部顯示」用；白板是空的時回傳 null */
@@ -549,6 +663,51 @@ export function contentBounds(doc: BoardDoc, sizes?: Sizes): Rect | null {
     }
   }
   return minX === Infinity ? null : { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+// ---------- 逐步播放 ----------
+
+export type BoardStep = NonNullable<BoardDoc['steps']>[number];
+export const MAX_STEPS = 50;
+
+export function newStepId(doc: BoardDoc): string {
+  const taken = new Set((doc.steps ?? []).map((step) => step.id));
+  for (;;) {
+    const id = Math.random().toString(36).slice(2, 10);
+    if (id && !taken.has(id)) return id;
+  }
+}
+
+/** 把目前的畫面記成最後一步；已經 50 步就不再記 */
+export function captureStep(doc: BoardDoc, id: string, caption = ''): BoardDoc {
+  const steps = doc.steps ?? [];
+  if (steps.length >= MAX_STEPS) return doc;
+  return { ...doc, steps: [...steps, { id, caption, elements: doc.elements }] };
+}
+
+export function deleteStep(doc: BoardDoc, index: number): BoardDoc {
+  const steps = (doc.steps ?? []).filter((_, i) => i !== index);
+  return steps.length > 0 ? { ...doc, steps } : { elements: doc.elements };
+}
+
+export function setStepCaption(doc: BoardDoc, index: number, caption: string): BoardDoc {
+  return { ...doc, steps: (doc.steps ?? []).map((step, i) => (i === index ? { ...step, caption } : step)) };
+}
+
+/** 從某一步繼續編輯：畫面換成那一步，步驟本身不動 */
+export function restoreStep(doc: BoardDoc, index: number): BoardDoc {
+  const step = doc.steps?.[index];
+  return step ? { ...doc, elements: step.elements } : doc;
+}
+
+/** 播放某一步時要畫的內容 */
+export function stepDoc(doc: BoardDoc, index: number): BoardDoc {
+  return { elements: doc.steps?.[index]?.elements ?? [] };
+}
+
+/** 清空畫面；記下來的步驟保留 */
+export function clearElements(doc: BoardDoc): BoardDoc {
+  return { ...doc, elements: [] };
 }
 
 // ---------- 復原紀錄 ----------

@@ -92,12 +92,14 @@ test('keeps the view where it is after adding something', async ({ page }) => {
   await page.getByRole('button', { name: 'Heading', exact: true }).click();
   await expect(page.getByText('Saved on this device')).toBeVisible();
 
-  // 拖曳空白處平移畫面，再放一個元件；存檔之後畫面不應該跳回中間
+  // 用手掌工具平移畫面，再放一個元件；存檔之後畫面不應該跳回中間
+  await page.keyboard.press('h');
   const box = (await canvas.boundingBox())!;
   await page.mouse.move(box.x + 40, box.y + box.height - 120);
   await page.mouse.down();
   await page.mouse.move(box.x + 240, box.y + box.height - 220, { steps: 5 });
   await page.mouse.up();
+  await page.keyboard.press('v');
   const panned = await world.getAttribute('style');
 
   await page.getByRole('button', { name: 'Variable', exact: true }).click();
@@ -199,10 +201,112 @@ test('switching straight from one whiteboard to another never mixes them up', as
   await expect(other).toContainText('Click or drag in an element');
   await page.getByRole('button', { name: 'Array', exact: true }).click();
   await expect(other.getByText('Saved on this device')).toBeVisible();
-  await expect(other.getByRole('group')).toHaveCount(1);
+  await expect(other.getByRole('group', { name: /^Array nums/ })).toHaveCount(1);
+  await expect(other.getByRole('group', { name: /^Variable/ })).toHaveCount(0);
 
   await page.goBack();
   const first = page.getByRole('dialog', { name: '1. Two Sum' });
   await expect(first.getByRole('group', { name: /^Variable ans/ })).toBeVisible();
-  await expect(first.getByRole('group')).toHaveCount(1);
+  await expect(first.getByRole('group', { name: /^Array nums/ })).toHaveCount(0);
+});
+
+test('connects nodes with a plain line, then selects, duplicates, and deletes a group with a box', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Graph node', exact: true }).click();
+  await page.getByRole('button', { name: 'Graph node', exact: true }).click();
+  const nodes = page.getByRole('group', { name: /^Graph node/ });
+  const a = (await nodes.nth(0).boundingBox())!;
+  const b = (await nodes.nth(1).boundingBox())!;
+
+  // L 畫直線（沒有箭頭），點一下可以選取並改成箭頭
+  await page.keyboard.press('l');
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await page.keyboard.press('v');
+  const selection = page.getByRole('toolbar', { name: 'Selected element' });
+  const midX = (a.x + a.width / 2 + b.x + b.width / 2) / 2;
+  const midY = (a.y + a.height / 2 + b.y + b.height / 2) / 2;
+  await page.mouse.click(midX, midY);
+  await expect(selection.getByRole('button', { name: 'Add an arrowhead' })).toBeVisible();
+
+  // 在空白處拖曳框住兩個節點和直線：一起複製，再一起刪掉
+  const left = Math.min(a.x, b.x) - 24;
+  const top = Math.min(a.y, b.y) - 24;
+  const right = Math.max(a.x + a.width, b.x + b.width) + 24;
+  const bottom = Math.max(a.y + a.height, b.y + b.height) + 24;
+  await page.mouse.move(left, top);
+  await page.mouse.down();
+  await page.mouse.move(right, bottom, { steps: 5 });
+  await page.mouse.up();
+  await expect(selection).toContainText('3 selected');
+  await page.keyboard.press('Control+d');
+  await expect(nodes).toHaveCount(4);
+  await expect(selection).toContainText('3 selected');
+  await page.keyboard.press('Delete');
+  await expect(nodes).toHaveCount(2);
+});
+
+test('records steps and plays them back with notes', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Array', exact: true }).click();
+  await page.getByRole('button', { name: 'Pointer', exact: true }).click();
+  const pointer = page.getByRole('group', { name: /^Pointer i/ });
+
+  // 每一步：記下畫面，再把指標往右移一格
+  for (let i = 0; i < 3; i += 1) {
+    await page.keyboard.press('s');
+    await pointer.click();
+    await page.keyboard.press('ArrowRight');
+  }
+  await expect(pointer).toHaveAccessibleName('Pointer i at index 3');
+
+  await page.getByRole('button', { name: 'Play all 3 steps from the start' }).click();
+  const playback = page.getByRole('toolbar', { name: 'Step playback' });
+  await expect(playback).toContainText('Step 1 of 3');
+  await expect(pointer).toHaveAccessibleName('Pointer i at index 0');
+  await playback.getByRole('textbox', { name: 'What happens in step 1' }).fill('i starts at the first cell');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowRight');
+  await expect(playback).toContainText('Step 2 of 3');
+  await expect(pointer).toHaveAccessibleName('Pointer i at index 1');
+  // 播放時不能編輯，元件庫停用
+  await expect(page.getByRole('toolbar', { name: 'Tools' })).toBeHidden();
+
+  // 從第 2 步繼續編輯：畫面換成那一步
+  await playback.getByRole('button', { name: 'Continue editing from here' }).click();
+  await expect(playback).toBeHidden();
+  await expect(pointer).toHaveAccessibleName('Pointer i at index 1');
+
+  // 說明會存起來
+  await page.getByRole('button', { name: 'Play all 3 steps from the start' }).click();
+  await expect(playback.getByRole('textbox', { name: 'What happens in step 1' })).toHaveValue('i starts at the first cell');
+  await playback.getByRole('button', { name: 'Delete step' }).click();
+  await expect(playback).toContainText('Step 1 of 2');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Play all 2 steps from the start' })).toBeVisible();
+});
+
+test('exports the board, or the step being played, as a PNG', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  const exportButton = page.getByRole('button', { name: 'Export image' });
+  await expect(exportButton).toBeDisabled();
+  await page.getByRole('button', { name: 'Array', exact: true }).click();
+  await page.getByRole('button', { name: 'Pointer', exact: true }).click();
+
+  const [download] = await Promise.all([page.waitForEvent('download'), exportButton.click()]);
+  expect(download.suggestedFilename()).toBe('whiteboard.png');
+  const path = await download.path();
+  const { readFileSync } = await import('node:fs');
+  const png = readFileSync(path);
+  // PNG 檔頭，而且不是空白小圖
+  expect(png.subarray(1, 4).toString()).toBe('PNG');
+  expect(png.length).toBeGreaterThan(2000);
+
+  // 播放時匯出的是那一步
+  await page.keyboard.press('s');
+  await page.getByRole('button', { name: 'Play the step from the start' }).click();
+  const [stepDownload] = await Promise.all([page.waitForEvent('download'), exportButton.click()]);
+  expect(stepDownload.suggestedFilename()).toBe('whiteboard-step-1.png');
 });
