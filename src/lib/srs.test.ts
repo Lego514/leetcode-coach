@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INTERVAL, MIN_EASE, masteryOf, schedule, stageOf, type ReviewState } from './srs';
+import { MAX_INTERVAL, MIN_EASE, masteryOf, schedule, spreadDelays, stageOf, type ReviewState } from './srs';
 
 const DAY = '2026-09-16';
 
@@ -47,6 +47,29 @@ describe('schedule', () => {
 
   it('handles month and year boundaries', () => {
     expect(schedule(undefined, 'solo', '2026-12-30').due).toBe('2027-01-03');
+  });
+
+  it('can push the due date later without changing the interval', () => {
+    expect(schedule(undefined, 'solo', DAY, 3)).toMatchObject({ interval: 4, due: '2026-09-23' });
+  });
+});
+
+describe('spreadDelays', () => {
+  it('fills each day up to the limit before moving on', () => {
+    expect(spreadDelays(12, DAY, new Map(), 5)).toEqual([0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2]);
+  });
+
+  it('counts reviews already due on those days', () => {
+    const load = new Map([
+      [DAY, 4],
+      ['2026-09-17', 5],
+    ]);
+    expect(spreadDelays(3, DAY, load, 5)).toEqual([0, 2, 2]);
+  });
+
+  it('leaves small batches on the first day', () => {
+    expect(spreadDelays(2, DAY)).toEqual([0, 0]);
+    expect(spreadDelays(0, DAY)).toEqual([]);
   });
 });
 

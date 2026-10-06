@@ -32,6 +32,8 @@ export interface AttemptRecord {
   /** 這次打開了幾層提示 */
   hints?: number;
   sawSolution?: boolean;
+  /** 批次標記時為了分散複習日，到期日往後挪的天數 */
+  delayDays?: number;
 }
 
 export interface NoteRecord {

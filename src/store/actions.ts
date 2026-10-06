@@ -2,7 +2,7 @@ import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { toDay, type Day } from '../lib/dates';
 import { parseSlug } from '../lib/catalog';
-import { schedule, type Rating } from '../lib/srs';
+import { schedule, spreadDelays, type Rating } from '../lib/srs';
 import type { CardResult } from '../../shared/constants';
 import {
   db,
@@ -24,6 +24,8 @@ export interface RecordAttemptOptions {
   minutes?: number;
   hints?: number;
   sawSolution?: boolean;
+  /** 到期日往後挪幾天，只有批次標記會用到 */
+  delayDays?: number;
   day?: Day;
   at?: Date;
 }
@@ -31,12 +33,12 @@ export interface RecordAttemptOptions {
 export async function recordAttempt(
   problemId: number,
   rating: Rating,
-  { mode = 'practice', minutes, hints, sawSolution, day, at = new Date() }: RecordAttemptOptions = {},
+  { mode = 'practice', minutes, hints, sawSolution, delayDays, day, at = new Date() }: RecordAttemptOptions = {},
 ): Promise<ProgressRecord> {
   const attemptDay = day ?? toDay(at);
   return db.transaction('rw', db.progress, db.attempts, db.outbox, async () => {
     const prev = await db.progress.get(problemId);
-    const state = schedule(prev, rating, attemptDay);
+    const state = schedule(prev, rating, attemptDay, delayDays);
     const record: ProgressRecord = {
       problemId,
       ...state,
@@ -57,25 +59,48 @@ export async function recordAttempt(
       ...(minutes && minutes > 0 ? { minutes } : {}),
       ...(hints && hints > 0 ? { hints } : {}),
       ...(sawSolution ? { sawSolution } : {}),
+      ...(delayDays && delayDays > 0 ? { delayDays } : {}),
     });
     await track(db, 'attempts', uid);
     return record;
   });
 }
 
+export interface MarkResult {
+  marked: number;
+  /** 最早和最晚的複習日；沒有標記任何題目時沒有 */
+  firstDue?: Day;
+  lastDue?: Day;
+}
+
 /**
  * 開始使用前就刷過的題目：一次排進複習，已經有紀錄的題目略過。
- * 回傳實際標記的題數。
+ * 題目多的時候分散到之後幾天，每天到期的題數（含原本就排好的複習）不超過上限，
+ * 免得幾十題同一天到期。
  */
-export async function markSolvedBefore(problemIds: readonly number[], rating: Rating): Promise<number> {
+export async function markSolvedBefore(problemIds: readonly number[], rating: Rating, at = new Date()): Promise<MarkResult> {
   return db.transaction('rw', db.progress, db.attempts, db.outbox, async () => {
-    let marked = 0;
+    const fresh: number[] = [];
     for (const problemId of new Set(problemIds)) {
-      if (await db.progress.get(problemId)) continue;
-      await recordAttempt(problemId, rating, { mode: 'import' });
-      marked += 1;
+      if (!(await db.progress.get(problemId))) fresh.push(problemId);
     }
-    return marked;
+    if (fresh.length === 0) return { marked: 0 };
+
+    const start = schedule(undefined, rating, toDay(at)).due;
+    // 整張表讀出來自己數：iOS 的 WebKit 在某些索引游標上會出錯，資料量也很小
+    const load = new Map<Day, number>();
+    for (const p of await db.progress.toArray()) {
+      if (p.due >= start) load.set(p.due, (load.get(p.due) ?? 0) + 1);
+    }
+    const delays = spreadDelays(fresh.length, start, load);
+
+    const dues: Day[] = [];
+    for (const [i, problemId] of fresh.entries()) {
+      const state = await recordAttempt(problemId, rating, { mode: 'import', delayDays: delays[i], at });
+      dues.push(state.due);
+    }
+    dues.sort();
+    return { marked: fresh.length, firstDue: dues[0], lastDue: dues[dues.length - 1] };
   });
 }
 

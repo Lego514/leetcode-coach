@@ -67,7 +67,8 @@ test('marks problems solved before without counting them as practice', async ({ 
   await bar.getByRole('button', { name: 'Roughly remember' }).click();
   await expect(bar).toContainText('First review in 2 days');
   await bar.getByRole('button', { name: `Mark ${marked} problems` }).click();
-  await expect(page.getByRole('status')).toContainText(`Scheduled ${marked} problems for review.`);
+  // 題目多的時候分散到之後幾天
+  await expect(page.getByRole('status')).toContainText(new RegExp(`Scheduled ${marked} problems for review (on|between) `));
   await expect(bar).toContainText('0 problems selected');
   // 標記過的題目不能再選
   await expect(group.getByRole('checkbox')).toHaveCount(1);

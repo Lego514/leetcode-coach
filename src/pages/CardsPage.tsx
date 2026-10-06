@@ -83,6 +83,8 @@ function Round({ catalog, progress, reviews, attempts, onAgain }: RoundProps) {
   });
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
+  /** 按了「我不知道」：直接看答案，記成答錯，不用亂猜 */
+  const [gaveUp, setGaveUp] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [results, setResults] = useState<CardResult[]>([]);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -113,6 +115,7 @@ function Round({ catalog, progress, reviews, attempts, onAgain }: RoundProps) {
   const next = () => {
     setIndex((i) => i + 1);
     setPicked(null);
+    setGaveUp(false);
     setRevealed(false);
   };
 
@@ -120,6 +123,12 @@ function Round({ catalog, progress, reviews, attempts, onAgain }: RoundProps) {
     if (!card || answered) return;
     setPicked(i);
     save(i === card.answer ? 'good' : 'again');
+  };
+
+  const giveUp = () => {
+    if (!card || answered) return;
+    setGaveUp(true);
+    save('again');
   };
 
   const rate = (result: CardResult) => {
@@ -137,6 +146,7 @@ function Round({ catalog, progress, reviews, attempts, onAgain }: RoundProps) {
       const digit = Number(e.key);
       if (card.options.length > 0) {
         if (!answered && digit >= 1 && digit <= card.options.length) choose(digit - 1);
+        else if (!answered && e.key === '0') giveUp();
         else if (answered && e.key === 'Enter') next();
       } else if (!revealed && (e.key === 'Enter' || e.key === ' ')) {
         e.preventDefault();
@@ -162,6 +172,8 @@ function Round({ catalog, progress, reviews, attempts, onAgain }: RoundProps) {
   const lang = locale === 'en' ? 'en' : 'zh';
   const right = answered && results[index] === 'good';
   const isChoice = card.options.length > 0;
+  const outcome = !answered ? undefined : right ? 'right' : gaveUp ? 'unknown' : 'wrong';
+  const verdict = outcome === 'right' ? t.cards.correct : outcome === 'unknown' ? t.cards.unknownVerdict : t.cards.wrong;
 
   return (
     <div className="flash">
@@ -220,12 +232,20 @@ function Round({ catalog, progress, reviews, attempts, onAgain }: RoundProps) {
           })}
         </ol>
       )}
+      {isChoice && !answered && (
+        <button type="button" className="btn flash-unknown" onClick={giveUp}>
+          <span className="flash-key" aria-hidden>
+            0
+          </span>
+          {t.cards.unknown}
+        </button>
+      )}
 
       {/* 答完的結果和下一步固定在畫面底部，內容很長也不用往下捲才找得到按鈕 */}
       {isChoice && answered && (
         <div className="flash-panel">
-          <div className="flash-feedback" data-correct={right}>
-            <p className="flash-verdict">{right ? t.cards.correct : t.cards.wrong}</p>
+          <div className="flash-feedback" data-outcome={outcome}>
+            <p className="flash-verdict">{verdict}</p>
             {!right && (
               <p className="flash-solution">
                 <b>{t.cards.solution}</b> <OptionText label={optionLabel(card, card.options[card.answer], t, locale)} />
@@ -263,7 +283,7 @@ function Round({ catalog, progress, reviews, attempts, onAgain }: RoundProps) {
       )}
 
       <p className="visually-hidden" role="status">
-        {isChoice && answered ? (right ? t.cards.correct : t.cards.wrong) : ''}
+        {isChoice && answered ? verdict : ''}
       </p>
       <p className="flash-hint">{t.cards.keyboardHint}</p>
     </div>

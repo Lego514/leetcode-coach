@@ -230,7 +230,7 @@ export async function rebuildProgress(database: CoachDB, problemIds: Iterable<nu
     }
     attempts.sort((a, b) => a.at.localeCompare(b.at) || (a.id ?? 0) - (b.id ?? 0));
     let state: ReviewState | undefined;
-    for (const attempt of attempts) state = schedule(state, attempt.rating, attempt.day);
+    for (const attempt of attempts) state = schedule(state, attempt.rating, attempt.day, attempt.delayDays);
     const last = attempts[attempts.length - 1];
     await database.progress.put({
       problemId,

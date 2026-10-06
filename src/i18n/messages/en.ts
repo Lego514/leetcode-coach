@@ -371,9 +371,12 @@ const en: Messages = {
     batchRatingLabel: 'How well do you remember them?',
     batchRemember: 'Remember them well',
     batchVague: 'Roughly remember',
-    batchReviewIn: (days) => `First review in ${count(days, 'day')}`,
+    batchReviewIn: (days, perDay) => `First review in ${count(days, 'day')}, at most ${perDay} a day`,
     batchMark: (n) => `Mark ${count(n, 'problem')}`,
-    batchDone: (n) => `Scheduled ${count(n, 'problem')} for review.`,
+    batchDone: (n, from, to) =>
+      from === to
+        ? `Scheduled ${count(n, 'problem')} for review on ${from}.`
+        : `Scheduled ${count(n, 'problem')} for review between ${from} and ${to}.`,
     batchExit: 'Done',
   },
 
@@ -711,6 +714,8 @@ const en: Messages = {
     rate: { good: 'I could', fuzzy: 'Partly', again: 'Forgot' },
     correct: 'Correct',
     wrong: 'Not quite',
+    unknown: 'I don’t know',
+    unknownVerdict: 'No worries, here’s the answer',
     correctAnswer: ' (correct answer)',
     solution: 'Correct answer:',
     yourAnswer: ' (your answer)',
@@ -721,7 +726,7 @@ const en: Messages = {
     doneToday: (n) => `<b>${n}</b> ${n === 1 ? 'card' : 'cards'} reviewed today`,
     missedNote: 'Cards you missed or forgot will come back in a later round today.',
     another: 'Another round',
-    keyboardHint: 'Keyboard: 1–4 to answer, Enter for the next card',
+    keyboardHint: 'Keyboard: 1–4 to answer, 0 if you don’t know, Enter for the next card',
     saveFailed: 'That answer couldn’t be saved.',
   },
 

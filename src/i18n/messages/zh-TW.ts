@@ -365,9 +365,10 @@ const zhTW = {
     batchRatingLabel: '還記得多少？',
     batchRemember: '記得很清楚',
     batchVague: '大概記得',
-    batchReviewIn: (days: number) => `${days} 天後開始複習`,
+    batchReviewIn: (days: number, perDay: number) => `${days} 天後開始複習，每天最多 ${perDay} 題`,
     batchMark: (n: number) => `標記 ${n} 題`,
-    batchDone: (n: number) => `已把 ${n} 題排進複習。`,
+    batchDone: (n: number, from: string, to: string) =>
+      from === to ? `已把 ${n} 題排進 ${from} 的複習。` : `已把 ${n} 題排進複習，分散在 ${from} 到 ${to}。`,
     batchExit: '完成',
   },
 
@@ -692,6 +693,8 @@ const zhTW = {
     rate: { good: '講得出來', fuzzy: '有點模糊', again: '忘了' },
     correct: '答對了',
     wrong: '答錯了',
+    unknown: '我不知道',
+    unknownVerdict: '沒關係，先記住答案',
     correctAnswer: '（正確答案）',
     solution: '正確答案',
     yourAnswer: '（你選的）',
@@ -702,7 +705,7 @@ const zhTW = {
     doneToday: (n: number) => `今天已複習 <b>${n}</b> 張`,
     missedNote: '答錯和忘了的卡，今天稍後的回合會再出現。',
     another: '再來一回合',
-    keyboardHint: '鍵盤：1–4 選答案，Enter 下一張',
+    keyboardHint: '鍵盤：1–4 選答案，0 不知道，Enter 下一張',
     saveFailed: '這張卡的作答紀錄沒有存到。',
   },
 
