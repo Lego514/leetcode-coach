@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-labelledby="title desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
   <title id="title">LeetCode Coach architecture</title>
-  <desc id="desc">An installable React PWA stores data locally in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL. The API calls the Claude API for explanation feedback and Brevo for password reset email. GitHub Actions runs lint, type checks, unit, API and Playwright tests before Render deploys main.</desc>
+  <desc id="desc">An installable React PWA, including a custom whiteboard editor and spaced-repetition flashcards, stores data locally in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL. The API calls the Claude API for explanation feedback and Brevo for password reset email. GitHub Actions runs lint, type checks, unit, API and Playwright tests before Render deploys main.</desc>
   <defs>
     <style>
       .bg { fill: #ffffff; }
@@ -42,25 +42,33 @@
   <rect class="panel" x="30" y="84" width="370" height="496" rx="10" />
   <text class="h2" x="50" y="114">Browser — installable PWA</text>
   <g>
-    <rect class="item" x="50" y="130" width="330" height="72" rx="6" />
-    <text class="t" x="66" y="158">UI</text>
-    <text class="d" x="66" y="180">React 19 · TypeScript · React Router 8 · Vite 8</text>
+    <rect class="item" x="50" y="128" width="330" height="54" rx="6" />
+    <text class="t" x="66" y="150">UI</text>
+    <text class="d" x="66" y="169">React 19 · TypeScript · React Router 8 · Vite 8</text>
 
-    <rect class="item" x="50" y="218" width="330" height="72" rx="6" />
-    <text class="t" x="66" y="246">Local-first data</text>
-    <text class="d" x="66" y="268">Dexie 4 on IndexedDB · change outbox</text>
+    <rect class="item" x="50" y="190" width="330" height="54" rx="6" />
+    <text class="t" x="66" y="212">Local-first data</text>
+    <text class="d" x="66" y="231">Dexie 4 on IndexedDB · change outbox</text>
 
-    <rect class="item" x="50" y="306" width="330" height="72" rx="6" />
-    <text class="t" x="66" y="334">Offline &amp; updates</text>
-    <text class="d" x="66" y="356">Service worker (Workbox) · self-updating</text>
+    <rect class="item" x="50" y="252" width="330" height="54" rx="6" />
+    <text class="t" x="66" y="274">Whiteboard</text>
+    <text class="d" x="66" y="293">Custom canvas editor · no drawing library</text>
 
-    <rect class="item" x="50" y="394" width="330" height="72" rx="6" />
-    <text class="t" x="66" y="422">Speech</text>
-    <text class="d" x="66" y="444">Web Speech API · live English transcripts</text>
+    <rect class="item" x="50" y="314" width="330" height="54" rx="6" />
+    <text class="t" x="66" y="336">Flashcards</text>
+    <text class="d" x="66" y="355">Leitner spaced repetition · 59 tested tips</text>
 
-    <rect class="item" x="50" y="482" width="330" height="72" rx="6" />
-    <text class="t" x="66" y="510">Localization</text>
-    <text class="d" x="66" y="532">English + Traditional Chinese dictionaries</text>
+    <rect class="item" x="50" y="376" width="330" height="54" rx="6" />
+    <text class="t" x="66" y="398">Offline &amp; updates</text>
+    <text class="d" x="66" y="417">Service worker (Workbox) · self-updating</text>
+
+    <rect class="item" x="50" y="438" width="330" height="54" rx="6" />
+    <text class="t" x="66" y="460">Speech</text>
+    <text class="d" x="66" y="479">Web Speech API · live English transcripts</text>
+
+    <rect class="item" x="50" y="500" width="330" height="54" rx="6" />
+    <text class="t" x="66" y="522">Localization</text>
+    <text class="d" x="66" y="541">English + Traditional Chinese dictionaries</text>
   </g>
 
   <!-- Render -->
@@ -96,7 +104,7 @@
   <rect class="ext" x="880" y="84" width="290" height="176" rx="10" />
   <text class="h2" x="900" y="114">Neon PostgreSQL</text>
   <text class="d" x="900" y="142">users · sessions</text>
-  <text class="d" x="900" y="164">records (jsonb, one row per item)</text>
+  <text class="d" x="900" y="164">records (jsonb) · 9 synced collections</text>
   <text class="d" x="900" y="186">password_resets · ai_usage</text>
   <text class="d" x="900" y="208">Serverless, scales to zero when idle</text>
   <text class="sub" x="900" y="240">AWS US East 2 (Ohio)</text>
@@ -135,10 +143,11 @@
   <text class="d" x="78" y="712">Pull requests into main</text>
   <text class="d" x="78" y="734">github.com/Lego514/leetcode-coach</text>
 
-  <rect class="item" x="440" y="660" width="340" height="96" rx="6" />
-  <text class="t" x="458" y="690">GitHub Actions</text>
-  <text class="d" x="458" y="712">ESLint · tsc · Vitest (129 unit &amp; API tests)</text>
-  <text class="d" x="458" y="734">Playwright e2e (16) against PostgreSQL 17</text>
+  <rect class="item" x="440" y="660" width="340" height="104" rx="6" />
+  <text class="t" x="458" y="688">GitHub Actions</text>
+  <text class="d" x="458" y="710">ESLint · tsc · Vitest: 205 unit &amp; API tests</text>
+  <text class="d" x="458" y="730">Playwright: 29 e2e tests on Chromium</text>
+  <text class="d" x="458" y="750">and iPhone WebKit, against PostgreSQL 17</text>
 
   <rect class="item" x="860" y="660" width="290" height="96" rx="6" />
   <text class="t" x="878" y="690">Render</text>
