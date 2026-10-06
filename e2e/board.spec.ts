@@ -84,3 +84,25 @@ test('adds, highlights, and inserts single cells of an array', async ({ page }) 
   await expect(array).toHaveAccessibleName('Array nums: 1, 9, 2, 3, 4, 5');
   await expect(page.getByRole('group', { name: 'Pointer i at index 3' })).toBeVisible();
 });
+
+test('keeps the view where it is after adding something', async ({ page }) => {
+  await page.goto('/#/board');
+  const canvas = page.getByRole('region', { name: 'Whiteboard canvas' });
+  const world = canvas.locator('.board-world');
+  await page.getByRole('button', { name: 'Heading', exact: true }).click();
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+  // 拖曳空白處平移畫面，再放一個元件；存檔之後畫面不應該跳回中間
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + 40, box.y + box.height - 120);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 240, box.y + box.height - 220, { steps: 5 });
+  await page.mouse.up();
+  const panned = await world.getAttribute('style');
+
+  await page.getByRole('button', { name: 'Variable', exact: true }).click();
+  await expect(page.getByText('Saving…')).toBeVisible();
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(await world.getAttribute('style')).toBe(panned);
+});

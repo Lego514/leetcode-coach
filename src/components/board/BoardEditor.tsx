@@ -192,11 +192,13 @@ function Editor({ boardId, title, initial, onClose }: BoardEditorProps & { initi
     setView({ zoom, x: r.width / 2 - (bounds.x + bounds.w / 2) * zoom, y: r.height / 2 - (bounds.y + bounds.h / 2) * zoom });
   }, []);
 
-  // 打開時把內容放在畫面中間
+  // 打開時把內容放在畫面中間，只做這一次。
+  // 存檔後資料庫的內容會更新、initial 跟著變，不能因此又把畫面拉回中間。
+  const [openedWith] = useState(initial);
   useEffect(() => {
-    const frame = requestAnimationFrame(() => fitTo(initial, new Map()));
+    const frame = requestAnimationFrame(() => fitTo(openedWith, new Map()));
     return () => cancelAnimationFrame(frame);
-  }, [fitTo, initial]);
+  }, [fitTo, openedWith]);
 
   // 滾輪平移；按著 Ctrl 或觸控板捏合時縮放
   useEffect(() => {
