@@ -10,7 +10,9 @@ import {
   confusableWith,
   dealCard,
   dealRound,
+  filterDeck,
   formatBigO,
+  isCardScope,
   keyInsight,
   nextBox,
   parseComplexity,
@@ -164,6 +166,41 @@ describe('picking a round', () => {
     const small: CardRef[] = deck.filter((c) => c.kind === 'tip').slice(0, 3);
     const states = cardStates(small.map((c) => review(c.id, '2026-10-05', 'good')));
     expect(pickRound(small, states, '2026-10-05', seeded(1))).toHaveLength(3);
+  });
+});
+
+describe('topics', () => {
+  const deck = buildDeck({
+    problems: [problems.get(1)!, problems.get(20)!],
+    explanations: EXPLANATIONS_EN,
+    signalCounts,
+    tipIds: ['heap-min', 'bisect-left'],
+  });
+  const kinds = (scope: Parameters<typeof filterDeck>[1]) => [...new Set(filterDeck(deck, scope, problems).map((c) => c.kind))].sort();
+
+  it('keeps only the chosen kind of card', () => {
+    expect(filterDeck(deck, 'all', problems)).toHaveLength(deck.length);
+    expect(kinds('problems')).toEqual(['complexity', 'explain', 'insight', 'pattern']);
+    expect(kinds('signals')).toEqual(['signal']);
+    expect(kinds('tips')).toEqual(['tip']);
+  });
+
+  it('drops cards whose answer would be the chosen pattern itself', () => {
+    // 1 是陣列與雜湊，20 是堆疊
+    const stack = filterDeck(deck, 'pattern:stack', problems).map((c) => c.id).sort();
+    expect(stack).toEqual(['complexity:20', 'explain:20', 'insight:20']);
+  });
+
+  it('still deals a full round from a single problem', () => {
+    const one = filterDeck(deck, 'pattern:stack', problems);
+    expect(pickRound(one, new Map(), '2026-10-05', seeded(1))).toHaveLength(3);
+  });
+
+  it('recognizes saved topics', () => {
+    expect(isCardScope('tips')).toBe(true);
+    expect(isCardScope('pattern:heap')).toBe(true);
+    expect(isCardScope('pattern:nope')).toBe(false);
+    expect(isCardScope('everything')).toBe(false);
   });
 });
 
