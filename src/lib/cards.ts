@@ -153,6 +153,39 @@ export function buildDeck({ problems, explanations, signalCounts, tipIds }: Deck
   return deck;
 }
 
+/** 微複習的範圍：全部、只練做過的題目、只練線索、只練小知識，或只練某個模式的題目 */
+export type CardScope = 'all' | 'problems' | 'signals' | 'tips' | `pattern:${PatternId}`;
+
+export function isCardScope(value: string): value is CardScope {
+  if (value === 'all' || value === 'problems' || value === 'signals' || value === 'tips') return true;
+  return value.startsWith('pattern:') && (PATTERN_ORDER as string[]).includes(value.slice('pattern:'.length));
+}
+
+const PROBLEM_KINDS = new Set<CardKind>(['pattern', 'insight', 'complexity', 'explain']);
+
+/**
+ * 依範圍篩選牌組。只練某個模式時不出「哪個模式」和線索卡，
+ * 因為答案一定是那個模式。
+ */
+export function filterDeck(deck: readonly CardRef[], scope: CardScope, problems: ReadonlyMap<number, Problem>): CardRef[] {
+  switch (scope) {
+    case 'all':
+      return [...deck];
+    case 'problems':
+      return deck.filter((c) => PROBLEM_KINDS.has(c.kind));
+    case 'signals':
+      return deck.filter((c) => c.kind === 'signal');
+    case 'tips':
+      return deck.filter((c) => c.kind === 'tip');
+    default: {
+      const pattern = scope.slice('pattern:'.length);
+      return deck.filter(
+        (c) => c.kind !== 'pattern' && 'problemId' in c && problems.get(c.problemId)?.pattern === pattern,
+      );
+    }
+  }
+}
+
 export type Random = () => number;
 
 export function shuffle<T>(items: readonly T[], random: Random = Math.random): T[] {
@@ -219,10 +252,10 @@ export function pickRound(
 
   const chosen: CardRef[] = [];
   const topics = new Set<string>();
-  const take = (pool: readonly CardRef[], limit: number) => {
+  const take = (pool: readonly CardRef[], limit: number, sameTopicOk = false) => {
     for (const card of pool) {
       if (chosen.length >= limit) return;
-      if (chosen.includes(card) || topics.has(topicOf(card))) continue;
+      if (chosen.includes(card) || (!sameTopicOk && topics.has(topicOf(card)))) continue;
       chosen.push(card);
       topics.add(topicOf(card));
     }
@@ -232,6 +265,8 @@ export function pickRound(
   take(fresh, size);
   take(due, size);
   take(later, size);
+  // 範圍很小（例如只做過一題的模式）時，才允許同一題出兩張卡
+  take([...due, ...fresh, ...later], size, true);
   return shuffle(chosen, random);
 }
 

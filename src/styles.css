@@ -2006,16 +2006,126 @@ audio {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .flash-count {
+  min-width: 0;
+  overflow: hidden;
   font-size: 14px;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.flash-top .btn {
+.flash-top .flash-timer {
   margin-left: auto;
+}
+
+/* 組間休息計時：倒數中用螢光筆顏色，一眼就看得到 */
+.flash-timer {
+  gap: 4px;
+  min-width: 72px;
+  font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
+}
+
+.flash-timer svg {
+  width: 16px;
+  height: 16px;
+}
+
+.flash-timer[data-running] {
+  border-color: var(--marker);
+  background: var(--marker);
+  color: var(--marker-ink);
+}
+
+.flash-alarm {
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  max-width: 640px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--marker);
+  border-radius: var(--radius);
+  background: var(--marker);
+  color: var(--marker-ink);
+  font-weight: 700;
+  animation: flash-pulse 1s ease-in-out 3;
+}
+
+.flash-alarm p {
+  margin: 0;
+}
+
+@keyframes flash-pulse {
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-alarm {
+    animation: none;
+  }
+}
+
+/* 範圍和休息時間：標籤放在選單左邊，只佔一行 */
+.flash-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 10px;
+}
+
+.flash-settings .field {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.flash-settings .field-label {
+  flex: none;
+  font-size: 13px;
+}
+
+.flash-settings .select {
+  min-width: 0;
+  min-height: 36px;
+  padding: 5px 8px;
+}
+
+.flash-missed-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.flash-missed {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flash-missed li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.flash-missed-subject {
+  font-weight: 600;
 }
 
 .flash-dots {
@@ -2298,6 +2408,8 @@ audio {
 
 .flash-done {
   gap: 14px;
+  /* 結果頁有好幾塊，按鈕由 .flash-actions 推到底部 */
+  margin-bottom: 0;
 }
 
 /* 觸控裝置和手機沒有鍵盤，不顯示快捷鍵 */
