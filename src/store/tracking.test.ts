@@ -92,6 +92,17 @@ describe('flashcard answers', () => {
 });
 
 describe('rebuildProgress', () => {
+  it('keeps the spread-out due date of a batch-marked problem', async () => {
+    await recordAttempt(1, 'solo', { mode: 'import', delayDays: 3, day: '2026-09-01', at: new Date('2026-09-01T10:00:00Z') });
+    const incremental = await db.progress.get(1);
+    expect(incremental?.due).toBe('2026-09-08');
+    const attempt = (await db.attempts.toArray())[0];
+    expect(COLLECTION_SCHEMAS.attempts.data.parse(toSyncData('attempts', attempt))).toMatchObject({ delayDays: 3 });
+    await db.progress.clear();
+    await rebuildProgress(db, [1]);
+    expect(await db.progress.get(1)).toEqual(incremental);
+  });
+
   it('matches the incremental schedule', async () => {
     await recordAttempt(1, 'fail', { day: '2026-09-01', at: new Date('2026-09-01T10:00:00Z') });
     await recordAttempt(1, 'hint', { day: '2026-09-02', at: new Date('2026-09-02T10:00:00Z') });

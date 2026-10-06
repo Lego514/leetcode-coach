@@ -239,13 +239,35 @@ describe('backup', () => {
 describe('markSolvedBefore', () => {
   it('schedules untouched problems and skips ones already started', async () => {
     await recordAttempt(1, 'fail', { day: '2026-09-16' });
-    expect(await markSolvedBefore([1, 15, 15, 42], 'solo')).toBe(2);
+    expect(await markSolvedBefore([1, 15, 15, 42], 'solo', new Date('2026-09-16T12:00:00'))).toEqual({
+      marked: 2,
+      firstDue: '2026-09-20',
+      lastDue: '2026-09-20',
+    });
     const attempts = await db.attempts.where('problemId').anyOf(15, 42).toArray();
     expect(attempts.map((a) => a.mode)).toEqual(['import', 'import']);
     expect((await db.progress.get(15))?.interval).toBe(4);
     expect((await db.progress.get(1))?.lastRating).toBe('fail');
     expect((await db.attempts.where('problemId').equals(1).count())).toBe(1);
     expect(await outbox()).toEqual(['attempts:put', 'attempts:put', 'attempts:put']);
+  });
+
+  it('spreads a big batch so no more than five come due a day', async () => {
+    const at = new Date('2026-09-16T12:00:00');
+    // 9/20 原本就有一題到期
+    await recordAttempt(500, 'solo', { day: '2026-09-16', at });
+    const first = Array.from({ length: 12 }, (_, i) => i + 1);
+    expect(await markSolvedBefore(first, 'solo', at)).toEqual({ marked: 12, firstDue: '2026-09-20', lastDue: '2026-09-22' });
+    // 第二批接在後面，不會又擠回 9/20
+    expect(await markSolvedBefore([20, 21, 22, 23], 'solo', at)).toEqual({ marked: 4, firstDue: '2026-09-22', lastDue: '2026-09-23' });
+
+    const perDay = new Map<string, number>();
+    for (const p of await db.progress.toArray()) perDay.set(p.due, (perDay.get(p.due) ?? 0) + 1);
+    expect(Object.fromEntries(perDay)).toEqual({ '2026-09-20': 5, '2026-09-21': 5, '2026-09-22': 5, '2026-09-23': 2 });
+    // 延後的只是到期日，間隔照舊
+    expect((await db.progress.get(23))?.interval).toBe(4);
+    expect((await db.attempts.where('problemId').equals(1).first())?.delayDays).toBeUndefined();
+    expect((await db.attempts.where('problemId').equals(12).first())?.delayDays).toBe(2);
   });
 });
 

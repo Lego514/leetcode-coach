@@ -34,8 +34,9 @@ const clampEase = (ease: number) => Math.min(MAX_EASE, Math.max(MIN_EASE, Math.r
 /**
  * 簡化版 SM-2：把四種自評對應到下次複習的間隔。
  * 自己解出的題目間隔成長最快；看了解答或不會的題目隔天就再做一次。
+ * delayDays 只把到期日往後挪，不影響間隔（批次標記時用來分散複習日）。
  */
-export function schedule(prev: ReviewState | undefined, rating: Rating, day: Day): ReviewState {
+export function schedule(prev: ReviewState | undefined, rating: Rating, day: Day, delayDays = 0): ReviewState {
   const reps = prev?.reps ?? 0;
   const ease = prev?.ease ?? INITIAL_EASE;
   const interval = prev?.interval ?? 0;
@@ -66,7 +67,32 @@ export function schedule(prev: ReviewState | undefined, rating: Rating, day: Day
   }
 
   next.interval = Math.min(MAX_INTERVAL, next.interval);
-  return { ...next, due: addDays(day, next.interval) };
+  return { ...next, due: addDays(day, next.interval + delayDays) };
+}
+
+/** 批次標記時，每天最多排幾題到期 */
+export const IMPORT_DUE_PER_DAY = 5;
+
+/**
+ * 把 count 題排到 start 當天或之後、到期題數還沒滿 perDay 的日子，越早越好。
+ * load 是每天已經有幾題到期；回傳每一題要延後幾天。
+ */
+export function spreadDelays(
+  count: number,
+  start: Day,
+  load: ReadonlyMap<Day, number> = new Map(),
+  perDay = IMPORT_DUE_PER_DAY,
+): number[] {
+  const used = new Map(load);
+  const delays: number[] = [];
+  let offset = 0;
+  for (let i = 0; i < count; i += 1) {
+    while ((used.get(addDays(start, offset)) ?? 0) >= perDay) offset += 1;
+    const day = addDays(start, offset);
+    used.set(day, (used.get(day) ?? 0) + 1);
+    delays.push(offset);
+  }
+  return delays;
 }
 
 export type Stage = 'new' | 'learning' | 'reviewing' | 'mastered';

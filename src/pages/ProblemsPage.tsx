@@ -9,7 +9,7 @@ import { getPattern, getPatterns, PATTERN_ORDER, type PatternId } from '../data/
 import type { Difficulty, Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { inList, LIST_FILTERS } from '../lib/catalog';
-import { schedule, stageOf, STAGES, type Rating, type Stage } from '../lib/srs';
+import { IMPORT_DUE_PER_DAY, schedule, stageOf, STAGES, type Rating, type Stage } from '../lib/srs';
 import { markSolvedBefore } from '../store/actions';
 import { useCatalog, useCompanies, useMetaMap, useProgressMap, useSettings, useToday } from '../store/queries';
 
@@ -293,7 +293,7 @@ interface BatchBarProps {
 }
 
 function BatchBar({ day, selectedIds, onMarked, onExit }: BatchBarProps) {
-  const { t } = useI18n();
+  const { t, fmt } = useI18n();
   const toast = useToast();
   const [rating, setRating] = useState<Rating>('solo');
   const [busy, setBusy] = useState(false);
@@ -302,8 +302,8 @@ function BatchBar({ day, selectedIds, onMarked, onExit }: BatchBarProps) {
   async function mark() {
     setBusy(true);
     try {
-      const marked = await markSolvedBefore(selectedIds, rating);
-      toast(t.problems.batchDone(marked));
+      const { marked, firstDue, lastDue } = await markSolvedBefore(selectedIds, rating);
+      if (firstDue && lastDue) toast(t.problems.batchDone(marked, fmt.day(firstDue, false), fmt.day(lastDue, false)));
       onMarked();
     } finally {
       setBusy(false);
@@ -321,14 +321,14 @@ function BatchBar({ day, selectedIds, onMarked, onExit }: BatchBarProps) {
             key={option.rating}
             type="button"
             aria-pressed={rating === option.rating}
-            title={t.problems.batchReviewIn(schedule(undefined, option.rating, day).interval)}
+            title={t.problems.batchReviewIn(schedule(undefined, option.rating, day).interval, IMPORT_DUE_PER_DAY)}
             onClick={() => setRating(option.rating)}
           >
             {t.problems[option.label]}
           </button>
         ))}
       </div>
-      <span className="sheet-note">{t.problems.batchReviewIn(schedule(undefined, rating, day).interval)}</span>
+      <span className="sheet-note">{t.problems.batchReviewIn(schedule(undefined, rating, day).interval, IMPORT_DUE_PER_DAY)}</span>
       <div className="btn-row batch-actions">
         <button className="btn btn-primary" disabled={count === 0 || busy} onClick={() => void mark()}>
           {t.problems.batchMark(count)}

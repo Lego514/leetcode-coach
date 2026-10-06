@@ -2235,12 +2235,21 @@ audio {
   font-weight: 700;
 }
 
-.flash-feedback[data-correct='true'] .flash-verdict {
+.flash-feedback[data-outcome='right'] .flash-verdict {
   color: var(--good);
 }
 
-.flash-feedback[data-correct='false'] .flash-verdict {
+.flash-feedback[data-outcome='wrong'] .flash-verdict {
   color: var(--hard);
+}
+
+/* 「我不知道」比選項低調一點，但一樣好按 */
+.flash-unknown {
+  width: 100%;
+  min-height: 48px;
+  border-style: dashed;
+  color: var(--ink-2);
+  touch-action: manipulation;
 }
 
 .flash-detail {
@@ -2294,7 +2303,8 @@ audio {
 /* 觸控裝置和手機沒有鍵盤，不顯示快捷鍵 */
 @media (hover: none), (pointer: coarse), (max-width: 599px) {
   .flash-hint,
-  .flash-rate .flash-key {
+  .flash-rate .flash-key,
+  .flash-unknown .flash-key {
     display: none;
   }
 }

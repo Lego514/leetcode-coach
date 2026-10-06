@@ -2,19 +2,26 @@ import { expect, test, type Page } from '@playwright/test';
 
 const cardsSheet = (page: Page) => page.getByRole('region', { name: /^Flashcards/ });
 
-/** 答一張卡：選擇題點第一個選項，翻面卡翻開後選「I could」 */
-async function answerCard(page: Page) {
+/** 答一張卡：選擇題點第一個選項（或「我不知道」），翻面卡翻開後選「I could」 */
+async function answerCard(page: Page, { unknown = false } = {}) {
   const reveal = page.getByRole('button', { name: 'Show the reference' });
   if (await reveal.isVisible()) {
     await reveal.click();
     await page.getByRole('button', { name: /I could/ }).click();
     return;
   }
-  await page.getByRole('list').getByRole('button').first().click();
-  const verdict = page.getByRole('status').filter({ hasText: /^(Correct|Not quite)$/ });
-  await expect(verdict).toHaveCount(1);
-  // 答錯時底部面板會寫出正確答案
-  if ((await verdict.textContent()) === 'Not quite') await expect(page.getByText(/^Correct answer:/)).toBeVisible();
+  if (unknown) {
+    // 不知道就直接看答案，不用亂猜
+    await page.getByRole('button', { name: 'I don’t know' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'No worries, here’s the answer' })).toHaveCount(1);
+    await expect(page.getByText(/^Correct answer:/)).toBeVisible();
+  } else {
+    await page.getByRole('list').getByRole('button').first().click();
+    const verdict = page.getByRole('status').filter({ hasText: /^(Correct|Not quite)$/ });
+    await expect(verdict).toHaveCount(1);
+    // 答錯時底部面板會寫出正確答案
+    if ((await verdict.textContent()) === 'Not quite') await expect(page.getByText(/^Correct answer:/)).toBeVisible();
+  }
   await page.getByRole('button', { name: /^(Next|See results)$/ }).click();
 }
 
@@ -25,7 +32,7 @@ test('does a round of flashcards and counts it toward the streak', async ({ page
 
   for (let i = 1; i <= 5; i += 1) {
     await expect(page.getByText(`Card ${i} of 5`)).toBeVisible();
-    await answerCard(page);
+    await answerCard(page, { unknown: i === 1 });
   }
 
   await expect(page.getByRole('heading', { name: 'Round complete' })).toBeVisible();

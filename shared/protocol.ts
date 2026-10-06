@@ -29,6 +29,7 @@ export const attemptDataSchema = z.object({
   mode: z.enum(ATTEMPT_MODES),
   hints: z.number().int().min(0).max(10).optional(),
   sawSolution: z.boolean().optional(),
+  delayDays: z.number().int().min(1).max(365).optional(),
 });
 
 /** AI 對一次講解的回饋；分數 0 沒講到、1 講得不完整、2 講清楚 */
