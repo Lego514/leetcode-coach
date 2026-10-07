@@ -25,7 +25,18 @@ import {
   nextPointerName,
   PALETTE,
   placeAtCenter,
-  recolorShapes,
+  recolorElements,
+  elementsInRect,
+  rectFromCorners,
+  captureStep,
+  deleteStep,
+  setStepCaption,
+  restoreStep,
+  stepDoc,
+  clearElements,
+  MAX_STEPS,
+  hitConnector,
+  setArrowHead,
   pointerPosition,
   pointerTone,
   POINTER_TONES,
@@ -233,12 +244,12 @@ describe('editing', () => {
     expect(removeElements(doc, new Set(['b'])).elements.map((el) => el.id)).toEqual(['a']);
   });
 
-  it('duplicates with new ids, offset, and free pointers', () => {
+  it('duplicates with new ids and offset, freeing a pointer copied without its array', () => {
     let doc = boardWithArray();
     doc = { elements: doc.elements.map((el) => (el.id === 'pi' ? { ...el, attach: { id: 'arr', index: 0 } } : el)) };
-    const { doc: next, ids } = duplicateElements(doc, new Set(['arr', 'pi']));
-    expect(ids).toHaveLength(2);
-    const copy = next.elements.find((el) => el.id === ids[1]) as ElementOf<'pointer'>;
+    const { doc: next, ids } = duplicateElements(doc, new Set(['pi']));
+    expect(ids).toHaveLength(1);
+    const copy = next.elements.find((el) => el.id === ids[0]) as ElementOf<'pointer'>;
     expect(copy.attach).toBeUndefined();
     expect(copy.x).toBe(pointerPosition(doc, pointer(doc, 'pi')).x + 24);
   });
@@ -314,10 +325,123 @@ describe('rectangles and ellipses', () => {
 
     doc = resizeShape(doc, 'c', 3, 400);
     expect(doc.elements[0]).toMatchObject({ w: 8, h: 400 });
-    doc = recolorShapes(doc, new Set(['c', 'n']), 'green');
+    doc = recolorElements(doc, new Set(['c', 'n']), 'green');
     expect(doc.elements[0]).toMatchObject({ color: 'green' });
     expect(doc.elements[1]).not.toHaveProperty('color');
     expect(boardDocSchema.safeParse(doc).success).toBe(true);
+  });
+});
+
+describe('lines', () => {
+  const a = createElement('graphNode', { x: 0, y: 0 }, 'a', texts);
+  const b = createElement('graphNode', { x: 200, y: 0 }, 'b', texts);
+  const edge = { type: 'arrow' as const, id: 'e', from: { id: 'a' }, to: { id: 'b' }, color: 'ink' as const };
+
+  it('turns an arrow into a plain line and back', () => {
+    let doc: BoardDoc = { elements: [a, b, edge] };
+    doc = setArrowHead(doc, 'e', 'none');
+    expect(doc.elements[2]).toMatchObject({ head: 'none' });
+    expect(boardDocSchema.safeParse(doc).success).toBe(true);
+    doc = setArrowHead(doc, 'e', 'end');
+    expect(doc.elements[2]).not.toHaveProperty('head', 'none');
+  });
+
+  it('can be clicked and recolored', () => {
+    let doc: BoardDoc = { elements: [a, b, edge] };
+    expect(hitConnector(doc, { x: 120, y: 27 }, 8)).toBe('e');
+    expect(hitConnector(doc, { x: 120, y: 80 }, 8)).toBeUndefined();
+    doc = recolorElements(doc, new Set(['e', 'a']), 'red');
+    expect(doc.elements[2]).toMatchObject({ color: 'red' });
+    expect(doc.elements[0]).not.toHaveProperty('color');
+  });
+});
+
+describe('steps', () => {
+  it('records snapshots that later edits do not change', () => {
+    let doc = boardWithArray();
+    doc = captureStep(doc, 's1', 'start');
+    doc = shiftPointer({ elements: doc.elements.map((el) => (el.id === 'pi' ? { ...el, attach: { id: 'arr', index: 0 } } : el)), steps: doc.steps }, 'pi', 1);
+    doc = captureStep(doc, 's2');
+    doc = moveElements(doc, new Set(['arr']), 100, 0);
+    expect(doc.steps?.map((s) => s.caption)).toEqual(['start', '']);
+    // 第一步記的時候指標還沒吸附，第二步在第 1 格
+    expect(pointer(stepDoc(doc, 0), 'pi').attach).toBeUndefined();
+    expect(pointer(stepDoc(doc, 1), 'pi').attach?.index).toBe(1);
+    expect((stepDoc(doc, 1).elements[0] as ElementOf<'list'>).x).toBe(100);
+    expect(boardDocSchema.safeParse(doc).success).toBe(true);
+  });
+
+  it('keeps steps through edits, captions, restores, and clearing the canvas', () => {
+    let doc = captureStep(boardWithArray(), 's1');
+    doc = setStepCaption(doc, 0, 'j moves right');
+    doc = removeElements(doc, new Set(['arr']));
+    doc = addElement(doc, createElement('var', { x: 0, y: 0 }, 'v', texts));
+    expect(doc.steps).toHaveLength(1);
+    doc = restoreStep(doc, 0);
+    expect(doc.elements.map((el) => el.id)).toEqual(['arr', 'pi', 'pj']);
+    doc = clearElements(doc);
+    expect(doc.elements).toEqual([]);
+    expect(doc.steps?.[0].caption).toBe('j moves right');
+    doc = deleteStep(doc, 0);
+    expect(doc).not.toHaveProperty('steps');
+  });
+
+  it('stops at the step limit', () => {
+    let doc: BoardDoc = EMPTY_DOC;
+    for (let i = 0; i < MAX_STEPS + 3; i += 1) doc = captureStep(doc, `s${i}`);
+    expect(doc.steps).toHaveLength(MAX_STEPS);
+  });
+});
+
+describe('marquee selection', () => {
+  function group(): BoardDoc {
+    const base = boardWithArray();
+    const elements = base.elements.map((el) => (el.id === 'pi' ? { ...el, attach: { id: 'arr', index: 1 } } : el));
+    const a = createElement('treeNode', { x: 100, y: 300 }, 'a', texts);
+    const b = createElement('treeNode', { x: 200, y: 300 }, 'b', texts);
+    return {
+      elements: [
+        ...elements,
+        a,
+        b,
+        { type: 'arrow', id: 'e', from: { id: 'a' }, to: { id: 'b' }, color: 'ink' },
+        { type: 'stroke', id: 's', color: 'red', points: [100, 400, 150, 420] },
+      ],
+    };
+  }
+
+  it('selects only what lies entirely inside the box', () => {
+    const doc = group();
+    expect(elementsInRect(doc, rectFromCorners({ x: 90, y: 290 }, { x: 260, y: 430 })).sort()).toEqual(['a', 'b', 'e', 's']);
+    // 只框到一半的陣列不算
+    expect(elementsInRect(doc, rectFromCorners({ x: 90, y: 90 }, { x: 180, y: 200 }))).not.toContain('arr');
+    expect(elementsInRect(doc, rectFromCorners({ x: 90, y: 90 }, { x: 300, y: 240 }))).toEqual(['arr', 'pi']);
+  });
+
+  it('moves a group together, keeping pointers on their array and ink in place relative to it', () => {
+    const doc = moveElements(group(), new Set(['arr', 'pi', 's', 'e', 'a', 'b']), 50, 10);
+    expect(pointer(doc, 'pi').attach).toEqual({ id: 'arr', index: 1 });
+    expect((doc.elements.find((el) => el.id === 's') as ElementOf<'stroke'>).points).toEqual([150, 410, 200, 430]);
+    expect(doc.elements.find((el) => el.id === 'a')).toMatchObject({ x: 150, y: 310 });
+  });
+
+  it('duplicates a group with pointers and arrows wired to the copies', () => {
+    const source = group();
+    const { doc, ids } = duplicateElements(source, new Set(['arr', 'pi', 'a', 'b', 'e', 's']));
+    expect(ids).toHaveLength(6);
+    const copies = doc.elements.filter((el) => ids.includes(el.id));
+    const arrCopy = copies.find((el) => el.type === 'list')!;
+    const ptrCopy = copies.find((el) => el.type === 'pointer') as ElementOf<'pointer'>;
+    expect(ptrCopy.attach).toEqual({ id: arrCopy.id, index: 1 });
+    const edgeCopy = copies.find((el) => el.type === 'arrow') as ElementOf<'arrow'>;
+    const nodeIds = copies.filter((el) => el.type === 'node').map((el) => el.id);
+    expect(nodeIds).toContain((edgeCopy.from as { id: string }).id);
+    expect(nodeIds).toContain((edgeCopy.to as { id: string }).id);
+    expect(boardDocSchema.safeParse(doc).success).toBe(true);
+
+    // 箭頭的另一端沒有一起複製時，不複製箭頭
+    const partial = duplicateElements(source, new Set(['a', 'e']));
+    expect(partial.ids).toHaveLength(1);
   });
 });
 

@@ -2498,6 +2498,16 @@ audio {
   background: var(--sheet);
 }
 
+.board-export {
+  flex: none;
+  gap: 6px;
+}
+
+.board-export svg {
+  width: 16px;
+  height: 16px;
+}
+
 .board-heading {
   display: flex;
   flex-direction: column;
@@ -2702,6 +2712,33 @@ audio {
 
 .board-arrow-draft {
   stroke-dasharray: 6 4;
+}
+
+/* 框選的範圍 */
+.board-marquee {
+  fill: var(--pen);
+  fill-opacity: 0.08;
+  stroke: var(--pen);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.board-stroke-selected {
+  fill: none;
+  stroke: var(--pen);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.3;
+}
+
+/* 選取的箭頭或直線：底下加一道淡淡的藍 */
+.board-arrow-selected {
+  stroke: var(--pen);
+  stroke-width: 9;
+  stroke-linecap: round;
+  opacity: 0.3;
 }
 
 .board-empty {
@@ -3453,6 +3490,147 @@ textarea.board-text-input {
   outline-offset: 1px;
 }
 
+/* ---------- 逐步播放 ---------- */
+
+.board-steps-widget {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--sheet);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+.board-steps-widget .btn {
+  gap: 6px;
+}
+
+.board-record-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--board-red);
+}
+
+.board-steps-play {
+  display: inline-flex;
+}
+
+.board-steps-play svg {
+  width: 14px;
+  height: 14px;
+}
+
+.board-playback {
+  position: absolute;
+  right: 0;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(640px, calc(100% - 120px));
+  margin-inline: auto;
+  padding: 10px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--sheet);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.14);
+}
+
+.board-playback-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.board-playback-count {
+  min-width: 92px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-step-dots {
+  display: flex;
+  gap: 4px;
+  max-width: 100%;
+  margin: 0 0 0 auto;
+  padding: 2px;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.board-step-dots button {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 13px;
+  background: var(--sheet);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.board-step-dots button[aria-current='step'] {
+  border-color: var(--pen);
+  background: var(--pen);
+  color: var(--on-pen);
+}
+
+.board-playback-caption {
+  font-size: 16px;
+}
+
+.board-playback-actions {
+  justify-content: flex-end;
+}
+
+/* 播放時：元件從上一步的位置滑到這一步，元件庫先停用 */
+.board[data-playing] .board-el {
+  cursor: default;
+  transition:
+    left 0.35s ease,
+    top 0.35s ease;
+}
+
+.board[data-playing] .board-cell {
+  transition: background-color 0.35s ease;
+}
+
+.board[data-playing] .board-palette {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board[data-playing] .board-el,
+  .board[data-playing] .board-cell {
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .board-steps-text,
+  .board-export-text {
+    display: none;
+  }
+
+  .board-playback {
+    width: calc(100% - 24px);
+  }
+}
+
 /* 手機和直立的平板：元件庫改成上方一條，可以左右滑 */
 @media (max-width: 760px) {
   .board-body {
@@ -3542,6 +3720,23 @@ textarea.board-text-input {
     right: 12px;
     bottom: auto;
     flex-direction: row;
+  }
+
+  /* 橫排時照習慣排成「－ 100% ＋」 */
+  .board-zoom-out {
+    order: 1;
+  }
+
+  .board-zoom-value {
+    order: 2;
+  }
+
+  .board-zoom-in {
+    order: 3;
+  }
+
+  .board-zoom > :nth-child(n + 4) {
+    order: 4;
   }
 
   .board-help {

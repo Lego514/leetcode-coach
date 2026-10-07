@@ -160,7 +160,15 @@ export const boardElementSchema = z.discriminatedUnion('type', [
     /** 吸附在陣列的哪一格；有吸附時位置跟著陣列走 */
     attach: z.object({ id: boardElementId, index: z.number().int().min(0).max(63) }).optional(),
   }),
-  z.object({ type: z.literal('arrow'), id: boardElementId, from: boardEnd, to: boardEnd, color: z.enum(BOARD_COLORS) }),
+  z.object({
+    type: z.literal('arrow'),
+    id: boardElementId,
+    from: boardEnd,
+    to: boardEnd,
+    color: z.enum(BOARD_COLORS),
+    /** none 是沒有箭頭的直線（例如無向圖的邊）；沒寫就是有箭頭 */
+    head: z.enum(['end', 'none']).optional(),
+  }),
   z.object({
     type: z.literal('stroke'),
     id: boardElementId,
@@ -170,7 +178,18 @@ export const boardElementSchema = z.discriminatedUnion('type', [
   }),
 ]);
 
-export const boardDocSchema = z.object({ elements: z.array(boardElementSchema).max(800) });
+/** 逐步播放的一步：當時整張白板的快照，加上一句說明 */
+export const boardStepSchema = z.object({
+  id: boardElementId,
+  caption: text(200),
+  elements: z.array(boardElementSchema).max(800),
+});
+
+export const boardDocSchema = z.object({
+  elements: z.array(boardElementSchema).max(800),
+  /** 記下來的步驟，最多 50 步；沒記過就沒有這一項 */
+  steps: z.array(boardStepSchema).max(50).optional(),
+});
 export type BoardDoc = z.infer<typeof boardDocSchema>;
 export type BoardElement = BoardDoc['elements'][number];
 

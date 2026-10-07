@@ -2,17 +2,20 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
 import { BOARD_COLORS, BOARD_MAX_BYTES, CELL_COLORS, type BoardColor, type CellColor } from '../../../shared/constants';
 import type { Difficulty } from '../../data/problems';
 import { useI18n } from '../../i18n';
+import { boardToSvg, estimateWidth, type Measure } from '../../lib/board/exportSvg';
 import * as m from '../../lib/board/model';
 import { useCloud } from '../../store/cloud';
+import { useToast } from '../toast';
 import { DifficultyTag, Dialog } from '../ui';
 import { saveBoard } from '../../store/actions';
 import { useBoard } from '../../store/queries';
 import { ElementView } from './BoardElements';
+import { PlaybackBar, StepsWidget } from './BoardSteps';
 
 // 自己寫的數位白板：左邊拖元件、中間是可以平移縮放的畫布、下面是工具列。
 // 元件是一般的 HTML（文字清楚、可以直接編輯），箭頭和筆跡畫在同一層的 SVG 上。
 
-type Tool = 'select' | 'hand' | 'arrow' | 'rect' | 'ellipse' | 'pen' | 'eraser';
+type Tool = 'select' | 'hand' | 'arrow' | 'line' | 'rect' | 'ellipse' | 'pen' | 'eraser';
 
 interface View {
   x: number;
@@ -22,8 +25,8 @@ interface View {
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3;
-const TOOLS: Tool[] = ['select', 'hand', 'arrow', 'rect', 'ellipse', 'pen', 'eraser'];
-const TOOL_KEYS: Record<string, Tool> = { v: 'select', h: 'hand', a: 'arrow', r: 'rect', o: 'ellipse', p: 'pen', e: 'eraser' };
+const TOOLS: Tool[] = ['select', 'hand', 'arrow', 'line', 'rect', 'ellipse', 'pen', 'eraser'];
+const TOOL_KEYS: Record<string, Tool> = { v: 'select', h: 'hand', a: 'arrow', l: 'line', r: 'rect', o: 'ellipse', p: 'pen', e: 'eraser' };
 
 type Gesture =
   | { kind: 'pan'; pointerId: number; start: m.Point; view: View }
@@ -39,15 +42,17 @@ type Gesture =
     }
   | { kind: 'pen'; pointerId: number; points: number[] }
   | { kind: 'erase'; pointerId: number; erased: boolean }
-  | { kind: 'arrow'; pointerId: number; from: m.ArrowEnd; fromPoint: m.Point }
+  | { kind: 'arrow'; pointerId: number; from: m.ArrowEnd; fromPoint: m.Point; head: 'end' | 'none' }
   | { kind: 'shape'; pointerId: number; variant: m.ShapeVariant; from: m.Point }
+  | { kind: 'marquee'; pointerId: number; start: m.Point; base: ReadonlySet<string> }
   | { kind: 'resize'; pointerId: number; id: string; start: m.Point; base: m.BoardDoc; w: number; h: number; moved: boolean }
   | { kind: 'pinch'; startDistance: number; startMid: m.Point; view: View };
 
 type Draft =
   | { kind: 'pen'; points: number[] }
-  | { kind: 'arrow'; from: m.Point; to: m.Point }
-  | { kind: 'shape'; shape: m.ElementOf<'shape'> };
+  | { kind: 'arrow'; from: m.Point; to: m.Point; head: 'end' | 'none' }
+  | { kind: 'shape'; shape: m.ElementOf<'shape'> }
+  | { kind: 'marquee'; rect: m.Rect };
 
 const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
@@ -77,6 +82,7 @@ export function BoardEditor({ boardId, onClose, ...heading }: BoardEditorProps) 
 function Editor({ boardId, title, caption, difficulty, initial, onClose }: BoardEditorProps & { initial: m.BoardDoc }) {
   const { t } = useI18n();
   const signedIn = useCloud().account.kind === 'signed-in';
+  const toast = useToast();
   const [history, setHistory] = useState(() => m.initHistory(initial));
   const doc = history.present;
   const [view, setView] = useState<View>({ x: 0, y: 0, zoom: 1 });
@@ -96,6 +102,9 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   const [confirmClear, setConfirmClear] = useState(false);
   /** 手機上顏色收成一顆，點了才展開 */
   const [colorsOpen, setColorsOpen] = useState(false);
+  /** 正在播放第幾步；null 是一般編輯 */
+  const [playing, setPlaying] = useState<number | null>(null);
+  const [autoPlay, setAutoPlay] = useState(false);
   const [savedDoc, setSavedDoc] = useState(initial);
   const [tooLarge, setTooLarge] = useState(false);
 
@@ -221,11 +230,17 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     if (!node) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      // 換成像素：滑鼠滾輪一格大約 100，Firefox 有時以「行」為單位
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? node.clientHeight : 1;
+      const dx = e.deltaX * unit;
+      const dy = e.deltaY * unit;
       if (e.ctrlKey || e.metaKey) {
+        // 每次最多縮放約 12%：滑鼠一格不會一下跳太多，觸控板捏合也一樣平順
         const r = node.getBoundingClientRect();
-        zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - r.left, e.clientY - r.top);
+        const step = Math.max(-60, Math.min(60, dy));
+        zoomAt(Math.exp(-step * 0.002), e.clientX - r.left, e.clientY - r.top);
       } else {
-        setView((v) => ({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }));
+        setView((v) => ({ ...v, x: v.x - dx, y: v.y - dy }));
       }
     };
     node.addEventListener('wheel', onWheel, { passive: false });
@@ -316,16 +331,89 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     }
     setColor(c);
     setColorsOpen(false);
-    if ([...selected].some((id) => m.findElement(doc, id)?.type === 'shape')) apply(m.recolorShapes(doc, selected, c));
+    if ([...selected].some((id) => m.hasColor(m.findElement(doc, id)))) apply(m.recolorElements(doc, selected, c));
   };
 
   /** 清空整張白板；跟其他修改一樣可以復原 */
+  // ---------- 逐步播放 ----------
+
+  const steps = doc.steps ?? [];
+  // 步驟被刪掉或復原時，播放的位置可能已經不存在
+  const playIndex = playing !== null && playing < steps.length ? playing : null;
+  /** 畫面上顯示的內容：播放時是那一步的快照，平常是目前的白板 */
+  const shownDoc = playIndex === null ? doc : m.stepDoc(doc, playIndex);
+
+  const captureCurrentStep = () => {
+    if (steps.length >= m.MAX_STEPS) return;
+    stopEditing();
+    apply(m.captureStep(doc, m.newStepId(doc)));
+  };
+
+  const startPlayback = (index: number) => {
+    stopEditing();
+    setSelection(new Set());
+    setCellSel(null);
+    setShowHelp(false);
+    setAutoPlay(false);
+    setPlaying(index);
+  };
+
+  const exitPlayback = () => {
+    setAutoPlay(false);
+    setPlaying(null);
+  };
+
+  const goToStep = (index: number) => setPlaying(Math.max(0, Math.min(index, steps.length - 1)));
+
+  const toggleAutoPlay = () => {
+    if (playIndex === null) return;
+    // 在最後一步按播放就從頭開始
+    if (!autoPlay && playIndex === steps.length - 1) setPlaying(0);
+    setAutoPlay((on) => !on);
+  };
+
+  const restoreFromStep = () => {
+    if (playIndex === null) return;
+    apply(m.restoreStep(doc, playIndex));
+    exitPlayback();
+  };
+
+  const deleteCurrentStep = () => {
+    if (playIndex === null) return;
+    apply(m.deleteStep(doc, playIndex));
+    if (steps.length <= 1) exitPlayback();
+    else setPlaying(Math.min(playIndex, steps.length - 2));
+  };
+
+  // 自動播放：每一步停 1.4 秒，播到最後一步就停
+  useEffect(() => {
+    if (!autoPlay || playIndex === null) return;
+    const timer = window.setTimeout(() => {
+      if (playIndex >= steps.length - 1) setAutoPlay(false);
+      else setPlaying(playIndex + 1);
+    }, 1400);
+    return () => window.clearTimeout(timer);
+  }, [autoPlay, playIndex, steps.length]);
+
+  /** 匯出目前畫面上的內容（播放時是那一步）成 PNG */
+  const exportImage = async () => {
+    const out = boardToSvg(shownDoc, sizes, { measure: canvasMeasure(), front: t.board.front, back: t.board.back });
+    if (!out) return;
+    try {
+      const blob = await svgToPng(out.svg, out.width, out.height);
+      const base = boardId === 'scratch' ? 'whiteboard' : `whiteboard-${boardId.slice(1)}`;
+      download(blob, `${base}${playIndex === null ? '' : `-step-${playIndex + 1}`}.png`);
+    } catch {
+      toast(t.board.exportFailed);
+    }
+  };
+
   const clearBoard = () => {
     setConfirmClear(false);
     setEditingId(null);
     setCellSel(null);
     setSelection(new Set());
-    apply(m.EMPTY_DOC);
+    apply(m.clearElements(doc));
   };
 
   const undo = () => {
@@ -384,6 +472,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       return;
     }
     if (pointers.current.size > 2) return;
+    if (playIndex !== null) {
+      gesture.current = { kind: 'pan', pointerId: e.pointerId, start: { x: e.clientX, y: e.clientY }, view };
+      return;
+    }
 
     const world = toWorld(e.clientX, e.clientY);
     const elId = target.closest<HTMLElement>('[data-el]')?.dataset.el;
@@ -398,13 +490,31 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       return;
     }
 
-    const pan = tool === 'hand' || spaceDown.current || e.button === 1 || (tool === 'select' && !elId);
-    if (pan) {
-      if (tool === 'select' && !elId && !e.shiftKey) {
-        setSelection(new Set());
-        setCellSel(null);
+    const connector = tool === 'select' && !elId && !spaceDown.current ? m.hitConnector(doc, world, 8 / view.zoom, sizes) : undefined;
+    if (connector) {
+      setCellSel(null);
+      if (e.shiftKey) {
+        const next = new Set(selected);
+        if (next.has(connector)) next.delete(connector);
+        else next.add(connector);
+        setSelection(next);
+      } else {
+        setSelection(new Set([connector]));
       }
+      return;
+    }
+
+    const pan = tool === 'hand' || spaceDown.current || e.button === 1;
+    if (pan) {
       gesture.current = { kind: 'pan', pointerId: e.pointerId, start: { x: e.clientX, y: e.clientY }, view };
+      return;
+    }
+
+    // 選取工具在空白處拖曳：框選；按住 Shift 是加選
+    if (tool === 'select' && !elId) {
+      setCellSel(null);
+      if (!e.shiftKey) setSelection(new Set());
+      gesture.current = { kind: 'marquee', pointerId: e.pointerId, start: world, base: e.shiftKey ? selected : new Set() };
       return;
     }
 
@@ -453,10 +563,12 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         setDraft({ kind: 'shape', shape: m.shapeFromDrag('draft', tool, world, world, color) });
         return;
       }
-      case 'arrow': {
+      case 'arrow':
+      case 'line': {
         const from: m.ArrowEnd = elId ? { id: elId } : { x: Math.round(world.x), y: Math.round(world.y) };
-        gesture.current = { kind: 'arrow', pointerId: e.pointerId, from, fromPoint: world };
-        setDraft({ kind: 'arrow', from: world, to: world });
+        const head = tool === 'line' ? 'none' : 'end';
+        gesture.current = { kind: 'arrow', pointerId: e.pointerId, from, fromPoint: world, head };
+        setDraft({ kind: 'arrow', from: world, to: world, head });
         return;
       }
       default:
@@ -508,11 +620,17 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         eraseAt(world, g);
         return;
       case 'arrow':
-        setDraft({ kind: 'arrow', from: g.fromPoint, to: world });
+        setDraft({ kind: 'arrow', from: g.fromPoint, to: world, head: g.head });
         return;
       case 'shape':
         setDraft({ kind: 'shape', shape: m.shapeFromDrag('draft', g.variant, g.from, world, color, e.shiftKey) });
         return;
+      case 'marquee': {
+        const rect = m.rectFromCorners(g.start, world);
+        setDraft({ kind: 'marquee', rect });
+        setSelection(new Set([...g.base, ...m.elementsInRect(doc, rect, sizes)]));
+        return;
+      }
       case 'resize': {
         const dx = world.x - g.start.x;
         const dy = world.y - g.start.y;
@@ -574,7 +692,9 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         const to: m.ArrowEnd = hit ? { id: hit } : { x: Math.round(world.x), y: Math.round(world.y) };
         const same = 'id' in g.from && 'id' in to && g.from.id === to.id;
         const tiny = !('id' in g.from) && !('id' in to) && Math.hypot(world.x - g.fromPoint.x, world.y - g.fromPoint.y) < 8;
-        if (!same && !tiny) apply(m.addElement(doc, { type: 'arrow', id: m.newId(doc), from: g.from, to, color }));
+        if (!same && !tiny) {
+          apply(m.addElement(doc, { type: 'arrow', id: m.newId(doc), from: g.from, to, color, ...(g.head === 'none' ? { head: 'none' as const } : {}) }));
+        }
         return;
       }
       default:
@@ -586,7 +706,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
 
   const paletteHandlers = (kind: m.PaletteKind) => ({
     onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || playIndex !== null) return;
       e.currentTarget.setPointerCapture(e.pointerId);
       paletteDrag.current = { kind, start: { x: e.clientX, y: e.clientY }, dragging: false };
     },
@@ -614,7 +734,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       setGhost(null);
     },
     onClick: () => {
-      if (suppressClick.current) return;
+      if (suppressClick.current || playIndex !== null) return;
       addKind(kind);
     },
   });
@@ -625,6 +745,18 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('input, textarea, select')) return;
+      if (playIndex !== null) {
+        if (e.type !== 'keydown' || e.metaKey || e.ctrlKey) return;
+        // 焦點在按鈕上時，Enter 和空白鍵交給按鈕
+        if (target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
+        if (e.key === 'ArrowRight') goToStep(playIndex + 1);
+        else if (e.key === 'ArrowLeft') goToStep(playIndex - 1);
+        else if (e.key === ' ') toggleAutoPlay();
+        else if (e.key === 'Escape') exitPlayback();
+        else return;
+        e.preventDefault();
+        return;
+      }
       if (e.key === ' ' && !target.closest('button')) {
         spaceDown.current = e.type === 'keydown';
         e.preventDefault();
@@ -642,6 +774,12 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       } else if (mod && e.key.toLowerCase() === 'd') {
         e.preventDefault();
         duplicateSelected();
+      } else if (mod && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        stopEditing();
+        setCellSel(null);
+        setTool('select');
+        setSelection(new Set(doc.elements.map((el) => el.id)));
       } else if (mod) {
         return;
       } else if (pickedList && pickedIndex !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
@@ -677,6 +815,8 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         // 吸附在陣列上的指標左右移一格，其他元件移 10
         if (single?.type === 'pointer' && single.attach && dx !== 0) apply(m.shiftPointer(doc, single.id, dx));
         else apply(m.moveElements(doc, selected, dx * 10, dy * 10));
+      } else if (e.key === 's') {
+        captureCurrentStep();
       } else if (TOOL_KEYS[e.key]) {
         chooseTool(TOOL_KEYS[e.key]);
       } else if (e.key === '+' || e.key === '=') {
@@ -702,13 +842,14 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   // 只有單獨選取時才顯示「＋」格，平常畫面保持乾淨
   const canAdd = (el: m.Placed) => tool === 'select' && selected.size === 1 && selected.has(el.id);
   // 框框畫在最上層，框線才不會被格子的底色蓋住；框裡面點得穿，不會擋到框住的東西
-  const placed = [...doc.elements.filter((el) => m.isPlaced(el) && el.type !== 'shape'), ...doc.elements.filter((el) => el.type === 'shape')] as m.Placed[];
-  const ink = doc.elements.filter((el): el is m.ElementOf<'arrow'> | m.ElementOf<'stroke'> => !m.isPlaced(el));
+  const shown = shownDoc.elements;
+  const placed = [...shown.filter((el) => m.isPlaced(el) && el.type !== 'shape'), ...shown.filter((el) => el.type === 'shape')] as m.Placed[];
+  const ink = shown.filter((el): el is m.ElementOf<'arrow'> | m.ElementOf<'stroke'> => !m.isPlaced(el));
   const saving = doc !== savedDoc;
   const grid = 24 * view.zoom;
 
   return (
-    <div className="board" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="board" role="dialog" aria-modal="true" aria-label={title} data-playing={playIndex !== null || undefined}>
       <header className="board-head">
         <button type="button" className="btn btn-quiet btn-small" onClick={onClose}>
           {t.board.close}
@@ -724,6 +865,17 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         <span className="board-save" aria-live="polite">
           {tooLarge ? t.board.tooLarge : saving ? t.board.saving : signedIn ? t.board.savedSynced : t.board.savedLocal}
         </span>
+        <button
+          type="button"
+          className="btn btn-small board-export"
+          disabled={shownDoc.elements.length === 0}
+          aria-label={t.board.export}
+          title={t.board.export}
+          onClick={() => void exportImage()}
+        >
+          {ICON_EXPORT}
+          <span className="board-export-text">{t.board.export}</span>
+        </button>
       </header>
 
       <div className="board-body">
@@ -763,7 +915,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
               <ElementView
                 key={el.id}
                 el={el}
-                doc={doc}
+                doc={shownDoc}
                 selected={selected.has(el.id)}
                 editing={editingId === el.id}
                 snapIndex={snap?.id === el.id ? snap.index : undefined}
@@ -786,23 +938,37 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 ))}
               </defs>
               {ink.map((el) => {
-                if (el.type === 'stroke') return <path key={el.id} d={strokePath(el.points)} stroke={m.colorVar(el.color)} className="board-stroke" />;
-                const ends = m.arrowPoints(doc, el, sizes);
+                if (el.type === 'stroke') {
+                  return (
+                    <g key={el.id}>
+                      {selected.has(el.id) && <path d={strokePath(el.points)} className="board-stroke-selected" />}
+                      <path d={strokePath(el.points)} stroke={m.colorVar(el.color)} className="board-stroke" />
+                    </g>
+                  );
+                }
+                const ends = m.arrowPoints(shownDoc, el, sizes);
                 if (!ends) return null;
                 return (
-                  <line
-                    key={el.id}
-                    x1={ends[0].x}
-                    y1={ends[0].y}
-                    x2={ends[1].x}
-                    y2={ends[1].y}
-                    stroke={m.colorVar(el.color)}
-                    className="board-arrow"
-                    markerEnd={`url(#board-head-${el.color})`}
-                  />
+                  <g key={el.id}>
+                    {selected.has(el.id) && (
+                      <line x1={ends[0].x} y1={ends[0].y} x2={ends[1].x} y2={ends[1].y} className="board-arrow-selected" />
+                    )}
+                    <line
+                      x1={ends[0].x}
+                      y1={ends[0].y}
+                      x2={ends[1].x}
+                      y2={ends[1].y}
+                      stroke={m.colorVar(el.color)}
+                      className="board-arrow"
+                      markerEnd={el.head === 'none' ? undefined : `url(#board-head-${el.color})`}
+                    />
+                  </g>
                 );
               })}
               {draft?.kind === 'pen' && <path d={strokePath(draft.points)} stroke={m.colorVar(color)} className="board-stroke" />}
+              {draft?.kind === 'marquee' && (
+                <rect className="board-marquee" x={draft.rect.x} y={draft.rect.y} width={draft.rect.w} height={draft.rect.h} />
+              )}
               {draft?.kind === 'shape' &&
                 (draft.shape.variant === 'rect' ? (
                   <rect
@@ -832,15 +998,40 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                   y2={draft.to.y}
                   stroke={m.colorVar(color)}
                   className="board-arrow board-arrow-draft"
-                  markerEnd={`url(#board-head-${color})`}
+                  markerEnd={draft.head === 'none' ? undefined : `url(#board-head-${color})`}
                 />
               )}
             </svg>
           </div>
 
-          {doc.elements.length === 0 && <p className="board-empty">{t.board.empty}</p>}
+          {playIndex === null && doc.elements.length === 0 && <p className="board-empty">{t.board.empty}</p>}
 
-          {tool === 'select' && selected.size > 0 && (
+          {playIndex === null && (
+            <StepsWidget
+              count={steps.length}
+              full={steps.length >= m.MAX_STEPS}
+              onCapture={captureCurrentStep}
+              onPlay={() => startPlayback(0)}
+            />
+          )}
+
+          {playIndex !== null && (
+            <PlaybackBar
+              steps={steps}
+              index={playIndex}
+              autoPlay={autoPlay}
+              onGo={goToStep}
+              onToggleAuto={toggleAutoPlay}
+              onExit={exitPlayback}
+              onRestore={restoreFromStep}
+              onDelete={deleteCurrentStep}
+              onCaptionStart={() => setHistory((h) => m.checkpoint(h))}
+              onCaption={(caption) => setHistory((h) => m.replace(h, m.setStepCaption(h.present, playIndex, caption)))}
+              onCaptionEnd={() => setHistory((h) => m.dropEmptyCheckpoint(h))}
+            />
+          )}
+
+          {playIndex === null && tool === 'select' && selected.size > 0 && (
             <div className="board-selbar" role="toolbar" aria-label={t.board.selectionLabel} data-ui>
               {pickedList && pickedIndex !== undefined ? (
                 <CellActions
@@ -853,10 +1044,13 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 />
               ) : (
                 <>
+                  {selected.size > 1 && <span className="board-selbar-title">{t.board.selectedCount(selected.size)}</span>}
                   {single && <SelectionActions el={single} doc={doc} apply={apply} onEdit={() => startEditing(single.id)} />}
-                  <button type="button" className="btn btn-small" onClick={duplicateSelected}>
-                    {t.board.actions.duplicate}
-                  </button>
+                  {[...selected].some((id) => m.findElement(doc, id)?.type !== 'arrow') && (
+                    <button type="button" className="btn btn-small" onClick={duplicateSelected}>
+                      {t.board.actions.duplicate}
+                    </button>
+                  )}
                   <button type="button" className="btn btn-small btn-danger" onClick={removeSelected}>
                     {t.board.actions.delete}
                   </button>
@@ -865,58 +1059,61 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
             </div>
           )}
 
-          <div className="board-tools" role="toolbar" aria-label={t.board.toolbarLabel} data-ui>
-            {TOOLS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                className="board-tool"
-                aria-pressed={tool === id}
-                aria-label={t.board.tools[id]}
-                title={t.board.tools[id]}
-                onClick={() => chooseTool(id)}
-              >
-                {TOOL_ICONS[id]}
-              </button>
-            ))}
-            <span className="board-tools-sep" aria-hidden />
-            <span className="board-colors" data-open={colorsOpen || undefined}>
-              {BOARD_COLORS.map((c) => (
+          {/* 播放時下方換成播放列 */}
+          {playIndex === null && (
+            <div className="board-tools" role="toolbar" aria-label={t.board.toolbarLabel} data-ui>
+              {TOOLS.map((id) => (
                 <button
-                  key={c}
+                  key={id}
                   type="button"
-                  className="board-swatch"
-                  aria-pressed={color === c}
-                  aria-label={t.board.colors[c]}
-                  title={t.board.colors[c]}
-                  style={{ color: m.colorVar(c) }}
-                  onClick={() => pickColor(c)}
-                />
+                  className="board-tool"
+                  aria-pressed={tool === id}
+                  aria-label={t.board.tools[id]}
+                  title={t.board.tools[id]}
+                  onClick={() => chooseTool(id)}
+                >
+                  {TOOL_ICONS[id]}
+                </button>
               ))}
-            </span>
-            <span className="board-tools-sep" aria-hidden />
-            <button type="button" className="board-tool" aria-label={t.board.undo} title={t.board.undo} disabled={history.past.length === 0} onClick={undo}>
-              {ICON_UNDO}
-            </button>
-            <button type="button" className="board-tool" aria-label={t.board.redo} title={t.board.redo} disabled={history.future.length === 0} onClick={redo}>
-              {ICON_REDO}
-            </button>
-            <span className="board-tools-sep" aria-hidden />
-            <button
-              type="button"
-              className="board-tool board-tool-danger"
-              aria-label={t.board.clear}
-              title={t.board.clear}
-              disabled={doc.elements.length === 0}
-              onClick={() => setConfirmClear(true)}
-            >
-              {ICON_CLEAR}
-            </button>
-          </div>
+              <span className="board-tools-sep" aria-hidden />
+              <span className="board-colors" data-open={colorsOpen || undefined}>
+                {BOARD_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className="board-swatch"
+                    aria-pressed={color === c}
+                    aria-label={t.board.colors[c]}
+                    title={t.board.colors[c]}
+                    style={{ color: m.colorVar(c) }}
+                    onClick={() => pickColor(c)}
+                  />
+                ))}
+              </span>
+              <span className="board-tools-sep" aria-hidden />
+              <button type="button" className="board-tool" aria-label={t.board.undo} title={t.board.undo} disabled={history.past.length === 0} onClick={undo}>
+                {ICON_UNDO}
+              </button>
+              <button type="button" className="board-tool" aria-label={t.board.redo} title={t.board.redo} disabled={history.future.length === 0} onClick={redo}>
+                {ICON_REDO}
+              </button>
+              <span className="board-tools-sep" aria-hidden />
+              <button
+                type="button"
+                className="board-tool board-tool-danger"
+                aria-label={t.board.clear}
+                title={t.board.clear}
+                disabled={doc.elements.length === 0}
+                onClick={() => setConfirmClear(true)}
+              >
+                {ICON_CLEAR}
+              </button>
+            </div>
+          )}
 
           <div className="board-zoom" data-ui>
-            <button type="button" className="board-tool" aria-label={t.board.zoomOut} title={t.board.zoomOut} onClick={() => zoomCenter(1 / 1.2)}>
-              −
+            <button type="button" className="board-tool board-zoom-in" aria-label={t.board.zoomIn} title={t.board.zoomIn} onClick={() => zoomCenter(1.2)}>
+              +
             </button>
             <button
               type="button"
@@ -927,8 +1124,8 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
             >
               {Math.round(view.zoom * 100)}%
             </button>
-            <button type="button" className="board-tool" aria-label={t.board.zoomIn} title={t.board.zoomIn} onClick={() => zoomCenter(1.2)}>
-              +
+            <button type="button" className="board-tool board-zoom-out" aria-label={t.board.zoomOut} title={t.board.zoomOut} onClick={() => zoomCenter(1 / 1.2)}>
+              −
             </button>
             <button type="button" className="board-tool" aria-label={t.board.fit} title={t.board.fit} onClick={() => fitTo(doc, sizes)}>
               {ICON_FIT}
@@ -1048,6 +1245,10 @@ function SelectionActions({ el, doc, apply, onEdit }: { el: m.BoardElement; doc:
   if (el.type === 'table') {
     buttons.push([a.removeRow, () => apply(m.resizeTable(doc, el.id, 'row', -1))], [a.removeCol, () => apply(m.resizeTable(doc, el.id, 'col', -1))]);
   }
+  if (el.type === 'arrow') {
+    const plain = el.head === 'none';
+    buttons.push([plain ? a.makeArrow : a.makeLine, () => apply(m.setArrowHead(doc, el.id, plain ? 'end' : 'none'))]);
+  }
   if (el.type === 'pointer' && el.attach) {
     buttons.push([a.pointerLeft, () => apply(m.shiftPointer(doc, el.id, -1))], [a.pointerRight, () => apply(m.shiftPointer(doc, el.id, 1))]);
   }
@@ -1060,6 +1261,43 @@ function SelectionActions({ el, doc, apply, onEdit }: { el: m.BoardElement; doc:
       ))}
     </>
   );
+}
+
+/** 用 canvas 量文字寬度，匯出時換行和截斷才跟畫面一致 */
+function canvasMeasure(): Measure {
+  const context = document.createElement('canvas').getContext('2d');
+  return (value, font) => {
+    if (!context) return estimateWidth(value, font);
+    context.font = font;
+    return context.measureText(value).width;
+  };
+}
+
+/** SVG 畫到 canvas 上轉成 PNG；兩倍解析度，但邊長不超過瀏覽器 canvas 的上限 */
+async function svgToPng(svg: string, width: number, height: number): Promise<Blob> {
+  const scale = Math.min(2, 8000 / Math.max(width, height));
+  const image = new Image();
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await image.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Canvas is not available');
+  context.scale(scale, scale);
+  context.drawImage(image, 0, 0, width, height);
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('PNG encoding failed'))), 'image/png'));
+}
+
+function download(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** 讓元件的中心落在 at */
@@ -1099,6 +1337,11 @@ const TOOL_ICONS: Record<Tool, ReactNode> = {
       <path d="M5 19L19 5M11 5h8v8" />
     </Icon>
   ),
+  line: (
+    <Icon>
+      <path d="M5 19L19 5" />
+    </Icon>
+  ),
   rect: (
     <Icon>
       <rect x="4" y="6" width="16" height="12" rx="2" />
@@ -1130,6 +1373,12 @@ const ICON_UNDO = (
 const ICON_REDO = (
   <Icon>
     <path d="M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" />
+  </Icon>
+);
+
+const ICON_EXPORT = (
+  <Icon>
+    <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14" />
   </Icon>
 );
 

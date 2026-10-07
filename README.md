@@ -41,13 +41,16 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - **Single cells** can be selected one at a time to highlight them, put a pointer on them, insert next to them, or delete them. Pointers and highlights follow their values when cells move. A dashed "+" adds cells, rows, and columns.
   - **Other tools**:
     - rectangle and ellipse frames, which draw on top but stay click-through except their outline
-    - arrows that follow the elements they connect
+    - arrows and plain lines (for undirected edges) that follow the elements they connect
     - a pen, an eraser, and five colors
     - undo/redo and clear canvas
-  - Mouse, trackpad, keyboard, and touch (two-finger pinch) all work.
+  - **Box selection**: drag across empty space to select everything inside, then move, duplicate, delete, or recolor it together. Copies keep pointers on their copied arrays and rewire arrows to the copied elements.
+  - **Step playback**: "Record step" saves a snapshot of the board with an optional one-line note (writing it in English doubles as explanation practice). Playback steps through the snapshots with the arrow keys or plays them automatically; elements slide from one step to the next. You can continue editing from any step.
+  - **Export image**: the board, or the step being played, is redrawn from its data as an SVG and saved as a 2× PNG.
+  - Mouse, trackpad, keyboard, and touch all work. Pan with the scroll wheel, Space + drag, the hand tool, or two fingers; zoom with Ctrl + scroll or a pinch.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - On the practice page the board opens on top, so the timer keeps running.
-  - No whiteboard library is used: the editor is about 40 KB (13 KB gzipped) and loads the first time a board opens.
+  - No whiteboard library is used: the editor is about 56 KB (18 KB gzipped) and loads the first time a board opens.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
@@ -83,7 +86,8 @@ src/                 Web app
   data/                Static content: problems, lists, patterns, hints, interview steps
   lib/                 Pure logic: scheduler, dates, stats, catalog, practice session
     cards.ts             Flashcards: deck, Leitner boxes, picking and dealing a round
-    board/model.ts       Whiteboard: layout, pointer snapping, cell edits, arrows, eraser, undo history
+    board/model.ts       Whiteboard: layout, pointer snapping, cell edits, arrows, selection, steps, undo history
+    board/exportSvg.ts   Whiteboard: redraw a board as SVG for PNG export
   store/               Data layer
     db.ts                Dexie schema (v2: sync ids, outbox, sync state; v3: flashcard answers; v4: whiteboards)
     actions.ts           Every local write; each one also records a change in the outbox
@@ -207,7 +211,7 @@ Notes:
 ## Roadmap
 
 - **Guided solving steps**: work through understand → trace by hand (on the whiteboard) → brute force → what's slow → what's repeated → what to keep → optimal, with a one-line note per step.
-- **Whiteboard, part 2**: lines, a minimap, step-by-step snapshots you can replay, and PNG export.
+- **Whiteboard**: a minimap for large boards, and flashcards that show a recorded step and ask what happens next.
 - **More AI assistance (Claude API)**: hints that react to your own code, code review, and an AI interviewer that asks follow-ups. These would run through the API so the key never reaches the browser.
 - **Behavioral prep**: a STAR story bank, system design notes, and a job application tracker.
 - **Signing in with GitHub.**
@@ -239,7 +243,10 @@ Notes:
 - 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、樹／串列／圖節點、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
 - 指標會吸附在陣列格子上，用方向鍵移動，依名字自動上色。
 - 點一格可以上底色、在那格加指標、插入或刪除格子。
-- 還有矩形框、圓形框、箭頭連線、畫筆、橡皮擦、復原、清空。
+- 還有矩形框、圓形框、箭頭連線、直線（無向圖的邊）、畫筆、橡皮擦、復原、清空。
+- 在空白處拖曳可以框選，框住的東西可以一起移動、複製、刪除或換色。
+- **逐步播放**：按「記一步」把目前的畫面存成一步，可以寫一句說明（用英文寫就是在練講解）；播放時一步一步看，指標會滑到下一格，也可以從任何一步繼續編輯。
+- 可以把白板（或播放中的那一步）匯出成圖片。
 - 每一題有自己的白板，另外有一張自由白板；在「我的白板」可以看到全部。白板存在這台裝置，登入後會同步到雲端。
 - 練習頁打開白板時，計時不會中斷。
 
