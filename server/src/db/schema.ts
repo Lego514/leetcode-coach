@@ -75,6 +75,22 @@ export const aiUsage = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.day] })],
 );
 
+/** 錯誤回報與建議；沒登入時 userId 為空 */
+export const reports = pgTable(
+  'reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    message: text('message').notNull(),
+    contact: text('contact'),
+    context: jsonb('context').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [index('reports_created_idx').on(t.createdAt), index('reports_user_idx').on(t.userId)],
+);
+
 export const schemaMigrations = pgTable('schema_migrations', {
   name: text('name').primaryKey(),
   appliedAt: timestamp('applied_at', { withTimezone: true }).notNull().defaultNow(),

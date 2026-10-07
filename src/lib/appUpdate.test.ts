@@ -19,6 +19,8 @@ describe('app updates', () => {
     expect(canReloadNow('/practice/15')).toBe(false);
     expect(canReloadNow('/cards')).toBe(false);
     expect(canReloadNow('/mock')).toBe(false);
+    // 回報寫到一半不要被重新載入吃掉
+    expect(canReloadNow('/feedback')).toBe(false);
   });
 
   it('tells subscribers once a new version is ready', () => {

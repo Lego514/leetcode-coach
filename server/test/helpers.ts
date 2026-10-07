@@ -17,7 +17,9 @@ export interface TestServer {
   close: () => Promise<void>;
 }
 
-export async function startTestServer(options: { ai?: AiOptions; mail?: MailOptions } = {}): Promise<TestServer> {
+export async function startTestServer(
+  options: { ai?: AiOptions; mail?: MailOptions; adminEmails?: string[]; trustProxy?: boolean } = {},
+): Promise<TestServer> {
   const database = await openDatabase('pglite:memory');
   await migrate(database.db, MIGRATIONS_DIR);
   const clock = { now: new Date('2026-09-16T12:00:00Z') };
@@ -29,6 +31,8 @@ export async function startTestServer(options: { ai?: AiOptions; mail?: MailOpti
     log: () => {},
     ai: options.ai,
     mail: options.mail,
+    adminEmails: options.adminEmails,
+    trustProxy: options.trustProxy,
   });
   return { app, database, clock, close: () => database.close() };
 }

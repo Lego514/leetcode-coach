@@ -7,6 +7,7 @@ import { authRoutes, type MailOptions } from './auth/routes';
 import { aiRoutes, type AiOptions } from './ai/routes';
 import type { Database } from './db/client';
 import { errorBody, HttpError, requestGuard, type AppDeps, type AppEnv } from './http';
+import { reportRoutes } from './reports/routes';
 import { syncRoutes } from './sync/routes';
 
 export interface AppOptions {
@@ -20,6 +21,8 @@ export interface AppOptions {
   ai?: AiOptions;
   /** 沒有設定時忘記密碼停用 */
   mail?: MailOptions;
+  /** 可以看所有回報的帳號 email（小寫）；沒設定時沒有人看得到收件匣 */
+  adminEmails?: string[];
   now?: () => Date;
   log?: (message: string, error?: unknown) => void;
 }
@@ -64,6 +67,7 @@ export function createApp(options: AppOptions) {
   app.route('/api/auth', authRoutes(deps, options.mail));
   app.route('/api/sync', syncRoutes(deps));
   app.route('/api/ai', aiRoutes(deps, options.ai));
+  app.route('/api/reports', reportRoutes(deps, options.adminEmails ?? []));
   app.all('/api/*', (c) => c.json(errorBody('not_found', 'Not found'), 404));
 
   if (options.staticDir) {

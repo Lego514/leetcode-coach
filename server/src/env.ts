@@ -27,6 +27,8 @@ export interface Env {
   mailFromName: string;
   /** 信件裡連結用的網址 */
   appUrl?: string;
+  /** 可以在 app 裡看所有回報的帳號 email */
+  adminEmails: string[];
 }
 
 export class EnvError extends Error {}
@@ -56,6 +58,9 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
     throw new EnvError(`AI_DAILY_LIMIT is invalid: ${source.AI_DAILY_LIMIT}`);
   }
 
+  const adminEmails = parseAllowedEmails(source.ADMIN_EMAILS);
+  if (adminEmails === '*') throw new EnvError('ADMIN_EMAILS must list email addresses, not *');
+
   return {
     port,
     databaseUrl,
@@ -70,6 +75,7 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
     appUrl: source.APP_URL?.trim() || allowedOrigins[0],
     aiDailyLimit,
     aiAllowedEmails: parseAllowedEmails(source.AI_ALLOWED_EMAILS),
+    adminEmails,
   };
 }
 

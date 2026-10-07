@@ -74,6 +74,13 @@ export type BoardColor = (typeof BOARD_COLORS)[number];
 export const CELL_COLORS = ['yellow', 'green', 'blue', 'red', 'purple', 'gray'] as const;
 export type CellColor = (typeof CELL_COLORS)[number];
 
+/** 回報的種類：程式錯誤、內容有錯、看不懂、建議、其他 */
+export const REPORT_KINDS = ['bug', 'wrong', 'unclear', 'idea', 'other'] as const;
+export type ReportKind = (typeof REPORT_KINDS)[number];
+
+/** 回報內容最多幾個字 */
+export const REPORT_MAX_LENGTH = 2000;
+
 /** 一次同步最多上傳、下載幾筆 */
 export const SYNC_BATCH_SIZE = 500;
 

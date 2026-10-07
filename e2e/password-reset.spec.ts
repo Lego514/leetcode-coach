@@ -8,7 +8,7 @@ test('asks for a reset link without saying whether the email exists', async ({ p
     await route.fulfill({ status: 204, body: '' });
   });
 
-  await page.goto('/#/settings');
+  await page.goto('/#/account');
   const account = page.getByRole('region', { name: 'Account & sync' });
   await account.getByLabel('Email', { exact: true }).fill('ray@example.com');
   await account.getByRole('button', { name: 'Forgot password?' }).click();
@@ -23,7 +23,7 @@ test('asks for a reset link without saying whether the email exists', async ({ p
 });
 
 test('says when password reset email is off on this server', async ({ page }) => {
-  await page.goto('/#/settings');
+  await page.goto('/#/account');
   const account = page.getByRole('region', { name: 'Account & sync' });
   await account.getByLabel('Email', { exact: true }).fill('ray@example.com');
   await account.getByRole('button', { name: 'Forgot password?' }).click();
@@ -48,13 +48,13 @@ test('sets a new password from the emailed link', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Set new password' }).click();
   await expect(page.getByRole('status')).toContainText('Password updated. You’re signed in.');
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible();
   expect(body).toEqual({ token: 'abc123', password: 'a brand new password' });
 });
 
 test('explains a link that lost its token', async ({ page }) => {
   await page.goto('/#/reset');
   await expect(page.getByText('This link is missing its reset code')).toBeVisible();
-  await page.getByRole('link', { name: 'Back to settings' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to account' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible();
 });

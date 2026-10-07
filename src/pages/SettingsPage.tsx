@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { AccountSection } from '../components/AccountSection';
+import { AccountSummary } from '../components/AccountSection';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useToast } from '../components/toast';
 import { Dialog, PageHead, Sheet } from '../components/ui';
@@ -33,7 +33,7 @@ export function SettingsPage() {
     <div className="page">
       <PageHead title={t.settings.title} />
       <div className="stack">
-        <AccountSection />
+        <AccountSummary />
         <Sheet title={t.settings.planTitle} id="plan">
           <div className="sheet-body stack" style={{ gap: 20 }}>
             <fieldset style={{ border: 0, margin: 0, padding: 0 }}>

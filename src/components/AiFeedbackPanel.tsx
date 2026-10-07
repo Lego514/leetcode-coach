@@ -70,7 +70,7 @@ export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeed
 
   let action;
   if (!signedIn) {
-    action = <p className="sheet-note">{rich(t.mock.aiSignIn, { link: (s) => <Link to="/settings">{s}</Link> })}</p>;
+    action = <p className="sheet-note">{rich(t.mock.aiSignIn, { link: (s) => <Link to="/account">{s}</Link> })}</p>;
   } else if (!status) {
     action = <p className="sheet-note">{t.common.loading}</p>;
   } else if (!status.available) {

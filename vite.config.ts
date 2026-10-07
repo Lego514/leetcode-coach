@@ -20,6 +20,10 @@ export default defineConfig({
   },
   // 相對路徑，方便部署到 GitHub Pages 之類的子路徑
   base: './',
+  define: {
+    // Render 和 GitHub Actions 建置時會提供 commit，回報問題時附上，才知道是哪一版
+    __APP_VERSION__: JSON.stringify((process.env.RENDER_GIT_COMMIT ?? process.env.GITHUB_SHA ?? 'dev').slice(0, 7)),
+  },
   plugins: [
     react(),
     VitePWA({

@@ -15,8 +15,11 @@ import {
   PASSWORD_MIN_LENGTH,
   PATTERN_IDS,
   RATING_IDS,
+  REPORT_KINDS,
+  REPORT_MAX_LENGTH,
   SYNC_BATCH_SIZE,
   type Collection,
+  type ReportKind,
 } from './constants';
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -307,6 +310,7 @@ export type ApiErrorCode =
   | 'email_taken'
   | 'invalid_credentials'
   | 'unauthorized'
+  | 'forbidden'
   | 'rate_limited'
   | 'payload_too_large'
   | 'not_found'
@@ -348,4 +352,54 @@ export interface FeedbackResponse {
   feedback: ExplanationFeedback;
   usedToday: number;
   dailyLimit: number;
+}
+
+/** 回報附上的資訊：從哪個頁面送出、哪張卡、剛才的錯誤訊息、版本與瀏覽器 */
+export const reportContextSchema = z
+  .object({
+    page: text(200).optional(),
+    card: z
+      .object({
+        id: text(100),
+        question: text(500),
+        answer: text(500).optional(),
+        picked: text(500).optional(),
+      })
+      .strict()
+      .optional(),
+    error: text(2000).optional(),
+    version: text(40).optional(),
+    userAgent: text(400).optional(),
+    language: text(20).optional(),
+    screen: text(20).optional(),
+  })
+  .strict();
+export type ReportContext = z.infer<typeof reportContextSchema>;
+
+export const reportRequestSchema = z.object({
+  kind: z.enum(REPORT_KINDS),
+  message: z.string().trim().min(1).max(REPORT_MAX_LENGTH),
+  /** 沒登入時可以留聯絡方式；登入時用帳號的 email */
+  contact: z.string().trim().max(200).optional(),
+  context: reportContextSchema,
+});
+export type ReportRequest = z.infer<typeof reportRequestSchema>;
+
+export const reportResolveSchema = z.object({ resolved: z.boolean() });
+
+export interface ReportItem {
+  id: string;
+  kind: ReportKind;
+  message: string;
+  context: ReportContext;
+  createdAt: string;
+  resolvedAt: string | null;
+  /** 只有管理者看得到：登入帳號的 email，或沒登入時留的聯絡方式 */
+  from?: string | null;
+}
+
+export interface ReportsResponse {
+  /** 管理者看到所有人的回報，其他人只看到自己的 */
+  admin: boolean;
+  reports: ReportItem[];
 }

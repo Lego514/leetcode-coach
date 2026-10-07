@@ -19,7 +19,7 @@ describe('migrations', () => {
   it('applies each migration once', async () => {
     const database = await openDatabase('pglite:memory');
     try {
-      expect(await migrate(database.db, MIGRATIONS_DIR)).toEqual(['0001_init.sql', '0002_ai_usage.sql', '0003_password_resets.sql']);
+      expect(await migrate(database.db, MIGRATIONS_DIR)).toEqual(['0001_init.sql', '0002_ai_usage.sql', '0003_password_resets.sql', '0004_reports.sql']);
       expect(await migrate(database.db, MIGRATIONS_DIR)).toEqual([]);
     } finally {
       await database.close();
@@ -70,6 +70,12 @@ describe('loadEnv', () => {
 
   it('rejects an invalid port', () => {
     expect(() => loadEnv({ PORT: 'abc' }, root)).toThrow(EnvError);
+  });
+
+  it('reads the report inbox admins and refuses a wildcard', () => {
+    expect(loadEnv({}, root).adminEmails).toEqual([]);
+    expect(loadEnv({ ADMIN_EMAILS: 'Me@Example.com' }, root).adminEmails).toEqual(['me@example.com']);
+    expect(() => loadEnv({ ADMIN_EMAILS: '*' }, root)).toThrow('ADMIN_EMAILS');
   });
 });
 

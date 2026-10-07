@@ -26,7 +26,7 @@ export function ResetPasswordPage() {
     try {
       await resetPassword(token, password);
       toast(t.account.resetDone);
-      navigate('/settings', { replace: true });
+      navigate('/account', { replace: true });
     } catch (err) {
       setError(t.errors.api[errorCode(err)]);
     } finally {
@@ -43,8 +43,8 @@ export function ResetPasswordPage() {
             <>
               <p className="sheet-note">{t.account.resetNoToken}</p>
               <div className="btn-row" style={{ marginTop: 12 }}>
-                <Link className="btn" to="/settings">
-                  {t.account.resetBackToSettings}
+                <Link className="btn" to="/account">
+                  {t.account.resetBackToAccount}
                 </Link>
               </div>
             </>

@@ -3,15 +3,15 @@ import { useEffect } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router';
 import { useI18n, type Messages } from '../i18n';
 import { applyUpdate, canReloadNow, useUpdateReady } from '../lib/appUpdate';
-import { rich } from '../i18n/rich';
 import { useCloud } from '../store/cloud';
+import { rememberPage } from '../store/reports';
 import { useProgressMap, useToday } from '../store/queries';
 import { syncStatusText } from './AccountSection';
 import { LanguageSwitch } from './LanguageSwitch';
 
 type NavKey = keyof Pick<
   Messages['nav'],
-  'today' | 'review' | 'cards' | 'mock' | 'problems' | 'patterns' | 'phrases' | 'board' | 'progress' | 'settings'
+  'today' | 'review' | 'cards' | 'mock' | 'problems' | 'patterns' | 'phrases' | 'board' | 'progress' | 'settings' | 'feedback'
 >;
 
 interface NavItem {
@@ -35,7 +35,10 @@ const NAV_GROUPS: NavItem[][] = [
     { to: '/board', key: 'board' },
     { to: '/progress', key: 'progress' },
   ],
-  [{ to: '/settings', key: 'settings' }],
+  [
+    { to: '/settings', key: 'settings' },
+    { to: '/feedback', key: 'feedback' },
+  ],
 ];
 
 function useDueCount(): number {
@@ -95,7 +98,7 @@ function SyncFootnote() {
   if (account.kind === 'signed-in') {
     return (
       <p className="nav-foot">
-        <Link to="/settings" className="nav-foot-link">
+        <Link to="/account" className="nav-foot-link">
           {account.user.email}
         </Link>
         <br />
@@ -104,21 +107,15 @@ function SyncFootnote() {
     );
   }
   return (
-    <p className="nav-foot">
-      {t.nav.localOnly}
+    <>
+      <p className="nav-foot">{t.nav.localOnly}</p>
+      {/* 沒登入時放一個明顯的按鈕，不用到設定頁裡找 */}
       {account.kind === 'signed-out' && (
-        <>
-          {' '}
-          {rich(t.nav.signInToSync, {
-            link: (text) => (
-              <Link to="/settings" className="nav-foot-link">
-                {text}
-              </Link>
-            ),
-          })}
-        </>
+        <Link to="/account" className="btn btn-primary btn-small nav-signin">
+          {t.nav.signIn}
+        </Link>
       )}
-    </p>
+    </>
   );
 }
 
@@ -128,6 +125,9 @@ export function Layout() {
   const updateReady = useUpdateReady();
   const { pathname } = useLocation();
   const safeToReload = canReloadNow(pathname);
+
+  // 回報問題時附上是從哪個頁面來的
+  useEffect(() => rememberPage(pathname), [pathname]);
 
   // 有新版時自動重新載入；計時中的頁面等離開後再套用
   useEffect(() => {
