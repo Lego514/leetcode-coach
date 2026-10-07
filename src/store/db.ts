@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
-import type { AttemptMode, CardResult, Collection, MockKind } from '../../shared/constants';
+import type { AttemptMode, CardResult, Collection, MockKind, StepNoteKey } from '../../shared/constants';
 import type { BoardDoc, ExplanationFeedback } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
@@ -47,8 +47,12 @@ export interface NoteRecord {
   pitfalls: string;
   code: string;
   language: string;
+  /** 解題步驟每一步寫的一句話 */
+  steps?: StepNotes;
   updatedAt: string;
 }
+
+export type StepNotes = Partial<Record<StepNoteKey, string>>;
 
 export interface MetaRecord {
   problemId: number;

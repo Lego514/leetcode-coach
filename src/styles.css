@@ -1811,6 +1811,42 @@ details.table-toggle[open] summary {
   color: var(--ink-3);
 }
 
+/* 解題步驟：沿用模擬面試的步驟樣式，寫過的步驟圓圈填色 */
+.solving-lede {
+  padding: 12px 20px 0;
+}
+
+.step[data-filled] .step-index {
+  background: var(--pen-soft);
+  border-color: var(--pen);
+  color: var(--pen);
+}
+
+.step-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.step-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* 內容多時跟著長高，不用自己拉 */
+.step-input {
+  min-height: 0;
+  field-sizing: content;
+  max-height: 14em;
+}
+
 .step-body {
   grid-column: 2;
   margin-top: 8px;

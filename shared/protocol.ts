@@ -17,6 +17,7 @@ import {
   RATING_IDS,
   REPORT_KINDS,
   REPORT_MAX_LENGTH,
+  STEP_NOTE_KEYS,
   SYNC_BATCH_SIZE,
   type Collection,
   type ReportKind,
@@ -88,6 +89,8 @@ export const noteDataSchema = z.object({
   pitfalls: text(5000),
   code: text(50_000),
   language: text(20),
+  /** 解題步驟每一步的一句話；舊版本的筆記沒有這個欄位 */
+  steps: z.partialRecord(z.enum(STEP_NOTE_KEYS), text(1000)).optional(),
   updatedAt: timestamp,
 });
 

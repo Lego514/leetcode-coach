@@ -6,6 +6,8 @@ import { BlobAudio } from '../components/BlobAudio';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
 import { HintPanel } from '../components/HintPanel';
 import { LeaveGuard } from '../components/LeaveGuard';
+import { StepFields, useStepNotes } from '../components/SolvingSteps';
+import { SaveStatus } from '../components/autosave';
 import { useToast } from '../components/toast';
 import { DifficultyTag, Dialog, LeetCodeLink, PageHead, Sheet } from '../components/ui';
 import {
@@ -340,6 +342,8 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
   const [finishing, setFinishing] = useState(false);
   const started = useRef(false);
   const { problem } = session;
+  // 每一步除了打勾，也可以寫一句自己的想法，存進這題的筆記
+  const stepNotes = useStepNotes(problem.id);
 
   useEffect(() => {
     if (started.current) return;
@@ -435,7 +439,12 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
           </section>
 
           {session.kind === 'full' ? (
-            <Sheet title={t.mock.stepsTitle} id="steps" note={t.mock.stepsProgress(done.length, INTERVIEW_STEPS.length)}>
+            <Sheet
+              title={t.mock.stepsTitle}
+              id="steps"
+              note={t.mock.stepsProgress(done.length, INTERVIEW_STEPS.length)}
+              actions={stepNotes.edited ? <SaveStatus status={stepNotes.status} /> : undefined}
+            >
               <ol className="steps">
                 {INTERVIEW_STEPS.map((step, i) => {
                   const state = done.includes(step.id) ? 'done' : i === currentStep ? 'current' : 'todo';
@@ -475,6 +484,7 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
                               );
                             })}
                           </ul>
+                          <StepFields step={step.id} state={stepNotes} />
                           <ul className="phrase-list">
                             {step.phrases.map((ph) => (
                               <li key={ph.en}>

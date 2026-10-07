@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { HintPanel } from '../components/HintPanel';
 import { LeaveGuard } from '../components/LeaveGuard';
 import { RecordForm } from '../components/RecordDialog';
+import { SolvingStepsSheet } from '../components/SolvingSteps';
 import { DifficultyTag, LeetCodeLink, PageHead, Sheet } from '../components/ui';
 import { MOCK_MINUTES } from '../data/interview';
 import { getPattern } from '../data/patterns';
@@ -176,7 +177,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
           )}
         </section>
 
-        {finished ? (
+        {finished && (
           <Sheet
             title={t.record.title}
             id="record"
@@ -200,7 +201,12 @@ function PracticeSession({ problem }: { problem: Problem }) {
               />
             </div>
           </Sheet>
-        ) : (
+        )}
+
+        {/* 一步寫一句；寫完計時後也還能補，紀錄表單放在上面 */}
+        <SolvingStepsSheet problemId={problem.id} title={t.solving.title} onOpenBoard={() => setBoardOpen(true)} />
+
+        {!finished && (
           <HintPanel
             problem={problem}
             used={hints}

@@ -74,6 +74,13 @@ export type BoardColor = (typeof BOARD_COLORS)[number];
 export const CELL_COLORS = ['yellow', 'green', 'blue', 'red', 'purple', 'gray'] as const;
 export type CellColor = (typeof CELL_COLORS)[number];
 
+/**
+ * 解題步驟每一步寫的一句話，存在題目筆記的 steps 裡。
+ * 舉例拆成例子和邊界情況，優化拆成三個問題：笨在哪、哪裡重複算、要留下什麼。
+ */
+export const STEP_NOTE_KEYS = ['clarify', 'example', 'edge', 'brute', 'slow', 'repeated', 'keep', 'code', 'test', 'complexity'] as const;
+export type StepNoteKey = (typeof STEP_NOTE_KEYS)[number];
+
 /** 回報的種類：程式錯誤、內容有錯、看不懂、建議、其他 */
 export const REPORT_KINDS = ['bug', 'wrong', 'unclear', 'idea', 'other'] as const;
 export type ReportKind = (typeof REPORT_KINDS)[number];

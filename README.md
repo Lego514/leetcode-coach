@@ -16,6 +16,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - The timer survives a page reload.
   - If you get stuck, open hints one layer at a time: which pattern to use, a hand-written key insight for each of the 213 problems, then the pattern template. A link to the LeetCode solutions comes last.
   - When you finish, the minutes are filled in and a self-rating is suggested based on how many hints you used.
+- **Solving steps**: practice, mock interviews, and the problem page share the seven interview steps (clarify, examples, brute force, optimize, code, test, complexity), and you write one line per step. Examples split into an example and its edge cases, and Optimize asks three questions: what's slow, what's repeated, and what to keep. The lines are saved with the problem's notes and synced, so a review starts from how you thought it through, not just the code. In a mock interview they sit under each step's checklist.
 - **Spaced repetition**: after each attempt you rate yourself (solved alone / needed a hint / read the solution / still stuck), and an SM-2–style scheduler picks the next review date.
 - **Daily plan**: the Today page lists the reviews that are due plus N new problems in roadmap order. At the top, a progress bar and three numbers show how much of the list is left, your daily pace, and when you'll finish the first pass. With a target date set, they show the days left and how many new problems a day you need, flagged when your daily goal is too low.
   - Any new problem you start counts toward the daily goal, wherever you start it. **One more problem** adds the next one in roadmap order.
@@ -212,7 +213,7 @@ Notes:
 
 ## Roadmap
 
-- **Guided solving steps**: work through understand → trace by hand (on the whiteboard) → brute force → what's slow → what's repeated → what to keep → optimal, with a one-line note per step.
+- **Solving steps, part 2**: turn the step notes into a draft of the English explanation script, and point hints at the step you're stuck on.
 - **Whiteboard**: a minimap for large boards, and flashcards that show a recorded step and ask what happens next.
 - **More AI assistance (Claude API)**: hints that react to your own code, code review, and an AI interviewer that asks follow-ups. These would run through the API so the key never reaches the browser.
 - **Behavioral prep**: a STAR story bank, system design notes, and a job application tracker.
@@ -231,6 +232,8 @@ Notes:
 介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
 
 今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
+
+**解題步驟**：練習頁、模擬面試和題目頁共用模擬面試的七個步驟（釐清題意、舉例與邊界、暴力解、優化、寫程式、驗證、複雜度），每一步寫一句自己的想法。舉例拆成「例子」和「邊界情況」，優化拆成三個問題：笨在哪、哪裡重複算、要留下什麼。寫的內容存在這題的筆記裡、會同步，複習時看得到當時怎麼想的；模擬面試時會出現在每一步的檢查清單下面。
 
 每一題都有一份英文參考講法（關鍵觀察、資料結構、例子、複雜度、邊界情況五句），預設收起，自己講過之後再展開對照；講解練習結束後會直接顯示在旁邊。
 

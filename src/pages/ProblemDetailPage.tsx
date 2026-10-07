@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { SaveStatus, useAutosave } from '../components/autosave';
+import { SolvingStepsSheet } from '../components/SolvingSteps';
 import { CodeTextarea } from '../components/CodeTextarea';
 import { RecordDialog } from '../components/RecordDialog';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
@@ -95,6 +96,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
 
       <div className="split">
         <div className="stack">
+          <SolvingStepsSheet key={problem.id} problemId={problem.id} title={t.solving.detailTitle} collapsible />
           <NotesEditor problemId={problem.id} />
           <ReferenceSheet problemId={problem.id} />
         </div>
