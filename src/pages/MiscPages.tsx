@@ -1,6 +1,7 @@
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
 import { syncStatusText } from '../components/AccountSection';
 import { LanguageSwitch } from '../components/LanguageSwitch';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { PageHead } from '../components/ui';
 import { useI18n } from '../i18n';
 import { useCloud } from '../store/cloud';
@@ -21,8 +22,9 @@ export function MorePage() {
   return (
     <div className="page">
       <PageHead title={t.more.title}>
-        <div style={{ marginTop: 16 }}>
+        <div className="prefs" style={{ marginTop: 16 }}>
           <LanguageSwitch />
+          <ThemeToggle />
         </div>
       </PageHead>
       <div className="stack" style={{ gap: 16 }}>

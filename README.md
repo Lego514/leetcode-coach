@@ -62,7 +62,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 - **Bug reports and suggestions**: a "Report a problem" page, a Report button on every flashcard once it's answered, and a link on the error screen. Reports work without an account; the form shows exactly what gets attached (page, card, version, browser). Signed-in users can follow the status of their own reports, and admin accounts (`ADMIN_EMAILS`) get an inbox to mark them resolved.
   - A reset link works once, expires in an hour, and signs you out on other devices. It needs `BREVO_API_KEY` and `MAIL_FROM`; without them the feature is hidden.
 - **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It follows the browser language by default, and you can switch from the sidebar or Settings.
-- **Installable PWA** that works offline, with light and dark themes and JSON backup/restore. New versions install themselves and reload the page, but wait while a timed practice or mock session, a flashcard round, or a whiteboard is open.
+- **Installable PWA** that works offline, with light and dark themes (it follows the system by default; a sun/moon button next to the language switch flips it, and pressing it again goes back to following the system) and JSON backup/restore. New versions install themselves and reload the page, but wait while a timed practice or mock session, a flashcard round, or a whiteboard is open.
 
 ## Tech stack
 
