@@ -135,7 +135,7 @@ test('disables the transcript option when the browser cannot recognize speech', 
 test('gets AI feedback for the transcript and saves the model answer', { tag: '@desktop' }, async ({ page }) => {
   await page.addInitScript(installFakeRecognition);
   const email = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
-  await page.goto('/#/settings');
+  await page.goto('/#/account');
   const account = page.getByRole('region', { name: 'Account & sync' });
   await account.getByRole('group', { name: 'Sign in or register' }).getByRole('button', { name: 'Register' }).click();
   await account.getByLabel('Email', { exact: true }).fill(email);

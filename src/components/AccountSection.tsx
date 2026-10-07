@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
 import { PASSWORD_MIN_LENGTH } from '../../shared/constants';
 import { useI18n, type Messages } from '../i18n';
 import type { Formatters } from '../i18n/format';
@@ -49,6 +50,44 @@ export function AccountSection() {
         {account.kind === 'signed-out' && <SignInForm expiredEmail={account.expiredEmail} />}
         {account.kind === 'signed-in' && <SignedIn email={account.user.email} cloud={cloud} />}
       </div>
+    </Sheet>
+  );
+}
+
+/** 設定頁上的帳號摘要；登入、登出等操作在帳號頁 */
+export function AccountSummary() {
+  const { t, fmt } = useI18n();
+  const cloud = useCloud();
+  const { account } = cloud;
+  const signedIn = account.kind === 'signed-in';
+  let summary: string;
+  switch (account.kind) {
+    case 'loading':
+      summary = t.account.checking;
+      break;
+    case 'unavailable':
+      summary = t.account.unavailable;
+      break;
+    case 'signed-out':
+      summary = t.account.signedOutSummary;
+      break;
+    case 'signed-in':
+      summary = `${account.user.email} · ${syncStatusText(cloud, t, fmt)}`;
+      break;
+  }
+  return (
+    <Sheet
+      title={t.account.title}
+      id="account"
+      actions={
+        account.kind === 'loading' ? undefined : (
+          <Link className={signedIn ? 'btn btn-small' : 'btn btn-small btn-primary'} to="/account">
+            {signedIn ? t.account.manage : t.nav.signIn}
+          </Link>
+        )
+      }
+    >
+      <p className="sheet-empty">{summary}</p>
     </Sheet>
   );
 }

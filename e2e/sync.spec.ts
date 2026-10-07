@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 const password = 'e2e-password-123';
 
 async function signIn(page: Page, email: string, mode: 'Register' | 'Sign in') {
-  await page.goto('/#/settings');
+  await page.goto('/#/account');
   const account = page.getByRole('region', { name: 'Account & sync' });
   await account.getByRole('group', { name: 'Sign in or register' }).getByRole('button', { name: mode }).click();
   await account.getByLabel('Email', { exact: true }).fill(email);
@@ -50,13 +50,13 @@ test('syncs attempts between two browsers, including ones recorded offline', { t
   // 離線時照常記錄，恢復連線後自動上傳
   await laptop.setOffline(true);
   await recordSolved(a, 217);
-  await a.goto('/#/settings');
+  await a.goto('/#/account');
   await expect(accountA.getByText(/Offline/)).toBeVisible();
   await expect(accountA.getByText('1 change')).toBeVisible();
   await laptop.setOffline(false);
   await expect(accountA.getByText('Nothing')).toBeVisible();
 
-  await b.goto('/#/settings');
+  await b.goto('/#/account');
   await b.getByRole('button', { name: 'Sync now' }).click();
   await b.goto('/');
   await expect(b.getByRole('region', { name: 'Done today' })).toContainText('Contains Duplicate');

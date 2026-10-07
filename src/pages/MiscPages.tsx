@@ -1,7 +1,10 @@
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
+import { syncStatusText } from '../components/AccountSection';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { PageHead } from '../components/ui';
 import { useI18n } from '../i18n';
+import { useCloud } from '../store/cloud';
+import { stashError } from '../store/reports';
 
 const MORE_LINKS = [
   { to: '/cards', key: 'cards' },
@@ -10,6 +13,7 @@ const MORE_LINKS = [
   { to: '/patterns', key: 'patterns' },
   { to: '/phrases', key: 'phrases' },
   { to: '/settings', key: 'settings' },
+  { to: '/feedback', key: 'feedback' },
 ] as const;
 
 export function MorePage() {
@@ -21,19 +25,58 @@ export function MorePage() {
           <LanguageSwitch />
         </div>
       </PageHead>
-      <nav className="sheet" aria-label={t.more.label}>
-        <ul className="more-list">
-          {MORE_LINKS.map((l) => (
-            <li key={l.to}>
-              <Link className="more-link" to={l.to}>
-                {t.nav[l.key]}
-                <span>{t.more[l.key]}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className="stack" style={{ gap: 16 }}>
+        <AccountCard />
+        <nav className="sheet" aria-label={t.more.label}>
+          <ul className="more-list">
+            {MORE_LINKS.map((l) => (
+              <li key={l.to}>
+                <Link className="more-link" to={l.to}>
+                  {t.nav[l.key]}
+                  <span>{t.more[l.key]}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
     </div>
+  );
+}
+
+/** 手機版沒有側邊欄，登入入口放在「更多」最上面 */
+function AccountCard() {
+  const { t, fmt } = useI18n();
+  const cloud = useCloud();
+  const { account } = cloud;
+  if (account.kind === 'loading') return null;
+  if (account.kind === 'signed-in') {
+    return (
+      <Link className="sheet more-account" to="/account" aria-label={t.more.accountLink(account.user.email)}>
+        <span className="more-account-text">
+          <span className="more-account-title">{account.user.email}</span>
+          <span className="more-account-note">{syncStatusText(cloud, t, fmt)}</span>
+        </span>
+        <span className="more-account-go" aria-hidden>
+          ›
+        </span>
+      </Link>
+    );
+  }
+  return (
+    <section className="sheet more-account" aria-labelledby="more-account-title">
+      <span className="more-account-text">
+        <span className="more-account-title" id="more-account-title">
+          {t.more.accountTitle}
+        </span>
+        <span className="more-account-note">{account.kind === 'unavailable' ? t.account.unavailable : t.more.accountNote}</span>
+      </span>
+      {account.kind === 'signed-out' && (
+        <Link className="btn btn-primary" to="/account">
+          {t.nav.signIn}
+        </Link>
+      )}
+    </section>
   );
 }
 
@@ -73,6 +116,9 @@ export function ErrorPage() {
             </button>
             <a className="btn" href="#/">
               {t.common.backToToday}
+            </a>
+            <a className="btn btn-quiet" href="#/feedback" onClick={() => stashError(message)}>
+              {t.errorPage.report}
             </a>
           </div>
         </PageHead>

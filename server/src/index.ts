@@ -21,6 +21,7 @@ const app = createApp({
   secureCookies: env.production,
   trustProxy: env.trustProxy,
   staticDir: env.staticDir,
+  adminEmails: env.adminEmails,
   mail:
     env.brevoApiKey && env.mailFrom && env.appUrl
       ? {
@@ -45,6 +46,11 @@ const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
   else if (env.aiAllowedEmails === '*') console.log(`AI feedback on for every account, ${env.aiDailyLimit} per user per day`);
   else if (env.aiAllowedEmails.length === 0) console.log('AI feedback on, but AI_ALLOWED_EMAILS is empty, so no account can use it');
   else console.log(`AI feedback on for ${env.aiAllowedEmails.length} account(s), ${env.aiDailyLimit} per user per day`);
+  console.log(
+    env.adminEmails.length > 0
+      ? `Report inbox on for ${env.adminEmails.length} admin account(s)`
+      : 'Report inbox off (ADMIN_EMAILS not set); reports are still saved',
+  );
   console.log(
     env.brevoApiKey && env.mailFrom
       ? `Password reset email on, from ${env.mailFrom}`

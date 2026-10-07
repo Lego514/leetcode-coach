@@ -18,10 +18,57 @@ import {
   practiceStreak,
   streakDays,
 } from '../lib/stats';
+import { useCloud } from '../store/cloud';
 import type { AttemptMode } from '../store/db';
 import { useAttempts, useCardReviews, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 
 const settingsLink = (text: string) => <Link to="/settings">{text}</Link>;
+
+const BANNER_KEY = 'coach:signin-banner-dismissed';
+
+function bannerDismissed(): boolean {
+  try {
+    return localStorage.getItem(BANNER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** 手機上沒登入時的提醒；桌面版側邊欄已經有登入按鈕，所以用 CSS 藏起來 */
+function SignInBanner() {
+  const { t } = useI18n();
+  const { account } = useCloud();
+  const [dismissed, setDismissed] = useState(bannerDismissed);
+  if (account.kind !== 'signed-out' || dismissed) return null;
+
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(BANNER_KEY, '1');
+    } catch {
+      // 存不了就只在這次隱藏
+    }
+  };
+
+  return (
+    <aside className="signin-banner" aria-labelledby="signin-banner-title">
+      <div className="signin-banner-text">
+        <p className="signin-banner-title" id="signin-banner-title">
+          {t.today.signInTitle}
+        </p>
+        <p className="signin-banner-body">{t.today.signInBody}</p>
+      </div>
+      <div className="btn-row">
+        <Link className="btn btn-primary btn-small" to="/account">
+          {t.nav.signIn}
+        </Link>
+        <button type="button" className="btn btn-quiet btn-small" onClick={dismiss}>
+          {t.today.signInLater}
+        </button>
+      </div>
+    </aside>
+  );
+}
 
 export function TodayPage() {
   const { t, fmt } = useI18n();
@@ -79,6 +126,7 @@ export function TodayPage() {
       </PageHead>
 
       <div className="stack">
+        <SignInBanner />
         {firstRun && (
           <Sheet title={t.today.welcomeTitle} id="welcome">
             <div className="sheet-empty">

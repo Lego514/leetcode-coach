@@ -65,6 +65,18 @@ const router = createHashRouter([
         path: 'settings',
         lazy: async () => ({ Component: (await import('./pages/SettingsPage')).SettingsPage }),
       },
+      {
+        path: 'account',
+        lazy: async () => ({ Component: (await import('./pages/AccountPage')).AccountPage }),
+      },
+      {
+        path: 'feedback',
+        lazy: async () => ({ Component: (await import('./pages/FeedbackPage')).FeedbackPage }),
+      },
+      {
+        path: 'feedback/inbox',
+        lazy: async () => ({ Component: (await import('./pages/FeedbackPage')).InboxPage }),
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

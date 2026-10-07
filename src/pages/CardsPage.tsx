@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
+import type { ReportKind } from '../../shared/constants';
+import type { ReportContext } from '../../shared/protocol';
+import { emptyDraft, ReportForm } from '../components/ReportForm';
 import { useToast } from '../components/toast';
-import { DifficultyTag } from '../components/ui';
+import { Dialog, DifficultyTag } from '../components/ui';
 import { EXPLANATIONS_EN } from '../data/explanations';
 import { getPattern, getPatterns, type PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -38,6 +41,7 @@ const TIP_OPTION_COUNTS = new Map(PYTHON_TIPS.map((tip) => [tip.id, tip.options.
 // 各語言的線索數量相同（有測試檢查），用中文版來數
 const SIGNAL_COUNTS = Object.fromEntries(getPatterns('zh-TW').map((p) => [p.id, p.signals.length]));
 const RATE_ORDER: CardResult[] = ['good', 'fuzzy', 'again'];
+const CARD_REPORT_KINDS: ReportKind[] = ['wrong', 'unclear', 'idea'];
 
 export function CardsPage() {
   const { t } = useI18n();
@@ -124,6 +128,9 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
   /** 按了「我不知道」：直接看答案，記成答錯，不用亂猜 */
   const [gaveUp, setGaveUp] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  /** 答完後可以回報這張卡：內容有錯、看不懂或建議 */
+  const [reporting, setReporting] = useState(false);
+  const [reportDraft, setReportDraft] = useState(() => emptyDraft('wrong'));
   const headingRef = useRef<HTMLHeadingElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
 
@@ -159,6 +166,8 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
     setPicked(null);
     setGaveUp(false);
     setRevealed(false);
+    setReporting(false);
+    setReportDraft(emptyDraft('wrong'));
   };
 
   const choose = (i: number) => {
@@ -181,7 +190,8 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!card || e.altKey || e.ctrlKey || e.metaKey) return;
+      // 寫回報時打的數字不能拿來作答
+      if (!card || reporting || e.altKey || e.ctrlKey || e.metaKey) return;
       // 焦點在按鈕或選單上時，Enter 和空白鍵交給它們自己處理
       const onControl = e.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select');
       if (onControl && (e.key === 'Enter' || e.key === ' ')) return;
@@ -254,6 +264,24 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
   const isChoice = card.options.length > 0;
   const outcome = !answered ? undefined : right ? 'right' : gaveUp ? 'unknown' : 'wrong';
   const verdict = outcome === 'right' ? t.cards.correct : outcome === 'unknown' ? t.cards.unknownVerdict : t.cards.wrong;
+  const reportContext: ReportContext = {
+    page: '/cards',
+    card: {
+      id: ref.id,
+      question: [
+        problem && `${problem.id}. ${problem.title}`,
+        questionOf(card, t, lang),
+        ref.kind === 'signal' ? signalText(ref.patternId, ref.index, locale) : tip?.code,
+      ]
+        .filter(Boolean)
+        .join(' — ')
+        .slice(0, 500),
+      ...(isChoice && { answer: optionLabel(card, card.options[card.answer], t, locale).text.slice(0, 500) }),
+      ...(isChoice &&
+        picked !== null &&
+        picked !== card.answer && { picked: optionLabel(card, card.options[picked], t, locale).text.slice(0, 500) }),
+    },
+  };
 
   return (
     <div className="flash">
@@ -262,7 +290,15 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
       <ProgressDots total={cards.length} index={inRetry ? -1 : index} results={answers.slice(0, cards.length)} />
 
       <section className="flash-card" aria-labelledby="flash-question">
-        <p className="flash-kind">{t.cards.kinds[ref.kind]}</p>
+        <div className="flash-card-top">
+          <p className="flash-kind">{t.cards.kinds[ref.kind]}</p>
+          {(answered || revealed) && (
+            <button type="button" className="flash-report" aria-label={t.report.cardTitle} onClick={() => setReporting(true)}>
+              {FlagIcon}
+              {t.report.cardButton}
+            </button>
+          )}
+        </div>
         {problem && (
           <p className="flash-problem">
             <span>
@@ -361,6 +397,21 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
         {isChoice && answered ? verdict : ''}
       </p>
       <p className="flash-hint">{t.cards.keyboardHint}</p>
+
+      <Dialog open={reporting} onClose={() => setReporting(false)} title={t.report.cardTitle} subtitle={t.report.cardLede}>
+        <ReportForm
+          kinds={CARD_REPORT_KINDS}
+          draft={reportDraft}
+          onDraft={setReportDraft}
+          context={reportContext}
+          onSent={() => {
+            setReporting(false);
+            setReportDraft(emptyDraft('wrong'));
+            toast(t.report.sent);
+          }}
+          onCancel={() => setReporting(false)}
+        />
+      </Dialog>
     </div>
   );
 }
@@ -458,6 +509,12 @@ function ProgressDots({ total, index, results }: { total: number; index: number;
     </ol>
   );
 }
+
+const FlagIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+  </svg>
+);
 
 const TimerIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

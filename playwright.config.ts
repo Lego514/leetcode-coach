@@ -38,6 +38,8 @@ export default defineConfig({
       PORT: String(PORT),
       APP_ORIGINS: baseURL,
       DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'pglite:memory',
+      // e2e/feedback.spec.ts 用這個帳號看收件匣
+      ADMIN_EMAILS: 'admin@e2e.test',
     },
   },
 });
