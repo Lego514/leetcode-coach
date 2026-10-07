@@ -84,3 +84,25 @@ test('marks problems solved before without counting them as practice', async ({ 
   await page.goto('/#/progress');
   await expect(page.getByRole('region', { name: 'Overview' })).toContainText('Total sessions0');
 });
+
+test('shows the plan as numbers and what a target date needs', async ({ page }) => {
+  await page.goto('/');
+  const stat = (label: string) => page.locator('.plan-stat').filter({ hasText: label });
+  const progress = page.getByRole('progressbar', { name: 'NeetCode 150 progress' });
+  await expect(progress).toHaveAttribute('aria-valuetext', '0 of 150 problems completed');
+  await expect(stat('problems left').getByRole('definition')).toHaveText('150');
+  await expect(stat('new a day').getByRole('definition')).toHaveText('3');
+  await expect(stat('first pass done').getByRole('definition')).toHaveText(/^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}$/);
+
+  // 目標日期太近，每天 3 題來不及：標出來並提供調高的按鈕
+  await page.getByRole('link', { name: 'Set a target date' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+  const target = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  await page.getByLabel('Target date').fill(target);
+  await page.goto('/');
+  await expect(stat('until')).toContainText(/\d+ days/);
+  await expect(stat('needed a day')).toHaveAttribute('data-warn', '');
+  await expect(page.getByText('At your goal of 3 a day, you won’t make it.')).toBeVisible();
+  await page.getByRole('link', { name: 'Raise the daily goal' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+});

@@ -46,6 +46,19 @@ export function streakDays(practiced: readonly { day: Day }[], cardReviews: read
   return [...practiced, ...cardReviews].map((item) => item.day);
 }
 
+/** 最長連續幾天；日子不用排序，重複的會合併 */
+export function longestStreak(days: Iterable<Day>): number {
+  let best = 0;
+  let run = 0;
+  let prev: Day | undefined;
+  for (const day of [...new Set(days)].sort()) {
+    run = prev !== undefined && addDays(prev, 1) === day ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = day;
+  }
+  return best;
+}
+
 export function countByDay(items: Iterable<{ day: Day }>): Map<Day, number> {
   const map = new Map<Day, number>();
   for (const { day } of items) map.set(day, (map.get(day) ?? 0) + 1);

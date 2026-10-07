@@ -22,8 +22,6 @@ import { useCloud } from '../store/cloud';
 import type { AttemptMode } from '../store/db';
 import { useAttempts, useCardReviews, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 
-const settingsLink = (text: string) => <Link to="/settings">{text}</Link>;
-
 const BANNER_KEY = 'coach:signin-banner-dismissed';
 
 function bannerDismissed(): boolean {
@@ -119,9 +117,16 @@ export function TodayPage() {
 
   return (
     <div className="page">
-      <PageHead title={t.today.title} lede={fmt.fullDay(day)}>
+      <PageHead title={t.today.title} lede={t.today.lede(fmt.fullDay(day), listName)}>
         {loaded && (
-          <PlanSentence day={day} listName={listName} untouched={untouched} dailyNew={settings.dailyNew} targetDate={settings.targetDate} />
+          <PlanSummary
+            day={day}
+            listName={listName}
+            total={listProblems.length}
+            untouched={untouched}
+            dailyNew={settings.dailyNew}
+            targetDate={settings.targetDate}
+          />
         )}
       </PageHead>
 
@@ -260,53 +265,141 @@ export function TodayPage() {
   );
 }
 
-interface PlanSentenceProps {
+interface PlanSummaryProps {
   day: Day;
   listName: string;
+  total: number;
   untouched: number;
   dailyNew: number;
   targetDate?: Day;
 }
 
-function PlanSentence({ day, listName, untouched, dailyNew, targetDate }: PlanSentenceProps) {
-  const { t, fmt, locale } = useI18n();
-  const tags = { b: bold, link: settingsLink };
-  // 英文句子之間要空格，中文不用
-  const sep = locale === 'en' ? ' ' : '';
+interface PlanStat {
+  label: string;
+  value: string;
+  unit?: string;
+  /** 每天要做的題數超過設定時標出來 */
+  warn?: boolean;
+}
+
+/** 清單進度：剩幾題、每天幾題、哪天做完（或距離目標日幾天），用一排數字卡一眼看完 */
+function PlanSummary({ day, listName, total, untouched, dailyNew, targetDate }: PlanSummaryProps) {
+  const { t, fmt } = useI18n();
+  const p = t.today.plan;
+  const progress = <PlanProgress listName={listName} done={total - untouched} total={total} />;
 
   if (untouched === 0) {
-    return <p className="today-plan">{t.today.planAllDone(listName)}</p>;
-  }
-
-  if (targetDate) {
-    const plan = planToTarget(untouched, day, targetDate);
-    if (plan.perDay === null) {
-      return <p className="today-plan">{rich(t.today.planTargetPassed(fmt.day(targetDate)), tags)}</p>;
-    }
     return (
-      <p className="today-plan">
-        {rich(t.today.planTarget(fmt.day(targetDate), plan.daysLeft, listName, untouched, plan.perDay), tags)}
-        {plan.perDay > dailyNew && (
-          <>
-            {sep}
-            {rich(t.today.planRaise(dailyNew), tags)}
-          </>
-        )}
-      </p>
+      <>
+        {progress}
+        <p className="today-plan">{t.today.planAllDone(listName)}</p>
+      </>
     );
   }
 
-  const finish = finishDay(untouched, dailyNew, day);
+  const problems = (n: number) => (n === 1 ? p.unitProblem : p.unitProblems);
+  const days = (n: number) => (n === 1 ? p.unitDay : p.unitDays);
+  const left: PlanStat = { label: p.left, value: String(untouched), unit: problems(untouched) };
+  let stats: PlanStat[];
+  let note: string | undefined;
+  let action: { to: string; label: string; primary?: boolean; calendar?: boolean };
+
+  const plan = targetDate ? planToTarget(untouched, day, targetDate) : null;
+  if (targetDate && plan && plan.perDay !== null) {
+    const behind = plan.perDay > dailyNew;
+    stats = [
+      { label: p.untilTarget(fmt.day(targetDate)), value: String(plan.daysLeft), unit: days(plan.daysLeft) },
+      left,
+      { label: p.needed, value: String(plan.perDay), unit: problems(plan.perDay), warn: behind },
+    ];
+    note = behind ? p.behind(dailyNew) : undefined;
+    action = behind ? { to: '/settings', label: p.raise, primary: true } : { to: '/settings', label: p.changeTarget, calendar: true };
+  } else if (targetDate) {
+    // 目標日已經到了
+    return (
+      <>
+        {progress}
+        <p className="today-plan">{t.today.planTargetPassed(fmt.day(targetDate))}</p>
+        <PlanAction to="/settings" label={p.newTarget} calendar />
+      </>
+    );
+  } else {
+    const finish = finishDay(untouched, dailyNew, day);
+    stats = [left, { label: p.perDay, value: String(dailyNew), unit: problems(dailyNew) }];
+    if (finish) stats.push({ label: p.finish, value: fmt.day(finish) });
+    action = { to: '/settings', label: p.setTarget, calendar: true };
+  }
+
   return (
-    <p className="today-plan">
-      {rich(t.today.planRemaining(listName, untouched), tags)}
-      {finish && (
-        <>
-          {sep}
-          {rich(t.today.planFinish(dailyNew, fmt.day(finish)), tags)}
-        </>
-      )}{' '}
-      {rich(t.today.planSetTarget, tags)}
-    </p>
+    <>
+      {progress}
+      <dl className="plan-stats">
+        {stats.map((stat) => (
+          <div key={stat.label} className="plan-stat" data-warn={stat.warn ? '' : undefined}>
+            <dt>{stat.label}</dt>
+            <dd>
+              {stat.value}
+              {stat.unit && (
+                <>
+                  {' '}
+                  <span className="plan-stat-unit">{stat.unit}</span>
+                </>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <PlanAction note={note} {...action} />
+    </>
+  );
+}
+
+interface PlanActionProps {
+  to: string;
+  label: string;
+  note?: string;
+  primary?: boolean;
+  /** 跟目標日期有關的按鈕加上日曆圖示 */
+  calendar?: boolean;
+}
+
+function PlanAction({ to, label, note, primary, calendar }: PlanActionProps) {
+  return (
+    <div className="plan-actions">
+      {note && <p>{note}</p>}
+      <Link className={primary ? 'btn btn-small btn-primary' : 'btn btn-small'} to={to}>
+        {calendar && (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 6.5h16M8 3v4M16 3v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+          </svg>
+        )}
+        {label}
+      </Link>
+    </div>
+  );
+}
+
+/** 清單完成度：已完成幾題 / 全部幾題 */
+function PlanProgress({ listName, done, total }: { listName: string; done: number; total: number }) {
+  const { t } = useI18n();
+  const p = t.today.plan;
+  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+  return (
+    <div className="plan-progress">
+      <span className="plan-progress-label" aria-hidden>
+        {p.done} <strong>{done}</strong> / {total}
+      </span>
+      <div
+        className="plan-progress-track"
+        role="progressbar"
+        aria-label={p.progressLabel(listName)}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={done}
+        aria-valuetext={p.progressText(done, total)}
+      >
+        <div className="plan-progress-fill" style={{ width: `${percent}%` }} />
+      </div>
+    </div>
   );
 }

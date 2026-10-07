@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
 import type { WeekCount } from '../lib/stats';
@@ -132,32 +132,72 @@ function activityLevel(count: number): 0 | 1 | 2 | 3 | 4 {
   return 4;
 }
 
-export function ActivityCalendar({ counts, today, weeks = 18 }: { counts: Map<Day, number>; today: Day; weeks?: number }) {
+interface ActivityHeatmapProps {
+  /** 每天練習了幾次題目 */
+  counts: ReadonlyMap<Day, number>;
+  /** 有做微複習的日子；沒練題目的話用最淺的顏色，連續天數也算進去 */
+  cardDays: ReadonlySet<Day>;
+  today: Day;
+  weeks?: number;
+}
+
+/** 一年的練習熱度圖：每格一天，一欄一週，練越多題顏色越深 */
+export function ActivityHeatmap({ counts, cardDays, today, weeks = 53 }: ActivityHeatmapProps) {
   const { t, fmt } = useI18n();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const first = addDays(startOfWeek(today), -7 * (weeks - 1));
   const columns = Array.from({ length: weeks }, (_, w) =>
     Array.from({ length: 7 }, (_, d) => addDays(first, w * 7 + d)),
   );
 
+  // 手機放不下一整年，一打開就捲到最近幾週
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, []);
+
   return (
-    <div className="calendar" aria-hidden>
-      {columns.map((days) => (
-        <div key={days[0]} className="calendar-week">
-          {days.map((day) => {
-            const count = counts.get(day) ?? 0;
-            const future = day > today;
+    <div className="heatmap">
+      <div className="heatmap-scroll" ref={scrollRef}>
+        <div className="heatmap-grid" aria-hidden>
+          {columns.map((days) => {
+            // 月份標在這個月 1 號所在的那一欄上面
+            const firstOfMonth = days.find((day) => day.endsWith('-01'));
             return (
-              <span
-                key={day}
-                className="cell"
-                data-level={activityLevel(count)}
-                data-future={future}
-                title={future ? undefined : t.charts.dayCell(fmt.day(day, false), count)}
-              />
+              <div key={days[0]} className="heatmap-week">
+                <span className="heatmap-month">{firstOfMonth && <span>{fmt.month(firstOfMonth)}</span>}</span>
+                {days.map((day) => {
+                  const count = counts.get(day) ?? 0;
+                  const cardsOnly = count === 0 && cardDays.has(day);
+                  const future = day > today;
+                  return (
+                    <span
+                      key={day}
+                      className="cell"
+                      data-level={cardsOnly ? 1 : activityLevel(count)}
+                      data-future={future}
+                      title={
+                        future
+                          ? undefined
+                          : cardsOnly
+                            ? t.charts.dayCards(fmt.day(day, false))
+                            : t.charts.dayCell(fmt.day(day, false), count)
+                      }
+                    />
+                  );
+                })}
+              </div>
             );
           })}
         </div>
-      ))}
+      </div>
+      <div className="heatmap-legend" aria-hidden>
+        <span>{t.charts.less}</span>
+        {[0, 1, 2, 3, 4].map((level) => (
+          <span key={level} className="cell" data-level={level} />
+        ))}
+        <span>{t.charts.more}</span>
+      </div>
     </div>
   );
 }

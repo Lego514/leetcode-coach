@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { ActivityCalendar, WeeklyChart } from '../components/charts';
+import { ActivityHeatmap, WeeklyChart } from '../components/charts';
 import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
 import { CLARITY_OPTIONS } from '../data/interview';
 import { getPattern } from '../data/patterns';
@@ -11,6 +11,7 @@ import { addDays, startOfWeek } from '../lib/dates';
 import { stageOf } from '../lib/srs';
 import {
   countByDay,
+  longestStreak,
   practiceAttempts,
   practiceStreak,
   streakDays,
@@ -20,7 +21,8 @@ import {
 } from '../lib/stats';
 import { useAttempts, useCardReviews, useCatalog, useMocks, useProgressMap, useSettings, useToday } from '../store/queries';
 
-const CALENDAR_WEEKS = 18;
+/** 熱度圖顯示一整年（含本週共 53 週） */
+const HEATMAP_WEEKS = 53;
 
 export function ProgressPage() {
   const { t, locale } = useI18n();
@@ -46,8 +48,13 @@ export function ProgressPage() {
   const mastered = problems.filter((p) => stageOf(progress.get(p.id)) === 'mastered').length;
   // 做過微複習的日子也算連續天數
   const streak = practiceStreak(streakDays(allAttempts, cardReviews ?? []), day);
-  const calendarStart = addDays(startOfWeek(day), -7 * (CALENDAR_WEEKS - 1));
-  const activeDays = [...byDay.keys()].filter((d) => d >= calendarStart && d <= day).length;
+  // 熱度圖的範圍：練題目或做微複習都算有練習的一天，和連續天數的算法一樣
+  const yearStart = addDays(startOfWeek(day), -7 * (HEATMAP_WEEKS - 1));
+  const inYear = (d: string) => d >= yearStart && d <= day;
+  const cardDays = useMemo(() => new Set((cardReviews ?? []).map((r) => r.day)), [cardReviews]);
+  const yearSessions = allAttempts.filter((a) => inYear(a.day)).length;
+  const yearDays = [...new Set([...byDay.keys(), ...cardDays])].filter(inYear);
+  const yearLongest = longestStreak(yearDays);
 
   const weakest = patterns
     .filter((p) => p.started >= 2)
@@ -105,6 +112,12 @@ export function ProgressPage() {
             </p>
           </div>
         </section>
+
+        <Sheet title={t.progress.heatmapTitle(yearSessions)} id="heatmap" note={t.progress.heatmapNote(yearDays.length, yearLongest)}>
+          <div className="sheet-body">
+            <ActivityHeatmap counts={byDay} cardDays={cardDays} today={day} weeks={HEATMAP_WEEKS} />
+          </div>
+        </Sheet>
 
         <Sheet
           title={t.progress.masteryTitle}
@@ -165,37 +178,30 @@ export function ProgressPage() {
               <WeeklyChart weeks={weeks} />
             </div>
           </Sheet>
-          <div className="stack">
-            <Sheet title={t.progress.calendarTitle} id="calendar" note={t.progress.calendarNote(CALENDAR_WEEKS, activeDays)}>
-              <div className="sheet-body">
-                <ActivityCalendar counts={byDay} today={day} weeks={CALENDAR_WEEKS} />
-              </div>
-            </Sheet>
-            <Sheet title={t.progress.difficultyTitle} id="difficulty">
-              <div className="sheet-body difficulty-bars">
-                {difficulty.map((d) => (
-                  <div key={d.difficulty} className="meter-row">
-                    <span className="difficulty" data-level={d.difficulty}>
-                      {d.difficulty}
-                    </span>
-                    <div
-                      className="meter"
-                      role="meter"
-                      aria-label={t.progress.difficultyLabel(d.difficulty)}
-                      aria-valuemin={0}
-                      aria-valuemax={d.total}
-                      aria-valuenow={d.started}
-                    >
-                      <div className="meter-fill" style={{ width: d.total ? `${(d.started / d.total) * 100}%` : 0 }} />
-                    </div>
-                    <span className="meter-value">
-                      {d.started} / {d.total}
-                    </span>
+          <Sheet title={t.progress.difficultyTitle} id="difficulty">
+            <div className="sheet-body difficulty-bars">
+              {difficulty.map((d) => (
+                <div key={d.difficulty} className="meter-row">
+                  <span className="difficulty" data-level={d.difficulty}>
+                    {d.difficulty}
+                  </span>
+                  <div
+                    className="meter"
+                    role="meter"
+                    aria-label={t.progress.difficultyLabel(d.difficulty)}
+                    aria-valuemin={0}
+                    aria-valuemax={d.total}
+                    aria-valuenow={d.started}
+                  >
+                    <div className="meter-fill" style={{ width: d.total ? `${(d.started / d.total) * 100}%` : 0 }} />
                   </div>
-                ))}
-              </div>
-            </Sheet>
-          </div>
+                  <span className="meter-value">
+                    {d.started} / {d.total}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Sheet>
         </div>
 
         <Sheet title={t.progress.mockTitle} id="mock-stats">
