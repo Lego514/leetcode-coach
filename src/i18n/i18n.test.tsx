@@ -76,7 +76,8 @@ describe('dictionaries', () => {
   it('has no empty strings', () => {
     for (const dict of [zhTW, en]) {
       const empty = collectStrings(dict).filter(
-        ([path, text]) => text.trim() === '' && !path.startsWith('progress.unit'),
+        // 數字後面的單位在某些語言可以不寫
+        ([path, text]) => text.trim() === '' && !path.startsWith('progress.unit') && !path.startsWith('today.plan.unit'),
       );
       expect(empty).toEqual([]);
     }

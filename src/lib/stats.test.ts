@@ -3,6 +3,7 @@ import { BUILTIN_PROBLEMS } from '../data/problems';
 import {
   dueProblems,
   finishDay,
+  longestStreak,
   newProblemsStartedOn,
   planToTarget,
   practiceAttempts,
@@ -24,6 +25,16 @@ describe('practiceStreak', () => {
     const cards = [{ day: '2026-09-15' }, { day: '2026-09-16' }];
     expect(practiceStreak(streakDays(practiced, cards), '2026-09-16')).toBe(3);
     expect(practiceStreak(streakDays(practiced, []), '2026-09-16')).toBe(1);
+  });
+});
+
+describe('longestStreak', () => {
+  it('finds the longest run of consecutive days, in any order', () => {
+    expect(longestStreak([])).toBe(0);
+    expect(longestStreak(['2026-09-16'])).toBe(1);
+    expect(longestStreak(['2026-09-16', '2026-09-14', '2026-09-15', '2026-09-15', '2026-09-20', '2026-09-21'])).toBe(3);
+    // 跨月也算連續
+    expect(longestStreak(['2026-09-30', '2026-10-01', '2026-10-02'])).toBe(3);
   });
 });
 

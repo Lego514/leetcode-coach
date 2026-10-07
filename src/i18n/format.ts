@@ -12,6 +12,8 @@ export interface Formatters {
   time: (ms: number) => string;
   /** 日期加時間，用在備份時間這類地方 */
   dateTime: (iso: string) => string;
+  /** 熱度圖上的月份：10月 或 Oct */
+  month: (day: Day) => string;
 }
 
 export function createFormatters(locale: Locale): Formatters {
@@ -21,11 +23,13 @@ export function createFormatters(locale: Locale): Formatters {
     const full = new Intl.DateTimeFormat('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
     const dateTime = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+    const month = new Intl.DateTimeFormat('en-US', { month: 'short' });
     return {
       day: (day, withWeekday = true) => (withWeekday ? shortWithWeekday : short).format(parseDay(day)),
       fullDay: (day) => full.format(parseDay(day)),
       time: (ms) => time.format(ms),
       dateTime: (iso) => dateTime.format(new Date(iso)),
+      month: (day) => month.format(parseDay(day)),
     };
   }
 
@@ -43,5 +47,6 @@ export function createFormatters(locale: Locale): Formatters {
     },
     time: (ms) => time.format(ms),
     dateTime: (iso) => dateTime.format(new Date(iso)),
+    month: (day) => `${parseDay(day).getMonth() + 1}月`,
   };
 }
