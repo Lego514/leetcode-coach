@@ -1,7 +1,8 @@
 import { useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { SaveStatus, useAutosave } from '../components/autosave';
-import { SolvingStepsSheet } from '../components/SolvingSteps';
+import { ScriptBuilder } from '../components/ScriptBuilder';
+import { hasStepNotes, SolvingStepsSheet } from '../components/SolvingSteps';
 import { CodeTextarea } from '../components/CodeTextarea';
 import { RecordDialog } from '../components/RecordDialog';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
@@ -191,6 +192,9 @@ function NotesForm({
   }));
   const status = useAutosave(draft, (value) => saveNote(problemId, value));
   const update = (patch: Partial<NoteDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  // 解題步驟在上面另一個表單裡編輯，這裡讀最新的內容
+  const steps = useNote(problemId)?.steps;
+  const [writing, setWriting] = useState(false);
 
   return (
     <Sheet title={t.detail.notesTitle} id="notes" actions={<SaveStatus status={status} />}>
@@ -222,13 +226,30 @@ function NotesForm({
             onChange={(e) => update({ explanation: e.target.value })}
             placeholder={EXPLANATION_SCAFFOLD}
           />
-          {!draft.explanation && (
-            <div>
-              <button type="button" className="btn btn-small" onClick={() => update({ explanation: EXPLANATION_SCAFFOLD })}>
-                {t.detail.insertScaffold}
-              </button>
+          {(!draft.explanation || hasStepNotes(steps)) && (
+            <div className="btn-row">
+              {hasStepNotes(steps) && (
+                <button type="button" className="btn btn-small" onClick={() => setWriting(true)}>
+                  {t.solving.writeScript}
+                </button>
+              )}
+              {!draft.explanation && (
+                <button type="button" className="btn btn-small" onClick={() => update({ explanation: EXPLANATION_SCAFFOLD })}>
+                  {t.detail.insertScaffold}
+                </button>
+              )}
             </div>
           )}
+          <ScriptBuilder
+            open={writing}
+            onClose={() => setWriting(false)}
+            steps={steps}
+            current={draft.explanation}
+            onUse={(script) => {
+              setWriting(false);
+              update({ explanation: script });
+            }}
+          />
         </div>
 
         <div className="form-grid">

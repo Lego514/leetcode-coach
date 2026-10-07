@@ -6,6 +6,8 @@ import { saveNote } from '../store/actions';
 import type { StepNotes } from '../store/db';
 import { useNote } from '../store/queries';
 import { SaveStatus, useAutosave, type AutosaveStatus } from './autosave';
+import { ScriptBuilder } from './ScriptBuilder';
+import { useToast } from './toast';
 import { Sheet } from './ui';
 
 // 解題步驟：練習頁、模擬面試和題目頁共用同一套步驟（模擬面試的七步）。
@@ -32,6 +34,8 @@ export interface StepNotesState {
   value: StepNotes | undefined;
   /** 這次有沒有改過 */
   edited: boolean;
+  /** 目前的英文講解稿，照步驟寫講解稿時帶進去 */
+  explanation: string;
   set: (key: StepNoteKey, text: string) => void;
   status: AutosaveStatus;
 }
@@ -49,6 +53,7 @@ export function useStepNotes(problemId: number): StepNotesState {
   return {
     value: draft ?? stored,
     edited: draft !== null,
+    explanation: note?.explanation ?? '',
     set: (key, text) => setDraft((prev) => ({ ...(prev ?? stored ?? {}), [key]: text })),
     status,
   };
@@ -93,13 +98,20 @@ interface SolvingStepsSheetProps {
   collapsible?: boolean;
   /** 練習頁：舉例那一步旁邊放「用白板走一遍」 */
   onOpenBoard?: () => void;
+  /**
+   * 練習頁：最下面放「寫成英文講解稿」。題目頁不放，因為那裡的筆記表單有自己的草稿，
+   * 從這裡改講解稿會被它蓋掉；題目頁的按鈕放在講解稿欄位旁邊。
+   */
+  scriptButton?: boolean;
 }
 
-export function SolvingStepsSheet({ problemId, title, collapsible = false, onOpenBoard }: SolvingStepsSheetProps) {
+export function SolvingStepsSheet({ problemId, title, collapsible = false, onOpenBoard, scriptButton = false }: SolvingStepsSheetProps) {
   const { t, locale } = useI18n();
   const s = t.solving;
+  const toast = useToast();
   const state = useStepNotes(problemId);
   const [expanded, setExpanded] = useState(false);
+  const [writing, setWriting] = useState(false);
   const open = !collapsible || expanded || state.edited || hasStepNotes(state.value);
 
   return (
@@ -142,7 +154,30 @@ export function SolvingStepsSheet({ problemId, title, collapsible = false, onOpe
               );
             })}
           </ol>
+          {scriptButton && hasStepNotes(state.value) && (
+            <div className="solving-foot">
+              <button type="button" className="btn btn-small" onClick={() => setWriting(true)}>
+                {s.writeScript}
+              </button>
+              <span className="sheet-note">{s.writeScriptHint}</span>
+            </div>
+          )}
         </>
+      )}
+      {scriptButton && (
+        <ScriptBuilder
+          open={writing}
+          onClose={() => setWriting(false)}
+          steps={state.value}
+          current={state.explanation}
+          onUse={(script) => {
+            setWriting(false);
+            saveNote(problemId, { explanation: script }).then(
+              () => toast(t.script.saved),
+              () => toast(t.errors.unknown),
+            );
+          }}
+        />
       )}
     </Sheet>
   );

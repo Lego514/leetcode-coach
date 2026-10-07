@@ -1847,6 +1847,87 @@ details.table-toggle[open] summary {
   max-height: 14em;
 }
 
+.solving-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--rule);
+}
+
+/* 照步驟寫講解稿：每一句上面列出相關步驟寫過的內容 */
+.script-refs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--level-2);
+  background: var(--sheet-2);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+/* 英文句子寫長了也看得到整句 */
+.script-line .textarea {
+  min-height: 0;
+  field-sizing: content;
+  max-height: 12em;
+}
+
+.script-ref-label {
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+/* 提示面板：卡在哪一步 */
+.stuck {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill-group button {
+  padding: 4px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: var(--sheet);
+  color: var(--ink-2);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pill-group button[aria-pressed='true'] {
+  border-color: var(--pen);
+  background: var(--pen);
+  color: var(--on-pen);
+  font-weight: 600;
+}
+
+.stuck-help {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--pen-soft);
+}
+
+.stuck-context {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.stuck-context span {
+  font-weight: 600;
+}
+
 .step-body {
   grid-column: 2;
   margin-top: 8px;

@@ -540,6 +540,7 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
               used={hints}
               sawSolution={sawSolution}
               onReveal={() => setHints((n) => Math.min(HINT_LEVELS, n + 1))}
+              onRevealTo={(level) => setHints((n) => Math.min(HINT_LEVELS, Math.max(n, level)))}
               onSolution={() => setSawSolution(true)}
             />
           )}

@@ -111,6 +111,11 @@ function PracticeSession({ problem }: { problem: Problem }) {
     setShowPattern(true);
   }
 
+  function revealHintTo(level: number) {
+    setHints((n) => Math.min(HINT_LEVELS, Math.max(n, level)));
+    setShowPattern(true);
+  }
+
   const minutes = Math.max(1, Math.round(elapsedSec / 60));
   const pattern = getPattern(problem.pattern, locale);
 
@@ -204,7 +209,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
         )}
 
         {/* 一步寫一句；寫完計時後也還能補，紀錄表單放在上面 */}
-        <SolvingStepsSheet problemId={problem.id} title={t.solving.title} onOpenBoard={() => setBoardOpen(true)} />
+        <SolvingStepsSheet problemId={problem.id} title={t.solving.title} onOpenBoard={() => setBoardOpen(true)} scriptButton />
 
         {!finished && (
           <HintPanel
@@ -212,6 +217,8 @@ function PracticeSession({ problem }: { problem: Problem }) {
             used={hints}
             sawSolution={sawSolution}
             onReveal={revealHint}
+            onRevealTo={revealHintTo}
+            onOpenBoard={() => setBoardOpen(true)}
             onSolution={() => setSawSolution(true)}
           />
         )}

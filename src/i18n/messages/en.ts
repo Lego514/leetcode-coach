@@ -164,6 +164,47 @@ const en: Messages = {
     reopenSolution: 'Open the LeetCode solutions again',
     skipToSolution: 'Skip to solutions',
     lastResort: 'Still stuck? See LeetCode solutions',
+    stuckLabel: 'Where are you stuck?',
+    stuckNote: 'Pick a step to see how to think about it. This doesn’t count as using a hint.',
+    yourStep: (field) => `Your “${field}”:`,
+    openForStep: (level, title) => `Open the hint for this step (hint ${level}: ${title})`,
+    stuckTips: {
+      clarify: [
+        'Say the problem in your own words: what comes in, and what goes out.',
+        'Check the range: can it be empty? Duplicates or negatives? How large?',
+        'Return indices or values? Does order matter? Can you change the input?',
+      ],
+      examples: [
+        'Pick the smallest example that isn’t trivial and solve it by hand.',
+        'Notice what you did step by step. That’s usually the algorithm.',
+        'Then try the edges: empty, a single item, all the same, negatives, duplicates.',
+      ],
+      brute: [
+        'Forget speed for now: what’s the most direct way?',
+        'Common brute forces: try every pair, every subarray, every combination, or simulate step by step.',
+        'Write down its time and space complexity, so you know what to optimize.',
+      ],
+      optimize: [
+        'What’s slow: which loop in the brute force costs the most?',
+        'What’s repeated: is the same lookup or calculation done many times?',
+        'What to keep: could a hash map, set, heap, sorting, or prefix sums save that work?',
+      ],
+      code: [
+        'Write the skeleton first: how the loop moves and which variables you keep. Fill in details later.',
+        'Move the fiddly parts into a helper so the main function reads like the plan.',
+        'Stuck on how to write it? Compare with this pattern’s template.',
+      ],
+      test: [
+        'Trace your example line by line and write down every variable.',
+        'Look hard at where loops start and stop, and at off-by-one errors.',
+        'Run the edge cases again: empty, a single item, all the same.',
+      ],
+      complexity: [
+        'Time: how many times does the innermost line run in total?',
+        'Space: what extra do you store besides the input? Count the recursion stack too.',
+        'Name the part of the code that causes it, like “sorting is O(n log n), one pass is O(n)”.',
+      ],
+    },
     ratingNudge: 'When you record a problem you needed hints for, “Needed a hint” is suggested so it comes back sooner.',
   },
 
@@ -718,6 +759,15 @@ const en: Messages = {
     ],
   },
 
+  script: {
+    title: 'Write the script from your steps',
+    lede: 'The script has five sentences. Above each one is what you wrote in the related steps. Say it as one English sentence.',
+    noSteps: 'You haven’t written the related steps yet. Think it through here.',
+    replaces: 'This replaces the problem’s current explanation script.',
+    use: 'Use this script',
+    saved: 'Saved as this problem’s explanation script. Try saying it in an explanation drill.',
+  },
+
   solving: {
     title: 'Solving steps',
     detailTitle: 'How I solved it',
@@ -725,6 +775,8 @@ const en: Messages = {
     empty: 'You haven’t written down how you solved this one yet. You can also fill in the steps during practice or a mock interview.',
     start: 'Write it down',
     board: 'Trace it on the whiteboard',
+    writeScript: 'Write the English script from these steps',
+    writeScriptHint: 'Turn these notes into spoken sentences and save them as this problem’s explanation script.',
     fields: {
       clarify: 'What the problem asks',
       example: 'Example',
