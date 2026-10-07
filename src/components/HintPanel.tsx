@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { hintFor } from '../data/hints';
+import { INTERVIEW_STEPS, STEP_CONTEXT, STEP_HINT_LEVEL, type StepId } from '../data/interview';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
@@ -15,11 +16,16 @@ interface HintPanelProps {
   sawSolution: boolean;
   onReveal: () => void;
   onSolution: () => void;
+  /** 卡在某一步時直接打開對應的那層提示（前面幾層一起打開） */
+  onRevealTo?: (level: number) => void;
+  /** 卡在舉例時可以直接開白板 */
+  onOpenBoard?: () => void;
 }
 
-export function HintPanel({ problem, used, sawSolution, onReveal, onSolution }: HintPanelProps) {
+export function HintPanel({ problem, used, sawSolution, onReveal, onSolution, onRevealTo, onOpenBoard }: HintPanelProps) {
   const { t, locale } = useI18n();
   const note = useNote(problem.id);
+  const [stuck, setStuck] = useState<StepId | null>(null);
   const patternNote = usePatternNote(problem.pattern);
   const pattern = getPattern(problem.pattern, locale);
   const keyHint = hintFor(problem.id, locale);
@@ -62,10 +68,56 @@ export function HintPanel({ problem, used, sawSolution, onReveal, onSolution }: 
   ];
 
   const remaining = HINT_LEVELS - used;
+  const stepLevel = stuck ? STEP_HINT_LEVEL[stuck] : undefined;
+  const context = stuck ? STEP_CONTEXT[stuck].filter((key) => note?.steps?.[key]?.trim()) : [];
 
   return (
     <Sheet title={t.hints.title} id="hints" note={used === 0 ? t.hints.closedNote : t.hints.openedNote(used, HINT_LEVELS)}>
       <div className="sheet-body stack" style={{ gap: 14 }}>
+        {/* 先選卡在哪一步，看這一步可以怎麼想；這部分不算用了提示 */}
+        <div className="stuck">
+          <p className="field-label" id="stuck-label">
+            {t.hints.stuckLabel}
+          </p>
+          <div className="pill-group" role="group" aria-labelledby="stuck-label">
+            {INTERVIEW_STEPS.map((step) => (
+              <button key={step.id} type="button" aria-pressed={stuck === step.id} onClick={() => setStuck(stuck === step.id ? null : step.id)}>
+                {t.interview.steps[step.id].name}
+              </button>
+            ))}
+          </div>
+          {stuck ? (
+            <div className="stuck-help" aria-live="polite">
+              {context.map((key) => (
+                <p key={key} className="stuck-context">
+                  <span>{t.hints.yourStep(t.solving.fields[key])}</span> {note?.steps?.[key]}
+                </p>
+              ))}
+              <ul className="bullets">
+                {t.hints.stuckTips[stuck].map((tip) => (
+                  <li key={tip}>{tip}</li>
+                ))}
+              </ul>
+              {(stuck === 'examples' && onOpenBoard) || (stepLevel && used < stepLevel && onRevealTo) ? (
+                <div className="btn-row">
+                  {stuck === 'examples' && onOpenBoard && (
+                    <button type="button" className="btn btn-small" onClick={onOpenBoard}>
+                      {t.solving.board}
+                    </button>
+                  )}
+                  {stepLevel && used < stepLevel && onRevealTo && (
+                    <button type="button" className="btn btn-small" onClick={() => onRevealTo(stepLevel)}>
+                      {t.hints.openForStep(stepLevel, levels[stepLevel - 1].title)}
+                    </button>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="field-hint">{t.hints.stuckNote}</p>
+          )}
+        </div>
+
         {used > 0 && (
           <ol className="hint-list">
             {levels.slice(0, used).map((level, i) => (

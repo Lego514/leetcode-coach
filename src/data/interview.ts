@@ -1,4 +1,4 @@
-import { EXPLAIN_POINTS, type StepNoteKey } from '../../shared/constants';
+import { EXPLAIN_POINTS, type ExplainPoint, type StepNoteKey } from '../../shared/constants';
 
 export interface Phrase {
   en: string;
@@ -24,6 +24,29 @@ export const STEP_NOTE_FIELDS: Record<StepId, StepNoteKey[]> = {
   test: ['test'],
   complexity: ['complexity'],
 };
+
+/** 照步驟寫講解稿：講解稿每一句可以參考哪幾步寫的內容 */
+export const SCRIPT_SOURCES: Record<ExplainPoint, StepNoteKey[]> = {
+  insight: ['repeated', 'keep'],
+  structure: ['keep', 'code'],
+  walkthrough: ['example'],
+  complexity: ['complexity'],
+  edge: ['edge', 'test'],
+};
+
+/** 卡在某一步時，先看自己前面幾步寫了什麼 */
+export const STEP_CONTEXT: Record<StepId, StepNoteKey[]> = {
+  clarify: [],
+  examples: ['clarify'],
+  brute: ['example', 'edge'],
+  optimize: ['brute'],
+  code: ['keep'],
+  test: ['example', 'edge'],
+  complexity: ['brute', 'keep'],
+};
+
+/** 卡在優化就看關鍵觀察（第 2 層），卡在寫程式就看模板（第 3 層） */
+export const STEP_HINT_LEVEL: Partial<Record<StepId, number>> = { optimize: 2, code: 3 };
 
 /** 美國技術面試常見的解題流程，模擬面試會依序走過 */
 export const INTERVIEW_STEPS: InterviewStep[] = [
