@@ -1,4 +1,4 @@
-import { EXPLAIN_POINTS } from '../../shared/constants';
+import { EXPLAIN_POINTS, type StepNoteKey } from '../../shared/constants';
 
 export interface Phrase {
   en: string;
@@ -13,6 +13,17 @@ export interface InterviewStep {
   english: string;
   phrases: Phrase[];
 }
+
+/** 每一步要寫的那一句話；舉例拆成例子和邊界情況，優化拆成三個問題 */
+export const STEP_NOTE_FIELDS: Record<StepId, StepNoteKey[]> = {
+  clarify: ['clarify'],
+  examples: ['example', 'edge'],
+  brute: ['brute'],
+  optimize: ['slow', 'repeated', 'keep'],
+  code: ['code'],
+  test: ['test'],
+  complexity: ['complexity'],
+};
 
 /** 美國技術面試常見的解題流程，模擬面試會依序走過 */
 export const INTERVIEW_STEPS: InterviewStep[] = [

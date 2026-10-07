@@ -152,6 +152,18 @@ describe('POST /api/sync', () => {
     }
   });
 
+  it('stores solving-step notes and rejects unknown steps', async () => {
+    const data = { ...note('hash map'), steps: { clarify: 'Find two indices that add up to target', edge: 'Duplicates, negatives', keep: 'Map value to index' } };
+    const ok = await client.sync(0, [{ collection: 'notes', key: '1', updatedAt: 1, deleted: false, data }]);
+    expect(ok.changes).toEqual([{ collection: 'notes', key: '1', updatedAt: 1, deleted: false, data }]);
+
+    // 舊版本的筆記沒有 steps 也要收
+    expect((await client.sync(0, [noteChange('2', 'two pointers', 1)])).rejected).toEqual([]);
+
+    const bad = { collection: 'notes', key: '3', updatedAt: 1, deleted: false, data: { ...note('x'), steps: { vibes: 'nope' } } };
+    expect((await client.request('POST', '/api/sync', { cursor: 0, changes: [bad] })).status).toBe(400);
+  });
+
   it('drops unknown fields from stored data', async () => {
     const res = await client.sync(0, [{ collection: 'meta', key: '7', updatedAt: 1, deleted: false, data: { companies: ['Google'], secret: 'x' } }]);
     expect(res.changes[0].data).toEqual({ companies: ['Google'] });
