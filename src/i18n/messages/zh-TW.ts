@@ -36,6 +36,9 @@ const zhTW = {
     problemNotFound: '找不到這一題',
     problemNotFoundLede: (id: string) => `題庫裡沒有第 ${id} 題。`,
     languageLabel: '語言',
+    darkMode: '深色模式',
+    toDark: '換成深色',
+    toLight: '換成淺色',
   },
 
   nav: {

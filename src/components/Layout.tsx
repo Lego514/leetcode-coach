@@ -8,6 +8,7 @@ import { rememberPage } from '../store/reports';
 import { useProgressMap, useToday } from '../store/queries';
 import { syncStatusText } from './AccountSection';
 import { LanguageSwitch } from './LanguageSwitch';
+import { ThemeToggle } from './ThemeToggle';
 
 type NavKey = keyof Pick<
   Messages['nav'],
@@ -161,7 +162,10 @@ export function Layout() {
         </div>
         <div className="nav-bottom">
           {updateReady && !safeToReload && <UpdateNotice />}
-          <LanguageSwitch compact />
+          <div className="prefs">
+            <LanguageSwitch compact />
+            <ThemeToggle compact />
+          </div>
           <SyncFootnote />
         </div>
       </nav>

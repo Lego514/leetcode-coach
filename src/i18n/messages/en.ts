@@ -38,6 +38,9 @@ const en: Messages = {
     problemNotFound: 'Problem not found',
     problemNotFoundLede: (id) => `There is no problem #${id} in your problem list.`,
     languageLabel: 'Language',
+    darkMode: 'Dark mode',
+    toDark: 'Switch to dark',
+    toLight: 'Switch to light',
   },
 
   nav: {

@@ -3968,3 +3968,46 @@ a.more-account:hover {
     color: var(--ink);
   }
 }
+
+/* ---------- 語言與深色模式 ---------- */
+
+.prefs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.theme-toggle-compact {
+  width: 28px;
+  height: 28px;
+}
+
+.theme-toggle-compact svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (hover: hover) {
+  .theme-toggle:hover {
+    background: var(--sheet-2);
+    color: var(--ink);
+  }
+}
