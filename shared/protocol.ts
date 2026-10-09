@@ -187,6 +187,25 @@ export const boardElementSchema = z.discriminatedUnion('type', [
     /** none 是沒有箭頭的直線（例如無向圖的邊）；沒寫就是有箭頭 */
     head: z.enum(['end', 'none']).optional(),
   }),
+  /** 圖：節點自動排成一圈；邊從 a 連到 b（有向時是 a → b），可以有權重、可以標記成走過 */
+  z.object({
+    type: z.literal('graph'),
+    ...placed,
+    label: text(40),
+    nodes: z.array(cell).min(1).max(20),
+    edges: z
+      .array(
+        z.object({
+          a: z.number().int().min(0).max(19),
+          b: z.number().int().min(0).max(19),
+          w: text(12).optional(),
+          mark: z.boolean().optional(),
+        }),
+      )
+      .max(60),
+    directed: z.boolean().optional(),
+    colors: z.array(z.enum(CELL_COLORS).nullable()).max(20).optional(),
+  }),
   /** 範圍框：框住同一個陣列上兩個指標之間的格子，指標移動時跟著變（滑動視窗）；位置由指標決定，不存座標 */
   z.object({
     type: z.literal('range'),

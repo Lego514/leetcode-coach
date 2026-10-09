@@ -4,6 +4,8 @@ import {
   CELL,
   colorVar,
   CYCLE_H,
+  edgeShape,
+  graphLayout,
   hasTreeNode,
   INDEX_H,
   isIndexed,
@@ -34,7 +36,7 @@ import {
   type ElementOf,
   type Placed,
 } from '../../lib/board/model';
-import { serializeTree } from '../../lib/board/structures';
+import { serializeGraph, serializeTree } from '../../lib/board/structures';
 
 // 白板上每一種元件的樣子。雙擊進入編輯時，格子和文字變成輸入框。
 
@@ -55,6 +57,11 @@ interface ElementViewProps {
   onToggleLink?: (gap: number) => void;
   /** 選了二元樹的一個節點時，點空的子節點位置加一個子節點 */
   onAddChild?: (index: number) => void;
+  /** 選取圖時：右下角的「＋」加節點、點一條邊選取它 */
+  onAddNode?: () => void;
+  onPickEdge?: (edge: number) => void;
+  /** 選取的那條邊 */
+  edgeIndex?: number;
   onAddRow?: () => void;
   onAddCol?: () => void;
   register: (id: string, node: HTMLElement | null) => void;
@@ -125,6 +132,8 @@ function Body({ el, editing, onChange, onDoneEditing, ...rest }: BodyProps) {
       return <ListBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'tree':
       return <TreeBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
+    case 'graph':
+      return <GraphBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'table':
       return <TableBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'var':
@@ -496,6 +505,80 @@ function TreeBody({ el, editing, snapIndex, cellIndex, focusIndex, onAddChild, o
   );
 }
 
+/** 圖：節點排成一圈，邊依有向、無向畫箭頭或直線；選取時邊可以點，右下角可以加節點 */
+function GraphBody({
+  el,
+  editing,
+  snapIndex,
+  cellIndex,
+  focusIndex,
+  edgeIndex,
+  onAddNode,
+  onPickEdge,
+  onChange,
+  onDoneEditing,
+}: { el: ElementOf<'graph'> } & Omit<BodyProps, 'el'>) {
+  const { t } = useI18n();
+  const layout = graphLayout(el);
+  const setNode = (index: number, value: string) => onChange({ nodes: el.nodes.map((v, i) => (i === index ? value : v)) });
+  const focus = focusIndex ?? 0;
+  const head = `board-graph-head-${el.id}`;
+  const markedHead = `board-graph-head-marked-${el.id}`;
+  return (
+    <>
+      <Label value={el.label} editing={editing} onChange={(label) => onChange({ label })} onDone={onDoneEditing} />
+      <svg className="board-graph-edges" width={layout.w} height={layout.h} aria-hidden>
+        <defs>
+          {/* 箭頭固定大小，標記的邊線條比較粗也不會跟著變大 */}
+          <marker id={head} viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" className="board-graph-head" />
+          </marker>
+          <marker id={markedHead} viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" className="board-graph-head-marked" />
+          </marker>
+        </defs>
+        {el.edges.map((edge, i) => {
+          const shape = edgeShape(el, layout.centers, edge);
+          if (!shape) return null;
+          return (
+            <g key={i} data-marked={edge.mark || undefined} data-picked={edgeIndex === i || undefined}>
+              {onPickEdge && !editing && <path d={shape.path} className="board-graph-edge-hit" data-ui data-edge={i} onClick={() => onPickEdge(i)} />}
+              <path d={shape.path} className="board-graph-edge" markerEnd={el.directed ? `url(#${edge.mark ? markedHead : head})` : undefined} />
+              {edge.w && (
+                <text x={shape.label.x} y={shape.label.y} className="board-graph-weight">
+                  {edge.w}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      {layout.centers.map((c, i) => (
+        <Cell
+          key={`${i}:${el.nodes.length}`}
+          index={i}
+          value={el.nodes[i]}
+          color={el.colors?.[i]}
+          picked={cellIndex === i}
+          editing={editing}
+          autoFocus={i === focus}
+          label={t.board.graphNodeLabel(i)}
+          snap={snapIndex === i}
+          className="board-graph-node"
+          style={{ left: c.x - TREE_D / 2, top: c.y - TREE_D / 2, width: TREE_D, height: TREE_D }}
+          onChange={(v) => setNode(i, v)}
+          onDone={onDoneEditing}
+        />
+      ))}
+      {onAddNode && !editing && (
+        <button type="button" className="board-add board-graph-add" aria-label={t.board.actions.addNode} title={t.board.actions.addNode} onClick={onAddNode}>
+          +
+        </button>
+      )}
+    </>
+  );
+}
+
 function TableBody({ el, editing, onChange, onDoneEditing, onAddRow, onAddCol }: { el: ElementOf<'table'> } & Omit<BodyProps, 'el'>) {
   const { t } = useI18n();
   const cols = Math.max(1, ...el.rows.map((r) => r.length));
@@ -661,6 +744,8 @@ function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t'])
       return `${t.board.kinds[el.variant]} ${el.label}: ${el.items.join(el.variant === 'linked' ? ' → ' : ', ')}`;
     case 'tree':
       return `${t.board.kinds.binaryTree} ${el.label}: ${serializeTree(el)}`;
+    case 'graph':
+      return `${t.board.kinds.graph} ${el.label}${el.directed ? ` (${t.board.directed})` : ''}: ${serializeGraph(el)}`;
     case 'table':
       return `${t.board.kinds[el.variant]} ${el.label}: ${el.rows.map((r) => r.join(' ')).join('; ')}`;
     case 'var':
@@ -670,7 +755,7 @@ function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t'])
     case 'pointer': {
       if (!el.attach) return `${t.board.kinds.pointer} ${el.name}`;
       const target = doc.elements.find((x) => x.id === el.attach!.id);
-      if (target?.type === 'tree') return t.board.pointerAtNode(el.name, target.nodes[el.attach.index] ?? '');
+      if (target?.type === 'tree' || target?.type === 'graph') return t.board.pointerAtNode(el.name, target.nodes[el.attach.index] ?? '');
       return t.board.pointerAt(el.name, el.attach.index);
     }
     case 'shape':
