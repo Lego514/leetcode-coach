@@ -37,6 +37,22 @@ export const POINTER_H = 34;
 export const NODE_D = 48;
 export const LIST_NODE_W = 76;
 export const LIST_NODE_H = 44;
+/** 鏈結串列兩個節點之間留給連線箭頭的空間 */
+export const LINK_GAP = 28;
+/** 鏈結串列尾端的「→ null」 */
+export const NULL_W = 36;
+/** 鏈結串列有環時，節點下方畫回頭箭頭的空間 */
+export const CYCLE_H = 24;
+/** 二元樹的節點 */
+export const TREE_D = 40;
+/** 二元樹依中序排開，相鄰兩個節點的水平距離 */
+export const TREE_GAP = 50;
+/** 二元樹一層的高度；指標放在節點上方，兩層之間要放得下 */
+export const TREE_LEVEL = 76;
+/** 根節點上方留一點空間給名稱 */
+export const TREE_TOP = LABEL_H + 12;
+/** 最多 6 層：第 0 到 62 個位置 */
+export const TREE_MAX_NODES = 63;
 /** 指標放開時離格子多近才吸附 */
 export const SNAP_DISTANCE = 48;
 
@@ -46,9 +62,18 @@ export function isPlaced(el: BoardElement): el is Placed {
   return el.type !== 'arrow' && el.type !== 'stroke';
 }
 
-/** 陣列和佇列有索引，指標可以吸附 */
+/** 陣列和佇列有索引，格子下面標 0、1、2… */
 export function isIndexed(el: BoardElement): el is ElementOf<'list'> {
   return el.type === 'list' && (el.variant === 'array' || el.variant === 'queue');
+}
+
+export function isLinked(el: BoardElement): el is ElementOf<'list'> {
+  return el.type === 'list' && el.variant === 'linked';
+}
+
+/** 指標可以吸附的元件：陣列、佇列、鏈結串列的格子，和二元樹的節點 */
+export function holdsPointers(el: BoardElement | undefined): el is ElementOf<'list'> | ElementOf<'tree'> {
+  return !!el && (isIndexed(el) || isLinked(el) || el.type === 'tree');
 }
 
 function tableCellWidth(el: ElementOf<'table'>): number {
@@ -68,7 +93,16 @@ export function sizeOf(el: Placed, measured?: { w: number; h: number }): { w: nu
     case 'list': {
       const n = Math.max(1, el.items.length);
       if (el.variant === 'stack') return { w: CELL, h: LABEL_H + n * CELL };
+      if (el.variant === 'linked') {
+        // 有環時尾巴的回頭箭頭畫在下面；沒有環時尾巴接一個 null
+        const tail = el.cycle === undefined ? LINK_GAP + NULL_W : 0;
+        return { w: n * CELL + (n - 1) * LINK_GAP + tail, h: LABEL_H + CELL + (el.cycle === undefined ? 0 : CYCLE_H) };
+      }
       return { w: n * CELL, h: LABEL_H + CELL + (isIndexed(el) ? INDEX_H : 0) };
+    }
+    case 'tree': {
+      const { w, h } = treeLayout(el);
+      return { w, h };
     }
     case 'table': {
       const cols = columns(el);
@@ -103,48 +137,97 @@ export function findElement(doc: BoardDoc, id: string): BoardElement | undefined
 
 // ---------- 指標 ----------
 
-/** 陣列第 index 格的位置 */
+/** 陣列或鏈結串列第 index 格的位置 */
 export function cellRect(list: ElementOf<'list'>, index: number): Rect {
-  return { x: list.x + index * CELL, y: list.y + LABEL_H, w: CELL, h: CELL };
+  const step = list.variant === 'linked' ? CELL + LINK_GAP : CELL;
+  return { x: list.x + index * step, y: list.y + LABEL_H, w: CELL, h: CELL };
 }
 
-/** 吸附的指標放在索引下面；同一格有好幾個指標時往下疊 */
+/** 格子下方從哪裡開始放指標：陣列空出索引那一列，有環的鏈結串列空出回頭箭頭 */
+function belowCells(list: ElementOf<'list'>): number {
+  if (list.variant === 'linked') return (list.cycle === undefined ? 0 : CYCLE_H) + 4;
+  return INDEX_H + 2;
+}
+
+/** 指標吸附在二元樹上時放在節點上方、箭頭朝下，免得蓋住往下的連線 */
+export function pointsDown(doc: BoardDoc, pointer: ElementOf<'pointer'>): boolean {
+  const target = pointer.attach && findElement(doc, pointer.attach.id);
+  return target?.type === 'tree' && hasTreeNode(target, pointer.attach!.index);
+}
+
+/** 指標吸附的那一格；陣列被刪短時落在最後一格 */
+function slotOf(target: ElementOf<'list'> | ElementOf<'tree'>, index: number): number {
+  return target.type === 'tree' ? index : Math.min(index, Math.max(0, target.items.length - 1));
+}
+
+/** 吸附的指標放在格子下面（二元樹是節點上面）；同一格有好幾個指標時往外疊 */
 export function pointerPosition(doc: BoardDoc, pointer: ElementOf<'pointer'>): Point {
   const target = pointer.attach && findElement(doc, pointer.attach.id);
-  if (!pointer.attach || !target || !isIndexed(target)) return { x: pointer.x, y: pointer.y };
-  const { index } = pointer.attach;
+  if (!pointer.attach || !holdsPointers(target)) return { x: pointer.x, y: pointer.y };
+  const slot = slotOf(target, pointer.attach.index);
   const sameCell = doc.elements.filter(
-    (el): el is ElementOf<'pointer'> =>
-      el.type === 'pointer' && el.attach?.id === target.id && Math.min(el.attach.index, target.items.length - 1) === Math.min(index, target.items.length - 1),
+    (el): el is ElementOf<'pointer'> => el.type === 'pointer' && el.attach?.id === target.id && slotOf(target, el.attach.index) === slot,
   );
   const stack = Math.max(0, sameCell.findIndex((el) => el.id === pointer.id));
-  const cell = cellRect(target, Math.min(index, Math.max(0, target.items.length - 1)));
-  return { x: cell.x + CELL / 2 - POINTER_W / 2, y: cell.y + CELL + INDEX_H + 2 + stack * POINTER_H };
+  if (target.type === 'tree') {
+    const center = treeLayout(target).centers.get(slot);
+    if (!center) return { x: pointer.x, y: pointer.y };
+    return { x: target.x + center.x - POINTER_W / 2, y: target.y + center.y - TREE_D / 2 - POINTER_H - 2 - stack * POINTER_H };
+  }
+  const cell = cellRect(target, slot);
+  return { x: cell.x + CELL / 2 - POINTER_W / 2, y: cell.y + CELL + belowCells(target) + stack * POINTER_H };
 }
 
-/** 指標放在 at 時，最近的陣列格子；太遠就不吸附 */
+/** 指標放在 at 時，最近的格子或樹節點；太遠就不吸附 */
 export function snapTarget(doc: BoardDoc, at: Point): { id: string; index: number } | undefined {
+  // 還沒吸附的指標箭頭朝上，尖端在最上面
   const tip = { x: at.x + POINTER_W / 2, y: at.y };
   let best: { id: string; index: number; distance: number } | undefined;
+  const consider = (id: string, index: number, x: number, y: number) => {
+    const distance = Math.hypot(x - tip.x, y - tip.y);
+    if (distance <= SNAP_DISTANCE && (!best || distance < best.distance)) best = { id, index, distance };
+  };
   for (const el of doc.elements) {
-    if (!isIndexed(el)) continue;
-    for (let index = 0; index < el.items.length; index += 1) {
-      const cell = cellRect(el, index);
-      const distance = Math.hypot(cell.x + CELL / 2 - tip.x, cell.y + CELL + INDEX_H - tip.y);
-      if (distance <= SNAP_DISTANCE && (!best || distance < best.distance)) best = { id: el.id, index, distance };
+    if (el.type === 'tree') {
+      for (const [index, c] of treeLayout(el).centers) consider(el.id, index, el.x + c.x, el.y + c.y);
+    } else if (isIndexed(el) || isLinked(el)) {
+      for (let index = 0; index < el.items.length; index += 1) {
+        const cell = cellRect(el, index);
+        consider(el.id, index, cell.x + CELL / 2, cell.y + CELL + belowCells(el) - 2);
+      }
     }
   }
   return best && { id: best.id, index: best.index };
 }
 
-/** 用方向鍵把吸附的指標往左右移一格 */
+/** 用方向鍵把吸附在陣列或串列上的指標往左右移一格 */
 export function shiftPointer(doc: BoardDoc, id: string, delta: number): BoardDoc {
   return mapElement(doc, id, (el) => {
     if (el.type !== 'pointer' || !el.attach) return el;
     const target = findElement(doc, el.attach.id);
-    if (!target || !isIndexed(target)) return el;
+    if (!target || !(isIndexed(target) || isLinked(target))) return el;
     const index = Math.min(Math.max(0, el.attach.index + delta), target.items.length - 1);
     return { ...el, attach: { ...el.attach, index } };
+  });
+}
+
+export type TreeDirection = 'left' | 'right' | 'up' | 'down';
+
+/** 二元樹上往左子節點、右子節點、父節點走一步，down 是往下（先左後右）；走不過去就是 null */
+export function treeStep(tree: ElementOf<'tree'>, index: number, dir: TreeDirection): number | null {
+  if (dir === 'down') return treeStep(tree, index, 'left') ?? treeStep(tree, index, 'right');
+  const next = dir === 'up' ? treeParent(index) : 2 * index + (dir === 'left' ? 1 : 2);
+  return hasTreeNode(tree, next) ? next : null;
+}
+
+/** 用方向鍵把吸附在二元樹上的指標移到子節點或父節點 */
+export function stepTreePointer(doc: BoardDoc, id: string, dir: TreeDirection): BoardDoc {
+  return mapElement(doc, id, (el) => {
+    if (el.type !== 'pointer' || !el.attach) return el;
+    const target = findElement(doc, el.attach.id);
+    if (target?.type !== 'tree') return el;
+    const index = treeStep(target, el.attach.index, dir);
+    return index === null ? el : { ...el, attach: { ...el.attach, index } };
   });
 }
 
@@ -163,6 +246,8 @@ export type PaletteKind =
   | 'set'
   | 'grid'
   | 'var'
+  | 'binaryTree'
+  | 'linkedList'
   | 'treeNode'
   | 'listNode'
   | 'graphNode'
@@ -174,7 +259,8 @@ export const PALETTE: { group: PaletteGroup; kinds: PaletteKind[] }[] = [
   { group: 'text', kinds: ['heading', 'text', 'code', 'sticky'] },
   { group: 'linear', kinds: ['array', 'pointer', 'stack', 'queue'] },
   { group: 'lookup', kinds: ['dict', 'set', 'grid', 'var'] },
-  { group: 'nodes', kinds: ['treeNode', 'listNode', 'graphNode'] },
+  // 單一的樹節點和串列節點換成整棵樹、整條串列；舊白板上的照樣顯示
+  { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graphNode'] },
   { group: 'table', kinds: ['table'] },
 ];
 
@@ -217,6 +303,10 @@ export function createElement(kind: PaletteKind, at: Point, id: string, texts: D
       return { type: 'table', ...placed, variant: 'table', label: '', rows: [['i', 'j', 'ans'], ['', '', '']] };
     case 'var':
       return { type: 'var', ...placed, name: 'ans', value: '0' };
+    case 'linkedList':
+      return { type: 'list', ...placed, variant: 'linked', label: 'head', items: ['1', '2', '3'] };
+    case 'binaryTree':
+      return { type: 'tree', ...placed, label: 'root', nodes: ['1', '2', '3'] };
     case 'treeNode':
       return { type: 'node', ...placed, variant: 'tree', value: '1' };
     case 'listNode':
@@ -248,6 +338,22 @@ export function placeAtCenter(doc: BoardDoc, el: Placed, center: Point, sizes?: 
     }
   }
   return { ...el, x: Math.round(center.x - w / 2), y: Math.round(center.y - h / 2) };
+}
+
+/**
+ * 元件變大後（例如用文字建立一整棵樹）蓋到別的東西時，挪到附近最近的空位；
+ * 沒蓋到就不動。吸附在它上面的指標跟著走，不算在擋路的東西裡。
+ */
+export function settleElement(doc: BoardDoc, id: string, sizes?: Sizes): BoardDoc {
+  const el = findElement(doc, id);
+  if (!el || !isPlaced(el)) return doc;
+  const others = {
+    ...doc,
+    elements: doc.elements.filter((other) => other.id !== id && !(other.type === 'pointer' && other.attach?.id === id)),
+  };
+  const { w, h } = sizeOf(el);
+  const moved = placeAtCenter(others, el, { x: el.x + w / 2, y: el.y + h / 2 }, sizes);
+  return moved.x === el.x && moved.y === el.y ? doc : updateElement(doc, id, { x: moved.x, y: moved.y });
 }
 
 /** 常用的指標名稱，新指標用第一個還沒用過的 */
@@ -409,6 +515,18 @@ function normalizeColors(colors: (CellColor | null)[] | undefined, length: numbe
   return aligned.some(Boolean) ? aligned : undefined;
 }
 
+export type Link = 'next' | 'prev' | 'none';
+
+/** 鏈結串列每一段連線的方向；沒存的都是往後 */
+export function linksOf(list: ElementOf<'list'>): Link[] {
+  return Array.from({ length: Math.max(0, list.items.length - 1) }, (_, g) => list.links?.[g] ?? 'next');
+}
+
+/** 全部都往後時不存 */
+function normalizeLinks(links: Link[]): Link[] | undefined {
+  return links.some((link) => link !== 'next') ? links : undefined;
+}
+
 /** 在 index 插入一個空格；原本在這格之後的指標跟著值往後一格 */
 export function insertCell(doc: BoardDoc, id: string, index: number): BoardDoc {
   const el = findElement(doc, id);
@@ -416,7 +534,14 @@ export function insertCell(doc: BoardDoc, id: string, index: number): BoardDoc {
   const at = Math.min(Math.max(0, index), el.items.length);
   const items = [...el.items.slice(0, at), '', ...el.items.slice(at)];
   const colors = el.colors && normalizeColors([...el.colors.slice(0, at), null, ...el.colors.slice(at)], items.length);
-  const next = updateElement<ElementOf<'list'>>(doc, id, { items, colors });
+  const patch: Partial<ElementOf<'list'>> = { items, colors };
+  if (el.variant === 'linked') {
+    // 新節點和後面那個之間是一段新的往後連線；環接到的節點在後面時跟著往後
+    const links = linksOf(el);
+    patch.links = normalizeLinks([...links.slice(0, at), 'next' as Link, ...links.slice(at)].slice(0, items.length - 1));
+    if (el.cycle !== undefined && el.cycle >= at) patch.cycle = el.cycle + 1;
+  }
+  const next = updateElement<ElementOf<'list'>>(doc, id, patch);
   return mapPointers(next, id, (i) => (i >= at ? i + 1 : i));
 }
 
@@ -426,8 +551,33 @@ export function deleteCell(doc: BoardDoc, id: string, index: number): BoardDoc {
   if (!el || el.type !== 'list' || el.items.length <= 1 || index < 0 || index >= el.items.length) return doc;
   const items = el.items.filter((_, i) => i !== index);
   const colors = el.colors && normalizeColors(el.colors.filter((_, i) => i !== index), items.length);
-  const next = updateElement<ElementOf<'list'>>(doc, id, { items, colors });
+  const patch: Partial<ElementOf<'list'>> = { items, colors };
+  if (el.variant === 'linked') {
+    // 拿掉這個節點往後的那段連線（最後一個節點就拿掉往前的那段）
+    const gone = Math.min(index, el.items.length - 2);
+    patch.links = normalizeLinks(linksOf(el).filter((_, g) => g !== gone));
+    if (el.cycle !== undefined) patch.cycle = Math.min(el.cycle > index ? el.cycle - 1 : el.cycle, items.length - 1);
+  }
+  const next = updateElement<ElementOf<'list'>>(doc, id, patch);
   return mapPointers(next, id, (i) => Math.min(i > index ? i - 1 : i, items.length - 1));
+}
+
+/** 點兩個節點之間的連線：往後 → 反過來 → 斷開 → 往後 */
+export function toggleLink(doc: BoardDoc, id: string, gap: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (!el || !isLinked(el) || gap < 0 || gap >= el.items.length - 1) return doc;
+  const order: Link[] = ['next', 'prev', 'none'];
+  const links = linksOf(el);
+  links[gap] = order[(order.indexOf(links[gap]) + 1) % order.length];
+  return updateElement<ElementOf<'list'>>(doc, id, { links: normalizeLinks(links) });
+}
+
+/** 尾巴接回第 index 個節點，變成有環的串列；undefined 是拿掉環 */
+export function setCycle(doc: BoardDoc, id: string, index: number | undefined): BoardDoc {
+  const el = findElement(doc, id);
+  if (!el || !isLinked(el)) return doc;
+  const cycle = index === undefined ? undefined : Math.min(Math.max(0, index), el.items.length - 1);
+  return updateElement<ElementOf<'list'>>(doc, id, { cycle });
 }
 
 /** 幫一格上底色；color 是 null 時拿掉 */
@@ -448,6 +598,108 @@ export function resizeList(doc: BoardDoc, id: string, delta: 1 | -1): BoardDoc {
 /** 在陣列的某一格加一個指標，名字用下一個還沒用過的 */
 export function addPointerAt(doc: BoardDoc, listId: string, index: number, id: string): BoardDoc {
   return addElement(doc, { type: 'pointer', id, x: 0, y: 0, name: nextPointerName(doc), attach: { id: listId, index } });
+}
+
+// ---------- 二元樹 ----------
+
+export function treeParent(index: number): number {
+  return index <= 0 ? -1 : Math.floor((index - 1) / 2);
+}
+
+export function treeDepth(index: number): number {
+  return Math.floor(Math.log2(index + 1));
+}
+
+export function hasTreeNode(tree: ElementOf<'tree'>, index: number): boolean {
+  return index >= 0 && index < tree.nodes.length && tree.nodes[index] !== null && tree.nodes[index] !== undefined;
+}
+
+export interface TreeLayout {
+  /** 每個節點的中心，相對於元件左上角 */
+  centers: Map<number, Point>;
+  w: number;
+  h: number;
+}
+
+/**
+ * 依中序排開：每個節點的 x 是它在中序走訪的順序，y 是它在第幾層。
+ * 左子樹一定在左邊、右子樹在右邊，不會重疊，偏一邊的樹也不會留一大片空白；
+ * 二元搜尋樹的值由左到右剛好是排好序的。
+ */
+export function treeLayout(tree: ElementOf<'tree'>): TreeLayout {
+  const centers = new Map<number, Point>();
+  let rank = 0;
+  let deepest = 0;
+  const visit = (index: number) => {
+    if (!hasTreeNode(tree, index)) return;
+    visit(2 * index + 1);
+    const depth = treeDepth(index);
+    deepest = Math.max(deepest, depth);
+    centers.set(index, { x: rank * TREE_GAP + TREE_GAP / 2, y: TREE_TOP + depth * TREE_LEVEL + TREE_D / 2 });
+    rank += 1;
+    visit(2 * index + 2);
+  };
+  visit(0);
+  return { centers, w: Math.max(1, rank) * TREE_GAP, h: TREE_TOP + deepest * TREE_LEVEL + TREE_D };
+}
+
+/** 去掉尾端空的位置 */
+function trimTree(nodes: (string | null)[]): (string | null)[] {
+  let end = nodes.length;
+  while (end > 1 && nodes[end - 1] === null) end -= 1;
+  return nodes.slice(0, end);
+}
+
+function treeColors(colors: (CellColor | null)[] | undefined, nodes: (string | null)[]): (CellColor | null)[] | undefined {
+  return normalizeColors(colors?.map((c, i) => (nodes[i] === null ? null : c)), nodes.length);
+}
+
+/** 在 parent 加左或右子節點（空的，等著輸入）；已經有了、超過 6 層就不加。回傳新節點的位置 */
+export function addTreeChild(doc: BoardDoc, id: string, parent: number, side: 'left' | 'right'): { doc: BoardDoc; index: number } | null {
+  const el = findElement(doc, id);
+  if (el?.type !== 'tree' || !hasTreeNode(el, parent)) return null;
+  const index = 2 * parent + (side === 'left' ? 1 : 2);
+  if (index >= TREE_MAX_NODES || hasTreeNode(el, index)) return null;
+  const nodes = Array.from({ length: Math.max(el.nodes.length, index + 1) }, (_, i) => (i === index ? '' : (el.nodes[i] ?? null)));
+  return { doc: updateElement<ElementOf<'tree'>>(doc, id, { nodes, colors: treeColors(el.colors, nodes) }), index };
+}
+
+/** 這個節點和它底下的所有節點 */
+export function subtreeOf(tree: ElementOf<'tree'>, index: number): number[] {
+  const out: number[] = [];
+  const queue = [index];
+  while (queue.length > 0) {
+    const i = queue.shift()!;
+    if (!hasTreeNode(tree, i)) continue;
+    out.push(i);
+    queue.push(2 * i + 1, 2 * i + 2);
+  }
+  return out;
+}
+
+/** 刪掉這個節點連同它的子樹；根節點不能刪（要刪整棵樹就刪元件）。指著被刪節點的指標留在原地 */
+export function deleteTreeNode(doc: BoardDoc, id: string, index: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'tree' || index <= 0 || !hasTreeNode(el, index)) return doc;
+  const gone = new Set(subtreeOf(el, index));
+  const nodes = trimTree(el.nodes.map((v, i) => (gone.has(i) ? null : v)));
+  const next = updateElement<ElementOf<'tree'>>(doc, id, { nodes, colors: treeColors(el.colors, nodes) });
+  return {
+    ...next,
+    elements: next.elements.map((p) => {
+      if (p.type !== 'pointer' || p.attach?.id !== id || !gone.has(p.attach.index)) return p;
+      const at = pointerPosition(doc, p);
+      return { ...p, x: Math.round(at.x), y: Math.round(at.y), attach: undefined };
+    }),
+  };
+}
+
+/** 幫樹的一個節點上底色；color 是 null 時拿掉 */
+export function setNodeColor(doc: BoardDoc, id: string, index: number, color: CellColor | null): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'tree' || !hasTreeNode(el, index)) return doc;
+  const colors = el.nodes.map((_, i) => (i === index ? color : (el.colors?.[i] ?? null)));
+  return updateElement<ElementOf<'tree'>>(doc, id, { colors: treeColors(colors, el.nodes) });
 }
 
 /** 表格加減一列或一欄，至少留一列一欄 */

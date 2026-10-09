@@ -1,11 +1,24 @@
-import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { Fragment, useEffect, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useI18n } from '../../i18n';
 import {
   CELL,
   colorVar,
+  CYCLE_H,
+  hasTreeNode,
   INDEX_H,
   isIndexed,
   LABEL_H,
+  LINK_GAP,
+  linksOf,
+  pointsDown,
+  TREE_D,
+  TREE_GAP,
+  TREE_LEVEL,
+  TREE_MAX_NODES,
+  treeLayout,
+  treeParent,
+  type Link,
+  type Point,
   LIST_NODE_H,
   LIST_NODE_W,
   NODE_D,
@@ -21,6 +34,7 @@ import {
   type ElementOf,
   type Placed,
 } from '../../lib/board/model';
+import { serializeTree } from '../../lib/board/structures';
 
 // 白板上每一種元件的樣子。雙擊進入編輯時，格子和文字變成輸入框。
 
@@ -37,6 +51,10 @@ interface ElementViewProps {
   focusIndex?: number;
   /** 選取時才有：陣列最後的「＋」格、表格的「＋列」「＋欄」 */
   onAddCell?: () => void;
+  /** 選取鏈結串列時，點兩個節點之間的箭頭切換方向 */
+  onToggleLink?: (gap: number) => void;
+  /** 選了二元樹的一個節點時，點空的子節點位置加一個子節點 */
+  onAddChild?: (index: number) => void;
   onAddRow?: () => void;
   onAddCol?: () => void;
   register: (id: string, node: HTMLElement | null) => void;
@@ -56,10 +74,11 @@ export function ElementView({ el, doc, selected, editing, register, ...rest }: E
       data-el={el.id}
       data-variant={'variant' in el ? el.variant : undefined}
       data-tone={el.type === 'pointer' ? pointerTone(el.name) : undefined}
+      data-down={(el.type === 'pointer' && pointsDown(doc, el)) || undefined}
       data-selected={selected || undefined}
       data-editing={editing || undefined}
       role="group"
-      aria-label={describe(el, t)}
+      aria-label={describe(el, doc, t)}
       style={{
         left: at.x,
         top: at.y,
@@ -102,7 +121,10 @@ function Body({ el, editing, onChange, onDoneEditing, ...rest }: BodyProps) {
     case 'text':
       return <TextBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} />;
     case 'list':
+      if (el.variant === 'linked') return <LinkedBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
       return <ListBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
+    case 'tree':
+      return <TreeBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'table':
       return <TableBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'var':
@@ -137,7 +159,12 @@ function Cell({
   index,
   color,
   picked,
+  className = '',
+  style: extraStyle,
 }: {
+  /** 鏈結串列和二元樹的節點加上自己的樣式和位置 */
+  className?: string;
+  style?: CSSProperties;
   value: string;
   editing: boolean;
   autoFocus?: boolean;
@@ -151,7 +178,7 @@ function Cell({
   color?: CellColor | null;
   picked?: boolean;
 }) {
-  const style = { width: wide ? WIDE_CELL : CELL, height: CELL };
+  const style = { width: wide ? WIDE_CELL : CELL, height: CELL, ...extraStyle };
   const data = {
     'data-cell': index,
     'data-color': color ?? undefined,
@@ -160,14 +187,14 @@ function Cell({
   };
   if (!editing) {
     return (
-      <span className="board-cell" style={style} title={value} {...data}>
+      <span className={`board-cell ${className}`} style={style} title={value} {...data}>
         {value}
       </span>
     );
   }
   return (
     <input
-      className="board-cell board-cell-input"
+      className={`board-cell board-cell-input ${className}`}
       style={style}
       {...data}
       value={value}
@@ -273,6 +300,198 @@ function ListBody({
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+/** 兩個節點之間的連線；選取串列時是按鈕，點一下切換方向 */
+function LinkArrow({ state, label, onToggle }: { state: Link; label: string; onToggle?: () => void }) {
+  const mid = CELL / 2;
+  const icon = (
+    <svg width={LINK_GAP} height={CELL} viewBox={`0 0 ${LINK_GAP} ${CELL}`} aria-hidden>
+      {state === 'none' ? (
+        <path className="board-link-cut" d={`M${LINK_GAP / 2 - 4} ${mid - 4}l8 8m0-8l-8 8`} />
+      ) : state === 'next' ? (
+        <path className="board-link-line" d={`M3 ${mid}H${LINK_GAP - 4}M${LINK_GAP - 9} ${mid - 5}L${LINK_GAP - 3} ${mid}L${LINK_GAP - 9} ${mid + 5}`} />
+      ) : (
+        <path className="board-link-line" d={`M${LINK_GAP - 3} ${mid}H4M9 ${mid - 5}L3 ${mid}L9 ${mid + 5}`} />
+      )}
+    </svg>
+  );
+  if (!onToggle) {
+    return (
+      <span className="board-link" data-state={state}>
+        {icon}
+      </span>
+    );
+  }
+  return (
+    <button type="button" className="board-link" data-state={state} aria-label={label} title={label} onClick={onToggle}>
+      {icon}
+    </button>
+  );
+}
+
+/** 鏈結串列：節點排成一列，中間是可以切換方向的箭頭，尾巴接 null 或接回某個節點 */
+function LinkedBody({
+  el,
+  editing,
+  snapIndex,
+  cellIndex,
+  focusIndex,
+  onAddCell,
+  onToggleLink,
+  onChange,
+  onDoneEditing,
+}: { el: ElementOf<'list'> } & Omit<BodyProps, 'el'>) {
+  const { t } = useI18n();
+  const n = el.items.length;
+  const links = linksOf(el);
+  const setItem = (index: number, value: string) => onChange({ items: el.items.map((v, i) => (i === index ? value : v)) });
+  // 最後一段反過來時，尾巴那個節點指回前面，就不畫往後的 null
+  const tailNull = n === 1 || links[n - 2] !== 'prev';
+  const focus = focusIndex ?? 0;
+  return (
+    <>
+      <Label value={el.label} editing={editing} onChange={(label) => onChange({ label })} onDone={onDoneEditing} />
+      <div className="board-cells board-linked">
+        {el.items.map((value, i) => (
+          <Fragment key={`${i}:${n}`}>
+            <Cell
+              index={i}
+              value={value}
+              color={el.colors?.[i]}
+              picked={cellIndex === i}
+              editing={editing}
+              autoFocus={i === focus}
+              label={t.board.cellLabel(i)}
+              snap={snapIndex === i}
+              className="board-linked-node"
+              onChange={(v) => setItem(i, v)}
+              onDone={onDoneEditing}
+            />
+            {i < n - 1 && (
+              <LinkArrow
+                state={links[i]}
+                label={t.board.linkLabel(i, t.board.linkStates[links[i]])}
+                onToggle={onToggleLink && !editing ? () => onToggleLink(i) : undefined}
+              />
+            )}
+          </Fragment>
+        ))}
+        {el.cycle === undefined && (
+          <span className="board-link-tail" aria-hidden>
+            {tailNull && (
+              <>
+                <LinkArrow state="next" label="" />
+                <span className="board-link-null">null</span>
+              </>
+            )}
+          </span>
+        )}
+      </div>
+      {el.cycle !== undefined && <CycleArrow n={n} target={el.cycle} />}
+      {onAddCell && (
+        <button type="button" className="board-add board-add-cell" aria-label={t.board.actions.addCell} title={t.board.actions.addCell} onClick={onAddCell}>
+          +
+        </button>
+      )}
+    </>
+  );
+}
+
+/** 有環：從尾巴往下、往回走到接回去的那個節點下面 */
+function CycleArrow({ n, target }: { n: number; target: number }) {
+  const step = CELL + LINK_GAP;
+  const top = LABEL_H + CELL;
+  const bottom = top + CYCLE_H - 6;
+  // 接回自己時兩端錯開一點，看得出是一個圈
+  const from = (n - 1) * step + CELL / 2 + (target === n - 1 ? 8 : 0);
+  const to = target * step + CELL / 2 - (target === n - 1 ? 8 : 0);
+  return (
+    <svg className="board-cycle" width={n * step} height={top + CYCLE_H} aria-hidden>
+      <path className="board-link-line" d={`M${from} ${top + 1}V${bottom}H${to}V${top + 3}M${to - 5} ${top + 8}L${to} ${top + 2}L${to + 5} ${top + 8}`} />
+    </svg>
+  );
+}
+
+/** 兩點之間的線段，兩端各縮進 r（從圓的邊緣畫到圓的邊緣） */
+function trimSegment(a: Point, b: Point, r: number): [Point, Point] {
+  const d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  const ux = (b.x - a.x) / d;
+  const uy = (b.y - a.y) / d;
+  return [
+    { x: a.x + ux * r, y: a.y + uy * r },
+    { x: b.x - ux * r, y: b.y - uy * r },
+  ];
+}
+
+/** 二元樹：依中序自動排版；選了一個節點時，空的子節點位置出現虛線「＋」 */
+function TreeBody({ el, editing, snapIndex, cellIndex, focusIndex, onAddChild, onChange, onDoneEditing }: { el: ElementOf<'tree'> } & Omit<BodyProps, 'el'>) {
+  const { t } = useI18n();
+  const layout = treeLayout(el);
+  const setNode = (index: number, value: string) => onChange({ nodes: el.nodes.map((v, i) => (i === index ? value : v)) });
+  const focus = focusIndex ?? 0;
+  const parent = cellIndex === undefined ? undefined : layout.centers.get(cellIndex);
+  const slots =
+    onAddChild && !editing && cellIndex !== undefined && parent
+      ? (['left', 'right'] as const)
+          .map((side) => ({
+            side,
+            index: 2 * cellIndex + (side === 'left' ? 1 : 2),
+            at: { x: parent.x + ((side === 'left' ? -1 : 1) * TREE_GAP) / 2, y: parent.y + TREE_LEVEL },
+          }))
+          .filter((slot) => slot.index < TREE_MAX_NODES && !hasTreeNode(el, slot.index))
+      : [];
+  return (
+    <>
+      <Label value={el.label} editing={editing} onChange={(label) => onChange({ label })} onDone={onDoneEditing} />
+      <svg className="board-tree-edges" width={layout.w} height={layout.h} aria-hidden>
+        {[...layout.centers].map(([i, c]) => {
+          const p = layout.centers.get(treeParent(i));
+          if (!p) return null;
+          const [a, b] = trimSegment(p, c, TREE_D / 2);
+          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+        })}
+        {parent &&
+          slots.map((slot) => {
+            const [a, b] = trimSegment(parent, slot.at, TREE_D / 2);
+            return <line key={slot.side} className="board-tree-slot-edge" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+          })}
+      </svg>
+      {[...layout.centers].map(([i, c]) => (
+        <Cell
+          key={i}
+          index={i}
+          value={el.nodes[i] ?? ''}
+          color={el.colors?.[i]}
+          picked={cellIndex === i}
+          editing={editing}
+          autoFocus={i === focus}
+          label={t.board.treeSlotLabel(i)}
+          snap={snapIndex === i}
+          className="board-tree-node"
+          style={{ left: c.x - TREE_D / 2, top: c.y - TREE_D / 2, width: TREE_D, height: TREE_D }}
+          onChange={(v) => setNode(i, v)}
+          onDone={onDoneEditing}
+        />
+      ))}
+      {slots.map((slot) => {
+        const name = slot.side === 'left' ? t.board.actions.addLeftChild : t.board.actions.addRightChild;
+        return (
+          <button
+            key={slot.side}
+            type="button"
+            className="board-add board-tree-slot"
+            style={{ left: slot.at.x - 16, top: slot.at.y - 16 }}
+            aria-label={name}
+            title={name}
+            onClick={() => onAddChild?.(slot.index)}
+          >
+            +
+          </button>
+        );
+      })}
     </>
   );
 }
@@ -434,20 +653,26 @@ function PointerBody({ el, editing, onChange, onDoneEditing }: { el: ElementOf<'
 }
 
 /** 螢幕閱讀器念的元件內容 */
-function describe(el: Placed, t: ReturnType<typeof useI18n>['t']): string {
+function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t']): string {
   switch (el.type) {
     case 'text':
       return `${t.board.kinds[el.variant]}: ${el.text}`;
     case 'list':
-      return `${t.board.kinds[el.variant]} ${el.label}: ${el.items.join(', ')}`;
+      return `${t.board.kinds[el.variant]} ${el.label}: ${el.items.join(el.variant === 'linked' ? ' → ' : ', ')}`;
+    case 'tree':
+      return `${t.board.kinds.binaryTree} ${el.label}: ${serializeTree(el)}`;
     case 'table':
       return `${t.board.kinds[el.variant]} ${el.label}: ${el.rows.map((r) => r.join(' ')).join('; ')}`;
     case 'var':
       return `${t.board.kinds.var} ${el.name} = ${el.value}`;
     case 'node':
       return `${t.board.kinds[el.variant === 'tree' ? 'treeNode' : el.variant === 'list' ? 'listNode' : 'graphNode']} ${el.value}`;
-    case 'pointer':
-      return el.attach ? t.board.pointerAt(el.name, el.attach.index) : `${t.board.kinds.pointer} ${el.name}`;
+    case 'pointer': {
+      if (!el.attach) return `${t.board.kinds.pointer} ${el.name}`;
+      const target = doc.elements.find((x) => x.id === el.attach!.id);
+      if (target?.type === 'tree') return t.board.pointerAtNode(el.name, target.nodes[el.attach.index] ?? '');
+      return t.board.pointerAt(el.name, el.attach.index);
+    }
     case 'shape':
       return t.board.shapes[el.variant];
   }

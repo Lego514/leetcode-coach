@@ -310,3 +310,84 @@ test('exports the board, or the step being played, as a PNG', async ({ page }) =
   const [stepDownload] = await Promise.all([page.waitForEvent('download'), exportButton.click()]);
   expect(stepDownload.suggestedFilename()).toBe('whiteboard-step-1.png');
 });
+
+test('builds a linked list from text, flips a link, and points the tail back', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Linked list', exact: true }).click();
+  const list = page.getByRole('group', { name: /^Linked list head/ });
+  await expect(list).toHaveAccessibleName('Linked list head: 1 → 2 → 3');
+
+  // 直接貼題目的範例
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await selbar.getByRole('button', { name: 'Build from text' }).click();
+  const input = selbar.getByRole('textbox', { name: 'Build from text' });
+  await expect(input).toHaveValue('1->2->3');
+  await input.fill('1->2->3->4->5');
+  await selbar.getByRole('button', { name: 'Apply' }).click();
+  await expect(list).toHaveAccessibleName('Linked list head: 1 → 2 → 3 → 4 → 5');
+  await expect(list).toContainText('null');
+
+  // 點兩個節點之間的箭頭：往後 → 反過來 → 斷開
+  await list.getByRole('button', { name: /^Link between node 0 and 1: forward/ }).click();
+  await expect(list.getByRole('button', { name: /^Link between node 0 and 1: reversed/ })).toBeVisible();
+  await list.getByRole('button', { name: /^Link between node 0 and 1: reversed/ }).click();
+  await expect(list.getByRole('button', { name: /^Link between node 0 and 1: cut/ })).toBeVisible();
+
+  // 選著串列時加指標，指標吸附在第一個節點下面，方向鍵一格一格走
+  await page.getByRole('button', { name: 'Pointer', exact: true }).click();
+  await expect(page.getByRole('group', { name: 'Pointer i at index 0' })).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('group', { name: 'Pointer i at index 1' })).toBeVisible();
+
+  // 點一個節點，讓尾巴接回這裡（有環），尾巴就不再接 null
+  await list.locator('[data-cell="1"]').click();
+  await selbar.getByRole('button', { name: 'Point the tail here' }).click();
+  await expect(list).not.toContainText('null');
+  await expect(selbar.getByRole('button', { name: 'Remove cycle' })).toBeVisible();
+});
+
+test('builds a binary tree from LeetCode’s format and edits it node by node', async ({ page, isMobile }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Binary tree', exact: true }).click();
+  const tree = page.getByRole('group', { name: /^Binary tree root/ });
+  await expect(tree).toHaveAccessibleName('Binary tree root: [1,2,3]');
+
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await selbar.getByRole('button', { name: 'Build from text' }).click();
+  const input = selbar.getByRole('textbox', { name: 'Build from text' });
+  await input.fill('[1,null,2,null,3,null,4,null,5,null,6,null,7]');
+  await selbar.getByRole('button', { name: 'Apply' }).click();
+  await expect(selbar.getByRole('alert')).toContainText('at most 6 levels');
+  await input.fill('[3,9,20,null,null,15,7]');
+  await selbar.getByRole('button', { name: 'Apply' }).click();
+  await expect(tree).toHaveAccessibleName('Binary tree root: [3,9,20,null,null,15,7]');
+
+  // 選節點 9，加右子節點，直接輸入值。桌面版點畫布上虛線的位置；手機畫面窄，那個位置可能在畫面外，用上方的按鈕
+  await tree.locator('[data-cell="1"]').click();
+  await expect(selbar).toContainText('Node 9');
+  await expect(tree.getByRole('button', { name: '+ Left child' })).toHaveCount(1);
+  if (isMobile) await selbar.getByRole('button', { name: '+ Right child' }).click();
+  else await tree.getByRole('button', { name: '+ Right child' }).click();
+  await page.getByRole('textbox', { name: 'Tree position 4' }).fill('8');
+  await page.keyboard.press('Enter');
+  await expect(tree).toHaveAccessibleName('Binary tree root: [3,9,20,null,8,15,7]');
+
+  // 在根節點加指標，用方向鍵走到右子節點
+  await tree.locator('[data-cell="0"]').click();
+  await selbar.getByRole('button', { name: '+ Pointer' }).click();
+  await expect(page.getByRole('group', { name: 'Pointer i at node 3' })).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('group', { name: 'Pointer i at node 20' })).toBeVisible();
+
+  // 刪掉 20 的子樹，指標留在原地；根節點不能刪
+  await tree.locator('[data-cell="2"]').click();
+  await selbar.getByRole('button', { name: 'Delete this subtree' }).click();
+  await expect(tree).toHaveAccessibleName('Binary tree root: [3,9,null,null,8]');
+  await expect(page.getByRole('group', { name: 'Pointer i', exact: true })).toBeVisible();
+  await tree.locator('[data-cell="0"]').click();
+  await expect(selbar.getByRole('button', { name: 'Delete this subtree' })).toBeDisabled();
+
+  await expect(page.getByText('Saved on this device')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('group', { name: 'Binary tree root: [3,9,null,null,8]' })).toBeVisible();
+});
