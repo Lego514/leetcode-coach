@@ -187,6 +187,14 @@ export const boardElementSchema = z.discriminatedUnion('type', [
     /** none 是沒有箭頭的直線（例如無向圖的邊）；沒寫就是有箭頭 */
     head: z.enum(['end', 'none']).optional(),
   }),
+  /** 範圍框：框住同一個陣列上兩個指標之間的格子，指標移動時跟著變（滑動視窗）；位置由指標決定，不存座標 */
+  z.object({
+    type: z.literal('range'),
+    id: boardElementId,
+    from: boardElementId,
+    to: boardElementId,
+    color: z.enum(BOARD_COLORS),
+  }),
   z.object({
     type: z.literal('stroke'),
     id: boardElementId,

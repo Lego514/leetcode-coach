@@ -4506,3 +4506,16 @@ button.board-link {
   color: var(--danger);
   font-size: 13px;
 }
+
+/* 範圍框：跟著兩個指標，框住它們之間的格子 */
+.board-range {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.board-range-selected {
+  fill: none;
+  stroke: var(--pen);
+  stroke-width: 9;
+  opacity: 0.3;
+}

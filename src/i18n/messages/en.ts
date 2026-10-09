@@ -954,6 +954,7 @@ const en: Messages = {
       'Select an array first, then click Pointer, and the pointer lands on the first cell.',
       'Linked list: click the arrow between two nodes to switch it between forward, reversed, and cut. Pick a node to point the tail back to it (a cycle).',
       'Binary tree: pick a node to add a left or right child, color it, add a pointer, or delete its subtree. A pointer on a tree moves to the left or right child with ← → and to the parent with ↑.',
+      'Range frame: select two pointers on the same array (Shift-click or box select) and choose “Frame between pointers”. The frame follows the pointers as they move, which suits sliding windows.',
       'The templates at the top of the palette set up a common scene in one click (two pointers, sliding window, reversing a list, tree DFS, grid BFS). The whole group is selected, so you can drag it where you want.',
       'Select a linked list or binary tree and choose “Build from text” to paste the problem’s example, like 1->2->3 or [3,9,20,null,null,15,7].',
       'Click one cell of an array to select just that cell: highlight it, put a pointer on it, insert or delete cells, and move between cells with the arrow keys. With an array selected, the + at the end adds a cell.',
@@ -965,6 +966,7 @@ const en: Messages = {
       'Delete removes, Ctrl+D duplicates, Ctrl+Z undoes, Ctrl+Shift+Z redoes.',
     ],
     actions: {
+      frameBetween: 'Frame between pointers',
       makeHeading: 'Make heading',
       makeBody: 'Make body text',
       addLeftChild: '+ Left child',

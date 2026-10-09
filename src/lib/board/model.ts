@@ -7,8 +7,8 @@ import type { BoardDoc, BoardElement } from '../../../shared/protocol';
 
 export type { BoardColor, BoardDoc, BoardElement, CellColor };
 export type ElementOf<T extends BoardElement['type']> = Extract<BoardElement, { type: T }>;
-/** 有位置、可以拖曳的元件（箭頭和筆跡以外的） */
-export type Placed = Exclude<BoardElement, { type: 'arrow' } | { type: 'stroke' }>;
+/** 有位置、可以拖曳的元件（箭頭、範圍框和筆跡以外的） */
+export type Placed = Exclude<BoardElement, { type: 'arrow' } | { type: 'stroke' } | { type: 'range' }>;
 
 export interface Point {
   x: number;
@@ -59,7 +59,7 @@ export const SNAP_DISTANCE = 48;
 export const EMPTY_DOC: BoardDoc = { elements: [] };
 
 export function isPlaced(el: BoardElement): el is Placed {
-  return el.type !== 'arrow' && el.type !== 'stroke';
+  return el.type !== 'arrow' && el.type !== 'stroke' && el.type !== 'range';
 }
 
 /** 陣列和佇列有索引，格子下面標 0、1、2… */
@@ -410,6 +410,8 @@ export function moveElements(doc: BoardDoc, ids: ReadonlySet<string>, dx: number
           return { ...el, points: el.points.map((v, i) => Math.round(v + (i % 2 === 0 ? dx : dy))) };
         case 'arrow':
           return { ...el, from: shift(el.from), to: shift(el.to) };
+        case 'range':
+          return el;
         case 'pointer': {
           if (el.attach && ids.has(el.attach.id)) return el;
           const at = pointerPosition(doc, el);
@@ -430,13 +432,18 @@ export function dropPointer(doc: BoardDoc, id: string): BoardDoc {
   return target ? updateElement<ElementOf<'pointer'>>(doc, id, { attach: target }) : doc;
 }
 
-/** 刪除元件，連在上面的箭頭一起刪；吸附在被刪陣列上的指標留在原地 */
+/** 刪除元件，連在上面的箭頭、範圍框一起刪；吸附在被刪陣列上的指標留在原地 */
 export function removeElements(doc: BoardDoc, ids: ReadonlySet<string>): BoardDoc {
   const touches = (end: ElementOf<'arrow'>['from']) => 'id' in end && ids.has(end.id);
   return {
     ...doc,
     elements: doc.elements
-      .filter((el) => !ids.has(el.id) && !(el.type === 'arrow' && (touches(el.from) || touches(el.to))))
+      .filter(
+        (el) =>
+          !ids.has(el.id) &&
+          !(el.type === 'arrow' && (touches(el.from) || touches(el.to))) &&
+          !(el.type === 'range' && (ids.has(el.from) || ids.has(el.to))),
+      )
       .map((el) => {
         if (el.type !== 'pointer' || !el.attach || !ids.has(el.attach.id)) return el;
         const at = pointerPosition(doc, el);
@@ -498,9 +505,55 @@ export function duplicateElements(doc: BoardDoc, ids: ReadonlySet<string>): { do
       const id = newId(next);
       next = addElement(next, { ...el, id, from, to });
       created.push(id);
+    } else if (el.type === 'range') {
+      const from = copies.get(el.from);
+      const to = copies.get(el.to);
+      if (!from || !to) continue;
+      const id = newId(next);
+      next = addElement(next, { ...el, id, from, to });
+      created.push(id);
     }
   }
   return { doc: next, ids: created };
+}
+
+// ---------- 範圍框 ----------
+
+/** 範圍框框住的格子外面留一點空間 */
+const RANGE_PAD = 5;
+
+/** 兩個指標吸附在同一個陣列或串列上時，它們之間的格子；不是的話是 null */
+function rangeCells(doc: BoardDoc, fromId: string, toId: string): { list: ElementOf<'list'>; lo: number; hi: number } | null {
+  const a = findElement(doc, fromId);
+  const b = findElement(doc, toId);
+  if (a?.type !== 'pointer' || b?.type !== 'pointer' || !a.attach || !b.attach || a.attach.id !== b.attach.id) return null;
+  const list = findElement(doc, a.attach.id);
+  if (!list || !(isIndexed(list) || isLinked(list))) return null;
+  const last = list.items.length - 1;
+  const i = Math.min(a.attach.index, last);
+  const j = Math.min(b.attach.index, last);
+  return { list, lo: Math.min(i, j), hi: Math.max(i, j) };
+}
+
+/** 範圍框畫在哪裡；指標脫離陣列或不在同一個陣列上時不畫 */
+export function rangeRect(doc: BoardDoc, range: ElementOf<'range'>): Rect | null {
+  const cells = rangeCells(doc, range.from, range.to);
+  if (!cells) return null;
+  const a = cellRect(cells.list, cells.lo);
+  const b = cellRect(cells.list, cells.hi);
+  return { x: a.x - RANGE_PAD, y: a.y - RANGE_PAD, w: b.x + CELL - a.x + RANGE_PAD * 2, h: CELL + RANGE_PAD * 2 };
+}
+
+/** 選取的剛好是同一個陣列上的兩個指標時，回傳這兩個指標，可以幫它們加範圍框 */
+export function rangePair(doc: BoardDoc, ids: ReadonlySet<string>): [string, string] | null {
+  if (ids.size !== 2) return null;
+  const [a, b] = [...ids];
+  const already = doc.elements.some((el) => el.type === 'range' && ((el.from === a && el.to === b) || (el.from === b && el.to === a)));
+  return !already && rangeCells(doc, a, b) ? [a, b] : null;
+}
+
+function distanceToRectEdge(rect: Rect, p: Point): number {
+  return distanceToShapeEdge({ type: 'shape', id: 'r', variant: 'rect', color: 'ink', ...rect }, p);
 }
 
 export const MAX_CELLS = 64;
@@ -796,6 +849,9 @@ export function hitInk(doc: BoardDoc, at: Point, radius: number, sizes?: Sizes):
       if (ends && distanceToSegment(at, ends[0], ends[1]) <= radius) hits.push(el.id);
     } else if (el.type === 'shape' && distanceToShapeEdge(el, at) <= radius) {
       hits.push(el.id);
+    } else if (el.type === 'range') {
+      const rect = rangeRect(doc, el);
+      if (rect && distanceToRectEdge(rect, at) <= radius) hits.push(el.id);
     }
   }
   return hits;
@@ -842,9 +898,9 @@ export function recolorElements(doc: BoardDoc, ids: ReadonlySet<string>, color: 
   };
 }
 
-/** 有沒有可以換顏色的東西：框、箭頭、直線、筆跡 */
+/** 有沒有可以換顏色的東西：框、範圍框、箭頭、直線、筆跡 */
 export function hasColor(el: BoardElement | undefined): boolean {
-  return el?.type === 'shape' || el?.type === 'arrow' || el?.type === 'stroke';
+  return el?.type === 'shape' || el?.type === 'range' || el?.type === 'arrow' || el?.type === 'stroke';
 }
 
 /** 箭頭和直線互換 */
@@ -852,10 +908,15 @@ export function setArrowHead(doc: BoardDoc, id: string, head: 'end' | 'none'): B
   return updateElement<ElementOf<'arrow'>>(doc, id, { head: head === 'end' ? undefined : head });
 }
 
-/** 點到的箭頭或直線（上面的優先），讓連線也能選取 */
+/** 點到的箭頭、直線或範圍框的框線（上面的優先），讓它們也能選取 */
 export function hitConnector(doc: BoardDoc, at: Point, radius: number, sizes?: Sizes): string | undefined {
   for (let i = doc.elements.length - 1; i >= 0; i -= 1) {
     const el = doc.elements[i];
+    if (el.type === 'range') {
+      const rect = rangeRect(doc, el);
+      if (rect && distanceToRectEdge(rect, at) <= radius) return el.id;
+      continue;
+    }
     if (el.type !== 'arrow') continue;
     const ends = arrowPoints(doc, el, sizes);
     if (ends && distanceToSegment(at, ends[0], ends[1]) <= radius) return el.id;
@@ -866,6 +927,7 @@ export function hitConnector(doc: BoardDoc, at: Point, radius: number, sizes?: S
 /** 一個東西佔的範圍；箭頭連的元件不見了就是 null */
 export function elementBounds(doc: BoardDoc, el: BoardElement, sizes?: Sizes): Rect | null {
   if (isPlaced(el)) return rectOf(doc, el, sizes);
+  if (el.type === 'range') return rangeRect(doc, el);
   let xs: number[];
   let ys: number[];
   if (el.type === 'stroke') {
@@ -916,6 +978,12 @@ export function contentBounds(doc: BoardDoc, sizes?: Sizes): Rect | null {
       include(r.x + r.w, r.y + r.h);
     } else if (el.type === 'stroke') {
       for (let i = 0; i + 1 < el.points.length; i += 2) include(el.points[i], el.points[i + 1]);
+    } else if (el.type === 'range') {
+      const r = rangeRect(doc, el);
+      if (r) {
+        include(r.x, r.y);
+        include(r.x + r.w, r.y + r.h);
+      }
     } else {
       const ends = arrowPoints(doc, el, sizes);
       if (ends) for (const p of ends) include(p.x, p.y);

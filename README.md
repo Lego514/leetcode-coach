@@ -40,6 +40,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - A **rest timer** (60–180 seconds) counts down between sets. When it ends it beeps, vibrates where supported, and shows an alert, and it asks the browser to keep the screen on while it runs.
   - Answers save one at a time, sync like attempts, and count toward the streak.
 - **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graph nodes, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
+  - **Range frames** box the cells between two pointers on the same array and follow them as they move, for sliding windows: select the two pointers and choose "Frame between pointers".
   - **Templates** set up a common scene in one click, with the pointers already named: two pointers, sliding window, reversing a linked list, tree DFS, and grid BFS. The whole group is placed in free space and selected so it can be dragged at once.
   - The palette is grouped by how often problems use each element, with line icons. Text switches to a heading from the selection bar.
   - **Pointers** snap to array cells, step with the arrow keys, and are colored by name (i, j, k, l).
@@ -263,6 +264,7 @@ Notes:
 - 指標會吸附在陣列格子上，用方向鍵移動，依名字自動上色。
 - **鏈結串列**是一整條：點兩個節點之間的箭頭可以在往後、反過來、斷開之間切換，反轉串列可以一段一段翻；尾巴可以接回任一個節點（有環）；prev、curr、next 指標吸附在節點下面。
 - **二元樹**自動依中序排版（二元搜尋樹由左到右剛好排好序）：點一個節點可以從虛線位置加左右子節點、上底色、刪掉子樹；指標放在節點上方，用方向鍵走到子節點或父節點；最多 6 層。
+- **範圍框**：選取同一個陣列上的兩個指標，按「框住兩個指標之間」，框會跟著指標移動，適合滑動視窗。
 - 元件庫最上面有**模板**，點一下就擺好一整套常見的場景，指標名字也取好：雙指標、滑動視窗、反轉鏈結串列、樹的 DFS、網格 BFS。整組會一起選取，可以直接拖動。
 - 選取串列或樹後按「用文字建立」，可以直接貼題目的範例，例如 `1->2->3` 或 `[3,9,20,null,null,15,7]`。
 - 點一格可以上底色、在那格加指標、插入或刪除格子。

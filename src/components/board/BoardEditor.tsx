@@ -293,6 +293,13 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     setTool('select');
   };
 
+  /** 幫兩個指標加範圍框，選取新的框（可以直接換色） */
+  const frameBetween = ([from, to]: [string, string]) => {
+    const id = m.newId(doc);
+    apply(m.addElement(doc, { type: 'range', id, from, to, color: 'orange' }));
+    setSelection(new Set([id]));
+  };
+
   /** 模板整組放在畫面中間附近的空位，全部選取，可以直接一起拖走 */
   const addTemplate = (kind: TemplateKind) => {
     stopEditing();
@@ -703,6 +710,8 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
           });
         } else {
           lastTap.current = { id: g.clicked, cell: g.cell, time: e.timeStamp };
+          // 選了一群東西時，點其中一個（沒拖動）就只選它；要一起拖就直接拖
+          if (g.ids.size > 1) setSelection(new Set([g.clicked]));
         }
         return;
       case 'pen': {
@@ -893,7 +902,9 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   // 框框畫在最上層，框線才不會被格子的底色蓋住；框裡面點得穿，不會擋到框住的東西
   const shown = shownDoc.elements;
   const placed = [...shown.filter((el) => m.isPlaced(el) && el.type !== 'shape'), ...shown.filter((el) => el.type === 'shape')] as m.Placed[];
-  const ink = shown.filter((el): el is m.ElementOf<'arrow'> | m.ElementOf<'stroke'> => !m.isPlaced(el));
+  const ink = shown.filter((el): el is m.ElementOf<'arrow'> | m.ElementOf<'stroke'> | m.ElementOf<'range'> => !m.isPlaced(el));
+  // 選了同一個陣列上的兩個指標：可以幫它們加範圍框
+  const pair = m.rangePair(doc, selected);
   const saving = doc !== savedDoc;
   const grid = 24 * view.zoom;
 
@@ -1005,6 +1016,16 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 ))}
               </defs>
               {ink.map((el) => {
+                if (el.type === 'range') {
+                  const r = m.rangeRect(shownDoc, el);
+                  if (!r) return null;
+                  return (
+                    <g key={el.id}>
+                      {selected.has(el.id) && <rect x={r.x} y={r.y} width={r.w} height={r.h} rx={8} className="board-range-selected" />}
+                      <rect x={r.x} y={r.y} width={r.w} height={r.h} rx={8} stroke={m.colorVar(el.color)} className="board-range" data-range={el.id} />
+                    </g>
+                  );
+                }
                 if (el.type === 'stroke') {
                   return (
                     <g key={el.id}>
@@ -1122,8 +1143,14 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
               ) : (
                 <>
                   {selected.size > 1 && <span className="board-selbar-title">{t.board.selectedCount(selected.size)}</span>}
+                  {pair && (
+                    <button type="button" className="btn btn-small" onClick={() => frameBetween(pair)}>
+                      {t.board.actions.frameBetween}
+                    </button>
+                  )}
                   {single && <SelectionActions key={single.id} el={single} doc={doc} sizes={sizes} apply={apply} onEdit={() => startEditing(single.id)} />}
-                  {[...selected].some((id) => m.findElement(doc, id)?.type !== 'arrow') && (
+                  {/* 箭頭和範圍框要連著的東西一起選才複製得出來 */}
+                  {[...selected].some((id) => !['arrow', 'range'].includes(m.findElement(doc, id)?.type ?? '')) && (
                     <button type="button" className="btn btn-small" onClick={duplicateSelected}>
                       {t.board.actions.duplicate}
                     </button>

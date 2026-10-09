@@ -417,3 +417,34 @@ test('sets up a whole scene from a template, and turns text into a heading', asy
   await selbar.getByRole('button', { name: 'Make body text' }).click();
   await expect(page.getByRole('group', { name: /^Text:/ })).toBeVisible();
 });
+
+test('frames the range between two pointers and keeps it in step as they move', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  const templates = page.getByRole('region', { name: 'Templates' });
+  await templates.getByRole('button', { name: /^Two pointers/ }).click();
+
+  // 選兩個指標，按「框住兩個指標之間」
+  await page.getByRole('group', { name: 'Pointer l at index 0' }).click();
+  await page.getByRole('group', { name: 'Pointer r at index 5' }).click({ modifiers: ['Shift'] });
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await selbar.getByRole('button', { name: 'Frame between pointers' }).click();
+  const frame = page.locator('.board-range');
+  await expect(frame).toHaveCount(1);
+  const width = async () => Number(await frame.getAttribute('width'));
+  const full = await width();
+
+  // r 往左移兩格，框跟著變窄
+  await page.getByRole('group', { name: 'Pointer r at index 5' }).click();
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('group', { name: 'Pointer r at index 3' })).toBeVisible();
+  expect(await width()).toBe(full - 2 * 44);
+
+  // 刪掉指標，框也一起刪
+  await page.keyboard.press('Delete');
+  await expect(frame).toHaveCount(0);
+
+  // 滑動視窗模板一開始就有範圍框
+  await templates.getByRole('button', { name: /^Sliding window/ }).click();
+  await expect(frame).toHaveCount(1);
+});
