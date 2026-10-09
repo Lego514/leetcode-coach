@@ -4279,3 +4279,145 @@ a.more-account:hover {
     color: var(--ink);
   }
 }
+
+/* ---------- 白板：鏈結串列 ---------- */
+
+.board-linked {
+  align-items: center;
+}
+
+.board-cell.board-linked-node {
+  border-width: 2px;
+  border-color: var(--ink-2);
+  border-radius: 8px;
+}
+
+.board-link {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-2);
+}
+
+button.board-link {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  button.board-link:hover {
+    background: var(--pen-soft);
+    color: var(--pen);
+  }
+}
+
+.board-link svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.board-link .board-link-cut {
+  stroke: var(--board-red);
+}
+
+.board-link-tail {
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 64px;
+}
+
+.board-link-null {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.board-cycle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.board-cycle path {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- 白板：二元樹 ---------- */
+
+.board-tree-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.board-tree-edges line {
+  stroke: var(--ink-2);
+  stroke-width: 2;
+}
+
+.board-tree-edges .board-tree-slot-edge {
+  stroke: var(--ink-3);
+  stroke-dasharray: 4 4;
+}
+
+/* 節點依排版放在固定位置；選取的節點也維持絕對定位 */
+.board-cell.board-tree-node {
+  position: absolute;
+  z-index: 1;
+  border-width: 2px;
+  border-color: var(--ink-2);
+  border-radius: 50%;
+}
+
+.board-add.board-tree-slot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+/* 吸附在樹上的指標：名牌在上、箭頭朝下 */
+.board-el-pointer[data-down] {
+  flex-direction: column-reverse;
+}
+
+.board-el-pointer[data-down] .board-pointer-arrow {
+  transform: rotate(180deg);
+}
+
+/* 用文字建立 */
+.board-text-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.board-text-form .input {
+  width: min(320px, 60vw);
+  min-height: 30px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.board-text-error {
+  color: var(--danger);
+  font-size: 13px;
+}

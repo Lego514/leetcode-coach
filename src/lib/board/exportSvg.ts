@@ -2,14 +2,22 @@ import {
   arrowPoints,
   CELL,
   contentBounds,
+  CYCLE_H,
   INDEX_H,
   isIndexed,
   LABEL_H,
+  LINK_GAP,
+  linksOf,
+  pointsDown,
+  TREE_D,
+  treeLayout,
+  treeParent,
   LIST_NODE_H,
   LIST_NODE_W,
   NODE_D,
   pointerPosition,
   pointerTone,
+  POINTER_H,
   POINTER_W,
   ROW_INDEX_W,
   WIDE_CELL,
@@ -139,7 +147,74 @@ function label(value: string, x: number, y: number): string {
   return value ? text(x, y + LABEL_H / 2, value, { size: 13, mono: true, bold: true, color: INK_2 }) : '';
 }
 
+/** 鏈結串列：節點之間依方向畫箭頭，斷開的畫 ×，尾巴接 null 或接回某個節點 */
+function drawLinked(el: ElementOf<'list'>, options: ExportOptions): string {
+  const parts = [label(el.label, el.x, el.y)];
+  const n = el.items.length;
+  const links = linksOf(el);
+  const step = CELL + LINK_GAP;
+  const top = el.y + LABEL_H;
+  const mid = top + CELL / 2;
+  const line = (d: string) => `<path d="${d}" fill="none" stroke="${INK_2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const arrow = (x0: number, x1: number) => {
+    const dir = Math.sign(x1 - x0);
+    return line(`M${x0} ${mid}H${x1}M${x1 - dir * 6} ${mid - 5}L${x1} ${mid}L${x1 - dir * 6} ${mid + 5}`);
+  };
+  el.items.forEach((value, i) => {
+    const x = el.x + i * step;
+    const fill = el.colors?.[i] ? CELL_FILLS[el.colors[i]!] : SHEET;
+    parts.push(rect(x, top, CELL, CELL, fill, INK_2, ' stroke-width="2" rx="8"'), cellText(value, x + CELL / 2, mid, CELL, options.measure));
+    if (i === n - 1) return;
+    const gapStart = x + CELL;
+    if (links[i] === 'next') parts.push(arrow(gapStart + 3, gapStart + LINK_GAP - 3));
+    else if (links[i] === 'prev') parts.push(arrow(gapStart + LINK_GAP - 3, gapStart + 3));
+    else {
+      const cx = gapStart + LINK_GAP / 2;
+      parts.push(`<path d="M${cx - 4} ${mid - 4}l8 8m0-8l-8 8" stroke="${STROKE_COLORS.red}" stroke-width="2" stroke-linecap="round"/>`);
+    }
+  });
+  const tailX = el.x + (n - 1) * step + CELL;
+  if (el.cycle === undefined) {
+    if (n === 1 || links[n - 2] !== 'prev') {
+      parts.push(arrow(tailX + 3, tailX + LINK_GAP - 3), text(tailX + LINK_GAP + 2, mid, 'null', { size: 13, mono: true, color: INK_3 }));
+    }
+  } else {
+    const bottom = top + CELL + CYCLE_H - 6;
+    const self = el.cycle === n - 1 ? 8 : 0;
+    const from = el.x + (n - 1) * step + CELL / 2 + self;
+    const to = el.x + el.cycle * step + CELL / 2 - self;
+    parts.push(line(`M${from} ${top + CELL + 1}V${bottom}H${to}V${top + CELL + 3}M${to - 5} ${top + CELL + 8}L${to} ${top + CELL + 2}L${to + 5} ${top + CELL + 8}`));
+  }
+  return parts.join('');
+}
+
+/** 二元樹：先畫連線，再畫圓形的節點 */
+function drawTree(el: ElementOf<'tree'>, options: ExportOptions): string {
+  const parts = [label(el.label, el.x, el.y)];
+  const { centers } = treeLayout(el);
+  const r = TREE_D / 2;
+  for (const [i, c] of centers) {
+    const p = centers.get(treeParent(i));
+    if (!p) continue;
+    const d = Math.hypot(c.x - p.x, c.y - p.y) || 1;
+    const ux = (c.x - p.x) / d;
+    const uy = (c.y - p.y) / d;
+    parts.push(
+      `<line x1="${el.x + p.x + ux * r}" y1="${el.y + p.y + uy * r}" x2="${el.x + c.x - ux * r}" y2="${el.y + c.y - uy * r}" stroke="${INK_2}" stroke-width="2"/>`,
+    );
+  }
+  for (const [i, c] of centers) {
+    const fill = el.colors?.[i] ? CELL_FILLS[el.colors[i]!] : SHEET;
+    parts.push(
+      `<circle cx="${el.x + c.x}" cy="${el.y + c.y}" r="${r - 1}" fill="${fill}" stroke="${INK_2}" stroke-width="2"/>`,
+      cellText(el.nodes[i] ?? '', el.x + c.x, el.y + c.y, TREE_D, options.measure),
+    );
+  }
+  return parts.join('');
+}
+
 function drawList(el: ElementOf<'list'>, options: ExportOptions): string {
+  if (el.variant === 'linked') return drawLinked(el, options);
   const parts = [label(el.label, el.x, el.y)];
   const n = el.items.length;
   const fill = (i: number) => (el.colors?.[i] ? CELL_FILLS[el.colors[i]!] : SHEET);
@@ -216,6 +291,15 @@ function drawPointer(doc: BoardDoc, el: ElementOf<'pointer'>, options: ExportOpt
   const font = `bold 13px ${MONO}`;
   const w = Math.max(30, options.measure(el.name, font) + 16);
   const cx = x + POINTER_W / 2;
+  if (pointsDown(doc, el)) {
+    // 二元樹上的指標：名牌在上、箭頭朝下指著節點
+    const tip = y + POINTER_H - 0.5;
+    return [
+      rect(cx - w / 2, y, w, 22, soft, strong, ' stroke-width="1.5" rx="11"'),
+      text(cx, y + 11, el.name, { size: 13, mono: true, bold: true, color: strong, anchor: 'middle' }),
+      `<path d="M${cx} ${tip}L${cx + 4.5} ${tip - 5.5}H${cx + 1.25}V${tip - 11.5}H${cx - 1.25}V${tip - 5.5}H${cx - 4.5}Z" fill="${strong}"/>`,
+    ].join('');
+  }
   return [
     `<path d="M${cx} ${y + 0.5}L${cx + 4.5} ${y + 6}H${cx + 1.25}V${y + 12}H${cx - 1.25}V${y + 6}H${cx - 4.5}Z" fill="${strong}"/>`,
     rect(cx - w / 2, y + 12, w, 22, soft, strong, ' stroke-width="1.5" rx="11"'),
@@ -266,6 +350,8 @@ function drawPlaced(doc: BoardDoc, el: Placed, sizes: Sizes | undefined, options
       return drawTable(el, options);
     case 'node':
       return drawNode(el, options);
+    case 'tree':
+      return drawTree(el, options);
     case 'pointer':
       return drawPointer(doc, el, options);
     case 'var':

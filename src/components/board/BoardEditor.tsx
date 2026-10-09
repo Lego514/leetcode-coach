@@ -4,6 +4,7 @@ import type { Difficulty } from '../../data/problems';
 import { useI18n } from '../../i18n';
 import { boardToSvg, estimateWidth, type Measure } from '../../lib/board/exportSvg';
 import * as m from '../../lib/board/model';
+import { applyStructureText, structureText } from '../../lib/board/structures';
 import { useCloud } from '../../store/cloud';
 import { useToast } from '../toast';
 import { DifficultyTag, Dialog } from '../ui';
@@ -256,6 +257,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   const pickedList =
     cellSel && single?.type === 'list' && single.id === cellSel.id && cellSel.index < single.items.length ? single : undefined;
   const pickedIndex = pickedList ? cellSel!.index : undefined;
+  // 二元樹選了一個節點
+  const pickedTree =
+    cellSel && single?.type === 'tree' && single.id === cellSel.id && m.hasTreeNode(single, cellSel.index) ? single : undefined;
+  const pickedNode = pickedTree ? cellSel!.index : undefined;
 
   const startEditing = (id: string, focus?: number) => {
     setHistory((h) => m.checkpoint(h));
@@ -278,8 +283,8 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     if (fresh.type === 'pointer') fresh.name = m.nextPointerName(doc);
     // 拖進來的放在放開的位置；點一下的放在畫面中間附近的空位
     let el = at ? { ...fresh, ...centered(fresh, at) } : m.placeAtCenter(doc, fresh, centerWorld(), sizes);
-    // 先選了陣列再加指標，指標直接放在第一格下面
-    if (el.type === 'pointer' && !at && single && m.isIndexed(single)) el = { ...el, attach: { id: single.id, index: 0 } };
+    // 先選了陣列、串列或樹再加指標，指標直接放在第一格（樹是根節點）；要放在別格，先點那格再按「＋指標」
+    if (el.type === 'pointer' && !at && m.holdsPointers(single)) el = { ...el, attach: { id: single.id, index: 0 } };
     let next = m.addElement(doc, el);
     if (el.type === 'pointer' && !el.attach) next = m.dropPointer(next, id);
     apply(next);
@@ -302,11 +307,30 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     setCellSel({ id: list.id, index: Math.max(0, Math.min(index, list.items.length - 2)) });
   };
 
-  const addPointerOn = (list: m.ElementOf<'list'>, index: number) => {
+  const addPointerOn = (target: m.ElementOf<'list'> | m.ElementOf<'tree'>, index: number) => {
     const id = m.newId(doc);
-    apply(m.addPointerAt(doc, list.id, index, id));
+    apply(m.addPointerAt(doc, target.id, index, id));
     setSelection(new Set([id]));
     setCellSel(null);
+  };
+
+  // ---------- 鏈結串列與二元樹 ----------
+
+  const toggleLinkAt = (list: m.ElementOf<'list'>, gap: number) => apply(m.toggleLink(doc, list.id, gap));
+
+  /** 在空的子節點位置長出一個節點，選取它並直接開始輸入 */
+  const addChildAt = (tree: m.ElementOf<'tree'>, index: number) => {
+    const result = m.addTreeChild(doc, tree.id, m.treeParent(index), index % 2 === 1 ? 'left' : 'right');
+    if (!result) return;
+    apply(result.doc);
+    setCellSel({ id: tree.id, index: result.index });
+    startEditing(tree.id, result.index);
+  };
+
+  const deleteNodeAt = (tree: m.ElementOf<'tree'>, index: number) => {
+    if (index <= 0) return;
+    apply(m.deleteTreeNode(doc, tree.id, index));
+    setCellSel({ id: tree.id, index: m.treeParent(index) });
   };
 
   const removeSelected = () => {
@@ -782,6 +806,18 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         setSelection(new Set(doc.elements.map((el) => el.id)));
       } else if (mod) {
         return;
+      } else if (pickedTree && pickedNode !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
+        // 選了樹的一個節點：刪的是這個子樹，不是整棵樹（根節點不刪）
+        e.preventDefault();
+        deleteNodeAt(pickedTree, pickedNode);
+      } else if (pickedTree && pickedNode !== undefined && e.key === 'Enter') {
+        e.preventDefault();
+        startEditing(pickedTree.id, pickedNode);
+      } else if (pickedTree && pickedNode !== undefined && e.key.startsWith('Arrow')) {
+        // ← → 到左右子節點，↑ 回到父節點，↓ 往下走（先左後右）
+        e.preventDefault();
+        const next = m.treeStep(pickedTree, pickedNode, arrowDirection(e.key));
+        if (next !== null) setCellSel({ id: pickedTree.id, index: next });
       } else if (pickedList && pickedIndex !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
         // 選了一格：刪的是這一格，不是整個陣列
         e.preventDefault();
@@ -812,8 +848,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         e.preventDefault();
         const dx = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
         const dy = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
-        // 吸附在陣列上的指標左右移一格，其他元件移 10
-        if (single?.type === 'pointer' && single.attach && dx !== 0) apply(m.shiftPointer(doc, single.id, dx));
+        // 吸附在陣列上的指標左右移一格；吸附在樹上的走到子節點或父節點；其他元件移 10
+        const onTree = single?.type === 'pointer' && m.pointsDown(doc, single);
+        if (onTree) apply(m.stepTreePointer(doc, single.id, arrowDirection(e.key)));
+        else if (single?.type === 'pointer' && single.attach && dx !== 0) apply(m.shiftPointer(doc, single.id, dx));
         else apply(m.moveElements(doc, selected, dx * 10, dy * 10));
       } else if (e.key === 's') {
         captureCurrentStep();
@@ -919,9 +957,11 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 selected={selected.has(el.id)}
                 editing={editingId === el.id}
                 snapIndex={snap?.id === el.id ? snap.index : undefined}
-                cellIndex={pickedList?.id === el.id ? pickedIndex : undefined}
+                cellIndex={pickedList?.id === el.id ? pickedIndex : pickedTree?.id === el.id ? pickedNode : undefined}
                 focusIndex={editingId === el.id ? editFocus : undefined}
                 onAddCell={canAdd(el) && el.type === 'list' ? () => insertCellAt(el, el.items.length) : undefined}
+                onToggleLink={canAdd(el) && m.isLinked(el) ? (gap) => toggleLinkAt(el, gap) : undefined}
+                onAddChild={canAdd(el) && el.type === 'tree' ? (index) => addChildAt(el, index) : undefined}
                 onAddRow={canAdd(el) && el.type === 'table' ? () => apply(m.resizeTable(doc, el.id, 'row', 1)) : undefined}
                 onAddCol={canAdd(el) && el.type === 'table' ? () => apply(m.resizeTable(doc, el.id, 'col', 1)) : undefined}
                 register={register}
@@ -1033,7 +1073,16 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
 
           {playIndex === null && tool === 'select' && selected.size > 0 && (
             <div className="board-selbar" role="toolbar" aria-label={t.board.selectionLabel} data-ui>
-              {pickedList && pickedIndex !== undefined ? (
+              {pickedTree && pickedNode !== undefined ? (
+                <NodeActions
+                  tree={pickedTree}
+                  index={pickedNode}
+                  onColor={(color) => apply(m.setNodeColor(doc, pickedTree.id, pickedNode, color))}
+                  onAddPointer={() => addPointerOn(pickedTree, pickedNode)}
+                  onAddChild={(index) => addChildAt(pickedTree, index)}
+                  onDelete={() => deleteNodeAt(pickedTree, pickedNode)}
+                />
+              ) : pickedList && pickedIndex !== undefined ? (
                 <CellActions
                   list={pickedList}
                   index={pickedIndex}
@@ -1041,11 +1090,12 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                   onAddPointer={() => addPointerOn(pickedList, pickedIndex)}
                   onInsert={(index) => insertCellAt(pickedList, index)}
                   onDelete={() => deleteCellAt(pickedList, pickedIndex)}
+                  onCycle={(index) => apply(m.setCycle(doc, pickedList.id, index))}
                 />
               ) : (
                 <>
                   {selected.size > 1 && <span className="board-selbar-title">{t.board.selectedCount(selected.size)}</span>}
-                  {single && <SelectionActions el={single} doc={doc} apply={apply} onEdit={() => startEditing(single.id)} />}
+                  {single && <SelectionActions key={single.id} el={single} doc={doc} sizes={sizes} apply={apply} onEdit={() => startEditing(single.id)} />}
                   {[...selected].some((id) => m.findElement(doc, id)?.type !== 'arrow') && (
                     <button type="button" className="btn btn-small" onClick={duplicateSelected}>
                       {t.board.actions.duplicate}
@@ -1182,42 +1232,56 @@ interface CellActionsProps {
   onAddPointer: () => void;
   onInsert: (index: number) => void;
   onDelete: () => void;
+  /** 鏈結串列：尾巴接回這一格；undefined 是拿掉環 */
+  onCycle: (index: number | undefined) => void;
 }
 
-/** 選了陣列的一格：上底色、在這格加指標、在旁邊插入、刪掉這格 */
-function CellActions({ list, index, onColor, onAddPointer, onInsert, onDelete }: CellActionsProps) {
+/** 底色選擇：不上色和六種顏色 */
+function CellColors({ current, onColor }: { current: CellColor | null; onColor: (color: CellColor | null) => void }) {
+  const { t } = useI18n();
+  return (
+    <span className="board-cell-colors" role="group" aria-label={t.board.cellColor}>
+      <button
+        type="button"
+        className="board-cell-swatch"
+        data-color="none"
+        aria-label={t.board.cellColors.none}
+        title={t.board.cellColors.none}
+        aria-pressed={current === null}
+        onClick={() => onColor(null)}
+      />
+      {CELL_COLORS.map((color) => (
+        <button
+          key={color}
+          type="button"
+          className="board-cell-swatch"
+          data-color={color}
+          aria-label={t.board.cellColors[color]}
+          title={t.board.cellColors[color]}
+          aria-pressed={current === color}
+          onClick={() => onColor(color)}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** 選了陣列的一格：上底色、在這格加指標、在旁邊插入、刪掉這格；鏈結串列還可以讓尾巴接回這裡 */
+function CellActions({ list, index, onColor, onAddPointer, onInsert, onDelete, onCycle }: CellActionsProps) {
   const { t } = useI18n();
   const a = t.board.actions;
-  const current = list.colors?.[index] ?? null;
   // 堆疊是直的：index 越大越上面
   const vertical = list.variant === 'stack';
   return (
     <>
-      <span className="board-selbar-title">{t.board.cellLabel(index)}</span>
-      <span className="board-cell-colors" role="group" aria-label={t.board.cellColor}>
-        <button
-          type="button"
-          className="board-cell-swatch"
-          data-color="none"
-          aria-label={t.board.cellColors.none}
-          title={t.board.cellColors.none}
-          aria-pressed={current === null}
-          onClick={() => onColor(null)}
-        />
-        {CELL_COLORS.map((color) => (
-          <button
-            key={color}
-            type="button"
-            className="board-cell-swatch"
-            data-color={color}
-            aria-label={t.board.cellColors[color]}
-            title={t.board.cellColors[color]}
-            aria-pressed={current === color}
-            onClick={() => onColor(color)}
-          />
-        ))}
-      </span>
-      {m.isIndexed(list) && (
+      <span className="board-selbar-title">{list.variant === 'linked' ? t.board.nodeLabel(list.items[index]) : t.board.cellLabel(index)}</span>
+      <CellColors current={list.colors?.[index] ?? null} onColor={onColor} />
+      {list.variant === 'linked' && (
+        <button type="button" className="btn btn-small" onClick={() => onCycle(list.cycle === index ? undefined : index)}>
+          {list.cycle === index ? a.removeCycle : a.cycleHere}
+        </button>
+      )}
+      {m.holdsPointers(list) && (
         <button type="button" className="btn btn-small" onClick={onAddPointer}>
           {a.addPointer}
         </button>
@@ -1235,11 +1299,120 @@ function CellActions({ list, index, onColor, onAddPointer, onInsert, onDelete }:
   );
 }
 
-/** 選了一個元件時，依種類多出來的操作 */
-function SelectionActions({ el, doc, apply, onEdit }: { el: m.BoardElement; doc: m.BoardDoc; apply: (doc: m.BoardDoc) => void; onEdit: () => void }) {
+interface NodeActionsProps {
+  tree: m.ElementOf<'tree'>;
+  index: number;
+  onColor: (color: CellColor | null) => void;
+  onAddPointer: () => void;
+  /** 參數是新子節點的位置 */
+  onAddChild: (index: number) => void;
+  onDelete: () => void;
+}
+
+/** 選了二元樹的一個節點：上底色、加指標、加左右子節點、刪掉這個子樹 */
+function NodeActions({ tree, index, onColor, onAddPointer, onAddChild, onDelete }: NodeActionsProps) {
   const { t } = useI18n();
   const a = t.board.actions;
+  const left = 2 * index + 1;
+  const right = 2 * index + 2;
+  const canAdd = (child: number) => child < m.TREE_MAX_NODES && !m.hasTreeNode(tree, child);
+  return (
+    <>
+      <span className="board-selbar-title">{t.board.nodeLabel(tree.nodes[index] ?? '')}</span>
+      <CellColors current={tree.colors?.[index] ?? null} onColor={onColor} />
+      <button type="button" className="btn btn-small" onClick={onAddPointer}>
+        {a.addPointer}
+      </button>
+      <button type="button" className="btn btn-small" disabled={!canAdd(left)} onClick={() => onAddChild(left)}>
+        {a.addLeftChild}
+      </button>
+      <button type="button" className="btn btn-small" disabled={!canAdd(right)} onClick={() => onAddChild(right)}>
+        {a.addRightChild}
+      </button>
+      <button type="button" className="btn btn-small btn-danger" disabled={index === 0} onClick={onDelete}>
+        {a.deleteSubtree}
+      </button>
+    </>
+  );
+}
+
+/** 鏈結串列和二元樹：貼題目的範例直接建立 */
+interface StructureTextFormProps {
+  el: m.ElementOf<'list'> | m.ElementOf<'tree'>;
+  doc: m.BoardDoc;
+  sizes: m.Sizes;
+  apply: (doc: m.BoardDoc) => void;
+  onClose: () => void;
+}
+
+function StructureTextForm({ el, doc, sizes, apply, onClose }: StructureTextFormProps) {
+  const { t } = useI18n();
+  const s = t.board.structureText;
+  const [text, setText] = useState(() => structureText(el));
+  const [error, setError] = useState('');
+  return (
+    <form
+      className="board-text-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const result = applyStructureText(doc, el.id, text);
+        if ('error' in result) {
+          setError(s.errors[result.error]);
+          return;
+        }
+        apply(m.settleElement(result.doc, el.id, sizes));
+        onClose();
+      }}
+    >
+      <input
+        className="input"
+        value={text}
+        aria-label={s.label}
+        placeholder={el.type === 'tree' ? s.tree : s.linked}
+        maxLength={2000}
+        autoFocus
+        spellCheck={false}
+        onChange={(e) => {
+          setText(e.target.value);
+          setError('');
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Escape') onClose();
+        }}
+      />
+      <button type="submit" className="btn btn-small btn-primary">
+        {t.board.actions.applyText}
+      </button>
+      <button type="button" className="btn btn-small btn-quiet" onClick={onClose}>
+        {t.common.cancel}
+      </button>
+      {error && (
+        <span className="board-text-error" role="alert">
+          {error}
+        </span>
+      )}
+    </form>
+  );
+}
+
+/** 選了一個元件時，依種類多出來的操作 */
+interface SelectionActionsProps {
+  el: m.BoardElement;
+  doc: m.BoardDoc;
+  sizes: m.Sizes;
+  apply: (doc: m.BoardDoc) => void;
+  onEdit: () => void;
+}
+
+function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsProps) {
+  const { t } = useI18n();
+  const a = t.board.actions;
+  const [writing, setWriting] = useState(false);
   const buttons: [string, () => void][] = [];
+  const structure = el.type === 'tree' || m.isLinked(el) ? el : undefined;
+  if (structure && writing) return <StructureTextForm el={structure} doc={doc} sizes={sizes} apply={apply} onClose={() => setWriting(false)} />;
+  if (structure) buttons.push([a.fromText, () => setWriting(true)]);
   if (m.isPlaced(el) && el.type !== 'shape') buttons.push([a.edit, onEdit]);
   // 加格子、加列、加欄用元件旁邊的「＋」；陣列刪格子先點那一格
   if (el.type === 'table') {
@@ -1249,7 +1422,13 @@ function SelectionActions({ el, doc, apply, onEdit }: { el: m.BoardElement; doc:
     const plain = el.head === 'none';
     buttons.push([plain ? a.makeArrow : a.makeLine, () => apply(m.setArrowHead(doc, el.id, plain ? 'end' : 'none'))]);
   }
-  if (el.type === 'pointer' && el.attach) {
+  if (el.type === 'pointer' && el.attach && m.pointsDown(doc, el)) {
+    buttons.push(
+      [a.pointerToParent, () => apply(m.stepTreePointer(doc, el.id, 'up'))],
+      [a.pointerToLeft, () => apply(m.stepTreePointer(doc, el.id, 'left'))],
+      [a.pointerToRight, () => apply(m.stepTreePointer(doc, el.id, 'right'))],
+    );
+  } else if (el.type === 'pointer' && el.attach) {
     buttons.push([a.pointerLeft, () => apply(m.shiftPointer(doc, el.id, -1))], [a.pointerRight, () => apply(m.shiftPointer(doc, el.id, 1))]);
   }
   return (
@@ -1261,6 +1440,11 @@ function SelectionActions({ el, doc, apply, onEdit }: { el: m.BoardElement; doc:
       ))}
     </>
   );
+}
+
+/** 在二元樹上，方向鍵對應的走法 */
+function arrowDirection(key: string): m.TreeDirection {
+  return key === 'ArrowLeft' ? 'left' : key === 'ArrowRight' ? 'right' : key === 'ArrowUp' ? 'up' : 'down';
 }
 
 /** 用 canvas 量文字寬度，匯出時換行和截斷才跟畫面一致 */
@@ -1407,6 +1591,8 @@ const PALETTE_ICONS: Record<m.PaletteKind, string> = {
   set: '{ }',
   grid: '▦',
   var: 'x=',
+  binaryTree: '∴',
+  linkedList: '▭→▭',
   treeNode: '●',
   listNode: '▭→',
   graphNode: '○',

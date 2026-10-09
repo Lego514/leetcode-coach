@@ -39,9 +39,18 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Practice everything, only problems you've done, only clues, only Python tips, or one pattern.
   - A **rest timer** (60–180 seconds) counts down between sets. When it ends it beeps, vibrates where supported, and shows an alert, and it asks the browser to keep the screen on while it runs.
   - Answers save one at a time, sync like attempts, and count toward the streak.
-- **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, tree/list/graph nodes, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
+- **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graph nodes, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
   - **Pointers** snap to array cells, step with the arrow keys, and are colored by name (i, j, k, l).
   - **Single cells** can be selected one at a time to highlight them, put a pointer on them, insert next to them, or delete them. Pointers and highlights follow their values when cells move. A dashed "+" adds cells, rows, and columns.
+  - **Linked lists** are one element:
+    - Each link between two nodes cycles between forward, reversed, and cut with a click, so reversing a list can be traced link by link.
+    - The tail can point back to any node to show a cycle.
+    - Pointers such as prev, curr, and next snap under nodes.
+  - **Binary trees** lay themselves out in order, so a binary search tree reads sorted from left to right.
+    - Pick a node to add a left or right child from a dashed slot, color it, or delete its subtree.
+    - Pointers sit above nodes and move to a child or the parent with the arrow keys.
+    - Up to six levels.
+  - **Build from text**: paste a problem's example, such as `1->2->3` or LeetCode's level order `[3,9,20,null,null,15,7]`, to build the list or tree at once.
   - **Other tools**:
     - rectangle and ellipse frames, which draw on top but stay click-through except their outline
     - arrows and plain lines (for undirected edges) that follow the elements they connect
@@ -53,7 +62,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Mouse, trackpad, keyboard, and touch all work. Pan with the scroll wheel, Space + drag, the hand tool, or two fingers; zoom with Ctrl + scroll or a pinch.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - On the practice page the board opens on top, so the timer keeps running.
-  - No whiteboard library is used: the editor is about 56 KB (18 KB gzipped) and loads the first time a board opens.
+  - No whiteboard library is used: the editor is about 71 KB (22 KB gzipped) and loads the first time a board opens.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
@@ -92,6 +101,7 @@ src/                 Web app
     cards.ts             Flashcards: deck, Leitner boxes, picking and dealing a round
     board/model.ts       Whiteboard: layout, pointer snapping, cell edits, arrows, selection, steps, undo history
     board/exportSvg.ts   Whiteboard: redraw a board as SVG for PNG export
+    board/structures.ts  Whiteboard: build linked lists and trees from text (LeetCode level order)
   store/               Data layer
     db.ts                Dexie schema (v2: sync ids, outbox, sync state; v3: flashcard answers; v4: whiteboards)
     actions.ts           Every local write; each one also records a change in the outbox
@@ -246,8 +256,11 @@ Notes:
 - 做微複習的日子也算進連續天數。
 
 **白板**是自己從頭寫的，沒有用繪圖套件：
-- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、樹／串列／圖節點、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
+- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖節點、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
 - 指標會吸附在陣列格子上，用方向鍵移動，依名字自動上色。
+- **鏈結串列**是一整條：點兩個節點之間的箭頭可以在往後、反過來、斷開之間切換，反轉串列可以一段一段翻；尾巴可以接回任一個節點（有環）；prev、curr、next 指標吸附在節點下面。
+- **二元樹**自動依中序排版（二元搜尋樹由左到右剛好排好序）：點一個節點可以從虛線位置加左右子節點、上底色、刪掉子樹；指標放在節點上方，用方向鍵走到子節點或父節點；最多 6 層。
+- 選取串列或樹後按「用文字建立」，可以直接貼題目的範例，例如 `1->2->3` 或 `[3,9,20,null,null,15,7]`。
 - 點一格可以上底色、在那格加指標、插入或刪除格子。
 - 還有矩形框、圓形框、箭頭連線、直線（無向圖的邊）、畫筆、橡皮擦、復原、清空。
 - 在空白處拖曳可以框選，框住的東西可以一起移動、複製、刪除或換色。

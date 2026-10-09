@@ -141,14 +141,26 @@ export const boardElementSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('list'),
     ...placed,
-    variant: z.enum(['array', 'stack', 'queue', 'set']),
+    variant: z.enum(['array', 'stack', 'queue', 'set', 'linked']),
     label: text(40),
     items: z.array(cell).max(64),
     /** 每一格的底色，跟 items 一一對應；沒有上色就沒有這一項 */
     colors: z.array(z.enum(CELL_COLORS).nullable()).max(64).optional(),
+    /** 鏈結串列：第 i 個和第 i+1 個節點之間的連線，往後、反過來或斷開；沒寫就全部往後 */
+    links: z.array(z.enum(['next', 'prev', 'none'])).max(63).optional(),
+    /** 鏈結串列：尾巴接回第幾個節點（有環）；沒寫就是接到 null */
+    cycle: z.number().int().min(0).max(63).optional(),
   }),
   z.object({ type: z.literal('table'), ...placed, variant: z.enum(['dict', 'grid', 'table']), label: text(40), rows: z.array(z.array(cell).max(26)).min(1).max(26) }),
   z.object({ type: z.literal('var'), ...placed, name: text(40), value: text(80) }),
+  /** 二元樹：依層序存，第 i 個節點的子節點是 2i+1 和 2i+2，null 是沒有節點；最多 6 層 */
+  z.object({
+    type: z.literal('tree'),
+    ...placed,
+    label: text(40),
+    nodes: z.array(cell.nullable()).min(1).max(63),
+    colors: z.array(z.enum(CELL_COLORS).nullable()).max(63).optional(),
+  }),
   z.object({ type: z.literal('node'), ...placed, variant: z.enum(['tree', 'list', 'graph']), value: cell }),
   /** 框出重點用的矩形框或圓形框；裡面是空的，不會擋到框住的元件 */
   z.object({
@@ -163,7 +175,7 @@ export const boardElementSchema = z.discriminatedUnion('type', [
     type: z.literal('pointer'),
     ...placed,
     name: text(12),
-    /** 吸附在陣列的哪一格；有吸附時位置跟著陣列走 */
+    /** 吸附在陣列、鏈結串列的哪一格，或二元樹的哪個節點；有吸附時位置跟著它走 */
     attach: z.object({ id: boardElementId, index: z.number().int().min(0).max(63) }).optional(),
   }),
   z.object({
