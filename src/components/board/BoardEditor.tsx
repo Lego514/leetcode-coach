@@ -1642,6 +1642,7 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   const [writing, setWriting] = useState(false);
   const buttons: [string, () => void][] = [];
   const structure = acceptsText(el) ? el : undefined;
+  const heapControls = m.isHeap(el) && !writing ? <HeapActions key={el.id} el={el} doc={doc} apply={apply} /> : null;
   if (structure && writing) return <StructureTextForm el={structure} doc={doc} sizes={sizes} apply={apply} onClose={() => setWriting(false)} />;
   if (structure) buttons.push([a.fromText, () => setWriting(true)]);
   if (el.type === 'graph') {
@@ -1675,11 +1676,79 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   }
   return (
     <>
+      {heapControls}
       {buttons.map(([label, onClick]) => (
         <button key={label} type="button" className="btn btn-small" onClick={onClick}>
           {label}
         </button>
       ))}
+    </>
+  );
+}
+
+/** 堆積：push、pop、heapify，切換最小堆／最大堆和畫法；可以把每一次交換記成逐步播放 */
+function HeapActions({ el, doc, apply }: { el: m.ElementOf<'list'>; doc: m.BoardDoc; apply: (doc: m.BoardDoc) => void }) {
+  const { t } = useI18n();
+  const h = t.board.heap;
+  const toast = useToast();
+  const [value, setValue] = useState('');
+  const [record, setRecord] = useState(false);
+  const run = (steps: m.HeapStep[]) => {
+    if (steps.length === 0) return;
+    apply(record ? m.recordHeapSteps(doc, steps) : steps[steps.length - 1].doc);
+  };
+  const full = el.items.length >= m.HEAP_MAX;
+  const view = el.view ?? 'both';
+  return (
+    <>
+      <form
+        className="board-heap-push"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!value.trim() || full) return;
+          run(m.heapPush(doc, el.id, value.trim()));
+          setValue('');
+        }}
+      >
+        <input
+          className="input board-weight"
+          value={value}
+          aria-label={h.value}
+          placeholder={h.value}
+          maxLength={40}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.stopPropagation()}
+        />
+        <button type="submit" className="btn btn-small" disabled={!value.trim() || full} title={full ? h.full : undefined}>
+          {h.push}
+        </button>
+      </form>
+      <button
+        type="button"
+        className="btn btn-small"
+        disabled={el.items.length === 0}
+        onClick={() => {
+          const popped = m.heapPop(doc, el.id);
+          if (!popped) return;
+          run(popped.steps);
+          toast(h.popped(popped.value));
+        }}
+      >
+        {h.pop}
+      </button>
+      <button type="button" className="btn btn-small" disabled={m.heapViolations(el).size === 0} onClick={() => run(m.heapify(doc, el.id))}>
+        {h.heapify}
+      </button>
+      <button type="button" className="btn btn-small" onClick={() => apply(m.setHeapOrder(doc, el.id, el.order === 'max' ? 'min' : 'max'))}>
+        {el.order === 'max' ? h.makeMin : h.makeMax}
+      </button>
+      <button type="button" className="btn btn-small" title={h.viewHint} onClick={() => apply(m.cycleHeapView(doc, el.id))}>
+        {h.views[view]}
+      </button>
+      <label className="board-heap-record">
+        <input type="checkbox" checked={record} onChange={(e) => setRecord(e.target.checked)} />
+        {h.record}
+      </label>
     </>
   );
 }
@@ -1861,6 +1930,14 @@ const PALETTE_ICONS: Record<m.PaletteKind, ReactNode> = {
   linkedList: <path d="M2 9h6.5v6H2zM15.5 9H22v6h-6.5zM8.5 12h6M12.5 10l2 2-2 2" />,
   treeNode: <circle cx="12" cy="12" r="6" />,
   listNode: <path d="M3 9h12v6H3zM11 9v6M15 12h6M19 10l2 2-2 2" />,
+  heap: (
+    <>
+      <circle cx="12" cy="4.5" r="2.2" />
+      <circle cx="7" cy="10.5" r="2.2" />
+      <circle cx="17" cy="10.5" r="2.2" />
+      <path d="M10.7 6.2 8.3 8.8M13.3 6.2l2.4 2.6M2.5 15.5h19v5h-19zM8.8 15.5v5M15.2 15.5v5" />
+    </>
+  ),
   graph: (
     <>
       <circle cx="6" cy="7" r="2.4" />

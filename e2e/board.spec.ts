@@ -511,3 +511,41 @@ test('fills an array and a dict by pasting a problem’s example', async ({ page
   await build("seen = {'a': 0, 'b': 1}");
   await expect(page.getByRole('group', { name: 'Dict seen: a 0; b 1' })).toBeVisible();
 });
+
+test('pushes and pops a heap, records each swap, and fixes a broken order', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Heap', exact: true }).click();
+  const heap = page.getByRole('group', { name: /^Heap heap/ });
+  await expect(heap).toHaveAccessibleName('Heap heap (min-heap): 1, 3, 2, 7, 4');
+  // 樹和陣列畫的是同一份資料
+  await expect(heap.locator('.board-tree-node')).toHaveCount(5);
+  await expect(heap.locator('.board-heap-array .board-cell')).toHaveCount(5);
+
+  // 記錄每一步：push 0 會往上換兩次，總共三步
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await selbar.getByRole('checkbox', { name: 'Record each step for playback' }).check();
+  await selbar.getByRole('textbox', { name: 'Value to push' }).fill('0');
+  await selbar.getByRole('button', { name: 'Push', exact: true }).click();
+  await expect(heap).toHaveAccessibleName('Heap heap (min-heap): 0, 3, 1, 7, 4, 2');
+  await expect(page.getByRole('button', { name: 'Play all 3 steps from the start' })).toBeVisible();
+
+  await selbar.getByRole('button', { name: 'Pop', exact: true }).click();
+  await expect(page.getByText('Popped 0')).toBeVisible();
+  await expect(heap).toHaveAccessibleName('Heap heap (min-heap): 1, 3, 2, 7, 4');
+
+  // 換成最大堆積：順序不對的節點變紅，Heapify 一次修好
+  await expect(selbar.getByRole('button', { name: 'Heapify' })).toBeDisabled();
+  await selbar.getByRole('button', { name: 'Make max-heap' }).click();
+  await expect(heap).toHaveAccessibleName(/^Heap heap \(max-heap\)/);
+  await expect(heap.locator('.board-heap-bad')).not.toHaveCount(0);
+  await selbar.getByRole('button', { name: 'Heapify' }).click();
+  await expect(heap).toHaveAccessibleName('Heap heap (max-heap): 7, 4, 2, 3, 1');
+  await expect(heap.locator('.board-heap-bad')).toHaveCount(0);
+
+  // 切換顯示：只看陣列，再只看樹
+  await selbar.getByRole('button', { name: 'Show: tree + array' }).click();
+  await expect(heap.locator('.board-tree-node')).toHaveCount(0);
+  await selbar.getByRole('button', { name: 'Show: array' }).click();
+  await expect(heap.locator('.board-heap-array')).toHaveCount(0);
+  await expect(selbar.getByRole('button', { name: 'Show: tree' })).toBeVisible();
+});

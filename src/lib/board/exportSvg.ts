@@ -6,6 +6,8 @@ import {
   CYCLE_H,
   edgeShape,
   graphLayout,
+  heapLayout,
+  heapViolations,
   INDEX_H,
   isIndexed,
   LABEL_H,
@@ -247,8 +249,47 @@ function drawGraph(el: ElementOf<'graph'>, options: ExportOptions): string {
   return parts.join('');
 }
 
+/** 堆積：上面的樹（違反堆積性質的標紅），下面同一份資料的陣列 */
+function drawHeap(el: ElementOf<'list'>, options: ExportOptions): string {
+  const parts = [label(el.label, el.x, el.y)];
+  const layout = heapLayout(el);
+  const bad = heapViolations(el);
+  const r = TREE_D / 2;
+  const fill = (i: number) => (el.colors?.[i] ? CELL_FILLS[el.colors[i]!] : SHEET);
+  if (layout.showTree) {
+    for (const [i, c] of layout.centers) {
+      const p = layout.centers.get(treeParent(i));
+      if (!p) continue;
+      const d = Math.hypot(c.x - p.x, c.y - p.y) || 1;
+      const ux = (c.x - p.x) / d;
+      const uy = (c.y - p.y) / d;
+      const style = bad.has(i) ? ` stroke="${STROKE_COLORS.red}" stroke-dasharray="4 3"` : ` stroke="${INK_2}"`;
+      parts.push(`<line x1="${el.x + p.x + ux * r}" y1="${el.y + p.y + uy * r}" x2="${el.x + c.x - ux * r}" y2="${el.y + c.y - uy * r}"${style} stroke-width="2"/>`);
+    }
+    for (const [i, c] of layout.centers) {
+      parts.push(
+        `<circle cx="${el.x + c.x}" cy="${el.y + c.y}" r="${r - 1}" fill="${fill(i)}" stroke="${bad.has(i) ? STROKE_COLORS.red : INK_2}" stroke-width="2"/>`,
+        cellText(el.items[i], el.x + c.x, el.y + c.y, TREE_D, options.measure),
+      );
+    }
+  }
+  if (layout.showArray) {
+    const y = el.y + layout.arrayTop;
+    el.items.forEach((value, i) => {
+      const x = el.x + i * CELL;
+      parts.push(
+        rect(x, y, CELL, CELL, fill(i), INK_3),
+        cellText(value, x + CELL / 2, y + CELL / 2, CELL, options.measure),
+        text(x + CELL / 2, y + CELL + INDEX_H / 2, String(i), { size: 11, mono: true, color: INK_3, anchor: 'middle' }),
+      );
+    });
+  }
+  return parts.join('');
+}
+
 function drawList(el: ElementOf<'list'>, options: ExportOptions): string {
   if (el.variant === 'linked') return drawLinked(el, options);
+  if (el.variant === 'heap') return drawHeap(el, options);
   const parts = [label(el.label, el.x, el.y)];
   const n = el.items.length;
   const fill = (i: number) => (el.colors?.[i] ? CELL_FILLS[el.colors[i]!] : SHEET);

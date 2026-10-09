@@ -141,7 +141,7 @@ export const boardElementSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('list'),
     ...placed,
-    variant: z.enum(['array', 'stack', 'queue', 'set', 'linked']),
+    variant: z.enum(['array', 'stack', 'queue', 'set', 'linked', 'heap']),
     label: text(40),
     items: z.array(cell).max(64),
     /** 每一格的底色，跟 items 一一對應；沒有上色就沒有這一項 */
@@ -150,6 +150,10 @@ export const boardElementSchema = z.discriminatedUnion('type', [
     links: z.array(z.enum(['next', 'prev', 'none'])).max(63).optional(),
     /** 鏈結串列：尾巴接回第幾個節點（有環）；沒寫就是接到 null */
     cycle: z.number().int().min(0).max(63).optional(),
+    /** 堆積：最小堆或最大堆（沒寫是最小堆） */
+    order: z.enum(['min', 'max']).optional(),
+    /** 堆積：只畫陣列或只畫樹；沒寫就兩個都畫 */
+    view: z.enum(['array', 'tree']).optional(),
   }),
   z.object({ type: z.literal('table'), ...placed, variant: z.enum(['dict', 'grid', 'table']), label: text(40), rows: z.array(z.array(cell).max(26)).min(1).max(26) }),
   z.object({ type: z.literal('var'), ...placed, name: text(40), value: text(80) }),
