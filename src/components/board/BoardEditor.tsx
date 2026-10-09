@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n';
 import { boardToSvg, estimateWidth, type Measure } from '../../lib/board/exportSvg';
 import * as m from '../../lib/board/model';
 import { applyStructureText, structureText } from '../../lib/board/structures';
+import { insertTemplate, TEMPLATES, type TemplateKind } from '../../lib/board/templates';
 import { useCloud } from '../../store/cloud';
 import { useToast } from '../toast';
 import { DifficultyTag, Dialog } from '../ui';
@@ -289,6 +290,16 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     if (el.type === 'pointer' && !el.attach) next = m.dropPointer(next, id);
     apply(next);
     setSelection(new Set([id]));
+    setTool('select');
+  };
+
+  /** 模板整組放在畫面中間附近的空位，全部選取，可以直接一起拖走 */
+  const addTemplate = (kind: TemplateKind) => {
+    stopEditing();
+    setCellSel(null);
+    const { doc: next, ids } = insertTemplate(doc, kind, centerWorld(), sizes);
+    apply(next);
+    setSelection(new Set(ids));
     setTool('select');
   };
 
@@ -919,6 +930,22 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       <div className="board-body">
         <aside className="board-palette" aria-label={t.board.palette}>
           <p className="board-palette-hint">{t.board.paletteHint}</p>
+          <section className="board-palette-group board-templates" aria-label={t.board.groups.templates}>
+            <h2>{t.board.groups.templates}</h2>
+            <div className="board-template-items">
+              {TEMPLATES.map((kind) => (
+                <button key={kind} type="button" className="board-template" title={t.board.templates[kind].hint} onClick={() => addTemplate(kind)}>
+                  <span className="board-palette-icon" aria-hidden>
+                    <Icon>{TEMPLATE_ICONS[kind]}</Icon>
+                  </span>
+                  <span className="board-template-text">
+                    <span className="board-template-name">{t.board.templates[kind].name}</span>
+                    <span className="board-template-hint">{t.board.templates[kind].hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
           {m.PALETTE.map(({ group, kinds }) => (
             <section key={group} className="board-palette-group" aria-label={t.board.groups[group]}>
               <h2>{t.board.groups[group]}</h2>
@@ -926,7 +953,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 {kinds.map((kind) => (
                   <button key={kind} type="button" className="board-palette-item" {...paletteHandlers(kind)}>
                     <span className="board-palette-icon" aria-hidden data-kind={kind}>
-                      {PALETTE_ICONS[kind]}
+                      <Icon>{PALETTE_ICONS[kind]}</Icon>
                     </span>
                     {t.board.kinds[kind]}
                   </button>
@@ -1414,6 +1441,14 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   if (structure && writing) return <StructureTextForm el={structure} doc={doc} sizes={sizes} apply={apply} onClose={() => setWriting(false)} />;
   if (structure) buttons.push([a.fromText, () => setWriting(true)]);
   if (m.isPlaced(el) && el.type !== 'shape') buttons.push([a.edit, onEdit]);
+  // 元件庫只有「文字」，選取後可以切換成標題
+  if (el.type === 'text' && (el.variant === 'text' || el.variant === 'heading')) {
+    const heading = el.variant === 'heading';
+    buttons.push([
+      heading ? a.makeBody : a.makeHeading,
+      () => apply(m.updateElement<m.ElementOf<'text'>>(doc, el.id, { variant: heading ? 'text' : 'heading' })),
+    ]);
+  }
   // 加格子、加列、加欄用元件旁邊的「＋」；陣列刪格子先點那一格
   if (el.type === 'table') {
     buttons.push([a.removeRow, () => apply(m.resizeTable(doc, el.id, 'row', -1))], [a.removeCol, () => apply(m.resizeTable(doc, el.id, 'col', -1))]);
@@ -1578,23 +1613,69 @@ const ICON_FIT = (
   </Icon>
 );
 
-const PALETTE_ICONS: Record<m.PaletteKind, string> = {
-  heading: 'T',
-  text: 't',
-  code: '{}',
-  sticky: '▤',
-  array: '[ ]',
-  pointer: '↑i',
-  stack: '⊔',
-  queue: '⇉',
-  dict: 'k:v',
-  set: '{ }',
-  grid: '▦',
-  var: 'x=',
-  binaryTree: '∴',
-  linkedList: '▭→▭',
-  treeNode: '●',
-  listNode: '▭→',
-  graphNode: '○',
-  table: '☰',
+/** 元件庫的線條圖示：同樣大小、同樣粗細，24×24 的座標 */
+const PALETTE_ICONS: Record<m.PaletteKind, ReactNode> = {
+  heading: <path d="M6 5v14M18 5v14M6 12h12" />,
+  text: <path d="M5 7h14M5 12h14M5 17h9" />,
+  code: <path d="M9 8l-4 4 4 4M15 8l4 4-4 4" />,
+  sticky: (
+    <>
+      <path className="board-icon-sticky" d="M5 5h14v9l-5 5H5z" />
+      <path d="M14 19v-5h5" />
+    </>
+  ),
+  array: <path d="M2.5 8.5h19v7h-19zM8.8 8.5v7M15.2 8.5v7" />,
+  pointer: <path d="M12 3.5V14M8 7.5l4-4 4 4M8.5 17.5h7a2 2 0 0 1 0 4h-7a2 2 0 0 1 0-4z" />,
+  stack: <path d="M5 4v15.5h14V4M5 10.5h14M5 15h14" />,
+  queue: <path d="M2.5 8.5h13v7h-13zM7 8.5v7M11.3 8.5v7M18 12h4M20 10l2 2-2 2" />,
+  dict: (
+    <>
+      <circle cx="7.5" cy="12" r="3.5" />
+      <path d="M11 12h10M17 12v3M20 12v2.5" />
+    </>
+  ),
+  set: (
+    <>
+      <circle cx="7" cy="9" r="2.6" />
+      <circle cx="16.5" cy="8" r="2.6" />
+      <circle cx="11.5" cy="16" r="2.6" />
+    </>
+  ),
+  grid: <path d="M4 4h16v16H4zM4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16" />,
+  var: <path d="M3.5 8.5c0-1.4 1.1-2.5 2.5-2.5h12c1.4 0 2.5 1.1 2.5 2.5v7c0 1.4-1.1 2.5-2.5 2.5H6c-1.4 0-2.5-1.1-2.5-2.5zM7 10l3 4M10 10l-3 4M13.5 10.8h4M13.5 13.2h4" />,
+  binaryTree: (
+    <>
+      <circle cx="12" cy="5" r="2.4" />
+      <circle cx="6" cy="18.5" r="2.4" />
+      <circle cx="18" cy="18.5" r="2.4" />
+      <path d="M10.7 7.1 7.2 16.4M13.3 7.1l3.5 9.3" />
+    </>
+  ),
+  linkedList: <path d="M2 9h6.5v6H2zM15.5 9H22v6h-6.5zM8.5 12h6M12.5 10l2 2-2 2" />,
+  treeNode: <circle cx="12" cy="12" r="6" />,
+  listNode: <path d="M3 9h12v6H3zM11 9v6M15 12h6M19 10l2 2-2 2" />,
+  graphNode: (
+    <>
+      <circle cx="6" cy="7" r="2.4" />
+      <circle cx="18" cy="9" r="2.4" />
+      <circle cx="10" cy="18" r="2.4" />
+      <path d="M8.3 7.5 15.6 8.6M7.1 9.2l1.9 6.6M16.4 10.9l-4.7 5.5" />
+    </>
+  ),
+  table: <path d="M4 5h16v14H4zM4 10h16M4 14.5h16M10 5v14" />,
+};
+
+const TEMPLATE_ICONS: Record<TemplateKind, ReactNode> = {
+  twoPointers: <path d="M2.5 5.5h19v6h-19zM8.8 5.5v6M15.2 5.5v6M5.7 20v-5.5M3.7 16.5l2-2 2 2M18.3 20v-5.5M16.3 16.5l2-2 2 2" />,
+  slidingWindow: <path d="M2.5 9h19v6h-19zM8.8 9v6M15.2 9v6M1.5 6.5h14v11h-14z" />,
+  reverseList: <path d="M2 9h6v6H2zM16 9h6v6h-6zM14.5 12h-5M11.5 10l-2 2 2 2" />,
+  treeDfs: (
+    <>
+      <circle cx="12" cy="5" r="2.4" />
+      <circle cx="6" cy="18.5" r="2.4" />
+      <circle cx="18" cy="18.5" r="2.4" />
+      <path d="M10.7 7.1 7.2 16.4M13.3 7.1l3.5 9.3M3.5 9.5 5 13l3.5-1" />
+    </>
+  ),
+  gridBfs: <path d="M3 3h12v12H3zM3 9h12M9 3v12M18 18l3 3M20.5 15.5a4 4 0 1 1-5 5" />,
 };

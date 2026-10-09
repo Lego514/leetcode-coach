@@ -253,15 +253,17 @@ export type PaletteKind =
   | 'graphNode'
   | 'table';
 
-export type PaletteGroup = 'text' | 'linear' | 'lookup' | 'nodes' | 'table';
+export type PaletteGroup = 'linear' | 'nodes' | 'lookup' | 'notes';
 
+/**
+ * 元件庫依刷題時用到的頻率排，每組剛好一列四個（節點三個）。
+ * 標題併進文字（選取後可以切換），單一的樹節點和串列節點換成整棵樹、整條串列；舊白板上的照樣顯示。
+ */
 export const PALETTE: { group: PaletteGroup; kinds: PaletteKind[] }[] = [
-  { group: 'text', kinds: ['heading', 'text', 'code', 'sticky'] },
   { group: 'linear', kinds: ['array', 'pointer', 'stack', 'queue'] },
-  { group: 'lookup', kinds: ['dict', 'set', 'grid', 'var'] },
-  // 單一的樹節點和串列節點換成整棵樹、整條串列；舊白板上的照樣顯示
   { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graphNode'] },
-  { group: 'table', kinds: ['table'] },
+  { group: 'lookup', kinds: ['dict', 'set', 'grid', 'table'] },
+  { group: 'notes', kinds: ['text', 'code', 'sticky', 'var'] },
 ];
 
 /** 文字類元件的預設內容依介面語言 */
@@ -326,6 +328,11 @@ function overlaps(a: Rect, b: Rect, margin: number): boolean {
  */
 export function placeAtCenter(doc: BoardDoc, el: Placed, center: Point, sizes?: Sizes): Placed {
   const { w, h } = sizeOf(el);
+  return { ...el, ...freeSpot(doc, w, h, center, sizes) };
+}
+
+/** w × h 的東西放在 center 附近、不會蓋到別人的左上角；一圈一圈往外找，找不到就放正中間 */
+export function freeSpot(doc: BoardDoc, w: number, h: number, center: Point, sizes?: Sizes): Point {
   const taken = doc.elements.filter(isPlaced).map((other) => rectOf(doc, other, sizes));
   const step = 32;
   for (let ring = 0; ring <= 12; ring += 1) {
@@ -333,11 +340,11 @@ export function placeAtCenter(doc: BoardDoc, el: Placed, center: Point, sizes?: 
       for (let dx = -ring; dx <= ring; dx += 1) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
         const spot = { x: Math.round(center.x - w / 2 + dx * step), y: Math.round(center.y - h / 2 + dy * step), w, h };
-        if (!taken.some((r) => overlaps(spot, r, 12))) return { ...el, x: spot.x, y: spot.y };
+        if (!taken.some((r) => overlaps(spot, r, 12))) return { x: spot.x, y: spot.y };
       }
     }
   }
-  return { ...el, x: Math.round(center.x - w / 2), y: Math.round(center.y - h / 2) };
+  return { x: Math.round(center.x - w / 2), y: Math.round(center.y - h / 2) };
 }
 
 /**

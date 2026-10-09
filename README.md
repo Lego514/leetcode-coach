@@ -40,6 +40,8 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - A **rest timer** (60–180 seconds) counts down between sets. When it ends it beeps, vibrates where supported, and shows an alert, and it asks the browser to keep the screen on while it runs.
   - Answers save one at a time, sync like attempts, and count toward the streak.
 - **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graph nodes, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
+  - **Templates** set up a common scene in one click, with the pointers already named: two pointers, sliding window, reversing a linked list, tree DFS, and grid BFS. The whole group is placed in free space and selected so it can be dragged at once.
+  - The palette is grouped by how often problems use each element, with line icons. Text switches to a heading from the selection bar.
   - **Pointers** snap to array cells, step with the arrow keys, and are colored by name (i, j, k, l).
   - **Single cells** can be selected one at a time to highlight them, put a pointer on them, insert next to them, or delete them. Pointers and highlights follow their values when cells move. A dashed "+" adds cells, rows, and columns.
   - **Linked lists** are one element:
@@ -102,6 +104,7 @@ src/                 Web app
     board/model.ts       Whiteboard: layout, pointer snapping, cell edits, arrows, selection, steps, undo history
     board/exportSvg.ts   Whiteboard: redraw a board as SVG for PNG export
     board/structures.ts  Whiteboard: build linked lists and trees from text (LeetCode level order)
+    board/templates.ts   Whiteboard: one-click scenes for common patterns
   store/               Data layer
     db.ts                Dexie schema (v2: sync ids, outbox, sync state; v3: flashcard answers; v4: whiteboards)
     actions.ts           Every local write; each one also records a change in the outbox
@@ -260,6 +263,7 @@ Notes:
 - 指標會吸附在陣列格子上，用方向鍵移動，依名字自動上色。
 - **鏈結串列**是一整條：點兩個節點之間的箭頭可以在往後、反過來、斷開之間切換，反轉串列可以一段一段翻；尾巴可以接回任一個節點（有環）；prev、curr、next 指標吸附在節點下面。
 - **二元樹**自動依中序排版（二元搜尋樹由左到右剛好排好序）：點一個節點可以從虛線位置加左右子節點、上底色、刪掉子樹；指標放在節點上方，用方向鍵走到子節點或父節點；最多 6 層。
+- 元件庫最上面有**模板**，點一下就擺好一整套常見的場景，指標名字也取好：雙指標、滑動視窗、反轉鏈結串列、樹的 DFS、網格 BFS。整組會一起選取，可以直接拖動。
 - 選取串列或樹後按「用文字建立」，可以直接貼題目的範例，例如 `1->2->3` 或 `[3,9,20,null,null,15,7]`。
 - 點一格可以上底色、在那格加指標、插入或刪除格子。
 - 還有矩形框、圓形框、箭頭連線、直線（無向圖的邊）、畫筆、橡皮擦、復原、清空。
