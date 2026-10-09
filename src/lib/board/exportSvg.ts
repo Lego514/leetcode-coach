@@ -4,6 +4,8 @@ import {
   CELL,
   contentBounds,
   CYCLE_H,
+  edgeShape,
+  graphLayout,
   INDEX_H,
   isIndexed,
   LABEL_H,
@@ -214,6 +216,37 @@ function drawTree(el: ElementOf<'tree'>, options: ExportOptions): string {
   return parts.join('');
 }
 
+/** 圖：邊（有向時有箭頭，標記走過的畫橘色）、權重，再畫圓形節點 */
+function drawGraph(el: ElementOf<'graph'>, options: ExportOptions): string {
+  const parts = [label(el.label, el.x, el.y)];
+  const { centers } = graphLayout(el);
+  const r = TREE_D / 2;
+  const at = (path: string) => path.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${Number(x) + el.x} ${Number(y) + el.y}`);
+  for (const edge of el.edges) {
+    const shape = edgeShape(el, centers, edge);
+    if (!shape) continue;
+    const color = edge.mark ? STROKE_COLORS.orange : INK_2;
+    const head = el.directed ? ` marker-end="url(#head-${edge.mark ? 'orange' : 'ink'})"` : '';
+    // 匯出共用箭頭的 marker（大小跟著線寬），標記的邊用顏色區分、不加粗
+    parts.push(`<path d="${at(shape.path)}" fill="none" stroke="${color}" stroke-width="2"${head}/>`);
+    if (edge.w) {
+      const x = el.x + shape.label.x;
+      const y = el.y + shape.label.y;
+      parts.push(
+        `<text x="${x}" y="${y}" font-family="${escapeXml(MONO)}" font-size="12" fill="${INK}" stroke="${SHEET}" stroke-width="4" paint-order="stroke" text-anchor="middle" dominant-baseline="middle">${escapeXml(edge.w)}</text>`,
+      );
+    }
+  }
+  centers.forEach((c, i) => {
+    const fill = el.colors?.[i] ? CELL_FILLS[el.colors[i]!] : SHEET;
+    parts.push(
+      `<circle cx="${el.x + c.x}" cy="${el.y + c.y}" r="${r - 1}" fill="${fill}" stroke="${GOOD}" stroke-width="2"/>`,
+      cellText(el.nodes[i], el.x + c.x, el.y + c.y, TREE_D, options.measure),
+    );
+  });
+  return parts.join('');
+}
+
 function drawList(el: ElementOf<'list'>, options: ExportOptions): string {
   if (el.variant === 'linked') return drawLinked(el, options);
   const parts = [label(el.label, el.x, el.y)];
@@ -353,6 +386,8 @@ function drawPlaced(doc: BoardDoc, el: Placed, sizes: Sizes | undefined, options
       return drawNode(el, options);
     case 'tree':
       return drawTree(el, options);
+    case 'graph':
+      return drawGraph(el, options);
     case 'pointer':
       return drawPointer(doc, el, options);
     case 'var':

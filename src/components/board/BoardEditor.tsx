@@ -4,7 +4,7 @@ import type { Difficulty } from '../../data/problems';
 import { useI18n } from '../../i18n';
 import { boardToSvg, estimateWidth, type Measure } from '../../lib/board/exportSvg';
 import * as m from '../../lib/board/model';
-import { applyStructureText, structureText } from '../../lib/board/structures';
+import { acceptsText, applyStructureText, structureText, type TextElement } from '../../lib/board/structures';
 import { insertTemplate, TEMPLATES, type TemplateKind } from '../../lib/board/templates';
 import { useCloud } from '../../store/cloud';
 import { useToast } from '../toast';
@@ -96,6 +96,8 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   const [editFocus, setEditFocus] = useState<number | undefined>(undefined);
   /** 選取的陣列格子；選了一格時，操作列換成這一格的操作 */
   const [cellSel, setCellSel] = useState<{ id: string; index: number } | null>(null);
+  /** 圖選了一條邊 */
+  const [edgeSel, setEdgeSel] = useState<{ id: string; index: number } | null>(null);
   const [sizes, setSizes] = useState<ReadonlyMap<string, { w: number; h: number }>>(() => new Map());
   const [draft, setDraft] = useState<Draft | null>(null);
   const [snap, setSnap] = useState<{ id: string; index: number } | null>(null);
@@ -262,6 +264,14 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   const pickedTree =
     cellSel && single?.type === 'tree' && single.id === cellSel.id && m.hasTreeNode(single, cellSel.index) ? single : undefined;
   const pickedNode = pickedTree ? cellSel!.index : undefined;
+  // 圖選了一個節點，或選了一條邊
+  const pickedGraph =
+    single?.type === 'graph' &&
+    ((cellSel?.id === single.id && cellSel.index < single.nodes.length) || (edgeSel?.id === single.id && edgeSel.index < single.edges.length))
+      ? single
+      : undefined;
+  const graphNode = pickedGraph && cellSel?.id === pickedGraph.id ? cellSel.index : undefined;
+  const graphEdge = pickedGraph && graphNode === undefined && edgeSel?.id === pickedGraph.id ? edgeSel.index : undefined;
 
   const startEditing = (id: string, focus?: number) => {
     setHistory((h) => m.checkpoint(h));
@@ -325,7 +335,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     setCellSel({ id: list.id, index: Math.max(0, Math.min(index, list.items.length - 2)) });
   };
 
-  const addPointerOn = (target: m.ElementOf<'list'> | m.ElementOf<'tree'>, index: number) => {
+  const addPointerOn = (target: m.ElementOf<'list'> | m.ElementOf<'tree'> | m.ElementOf<'graph'>, index: number) => {
     const id = m.newId(doc);
     apply(m.addPointerAt(doc, target.id, index, id));
     setSelection(new Set([id]));
@@ -343,6 +353,30 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     apply(result.doc);
     setCellSel({ id: tree.id, index: result.index });
     startEditing(tree.id, result.index);
+  };
+
+  const addGraphNodeTo = (graph: m.ElementOf<'graph'>) => {
+    const result = m.addGraphNode(doc, graph.id);
+    if (!result) return;
+    apply(result.doc);
+    setEdgeSel(null);
+    setCellSel({ id: graph.id, index: result.index });
+  };
+
+  const pickEdge = (graph: m.ElementOf<'graph'>, index: number) => {
+    setSelection(new Set([graph.id]));
+    setCellSel(null);
+    setEdgeSel({ id: graph.id, index });
+  };
+
+  const deleteGraphNodeAt = (graph: m.ElementOf<'graph'>, index: number) => {
+    apply(m.deleteGraphNode(doc, graph.id, index));
+    setCellSel(null);
+  };
+
+  const deleteEdgeAt = (graph: m.ElementOf<'graph'>, index: number) => {
+    apply(m.removeGraphEdge(doc, graph.id, index));
+    setEdgeSel(null);
   };
 
   const deleteNodeAt = (tree: m.ElementOf<'tree'>, index: number) => {
@@ -555,6 +589,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     // 選取工具在空白處拖曳：框選；按住 Shift 是加選
     if (tool === 'select' && !elId) {
       setCellSel(null);
+      setEdgeSel(null);
       if (!e.shiftKey) setSelection(new Set());
       gesture.current = { kind: 'marquee', pointerId: e.pointerId, start: world, base: e.shiftKey ? selected : new Set() };
       return;
@@ -584,6 +619,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         const ids = selected.has(elId) ? selected : new Set([elId]);
         if (!selected.has(elId)) setSelection(ids);
         setCellSel(cell === undefined ? null : { id: elId, index: cell });
+        setEdgeSel(null);
         gesture.current = { kind: 'move', pointerId: e.pointerId, start: world, ids, base: doc, moved: false, clicked: elId, cell };
         return;
       }
@@ -826,6 +862,20 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         setSelection(new Set(doc.elements.map((el) => el.id)));
       } else if (mod) {
         return;
+      } else if (pickedGraph && graphEdge !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        deleteEdgeAt(pickedGraph, graphEdge);
+      } else if (pickedGraph && graphNode !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        deleteGraphNodeAt(pickedGraph, graphNode);
+      } else if (pickedGraph && graphNode !== undefined && e.key === 'Enter') {
+        e.preventDefault();
+        startEditing(pickedGraph.id, graphNode);
+      } else if (pickedGraph && graphNode !== undefined && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        // 節點排成一圈：← → 換到前一個、下一個
+        e.preventDefault();
+        const n = pickedGraph.nodes.length;
+        setCellSel({ id: pickedGraph.id, index: (graphNode + (e.key === 'ArrowRight' ? 1 : -1) + n) % n });
       } else if (pickedTree && pickedNode !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
         // 選了樹的一個節點：刪的是這個子樹，不是整棵樹（根節點不刪）
         e.preventDefault();
@@ -859,6 +909,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       } else if (e.key === 'Escape') {
         setShowHelp(false);
         setCellSel(null);
+        setEdgeSel(null);
         setSelection(new Set());
         setTool('select');
       } else if (e.key === 'Enter' && single && m.isPlaced(single) && single.type !== 'shape') {
@@ -869,10 +920,12 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         const dx = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
         const dy = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
         // 吸附在陣列上的指標左右移一格；吸附在樹上的走到子節點或父節點；其他元件移 10
-        const onTree = single?.type === 'pointer' && m.pointsDown(doc, single);
-        if (onTree) apply(m.stepTreePointer(doc, single.id, arrowDirection(e.key)));
-        else if (single?.type === 'pointer' && single.attach && dx !== 0) apply(m.shiftPointer(doc, single.id, dx));
-        else apply(m.moveElements(doc, selected, dx * 10, dy * 10));
+        const target = single?.type === 'pointer' && single.attach ? m.findElement(doc, single.attach.id) : undefined;
+        if (target?.type === 'tree') apply(m.stepTreePointer(doc, single!.id, arrowDirection(e.key)));
+        // 吸附著的指標用上下鍵不會被拖離
+        else if (m.holdsPointers(target)) {
+          if (dx !== 0) apply(m.shiftPointer(doc, single!.id, dx));
+        } else apply(m.moveElements(doc, selected, dx * 10, dy * 10));
       } else if (e.key === 's') {
         captureCurrentStep();
       } else if (TOOL_KEYS[e.key]) {
@@ -995,7 +1048,12 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 selected={selected.has(el.id)}
                 editing={editingId === el.id}
                 snapIndex={snap?.id === el.id ? snap.index : undefined}
-                cellIndex={pickedList?.id === el.id ? pickedIndex : pickedTree?.id === el.id ? pickedNode : undefined}
+                cellIndex={
+                  pickedList?.id === el.id ? pickedIndex : pickedTree?.id === el.id ? pickedNode : pickedGraph?.id === el.id ? graphNode : undefined
+                }
+                edgeIndex={pickedGraph?.id === el.id ? graphEdge : undefined}
+                onAddNode={canAdd(el) && el.type === 'graph' ? () => addGraphNodeTo(el) : undefined}
+                onPickEdge={canAdd(el) && el.type === 'graph' ? (index) => pickEdge(el, index) : undefined}
                 focusIndex={editingId === el.id ? editFocus : undefined}
                 onAddCell={canAdd(el) && el.type === 'list' ? () => insertCellAt(el, el.items.length) : undefined}
                 onToggleLink={canAdd(el) && m.isLinked(el) ? (gap) => toggleLinkAt(el, gap) : undefined}
@@ -1121,7 +1179,24 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
 
           {playIndex === null && tool === 'select' && selected.size > 0 && (
             <div className="board-selbar" role="toolbar" aria-label={t.board.selectionLabel} data-ui>
-              {pickedTree && pickedNode !== undefined ? (
+              {pickedGraph && graphEdge !== undefined ? (
+                <EdgeActions
+                  key={`${pickedGraph.id}:${graphEdge}`}
+                  graph={pickedGraph}
+                  index={graphEdge}
+                  onChange={(patch) => apply(m.updateGraphEdge(doc, pickedGraph.id, graphEdge, patch))}
+                  onDelete={() => deleteEdgeAt(pickedGraph, graphEdge)}
+                />
+              ) : pickedGraph && graphNode !== undefined ? (
+                <GraphNodeActions
+                  graph={pickedGraph}
+                  index={graphNode}
+                  onColor={(color) => apply(m.setGraphColor(doc, pickedGraph.id, graphNode, color))}
+                  onAddPointer={() => addPointerOn(pickedGraph, graphNode)}
+                  onConnect={(to) => apply(m.addGraphEdge(doc, pickedGraph.id, graphNode, to))}
+                  onDelete={() => deleteGraphNodeAt(pickedGraph, graphNode)}
+                />
+              ) : pickedTree && pickedNode !== undefined ? (
                 <NodeActions
                   tree={pickedTree}
                   index={pickedNode}
@@ -1390,9 +1465,97 @@ function NodeActions({ tree, index, onColor, onAddPointer, onAddChild, onDelete 
   );
 }
 
+interface GraphNodeActionsProps {
+  graph: m.ElementOf<'graph'>;
+  index: number;
+  onColor: (color: CellColor | null) => void;
+  onAddPointer: () => void;
+  onConnect: (to: number) => void;
+  onDelete: () => void;
+}
+
+/** 選了圖的一個節點：上底色、加指標、連到別的節點、刪掉它 */
+function GraphNodeActions({ graph, index, onColor, onAddPointer, onConnect, onDelete }: GraphNodeActionsProps) {
+  const { t } = useI18n();
+  const a = t.board.actions;
+  const connected = (to: number) => graph.edges.some((e) => (e.a === index && e.b === to) || (!graph.directed && e.a === to && e.b === index));
+  const targets = graph.nodes.map((_, i) => i).filter((i) => i !== index && !connected(i));
+  return (
+    <>
+      <span className="board-selbar-title">{t.board.nodeLabel(graph.nodes[index])}</span>
+      <CellColors current={graph.colors?.[index] ?? null} onColor={onColor} />
+      <button type="button" className="btn btn-small" onClick={onAddPointer}>
+        {a.addPointer}
+      </button>
+      {targets.length > 0 && graph.edges.length < m.GRAPH_MAX_EDGES && (
+        <select
+          className="select board-connect"
+          aria-label={a.connectTo}
+          value=""
+          onChange={(e) => {
+            if (e.target.value !== '') onConnect(Number(e.target.value));
+          }}
+        >
+          <option value="">{a.connectTo}</option>
+          {targets.map((i) => (
+            <option key={i} value={i}>
+              {graph.nodes[i]}
+            </option>
+          ))}
+        </select>
+      )}
+      <button type="button" className="btn btn-small btn-danger" disabled={graph.nodes.length <= 1} onClick={onDelete}>
+        {a.deleteNode}
+      </button>
+    </>
+  );
+}
+
+interface EdgeActionsProps {
+  graph: m.ElementOf<'graph'>;
+  index: number;
+  onChange: (patch: { w?: string; mark?: boolean }) => void;
+  onDelete: () => void;
+}
+
+/** 選了圖的一條邊：標記走過、寫權重、刪掉它 */
+function EdgeActions({ graph, index, onChange, onDelete }: EdgeActionsProps) {
+  const { t } = useI18n();
+  const a = t.board.actions;
+  const edge = graph.edges[index];
+  const [weight, setWeight] = useState(edge.w ?? '');
+  const commitWeight = () => {
+    if (weight.trim() !== (edge.w ?? '')) onChange({ w: weight.trim() });
+  };
+  return (
+    <>
+      <span className="board-selbar-title">{t.board.edgeLabel(graph.nodes[edge.a], graph.nodes[edge.b], !!graph.directed)}</span>
+      <button type="button" className="btn btn-small" aria-pressed={!!edge.mark} onClick={() => onChange({ mark: !edge.mark })}>
+        {edge.mark ? a.unmarkEdge : a.markEdge}
+      </button>
+      <input
+        className="input board-weight"
+        value={weight}
+        aria-label={t.board.edgeWeight}
+        placeholder={t.board.edgeWeight}
+        maxLength={12}
+        onChange={(e) => setWeight(e.target.value)}
+        onBlur={commitWeight}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') commitWeight();
+        }}
+      />
+      <button type="button" className="btn btn-small btn-danger" onClick={onDelete}>
+        {a.deleteEdge}
+      </button>
+    </>
+  );
+}
+
 /** 鏈結串列和二元樹：貼題目的範例直接建立 */
 interface StructureTextFormProps {
-  el: m.ElementOf<'list'> | m.ElementOf<'tree'>;
+  el: TextElement;
   doc: m.BoardDoc;
   sizes: m.Sizes;
   apply: (doc: m.BoardDoc) => void;
@@ -1422,7 +1585,7 @@ function StructureTextForm({ el, doc, sizes, apply, onClose }: StructureTextForm
         className="input"
         value={text}
         aria-label={s.label}
-        placeholder={el.type === 'tree' ? s.tree : s.linked}
+        placeholder={textPlaceholder(el, s)}
         maxLength={2000}
         autoFocus
         spellCheck={false}
@@ -1450,6 +1613,20 @@ function StructureTextForm({ el, doc, sizes, apply, onClose }: StructureTextForm
   );
 }
 
+/** 「用文字建立」的輸入框提示：依元件種類舉例 */
+function textPlaceholder(el: TextElement, s: ReturnType<typeof useI18n>['t']['board']['structureText']): string {
+  switch (el.type) {
+    case 'tree':
+      return s.tree;
+    case 'graph':
+      return s.graph;
+    case 'table':
+      return el.variant === 'dict' ? s.dict : s.grid;
+    case 'list':
+      return el.variant === 'linked' ? s.linked : s.list;
+  }
+}
+
 /** 選了一個元件時，依種類多出來的操作 */
 interface SelectionActionsProps {
   el: m.BoardElement;
@@ -1464,9 +1641,12 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   const a = t.board.actions;
   const [writing, setWriting] = useState(false);
   const buttons: [string, () => void][] = [];
-  const structure = el.type === 'tree' || m.isLinked(el) ? el : undefined;
+  const structure = acceptsText(el) ? el : undefined;
   if (structure && writing) return <StructureTextForm el={structure} doc={doc} sizes={sizes} apply={apply} onClose={() => setWriting(false)} />;
   if (structure) buttons.push([a.fromText, () => setWriting(true)]);
+  if (el.type === 'graph') {
+    buttons.push([el.directed ? a.makeUndirected : a.makeDirected, () => apply(m.setDirected(doc, el.id, !el.directed))]);
+  }
   if (m.isPlaced(el) && el.type !== 'shape') buttons.push([a.edit, onEdit]);
   // 元件庫只有「文字」，選取後可以切換成標題
   if (el.type === 'text' && (el.variant === 'text' || el.variant === 'heading')) {
@@ -1484,7 +1664,7 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
     const plain = el.head === 'none';
     buttons.push([plain ? a.makeArrow : a.makeLine, () => apply(m.setArrowHead(doc, el.id, plain ? 'end' : 'none'))]);
   }
-  if (el.type === 'pointer' && el.attach && m.pointsDown(doc, el)) {
+  if (el.type === 'pointer' && el.attach && m.findElement(doc, el.attach.id)?.type === 'tree') {
     buttons.push(
       [a.pointerToParent, () => apply(m.stepTreePointer(doc, el.id, 'up'))],
       [a.pointerToLeft, () => apply(m.stepTreePointer(doc, el.id, 'left'))],
@@ -1681,6 +1861,14 @@ const PALETTE_ICONS: Record<m.PaletteKind, ReactNode> = {
   linkedList: <path d="M2 9h6.5v6H2zM15.5 9H22v6h-6.5zM8.5 12h6M12.5 10l2 2-2 2" />,
   treeNode: <circle cx="12" cy="12" r="6" />,
   listNode: <path d="M3 9h12v6H3zM11 9v6M15 12h6M19 10l2 2-2 2" />,
+  graph: (
+    <>
+      <circle cx="6" cy="7" r="2.4" />
+      <circle cx="18" cy="9" r="2.4" />
+      <circle cx="10" cy="18" r="2.4" />
+      <path d="M8.3 7.5 15.6 8.6M7.1 9.2l1.9 6.6M16.4 10.9l-4.7 5.5" />
+    </>
+  ),
   graphNode: (
     <>
       <circle cx="6" cy="7" r="2.4" />

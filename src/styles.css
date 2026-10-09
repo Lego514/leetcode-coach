@@ -4519,3 +4519,90 @@ button.board-link {
   stroke-width: 9;
   opacity: 0.3;
 }
+
+/* ---------- 白板：圖 ---------- */
+
+.board-graph-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.board-graph-edge {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2;
+}
+
+.board-graph-edges g[data-marked] .board-graph-edge {
+  stroke: var(--board-orange);
+  stroke-width: 3;
+}
+
+.board-graph-head {
+  fill: var(--ink-2);
+}
+
+.board-graph-head-marked {
+  fill: var(--board-orange);
+}
+
+/* 選取圖時邊可以點；選了的那條加一圈淡淡的底色 */
+.board-graph-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  stroke-linecap: round;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.board-graph-edges g[data-picked] .board-graph-edge-hit {
+  stroke: var(--pen);
+  stroke-opacity: 0.3;
+  stroke-width: 9;
+}
+
+.board-graph-weight {
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 4;
+  paint-order: stroke;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.board-cell.board-graph-node {
+  position: absolute;
+  z-index: 1;
+  border-width: 2px;
+  border-color: var(--good);
+  border-radius: 50%;
+}
+
+.board-add.board-graph-add {
+  top: calc(100% - 32px);
+  left: calc(100% + 6px);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.select.board-connect {
+  width: auto;
+  min-height: 30px;
+  padding: 2px 8px;
+  font-size: 14px;
+}
+
+.input.board-weight {
+  width: 80px;
+  min-height: 30px;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}

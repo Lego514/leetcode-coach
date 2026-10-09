@@ -53,6 +53,10 @@ export const TREE_LEVEL = 76;
 export const TREE_TOP = LABEL_H + 12;
 /** 最多 6 層：第 0 到 62 個位置 */
 export const TREE_MAX_NODES = 63;
+/** 圖的節點和樹的一樣大 */
+export const GRAPH_D = TREE_D;
+export const GRAPH_MAX_NODES = 20;
+export const GRAPH_MAX_EDGES = 60;
 /** 指標放開時離格子多近才吸附 */
 export const SNAP_DISTANCE = 48;
 
@@ -71,9 +75,15 @@ export function isLinked(el: BoardElement): el is ElementOf<'list'> {
   return el.type === 'list' && el.variant === 'linked';
 }
 
-/** 指標可以吸附的元件：陣列、佇列、鏈結串列的格子，和二元樹的節點 */
-export function holdsPointers(el: BoardElement | undefined): el is ElementOf<'list'> | ElementOf<'tree'> {
-  return !!el && (isIndexed(el) || isLinked(el) || el.type === 'tree');
+/** 指標可以吸附的元件：陣列、佇列、鏈結串列的格子，和二元樹、圖的節點 */
+export function holdsPointers(el: BoardElement | undefined): el is ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'> {
+  return !!el && (isIndexed(el) || isLinked(el) || el.type === 'tree' || el.type === 'graph');
+}
+
+/** 二元樹和圖：每個節點的中心（相對於元件左上角） */
+export function nodeCenters(el: ElementOf<'tree'> | ElementOf<'graph'>): Map<number, Point> {
+  if (el.type === 'tree') return treeLayout(el).centers;
+  return new Map(graphLayout(el).centers.map((c, i) => [i, c]));
 }
 
 function tableCellWidth(el: ElementOf<'table'>): number {
@@ -102,6 +112,10 @@ export function sizeOf(el: Placed, measured?: { w: number; h: number }): { w: nu
     }
     case 'tree': {
       const { w, h } = treeLayout(el);
+      return { w, h };
+    }
+    case 'graph': {
+      const { w, h } = graphLayout(el);
       return { w, h };
     }
     case 'table': {
@@ -149,15 +163,16 @@ function belowCells(list: ElementOf<'list'>): number {
   return INDEX_H + 2;
 }
 
-/** 指標吸附在二元樹上時放在節點上方、箭頭朝下，免得蓋住往下的連線 */
+/** 指標吸附在二元樹或圖上時放在節點上方、箭頭朝下，免得蓋住連線 */
 export function pointsDown(doc: BoardDoc, pointer: ElementOf<'pointer'>): boolean {
   const target = pointer.attach && findElement(doc, pointer.attach.id);
-  return target?.type === 'tree' && hasTreeNode(target, pointer.attach!.index);
+  if (target?.type === 'tree') return hasTreeNode(target, pointer.attach!.index);
+  return target?.type === 'graph' && pointer.attach!.index < target.nodes.length;
 }
 
 /** 指標吸附的那一格；陣列被刪短時落在最後一格 */
-function slotOf(target: ElementOf<'list'> | ElementOf<'tree'>, index: number): number {
-  return target.type === 'tree' ? index : Math.min(index, Math.max(0, target.items.length - 1));
+function slotOf(target: ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'>, index: number): number {
+  return target.type === 'list' ? Math.min(index, Math.max(0, target.items.length - 1)) : index;
 }
 
 /** 吸附的指標放在格子下面（二元樹是節點上面）；同一格有好幾個指標時往外疊 */
@@ -169,8 +184,8 @@ export function pointerPosition(doc: BoardDoc, pointer: ElementOf<'pointer'>): P
     (el): el is ElementOf<'pointer'> => el.type === 'pointer' && el.attach?.id === target.id && slotOf(target, el.attach.index) === slot,
   );
   const stack = Math.max(0, sameCell.findIndex((el) => el.id === pointer.id));
-  if (target.type === 'tree') {
-    const center = treeLayout(target).centers.get(slot);
+  if (target.type !== 'list') {
+    const center = nodeCenters(target).get(slot);
     if (!center) return { x: pointer.x, y: pointer.y };
     return { x: target.x + center.x - POINTER_W / 2, y: target.y + center.y - TREE_D / 2 - POINTER_H - 2 - stack * POINTER_H };
   }
@@ -188,8 +203,8 @@ export function snapTarget(doc: BoardDoc, at: Point): { id: string; index: numbe
     if (distance <= SNAP_DISTANCE && (!best || distance < best.distance)) best = { id, index, distance };
   };
   for (const el of doc.elements) {
-    if (el.type === 'tree') {
-      for (const [index, c] of treeLayout(el).centers) consider(el.id, index, el.x + c.x, el.y + c.y);
+    if (el.type === 'tree' || el.type === 'graph') {
+      for (const [index, c] of nodeCenters(el)) consider(el.id, index, el.x + c.x, el.y + c.y);
     } else if (isIndexed(el) || isLinked(el)) {
       for (let index = 0; index < el.items.length; index += 1) {
         const cell = cellRect(el, index);
@@ -205,6 +220,11 @@ export function shiftPointer(doc: BoardDoc, id: string, delta: number): BoardDoc
   return mapElement(doc, id, (el) => {
     if (el.type !== 'pointer' || !el.attach) return el;
     const target = findElement(doc, el.attach.id);
+    // 圖的節點排成一圈：往前往後繞著走
+    if (target?.type === 'graph') {
+      const n = target.nodes.length;
+      return { ...el, attach: { ...el.attach, index: (((el.attach.index + delta) % n) + n) % n } };
+    }
     if (!target || !(isIndexed(target) || isLinked(target))) return el;
     const index = Math.min(Math.max(0, el.attach.index + delta), target.items.length - 1);
     return { ...el, attach: { ...el.attach, index } };
@@ -248,6 +268,7 @@ export type PaletteKind =
   | 'var'
   | 'binaryTree'
   | 'linkedList'
+  | 'graph'
   | 'treeNode'
   | 'listNode'
   | 'graphNode'
@@ -261,7 +282,7 @@ export type PaletteGroup = 'linear' | 'nodes' | 'lookup' | 'notes';
  */
 export const PALETTE: { group: PaletteGroup; kinds: PaletteKind[] }[] = [
   { group: 'linear', kinds: ['array', 'pointer', 'stack', 'queue'] },
-  { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graphNode'] },
+  { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graph'] },
   { group: 'lookup', kinds: ['dict', 'set', 'grid', 'table'] },
   { group: 'notes', kinds: ['text', 'code', 'sticky', 'var'] },
 ];
@@ -307,6 +328,18 @@ export function createElement(kind: PaletteKind, at: Point, id: string, texts: D
       return { type: 'var', ...placed, name: 'ans', value: '0' };
     case 'linkedList':
       return { type: 'list', ...placed, variant: 'linked', label: 'head', items: ['1', '2', '3'] };
+    case 'graph':
+      return {
+        type: 'graph',
+        ...placed,
+        label: 'graph',
+        nodes: ['0', '1', '2', '3'],
+        edges: [
+          { a: 0, b: 1 },
+          { a: 0, b: 2 },
+          { a: 1, b: 3 },
+        ],
+      };
     case 'binaryTree':
       return { type: 'tree', ...placed, label: 'root', nodes: ['1', '2', '3'] };
     case 'treeNode':
@@ -760,6 +793,163 @@ export function setNodeColor(doc: BoardDoc, id: string, index: number, color: Ce
   if (el?.type !== 'tree' || !hasTreeNode(el, index)) return doc;
   const colors = el.nodes.map((_, i) => (i === index ? color : (el.colors?.[i] ?? null)));
   return updateElement<ElementOf<'tree'>>(doc, id, { colors: treeColors(colors, el.nodes) });
+}
+
+// ---------- 圖 ----------
+
+export type GraphEdge = ElementOf<'graph'>['edges'][number];
+
+export interface GraphLayout {
+  /** 第 i 個節點的中心，相對於元件左上角 */
+  centers: Point[];
+  w: number;
+  h: number;
+}
+
+/**
+ * 節點平均排在一個圓上，從正上方開始順時針；節點越多圓越大。
+ * 相鄰兩個節點之間留得下箭頭和權重，邊才不會擠成一團。
+ */
+export function graphLayout(graph: ElementOf<'graph'>): GraphLayout {
+  const n = graph.nodes.length;
+  const radius = n <= 1 ? 0 : Math.max(72, (n * (GRAPH_D + 64)) / (2 * Math.PI));
+  const size = 2 * radius + GRAPH_D;
+  const centers = graph.nodes.map((_, i) => {
+    const angle = (2 * Math.PI * i) / n;
+    return { x: Math.round(size / 2 + radius * Math.sin(angle)), y: Math.round(TREE_TOP + size / 2 - radius * Math.cos(angle)) };
+  });
+  return { centers, w: size, h: TREE_TOP + size };
+}
+
+export interface EdgeShape {
+  /** SVG 路徑，相對於元件左上角 */
+  path: string;
+  /** 權重標在哪裡 */
+  label: Point;
+}
+
+/**
+ * 一條邊怎麼畫：兩端停在節點邊緣；有向圖兩個方向都有邊時各自往旁邊彎，
+ * 才不會疊成一條；指向自己的邊畫成節點上方的小圈。
+ */
+export function edgeShape(graph: ElementOf<'graph'>, centers: Point[], edge: GraphEdge): EdgeShape | null {
+  const a = centers[edge.a];
+  const b = centers[edge.b];
+  if (!a || !b) return null;
+  const r = GRAPH_D / 2;
+  if (edge.a === edge.b) {
+    const top = a.y - r;
+    return { path: `M${a.x - 8} ${top + 2}C${a.x - 28} ${top - 36} ${a.x + 28} ${top - 36} ${a.x + 8} ${top + 2}`, label: { x: a.x, y: top - 34 } };
+  }
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const d = Math.hypot(dx, dy) || 1;
+  const ux = dx / d;
+  const uy = dy / d;
+  const curved = !!graph.directed && graph.edges.some((e) => e.a === edge.b && e.b === edge.a);
+  if (!curved) {
+    const s = { x: a.x + ux * r, y: a.y + uy * r };
+    const e = { x: b.x - ux * r, y: b.y - uy * r };
+    return { path: `M${s.x} ${s.y}L${e.x} ${e.y}`, label: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+  }
+  // 往方向的左手邊彎；反方向的那條自然彎到另一邊
+  const bend = 32;
+  const c = { x: (a.x + b.x) / 2 + uy * bend, y: (a.y + b.y) / 2 - ux * bend };
+  const toward = (from: Point, to: Point) => {
+    const len = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+    return { x: from.x + ((to.x - from.x) / len) * r, y: from.y + ((to.y - from.y) / len) * r };
+  };
+  const s = toward(a, c);
+  const e = toward(b, c);
+  return { path: `M${s.x} ${s.y}Q${c.x} ${c.y} ${e.x} ${e.y}`, label: { x: (s.x + 2 * c.x + e.x) / 4, y: (s.y + 2 * c.y + e.y) / 4 } };
+}
+
+function graphColors(colors: (CellColor | null)[] | undefined, length: number): (CellColor | null)[] | undefined {
+  return normalizeColors(colors, length);
+}
+
+/** 加一個節點，名稱接著現有的數字（不是數字就用下一個字母）；回傳新節點的位置 */
+export function addGraphNode(doc: BoardDoc, id: string): { doc: BoardDoc; index: number } | null {
+  const el = findElement(doc, id);
+  if (el?.type !== 'graph' || el.nodes.length >= GRAPH_MAX_NODES) return null;
+  const numeric = el.nodes.every((v) => /^\d+$/.test(v));
+  const label = numeric
+    ? String(Math.max(-1, ...el.nodes.map(Number)) + 1)
+    : String.fromCharCode(Math.max(96, ...el.nodes.map((v) => (v.length === 1 ? v.charCodeAt(0) : 96))) + 1);
+  const nodes = [...el.nodes, label];
+  return { doc: updateElement<ElementOf<'graph'>>(doc, id, { nodes, colors: graphColors(el.colors, nodes.length) }), index: nodes.length - 1 };
+}
+
+/** 刪掉一個節點和連著它的邊；後面的節點往前遞補，指著它們的指標跟著，指著被刪節點的留在原地 */
+export function deleteGraphNode(doc: BoardDoc, id: string, index: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'graph' || el.nodes.length <= 1 || index < 0 || index >= el.nodes.length) return doc;
+  const shift = (i: number) => (i > index ? i - 1 : i);
+  const nodes = el.nodes.filter((_, i) => i !== index);
+  const edges = el.edges.filter((e) => e.a !== index && e.b !== index).map((e) => ({ ...e, a: shift(e.a), b: shift(e.b) }));
+  const colors = el.colors && graphColors(el.colors.filter((_, i) => i !== index), nodes.length);
+  const next = updateElement<ElementOf<'graph'>>(doc, id, { nodes, edges, colors });
+  return {
+    ...next,
+    elements: next.elements.map((p) => {
+      if (p.type !== 'pointer' || p.attach?.id !== id) return p;
+      if (p.attach.index !== index) return { ...p, attach: { ...p.attach, index: shift(p.attach.index) } };
+      const at = pointerPosition(doc, p);
+      return { ...p, x: Math.round(at.x), y: Math.round(at.y), attach: undefined };
+    }),
+  };
+}
+
+/** 從 a 連一條邊到 b；同樣的邊已經有了就不加（無向圖不分方向） */
+export function addGraphEdge(doc: BoardDoc, id: string, a: number, b: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'graph' || el.edges.length >= GRAPH_MAX_EDGES) return doc;
+  if (a < 0 || b < 0 || a >= el.nodes.length || b >= el.nodes.length) return doc;
+  const same = (e: GraphEdge) => (e.a === a && e.b === b) || (!el.directed && e.a === b && e.b === a);
+  if (el.edges.some(same)) return doc;
+  return updateElement<ElementOf<'graph'>>(doc, id, { edges: [...el.edges, { a, b }] });
+}
+
+export function removeGraphEdge(doc: BoardDoc, id: string, edge: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'graph' || edge < 0 || edge >= el.edges.length) return doc;
+  return updateElement<ElementOf<'graph'>>(doc, id, { edges: el.edges.filter((_, i) => i !== edge) });
+}
+
+/** 改一條邊：權重（空字串就拿掉）、標記成走過 */
+export function updateGraphEdge(doc: BoardDoc, id: string, edge: number, patch: { w?: string; mark?: boolean }): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'graph' || edge < 0 || edge >= el.edges.length) return doc;
+  const edges = el.edges.map((e, i) => {
+    if (i !== edge) return e;
+    const next = { ...e, ...patch };
+    if (!next.w) delete next.w;
+    if (!next.mark) delete next.mark;
+    return next;
+  });
+  return updateElement<ElementOf<'graph'>>(doc, id, { edges });
+}
+
+export function setGraphColor(doc: BoardDoc, id: string, index: number, color: CellColor | null): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'graph' || index < 0 || index >= el.nodes.length) return doc;
+  const colors = el.nodes.map((_, i) => (i === index ? color : (el.colors?.[i] ?? null)));
+  return updateElement<ElementOf<'graph'>>(doc, id, { colors: graphColors(colors, el.nodes.length) });
+}
+
+/** 有向、無向互換；改成無向時，兩個方向都有的邊只留一條 */
+export function setDirected(doc: BoardDoc, id: string, directed: boolean): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'graph') return doc;
+  if (directed) return updateElement<ElementOf<'graph'>>(doc, id, { directed: true });
+  const seen = new Set<string>();
+  const edges = el.edges.filter((e) => {
+    const key = e.a < e.b ? `${e.a}-${e.b}` : `${e.b}-${e.a}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return updateElement<ElementOf<'graph'>>(doc, id, { directed: undefined, edges });
 }
 
 /** 表格加減一列或一欄，至少留一列一欄 */

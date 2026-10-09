@@ -210,11 +210,12 @@ test('switching straight from one whiteboard to another never mixes them up', as
   await expect(first.getByRole('group', { name: /^Array nums/ })).toHaveCount(0);
 });
 
-test('connects nodes with a plain line, then selects, duplicates, and deletes a group with a box', async ({ page }) => {
+test('connects elements with a plain line, then selects, duplicates, and deletes a group with a box', async ({ page }) => {
   await page.goto('/#/board/scratch');
-  await page.getByRole('button', { name: 'Graph node', exact: true }).click();
-  await page.getByRole('button', { name: 'Graph node', exact: true }).click();
-  const nodes = page.getByRole('group', { name: /^Graph node/ });
+  // 元件庫已經沒有單一的圖節點，用兩個變數來連
+  await page.getByRole('button', { name: 'Variable', exact: true }).click();
+  await page.getByRole('button', { name: 'Variable', exact: true }).click();
+  const nodes = page.getByRole('group', { name: /^Variable/ });
   const a = (await nodes.nth(0).boundingBox())!;
   const b = (await nodes.nth(1).boundingBox())!;
 
@@ -447,4 +448,66 @@ test('frames the range between two pointers and keeps it in step as they move', 
   // 滑動視窗模板一開始就有範圍框
   await templates.getByRole('button', { name: /^Sliding window/ }).click();
   await expect(frame).toHaveCount(1);
+});
+
+test('builds a graph from an edge list, connects nodes, and marks an edge', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Graph', exact: true }).click();
+  const graph = page.getByRole('group', { name: /^Graph graph/ });
+  await expect(graph).toHaveAccessibleName('Graph graph: n = 4, edges = [[0,1],[0,2],[1,3]]');
+
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await selbar.getByRole('button', { name: 'Build from text' }).click();
+  await selbar.getByRole('textbox', { name: 'Build from text' }).fill('n = 5, edges = [[0,1],[0,2],[1,3],[2,4]]');
+  await selbar.getByRole('button', { name: 'Apply' }).click();
+  await expect(graph).toHaveAccessibleName('Graph graph: n = 5, edges = [[0,1],[0,2],[1,3],[2,4]]');
+  await selbar.getByRole('button', { name: 'Make directed' }).click();
+  await expect(graph).toHaveAccessibleName(/^Graph graph \(directed\)/);
+
+  // 點最上面的節點 0，用 ← 繞到節點 3（手機上下方的選取列會擋住下面的節點），再連到 4
+  await graph.locator('[data-cell="0"]').click();
+  await expect(selbar).toContainText('Node 0');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await expect(selbar).toContainText('Node 3');
+  await selbar.getByRole('combobox', { name: 'Connect to…' }).selectOption('4');
+  await expect(graph).toHaveAccessibleName(/\[3,4\]\]$/);
+
+  // 點第一條邊：標記走過、寫權重
+  await graph.locator('[data-edge="0"]').click();
+  await expect(selbar).toContainText('Edge 0 → 1');
+  await selbar.getByRole('button', { name: 'Mark as visited' }).click();
+  await expect(graph.locator('g[data-marked]')).toHaveCount(1);
+  const weight = selbar.getByRole('textbox', { name: 'Weight' });
+  await weight.fill('4');
+  await weight.press('Enter');
+  await expect(graph).toHaveAccessibleName(/\[0,1,4\]/);
+  await selbar.getByRole('button', { name: 'Delete this edge' }).click();
+  await expect(graph).toHaveAccessibleName('Graph graph (directed): n = 5, edges = [[0,2],[1,3],[2,4],[3,4]]');
+});
+
+test('fills an array and a dict by pasting a problem’s example', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  const build = async (text: string) => {
+    await selbar.getByRole('button', { name: 'Build from text' }).click();
+    const input = selbar.getByRole('textbox', { name: 'Build from text' });
+    await input.fill(text);
+    await selbar.getByRole('button', { name: 'Apply' }).click();
+  };
+
+  // 貼 LeetCode 範例：取第一個陣列，名稱也改成 nums
+  await page.getByRole('button', { name: 'Array', exact: true }).click();
+  await build('nums = [2,7,11,15], target = 9');
+  await expect(page.getByRole('group', { name: 'Array nums: 2, 7, 11, 15' })).toBeVisible();
+
+  // 字串拆成一格一格
+  await page.getByRole('button', { name: 'Queue', exact: true }).click();
+  await build('"abc"');
+  await expect(page.getByRole('group', { name: 'Queue queue: a, b, c' })).toBeVisible();
+
+  // 字典用 Python 的寫法
+  await page.getByRole('button', { name: 'Dict', exact: true }).click();
+  await build("seen = {'a': 0, 'b': 1}");
+  await expect(page.getByRole('group', { name: 'Dict seen: a 0; b 1' })).toBeVisible();
 });
