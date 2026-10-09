@@ -2,6 +2,7 @@ import {
   CELL,
   freeSpot,
   INDEX_H,
+  isPlaced,
   LABEL_H,
   POINTER_H,
   POINTER_W,
@@ -9,6 +10,7 @@ import {
   sizeOf,
   WIDE_CELL,
   type BoardDoc,
+  type BoardElement,
   type ElementOf,
   type Placed,
   type Point,
@@ -31,7 +33,7 @@ function pointer(id: string, name: string, attach?: { id: string; index: number 
 }
 
 /** 模板裡的元件，位置相對於模板的左上角 */
-export function templateElements(kind: TemplateKind, nextId: () => string): Placed[] {
+export function templateElements(kind: TemplateKind, nextId: () => string): BoardElement[] {
   switch (kind) {
     case 'twoPointers': {
       const nums = nextId();
@@ -43,14 +45,16 @@ export function templateElements(kind: TemplateKind, nextId: () => string): Plac
     }
     case 'slidingWindow': {
       const s = nextId();
+      const l = nextId();
+      const r = nextId();
       // 計數字典放在指標下面
       const below = LABEL_H + CELL + INDEX_H + POINTER_H + GAP / 2;
       return [
         { type: 'list', id: s, x: 0, y: 0, variant: 'array', label: 's', items: ['a', 'b', 'c', 'a', 'b', 'b'] },
-        pointer(nextId(), 'l', { id: s, index: 0 }),
-        pointer(nextId(), 'r', { id: s, index: 2 }),
-        // 框住 l 到 r 的視窗；指標移動時再拖框框跟上
-        { type: 'shape', id: nextId(), variant: 'rect', x: -5, y: LABEL_H - 5, w: 3 * CELL + 10, h: CELL + 10, color: 'orange' },
+        pointer(l, 'l', { id: s, index: 0 }),
+        pointer(r, 'r', { id: s, index: 2 }),
+        // 範圍框跟著 l、r 移動
+        { type: 'range', id: nextId(), from: l, to: r, color: 'orange' },
         { type: 'table', id: nextId(), x: 0, y: below, variant: 'dict', label: 'count', rows: [['a', '1'], ['b', '1'], ['c', '1']] },
         { type: 'var', id: nextId(), x: 2 * WIDE_CELL + GAP, y: below + LABEL_H, name: 'best', value: '3' },
       ];
@@ -112,10 +116,10 @@ function idMaker(doc: BoardDoc): () => string {
   };
 }
 
-/** 一組元件佔的範圍；吸附的指標也算進去 */
-function groupBounds(els: Placed[]): Rect {
+/** 一組元件佔的範圍；吸附的指標也算進去，範圍框跟著指標不用算 */
+function groupBounds(els: BoardElement[]): Rect {
   const own: BoardDoc = { elements: els };
-  const rects = els.map((el) => rectOf(own, el));
+  const rects = els.filter(isPlaced).map((el: Placed) => rectOf(own, el));
   const x = Math.min(...rects.map((r) => r.x));
   const y = Math.min(...rects.map((r) => r.y));
   return { x, y, w: Math.max(...rects.map((r) => r.x + r.w)) - x, h: Math.max(...rects.map((r) => r.y + r.h)) - y };
@@ -128,7 +132,7 @@ export function insertTemplate(doc: BoardDoc, kind: TemplateKind, center: Point,
   const spot = freeSpot(doc, bounds.w, bounds.h, center, sizes);
   const dx = spot.x - bounds.x;
   const dy = spot.y - bounds.y;
-  // 吸附的指標位置跟著元件走，不用另外移
-  const placed = els.map((el) => (el.type === 'pointer' && el.attach ? el : { ...el, x: el.x + dx, y: el.y + dy }));
+  // 吸附的指標和範圍框跟著元件走，不用另外移
+  const placed = els.map((el) => (!isPlaced(el) || (el.type === 'pointer' && el.attach) ? el : { ...el, x: el.x + dx, y: el.y + dy }));
   return { doc: { ...doc, elements: [...doc.elements, ...placed] }, ids: placed.map((el) => el.id) };
 }

@@ -1,5 +1,6 @@
 import {
   arrowPoints,
+  rangeRect,
   CELL,
   contentBounds,
   CYCLE_H,
@@ -395,6 +396,9 @@ export function boardToSvg(doc: BoardDoc, sizes: Sizes | undefined, options: Exp
       let d = `M${pts[0]} ${pts[1]}`;
       for (let i = 2; i + 1 < pts.length; i += 2) d += `L${pts[i]} ${pts[i + 1]}`;
       body.push(`<path d="${d}" fill="none" stroke="${STROKE_COLORS[el.color]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`);
+    } else if (el.type === 'range') {
+      const r = rangeRect(doc, el);
+      if (r) body.push(rect(r.x, r.y, r.w, r.h, 'none', STROKE_COLORS[el.color], ' stroke-width="2.5" rx="8"'));
     } else if (el.type === 'arrow') {
       const ends = arrowPoints(doc, el, sizes);
       if (!ends) continue;
