@@ -89,7 +89,7 @@ test('keeps the view where it is after adding something', async ({ page }) => {
   await page.goto('/#/board/scratch');
   const canvas = page.getByRole('region', { name: 'Whiteboard canvas' });
   const world = canvas.locator('.board-world');
-  await page.getByRole('button', { name: 'Heading', exact: true }).click();
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
   await expect(page.getByText('Saved on this device')).toBeVisible();
 
   // 用手掌工具平移畫面，再放一個元件；存檔之後畫面不應該跳回中間
@@ -390,4 +390,30 @@ test('builds a binary tree from LeetCode’s format and edits it node by node', 
   await expect(page.getByText('Saved on this device')).toBeVisible();
   await page.reload();
   await expect(page.getByRole('group', { name: 'Binary tree root: [3,9,null,null,8]' })).toBeVisible();
+});
+
+test('sets up a whole scene from a template, and turns text into a heading', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  const templates = page.getByRole('region', { name: 'Templates' });
+  await templates.getByRole('button', { name: /^Reverse linked list/ }).click();
+  await expect(page.getByRole('group', { name: 'Linked list head: 1 → 2 → 3 → 4 → 5' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Pointer curr at index 0' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Pointer next at index 1' })).toBeVisible();
+  // prev 一開始是 None，不吸附在節點上
+  await expect(page.getByRole('group', { name: 'Pointer prev', exact: true })).toBeVisible();
+  // 整組一起選取，可以直接拖動或刪除
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await expect(selbar).toContainText('4 selected');
+
+  await templates.getByRole('button', { name: /^Grid BFS/ }).click();
+  await expect(page.getByRole('group', { name: /^2D array grid/ })).toBeVisible();
+  await expect(page.getByRole('group', { name: /^Queue queue/ })).toBeVisible();
+  await expect(selbar).toContainText('3 selected');
+
+  // 元件庫只有「文字」，選取後切換成標題
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  await selbar.getByRole('button', { name: 'Make heading' }).click();
+  await expect(page.getByRole('group', { name: /^Heading:/ })).toBeVisible();
+  await selbar.getByRole('button', { name: 'Make body text' }).click();
+  await expect(page.getByRole('group', { name: /^Text:/ })).toBeVisible();
 });

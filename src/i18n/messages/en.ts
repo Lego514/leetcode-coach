@@ -888,7 +888,14 @@ const en: Messages = {
     tooLarge: 'This whiteboard is too large to sync. Try erasing some ink.',
     palette: 'Elements',
     paletteHint: 'Click to add one in the middle, or drag it where you want it.',
-    groups: { text: 'Text', linear: 'Linear', lookup: 'Lookup', nodes: 'Nodes', table: 'Table' },
+    groups: { templates: 'Templates', linear: 'Linear', nodes: 'Nodes', lookup: 'Lookup', notes: 'Notes' },
+    templates: {
+      twoPointers: { name: 'Two pointers', hint: 'Array with l and r' },
+      slidingWindow: { name: 'Sliding window', hint: 'Array, l and r, a window frame, a count dict' },
+      reverseList: { name: 'Reverse linked list', hint: 'List with prev, curr, next' },
+      treeDfs: { name: 'Tree DFS', hint: 'Binary tree, stack, node pointer' },
+      gridBfs: { name: 'Grid BFS', hint: '2D array, queue, visited set' },
+    },
     kinds: {
       heading: 'Heading',
       text: 'Text',
@@ -947,6 +954,7 @@ const en: Messages = {
       'Select an array first, then click Pointer, and the pointer lands on the first cell.',
       'Linked list: click the arrow between two nodes to switch it between forward, reversed, and cut. Pick a node to point the tail back to it (a cycle).',
       'Binary tree: pick a node to add a left or right child, color it, add a pointer, or delete its subtree. A pointer on a tree moves to the left or right child with ← → and to the parent with ↑.',
+      'The templates at the top of the palette set up a common scene in one click (two pointers, sliding window, reversing a list, tree DFS, grid BFS). The whole group is selected, so you can drag it where you want.',
       'Select a linked list or binary tree and choose “Build from text” to paste the problem’s example, like 1->2->3 or [3,9,20,null,null,15,7].',
       'Click one cell of an array to select just that cell: highlight it, put a pointer on it, insert or delete cells, and move between cells with the arrow keys. With an array selected, the + at the end adds a cell.',
       'Drag across empty space to select everything inside the box, then move, duplicate (Ctrl+D), delete, or recolor it together. Shift adds to the selection; Ctrl+A selects everything.',
@@ -957,6 +965,8 @@ const en: Messages = {
       'Delete removes, Ctrl+D duplicates, Ctrl+Z undoes, Ctrl+Shift+Z redoes.',
     ],
     actions: {
+      makeHeading: 'Make heading',
+      makeBody: 'Make body text',
       addLeftChild: '+ Left child',
       addRightChild: '+ Right child',
       deleteSubtree: 'Delete this subtree',
