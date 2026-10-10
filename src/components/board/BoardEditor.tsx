@@ -540,12 +540,16 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     const id = [...selected][0];
     const host = viewport.querySelector<HTMLElement>(`[data-el="${id}"]`);
     if (!host) return;
+    // DP 表看的是正在填的那一格：按 Enter 一路往下填時，畫面跟著那一格走
+    const el = m.findElement(doc, id);
     const part =
-      cellSel?.id === id
-        ? host.querySelector(`[data-cell="${cellSel.index}"]`)
-        : edgeSel?.id === id
-          ? host.querySelector(`[data-edge="${edgeSel.index}"]`)
-          : null;
+      el?.type === 'dp' && el.at
+        ? host.querySelector(`[data-cell="${m.dpIndex(el, el.at)}"]`)
+        : cellSel?.id === id
+          ? host.querySelector(`[data-cell="${cellSel.index}"]`)
+          : edgeSel?.id === id
+            ? host.querySelector(`[data-edge="${edgeSel.index}"]`)
+            : null;
     const box = (node: Element): m.Rect => {
       const r = node.getBoundingClientRect();
       return { x: r.left, y: r.top, w: r.width, h: r.height };
@@ -554,9 +558,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     if (dy !== 0) setView((v) => ({ ...v, y: v.y + dy }));
   };
 
+  const dpAt = single?.type === 'dp' && single.at ? `${single.at.r}:${single.at.c}` : '';
   const selectionKey =
     playIndex === null && tool === 'select'
-      ? `${[...selected].join(',')}|${cellSel ? `${cellSel.id}:${cellSel.index}` : ''}|${edgeSel ? `${edgeSel.id}:${edgeSel.index}` : ''}`
+      ? `${[...selected].join(',')}|${cellSel ? `${cellSel.id}:${cellSel.index}` : ''}|${edgeSel ? `${edgeSel.id}:${edgeSel.index}` : ''}|${dpAt}`
       : '';
   const revealOnChange = useEffectEvent(() => {
     if (gesture.current) revealLater.current = true;
@@ -811,6 +816,9 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
           // 選了一群東西時，點其中一個（沒拖動）就只選它；要一起拖就直接拖
           if (g.ids.size > 1) setSelection(new Set([g.clicked]));
           else if (reveal) revealSelection();
+          // 點 DP 表的一格：改成正在填這一格，箭頭跟著換
+          const clicked = m.findElement(doc, g.clicked);
+          if (clicked?.type === 'dp' && g.cell !== undefined) apply(m.setDpCursor(doc, clicked.id, m.dpCellAt(clicked, g.cell)));
         }
         return;
       case 'pen': {
@@ -978,6 +986,22 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         const step = e.key === forward ? 1 : e.key === backward ? -1 : 0;
         const index = Math.min(Math.max(0, pickedIndex + step), pickedList.items.length - 1);
         setCellSel({ id: pickedList.id, index });
+      } else if (single?.type === 'dp' && single.at && e.key.startsWith('Arrow')) {
+        // DP 表：方向鍵移動正在填的格子
+        e.preventDefault();
+        const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+        const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+        const next = m.moveDpCursor(doc, single.id, dr, dc);
+        const moved = m.findElement(next, single.id) as m.ElementOf<'dp'>;
+        apply(next);
+        if (moved.at) setCellSel({ id: single.id, index: m.dpIndex(moved, moved.at) });
+      } else if (single?.type === 'dp' && single.at && e.key === 'Enter') {
+        e.preventDefault();
+        startEditing(single.id, m.dpIndex(single, single.at));
+      } else if (single?.type === 'dp' && single.at && single.cells[single.at.r][single.at.c] && (e.key === 'Delete' || e.key === 'Backspace')) {
+        // 正在填的格子有值時，Delete 清掉這一格（沒有值才刪整張表）
+        e.preventDefault();
+        apply(m.setDpValue(doc, single.id, single.at, ''));
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         removeSelected();
@@ -1143,8 +1167,20 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 onToggleLink={canAdd(el) && m.isLinked(el) ? (gap) => toggleLinkAt(el, gap) : undefined}
                 onAddChild={canAdd(el) && el.type === 'tree' ? (index) => addChildAt(el, index) : undefined}
                 onAddCall={canAdd(el) && el.type === 'recursion' ? (parent) => addCallAt(el, parent) : undefined}
-                onAddRow={canAdd(el) && el.type === 'table' ? () => apply(m.resizeTable(doc, el.id, 'row', 1)) : undefined}
-                onAddCol={canAdd(el) && el.type === 'table' ? () => apply(m.resizeTable(doc, el.id, 'col', 1)) : undefined}
+                onAddRow={
+                  canAdd(el) && el.type === 'table'
+                    ? () => apply(m.resizeTable(doc, el.id, 'row', 1))
+                    : canAdd(el) && el.type === 'dp'
+                      ? () => apply(m.resizeDp(doc, el.id, 'row', 1))
+                      : undefined
+                }
+                onAddCol={
+                  canAdd(el) && el.type === 'table'
+                    ? () => apply(m.resizeTable(doc, el.id, 'col', 1))
+                    : canAdd(el) && el.type === 'dp'
+                      ? () => apply(m.resizeDp(doc, el.id, 'col', 1))
+                      : undefined
+                }
                 register={register}
                 onChange={(patch) => editElement(el.id, patch)}
                 onDoneEditing={stopEditing}
@@ -1804,6 +1840,8 @@ function textPlaceholder(el: TextElement, s: ReturnType<typeof useI18n>['t']['bo
       return s.graph;
     case 'recursion':
       return s.recursion;
+    case 'dp':
+      return s.dp;
     case 'table':
       return el.variant === 'dict' ? s.dict : s.grid;
     case 'list':
@@ -1828,6 +1866,7 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   const buttons: [string, () => void][] = [];
   const structure = acceptsText(el) ? el : undefined;
   const heapControls = m.isHeap(el) && !writing ? <HeapActions key={el.id} el={el} doc={doc} apply={apply} /> : null;
+  const dpControls = el.type === 'dp' && !writing ? <DpActions key={el.id} el={el} doc={doc} apply={apply} /> : null;
   if (structure && writing) return <StructureTextForm el={structure} doc={doc} sizes={sizes} apply={apply} onClose={() => setWriting(false)} />;
   if (structure) buttons.push([a.fromText, () => setWriting(true)]);
   if (el.type === 'graph') {
@@ -1835,6 +1874,13 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   }
   if (el.type === 'recursion') {
     buttons.push([el.repeats ? r.repeatsOff : r.repeatsOn, () => apply(m.setRepeats(doc, el.id, !el.repeats))]);
+  }
+  if (el.type === 'dp') {
+    buttons.push(
+      [t.board.dp.clear, () => apply(m.clearDpValues(doc, el.id))],
+      [a.removeRow, () => apply(m.resizeDp(doc, el.id, 'row', -1))],
+      [a.removeCol, () => apply(m.resizeDp(doc, el.id, 'col', -1))],
+    );
   }
   if (m.isPlaced(el) && el.type !== 'shape') buttons.push([a.edit, onEdit]);
   // 元件庫只有「文字」，選取後可以切換成標題
@@ -1873,11 +1919,92 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   return (
     <>
       {heapControls}
+      {dpControls}
       {buttons.map(([label, onClick]) => (
         <button key={label} type="button" className="btn btn-small" onClick={onClick}>
           {label}
         </button>
       ))}
+    </>
+  );
+}
+
+/**
+ * DP 表：正在填的那一格寫值，按 Enter 填進去並跳到下一個還沒填的格子；可以把每一格記成逐步播放。
+ * 也在這裡選相依關係（箭頭）、往回看幾格和填表的順序
+ */
+function DpActions({ el, doc, apply }: { el: m.ElementOf<'dp'>; doc: m.BoardDoc; apply: (doc: m.BoardDoc) => void }) {
+  const { t } = useI18n();
+  const d = t.board.dp;
+  const [record, setRecord] = useState(false);
+  const oneD = m.isDp1d(el);
+  const at = el.at;
+  const key = at ? `${at.r}:${at.c}` : '';
+  const current = at ? (el.cells[at.r]?.[at.c] ?? '') : '';
+  // 打到一半的值跟著它屬於的格子；換格子時改顯示那一格的值，輸入框不重建，游標留在裡面
+  const [draft, setDraft] = useState({ key, value: current });
+  const shown = draft.key === key ? draft.value : current;
+  const presets = oneD ? m.DP_DEPS_1D : m.DP_DEPS_2D;
+  const options = el.deps && !presets.includes(el.deps) ? [...presets, el.deps] : presets;
+  return (
+    <>
+      {at && <span className="board-selbar-title">{m.dpName(el, at)}</span>}
+      {at && (
+        <input
+          className="input board-weight board-dp-value"
+          value={shown}
+          aria-label={d.value}
+          placeholder={d.value}
+          title={d.valueHint}
+          maxLength={40}
+          onChange={(e) => setDraft({ key, value: e.target.value })}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Escape') e.currentTarget.blur();
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            apply(m.fillDpCell(doc, el.id, shown.trim(), record));
+            setDraft({ key: '', value: '' });
+          }}
+        />
+      )}
+      <button type="button" className="btn btn-small" aria-label={d.prev} title={d.prev} onClick={() => apply(m.stepDpCursor(doc, el.id, 'prev'))}>
+        ←
+      </button>
+      <button type="button" className="btn btn-small" aria-label={d.next} title={d.next} onClick={() => apply(m.stepDpCursor(doc, el.id, 'next'))}>
+        →
+      </button>
+      <select
+        className="input board-dp-deps"
+        value={el.deps ?? ''}
+        aria-label={d.dependsOn}
+        title={d.dependsOn}
+        onChange={(e) => apply(m.setDpDeps(doc, el.id, (e.target.value || undefined) as m.DpDeps | undefined))}
+      >
+        <option value="">{d.noArrows}</option>
+        {options.map((deps) => (
+          <option key={deps} value={deps}>
+            {m.DP_DEP_FORMULAS[deps]}
+          </option>
+        ))}
+      </select>
+      {el.deps === 'steps' && (
+        <SelbarField
+          key={`steps:${(el.steps ?? []).join(',')}`}
+          label={d.steps}
+          value={(el.steps ?? []).join(', ')}
+          onCommit={(value) => apply(m.setDpDeps(doc, el.id, 'steps', value.split(/[^0-9]+/).filter(Boolean).map(Number)))}
+        />
+      )}
+      {!oneD && (
+        <button type="button" className="btn btn-small" onClick={() => apply(m.setDpOrder(doc, el.id, el.order === 'up' ? 'down' : 'up'))}>
+          {el.order === 'up' ? d.orderUp : d.orderDown}
+        </button>
+      )}
+      <label className="board-heap-record">
+        <input type="checkbox" checked={record} onChange={(e) => setRecord(e.target.checked)} />
+        {d.record}
+      </label>
     </>
   );
 }
@@ -2156,6 +2283,7 @@ const PALETTE_ICONS: Record<m.PaletteKind, ReactNode> = {
     </>
   ),
   table: <path d="M4 5h16v14H4zM4 10h16M4 14.5h16M10 5v14" />,
+  dpTable: <path d="M3.5 3.5h17v17h-17zM3.5 9.2h17M3.5 14.8h17M9.2 3.5v17M14.8 3.5v17M6.4 6.4l11 11M17.4 13.4v4h-4" />,
   recursionTree: (
     <>
       <rect x="8.5" y="2.5" width="7" height="4.5" rx="1.2" />

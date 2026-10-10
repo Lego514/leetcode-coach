@@ -1,4 +1,9 @@
 import {
+  DP_DEPS_1D,
+  DP_DEPS_2D,
+  DP_MAX_COLS,
+  DP_MAX_ROWS,
+  dpOrder,
   findElement,
   GRAPH_MAX_EDGES,
   GRAPH_MAX_NODES,
@@ -12,6 +17,7 @@ import {
   TREE_MAX_NODES,
   updateElement,
   type BoardDoc,
+  type DpDeps,
   type ElementOf,
   type GraphEdge,
   type RecursionNode,
@@ -386,11 +392,118 @@ export function inlineRecursion(el: ElementOf<'recursion'>): string {
   return visit(0);
 }
 
-export type TextElement = ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'> | ElementOf<'table'> | ElementOf<'recursion'>;
+/** 把 a = 1, b = [1,2], c = "ab" 拆成一個一個值；括號和引號裡的逗號不算，名稱可有可無，沒加引號的字當成字串 */
+function readArgs(text: string): unknown[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let quote = '';
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === quote) quote = '';
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+    } else if ('[{('.includes(ch)) {
+      depth += 1;
+    } else if (']})'.includes(ch)) {
+      depth -= 1;
+    } else if (ch === ',' && depth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts
+    .map((part) => part.replace(/^\s*[A-Za-z_]\w*\s*=\s*/, '').trim())
+    .filter(Boolean)
+    .map((part) => readValue(part) ?? part);
+}
+
+export interface ParsedDp {
+  cells: string[][];
+  rowHead?: string[];
+  colHead?: string[];
+  deps?: DpDeps;
+  steps?: number[];
+}
+
+/**
+ * DP 表：直接讀題目的輸入，排出表格的大小和旁邊標的字。
+ * 兩個字串 → (m+1)×(n+1)，旁邊標字元（LCS、編輯距離）；一個字串 → 一維 n+1 格（解碼、再給字典就是拆字）；
+ * m = 3, n = 7 → 3×7（不同路徑）；n = 5 → 一維 6 格；coins = [1,2,5], amount = 11 → 一維 12 格、往回看 1、2、5 格；
+ * nums = [...] → 一維，上面標數字；二維陣列直接當表格的內容。
+ */
+export function parseDp(text: string): ParsedDp | { error: ParseError } {
+  const values = readArgs(text);
+  if (values.length === 0) return { error: 'empty' };
+  const grid = values.find((v): v is unknown[][] => Array.isArray(v) && v.length > 0 && v.every(Array.isArray));
+  const list = values.find((v): v is unknown[] => Array.isArray(v) && !v.some(Array.isArray));
+  const strings = values.filter((v): v is string => typeof v === 'string');
+  const numbers = values.filter((v): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0);
+  const fits = (rows: number, cols: number) => rows >= 1 && cols >= 1 && rows <= DP_MAX_ROWS && cols <= DP_MAX_COLS;
+  const blank = (rows: number, cols: number) => Array.from({ length: rows }, () => Array.from({ length: cols }, () => ''));
+  if (grid) {
+    const cols = Math.max(1, ...grid.map((row) => row.length));
+    if (!fits(grid.length, cols)) return { error: 'tooMany' };
+    return { cells: grid.map((row) => Array.from({ length: cols }, (_, c) => (c < row.length ? cellText(row[c]) : ''))) };
+  }
+  if (strings.length >= 2) {
+    const [a, b] = strings.map((s) => [...s]);
+    if (!fits(a.length + 1, b.length + 1)) return { error: 'tooMany' };
+    return { cells: blank(a.length + 1, b.length + 1), rowHead: ['', ...a], colHead: ['', ...b], deps: 'upLeftDiag' };
+  }
+  if (strings.length === 1) {
+    const s = [...strings[0]];
+    if (!fits(1, s.length + 1)) return { error: 'tooMany' };
+    return { cells: blank(1, s.length + 1), colHead: ['', ...s], deps: list ? 'before' : 'prev2' };
+  }
+  if (numbers.length >= 2 && !list) {
+    const [m, n] = numbers;
+    if (!fits(m, n)) return { error: 'tooMany' };
+    return { cells: blank(m, n), deps: 'upLeft' };
+  }
+  if (numbers.length >= 1) {
+    const n = numbers[0];
+    if (!fits(1, n + 1)) return { error: 'tooMany' };
+    const steps = [...new Set((list ?? []).filter((v): v is number => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 29))]
+      .sort((a, b) => a - b)
+      .slice(0, 6);
+    return { cells: blank(1, n + 1), ...(steps.length > 0 ? { deps: 'steps' as const, steps } : { deps: 'prev2' as const }) };
+  }
+  if (list && list.length > 0) {
+    if (!fits(1, list.length)) return { error: 'tooMany' };
+    return { cells: blank(1, list.length), colHead: list.map(cellText) };
+  }
+  return { error: 'badFormat' };
+}
+
+/** 目前的表格寫成文字：看得出來是兩個字串、一個字串或數字排出來的，就寫回那個樣子；不然寫出每一格的內容 */
+export function serializeDp(el: ElementOf<'dp'>): string {
+  const chars = (head?: string[]) => (head && head[0] === '' && head.slice(1).every((ch) => [...ch].length === 1) ? head.slice(1).join('') : null);
+  const rows = el.cells.length;
+  const cols = el.cells[0].length;
+  const blank = el.cells.every((row) => row.every((v) => !v));
+  if (rows === 1) {
+    const s = chars(el.colHead);
+    if (s !== null) return `s = ${JSON.stringify(s)}`;
+    if (el.colHead) return `nums = [${el.colHead.map(literal).join(',')}]`;
+    if (blank && el.deps === 'steps' && el.steps) return `coins = [${el.steps.join(',')}], amount = ${cols - 1}`;
+    if (blank) return `n = ${cols - 1}`;
+  } else {
+    const a = chars(el.rowHead);
+    const b = chars(el.colHead);
+    if (a !== null && b !== null) return `text1 = ${JSON.stringify(a)}, text2 = ${JSON.stringify(b)}`;
+    if (blank && !el.rowHead && !el.colHead) return `m = ${rows}, n = ${cols}`;
+  }
+  return `[${el.cells.map((row) => `[${row.map((v) => (v ? literal(v) : '""')).join(',')}]`).join(',')}]`;
+}
+
+export type TextElement = ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'> | ElementOf<'table'> | ElementOf<'recursion'> | ElementOf<'dp'>;
 
 /** 可以用文字建立的元件 */
 export function acceptsText(el: { type: string } | undefined): el is TextElement {
-  return el?.type === 'list' || el?.type === 'tree' || el?.type === 'graph' || el?.type === 'table' || el?.type === 'recursion';
+  return ['list', 'tree', 'graph', 'table', 'recursion', 'dp'].includes(el?.type ?? '');
 }
 
 /** 目前內容的文字版，放進「用文字建立」的輸入框 */
@@ -400,6 +513,8 @@ export function structureText(el: TextElement): string {
       return serializeGraph(el);
     case 'recursion':
       return serializeRecursion(el);
+    case 'dp':
+      return serializeDp(el);
     case 'tree':
       return serializeTree(el);
     case 'table':
@@ -421,6 +536,26 @@ export function applyStructureText(doc: BoardDoc, id: string, text: string): { d
     if ('error' in parsed) return parsed;
     const next = updateElement<ElementOf<'recursion'>>(doc, id, { nodes: parsed.nodes });
     return { doc: detachMissing(doc, next, id, (index) => index < parsed.nodes.length) };
+  }
+  // DP 表讀的是題目的整串輸入（text1 = ..., text2 = ...），名稱不拿來改表格的名字
+  if (el?.type === 'dp') {
+    const parsed = parseDp(text);
+    if ('error' in parsed) return parsed;
+    const oneD = parsed.cells.length === 1;
+    // 沒有建議的相依關係時，原本的還適用（一維、二維對得上）就留著
+    const keep = el.deps && (oneD ? DP_DEPS_1D : DP_DEPS_2D).includes(el.deps) ? el.deps : undefined;
+    const deps = parsed.deps ?? keep;
+    const order = oneD ? undefined : el.order;
+    const next = updateElement<ElementOf<'dp'>>(doc, id, {
+      cells: parsed.cells,
+      rowHead: parsed.rowHead,
+      colHead: parsed.colHead,
+      deps,
+      steps: deps === 'steps' ? (parsed.steps ?? el.steps) : undefined,
+      order,
+      at: dpOrder({ ...el, cells: parsed.cells, order })[0],
+    });
+    return { doc: next };
   }
   const { name, body } = splitName(text);
   const label = name ? { label: name } : {};

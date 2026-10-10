@@ -4,6 +4,11 @@ import {
   CELL,
   contentBounds,
   CYCLE_H,
+  dpArrowPath,
+  dpDependencies,
+  dpLayout,
+  DP_HEAD_H,
+  DP_HEAD_W,
   edgeShape,
   graphLayout,
   heapLayout,
@@ -61,6 +66,8 @@ const SHEET_2 = '#f3f5f8';
 const RULE = '#d6dde7';
 const MARKER = '#ffe45c';
 const GOOD = '#1d7350';
+const PEN = '#2346a0';
+const PEN_SOFT = '#e7edfa';
 
 const STROKE_COLORS: Record<BoardColor, string> = {
   ink: INK,
@@ -218,6 +225,48 @@ function drawTree(el: ElementOf<'tree'>, options: ExportOptions): string {
       `<circle cx="${el.x + c.x}" cy="${el.y + c.y}" r="${r - 1}" fill="${fill}" stroke="${INK_2}" stroke-width="2"/>`,
       cellText(el.nodes[i] ?? '', el.x + c.x, el.y + c.y, TREE_D, options.measure),
     );
+  }
+  return parts.join('');
+}
+
+/** SVG 路徑裡的座標整個平移 */
+function shiftPath(path: string, dx: number, dy: number): string {
+  return path.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${Number(x) + dx} ${Number(y) + dy}`);
+}
+
+/** DP 表：索引和旁邊的字、格子和值；正在填的那一格加框，它從哪幾格算來用淺色和橘色箭頭標出 */
+function drawDp(el: ElementOf<'dp'>, options: ExportOptions): string {
+  const parts = [label(el.label, el.x, el.y)];
+  const { rows, cols, left, top } = dpLayout(el);
+  const small = (x: number, y: number, value: string) => text(x, y, value, { size: 11, mono: true, color: INK_3, anchor: 'middle' });
+  const head = (x: number, y: number, value: string, width: number) =>
+    text(x, y, fit(value, width - 4, `bold 13px ${MONO}`, options.measure), { size: 13, mono: true, bold: true, color: INK_2, anchor: 'middle' });
+  for (let c = 0; c < cols; c += 1) {
+    const cx = el.x + left + c * CELL + CELL / 2;
+    parts.push(small(cx, el.y + LABEL_H + INDEX_H / 2, String(c)));
+    if (el.colHead) parts.push(head(cx, el.y + LABEL_H + INDEX_H + DP_HEAD_H / 2, el.colHead[c] ?? '', CELL));
+  }
+  if (rows > 1) {
+    for (let r = 0; r < rows; r += 1) {
+      const cy = el.y + top + r * CELL + CELL / 2;
+      parts.push(small(el.x + ROW_INDEX_W / 2, cy, String(r)));
+      if (el.rowHead) parts.push(head(el.x + ROW_INDEX_W + DP_HEAD_W / 2, cy, el.rowHead[r] ?? '', DP_HEAD_W));
+    }
+  }
+  const deps = el.at ? dpDependencies(el, el.at) : [];
+  el.cells.forEach((row, r) =>
+    row.forEach((value, c) => {
+      const x = el.x + left + c * CELL;
+      const y = el.y + top + r * CELL;
+      const fill = deps.some((d) => d.r === r && d.c === c) ? PEN_SOFT : SHEET;
+      parts.push(rect(x, y, CELL, CELL, fill, INK_3), cellText(value, x + CELL / 2, y + CELL / 2, CELL, options.measure));
+    }),
+  );
+  if (el.at) {
+    parts.push(rect(el.x + left + el.at.c * CELL + 1.5, el.y + top + el.at.r * CELL + 1.5, CELL - 3, CELL - 3, 'none', PEN, ' stroke-width="3"'));
+    for (const d of deps) {
+      parts.push(`<path d="${shiftPath(dpArrowPath(el, d, el.at), el.x, el.y)}" fill="none" stroke="${STROKE_COLORS.orange}" stroke-width="2" marker-end="url(#head-orange)"/>`);
+    }
   }
   return parts.join('');
 }
@@ -481,6 +530,8 @@ function drawPlaced(doc: BoardDoc, el: Placed, sizes: Sizes | undefined, options
       return drawGraph(el, options);
     case 'recursion':
       return drawRecursion(el, options);
+    case 'dp':
+      return drawDp(el, options);
     case 'pointer':
       return drawPointer(doc, el, options);
     case 'var':

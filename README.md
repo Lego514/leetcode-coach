@@ -39,7 +39,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Practice everything, only problems you've done, only clues, only Python tips, or one pattern.
   - A **rest timer** (60–180 seconds) counts down between sets. When it ends it beeps, vibrates where supported, and shows an alert, and it asks the browser to keep the screen on while it runs.
   - Answers save one at a time, sync like attempts, and count toward the streak.
-- **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, recursion trees, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
+- **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, recursion trees, DP tables, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
   - **Range frames** box the cells between two pointers on the same array and follow them as they move, for sliding windows: select the two pointers and choose "Frame between pointers".
   - **Templates** set up a common scene in one click, with the pointers already named: two pointers, sliding window, reversing a linked list, tree DFS, grid BFS, and backtracking (the subsets decision tree with `path` and a `cur` pointer). The whole group is placed in free space and selected so it can be dragged at once.
   - The palette is grouped by how often problems use each element, with line icons. Text switches to a heading from the selection bar.
@@ -67,13 +67,18 @@ You still solve problems on LeetCode. This app handles the parts around solving:
     - "Color repeated calls" gives calls with the same label the same color, which shows what memoization would save.
     - A pointer steps through the calls in DFS order with ← →, and back to the caller with ↑, so a trace can be recorded step by step.
     - Up to 63 calls and eight levels.
-  - **Build from text**: arrays, stacks, queues, heaps, sets, dicts, 2D arrays, linked lists, trees, graphs, and recursion trees can all be filled by pasting a problem's example instead of typing cell by cell:
+  - **DP tables** fill one cell at a time, 1D (`dp[i]`) or 2D (`dp[i][j]`), with the strings or numbers from the problem written beside the rows and columns.
+    - Choose what each cell depends on (`dp[i-1], dp[i-2]`, every earlier `dp[j]`, `dp[i-k]` for coins, up/left/diagonal, or `dp[i+1][j-1]` filled from the bottom row for palindromes). The cell being filled then shows arrows from those cells, as arcs under a 1D table.
+    - Type the value in the selection bar and press Enter to move to the next empty cell. With "Record each filled cell" on, every cell becomes a playback step captioned like `dp[2][3] = 2`, so the whole fill order can be replayed.
+    - Up to 26 rows and 30 columns.
+  - **Build from text**: arrays, stacks, queues, heaps, sets, dicts, 2D arrays, linked lists, trees, graphs, recursion trees, and DP tables can all be filled by pasting a problem's example instead of typing cell by cell:
     - `nums = [2,7,11,15], target = 9` takes the first value and renames the element `nums`
     - `"abcabcbb"` splits into characters
     - `{'a': 1}` or JSON for dicts, and `[[1,0],[0,1]]` for grids
     - `1->2->3` and `head = [...]` for linked lists, and LeetCode's level order `[3,9,20,null,null,15,7]` for trees
     - `n = 5, edges = [[0,1],[0,2]]` (with optional weights) or an adjacency list (0- or 1-based) for graphs
     - an indented outline for recursion trees, one call per line, such as `f(3) => 2` with `n-1 | f(2)` underneath (`|` puts a label on the edge, `=>` adds a return value); the output of the `tree` command also works
+    - the problem's own input for DP tables: `text1 = "abcde", text2 = "ace"` makes a 6×4 table with the letters beside it, `m = 3, n = 7` a 3×7 grid, `n = 5` six cells, `coins = [1,2,5], amount = 11` twelve cells that look back 1, 2, and 5, and `s = "226"` or `nums = [...]` a row labeled with the characters or numbers
   - **Other tools**:
     - rectangle and ellipse frames, which draw on top but stay click-through except their outline
     - arrows and plain lines (for undirected edges) that follow the elements they connect
@@ -82,11 +87,11 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - **Box selection**: drag across empty space to select everything inside, then move, duplicate, delete, or recolor it together. Copies keep pointers on their copied arrays and rewire arrows to the copied elements.
   - **Step playback**: "Record step" saves a snapshot of the board with an optional one-line note (writing it in English doubles as explanation practice). Playback steps through the snapshots with the arrow keys or plays them automatically; elements slide from one step to the next. You can continue editing from any step.
   - **Export image**: the board, or the step being played, is redrawn from its data as an SVG and saved as a 2× PNG.
-  - When the selection bar would cover what you just picked, the board moves just enough to show it. It waits until you let go, so it never moves during a drag.
+  - When the selection bar would cover what you just picked (or the DP cell being filled), the board moves just enough to show it. It waits until you let go, so it never moves during a drag. On phones the bar is a single row that scrolls sideways instead of stacking into several rows.
   - Mouse, trackpad, keyboard, and touch all work. Pan with the scroll wheel, Space + drag, the hand tool, or two fingers; zoom with Ctrl + scroll or a pinch.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - On the practice page the board opens on top, so the timer keeps running.
-  - No whiteboard library is used: the editor is about 111 KB (33 KB gzipped) and loads the first time a board opens.
+  - No whiteboard library is used: the editor is about 124 KB (36 KB gzipped) and loads the first time a board opens.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
@@ -281,7 +286,7 @@ Notes:
 - 做微複習的日子也算進連續天數。
 
 **白板**是自己從頭寫的，沒有用繪圖套件：
-- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、遞迴樹、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
+- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、遞迴樹、DP 表、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
 - 指標會吸附在陣列格子上，用方向鍵移動，依名字自動上色。
 - **鏈結串列**是一整條：點兩個節點之間的箭頭可以在往後、反過來、斷開之間切換，反轉串列可以一段一段翻；尾巴可以接回任一個節點（有環）；prev、curr、next 指標吸附在節點下面。
 - **二元樹**自動依中序排版（二元搜尋樹由左到右剛好排好序）：點一個節點可以從虛線位置加左右子節點、上底色、刪掉子樹；指標放在節點上方，用方向鍵走到子節點或父節點；最多 6 層。
@@ -290,11 +295,12 @@ Notes:
 - **圖**：節點自動排成一圈，有向圖有箭頭，兩個方向都有的邊會彎開；邊可以寫權重、標記走過。點一個節點可以連到別的節點、上色、加指標或刪除；最多 20 個節點、60 條邊。
 - **堆積**：同一份資料同時畫成樹和陣列（標上索引），也可以只看其中一個。Push、Pop 會照堆積的規則往上或往下換；勾「每一步記成逐步播放」，每次交換都會存成一步，可以播放。可以切換最小堆和最大堆，順序不對的節點會變紅，按 Heapify 一次修好；最多 31 個值。
 - **遞迴樹**：一個節點是一次呼叫，由上往下排，呼叫者在它呼叫的那些節點正上方；適合回溯、備忘錄 DP 和字典樹。點一個呼叫可以加子呼叫、寫回傳值或上面那條邊的字（這一步選了什麼），也可以剪掉這枝（畫成虛線、淡色）。「標出重複的呼叫」會把字一樣的呼叫標同一個顏色，看出備忘錄能省掉什麼。吸附在上面的指標用 ← → 照 DFS 的順序走、↑ 回到呼叫者，可以一步一步記下來播放。最多 63 個呼叫、8 層。
-- **用文字建立**：陣列、堆疊、佇列、堆積、集合、字典、二維陣列、鏈結串列、樹、圖和遞迴樹都可以直接貼題目的範例，不用一格一格輸入。例如 `nums = [2,7,11,15], target = 9`（取第一個值，名稱也改成 nums）、`"abcabcbb"`（拆成一個一個字元）、`{'a': 1}`、`[[1,0],[0,1]]`、`1->2->3`、`[3,9,20,null,null,15,7]`、`n = 5, edges = [[0,1],[0,2]]`（可以有權重）或鄰接串列；遞迴樹是一行一個呼叫、用縮排表示誰呼叫誰（`|` 前面寫在邊上，`=>` 後面是回傳值），`tree` 指令的輸出也讀得懂。
+- **DP 表**：一格一格填，一維（`dp[i]`）或二維（`dp[i][j]`），列和欄旁邊可以標題目給的字串或數字。選好每一格從哪幾格算來（`dp[i-1], dp[i-2]`、前面所有的 `dp[j]`、硬幣的 `dp[i-k]`、上／左／左上，或回文從最後一列往上填的 `dp[i+1][j-1]`），正在填的那一格就會用箭頭標出來（一維畫成格子下面的弧線）。在選取列輸入值、按 Enter 就跳到下一個還沒填的格子；勾「每填一格記成一步」，每一格都會存成一步（說明寫 `dp[2][3] = 2`），可以回放整張表怎麼填出來。最多 26 列、30 欄。
+- **用文字建立**：陣列、堆疊、佇列、堆積、集合、字典、二維陣列、鏈結串列、樹、圖、遞迴樹和 DP 表都可以直接貼題目的範例，不用一格一格輸入。例如 `nums = [2,7,11,15], target = 9`（取第一個值，名稱也改成 nums）、`"abcabcbb"`（拆成一個一個字元）、`{'a': 1}`、`[[1,0],[0,1]]`、`1->2->3`、`[3,9,20,null,null,15,7]`、`n = 5, edges = [[0,1],[0,2]]`（可以有權重）或鄰接串列；遞迴樹是一行一個呼叫、用縮排表示誰呼叫誰（`|` 前面寫在邊上，`=>` 後面是回傳值），`tree` 指令的輸出也讀得懂；DP 表直接讀題目的輸入，例如 `text1 = "abcde", text2 = "ace"`（6×4，旁邊標字母）、`m = 3, n = 7`、`n = 5`、`coins = [1,2,5], amount = 11`（往回看 1、2、5 格）、`s = "226"` 或 `nums = [...]`。
 - 點一格可以上底色、在那格加指標、插入或刪除格子。
 - 還有矩形框、圓形框、箭頭連線、直線（無向圖的邊）、畫筆、橡皮擦、復原、清空。
 - 在空白處拖曳可以框選，框住的東西可以一起移動、複製、刪除或換色。
-- 選取列會擋住剛選到的東西時，畫面自動挪開剛好露出來；按著拖曳時不會動。
+- 選取列會擋住剛選到的東西（或 DP 表正在填的那一格）時，畫面自動挪開剛好露出來；按著拖曳時不會動。手機上選取列只排一列，放不下就左右滑，不會疊成好幾列擋住畫面。
 - **逐步播放**：按「記一步」把目前的畫面存成一步，可以寫一句說明（用英文寫就是在練講解）；播放時一步一步看，指標會滑到下一格，也可以從任何一步繼續編輯。
 - 可以把白板（或播放中的那一步）匯出成圖片。
 - 每一題有自己的白板，另外有一張自由白板；在「我的白板」可以看到全部。白板存在這台裝置，登入後會同步到雲端。

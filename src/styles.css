@@ -4101,9 +4101,23 @@ textarea.board-text-input {
     bottom: auto;
   }
 
+  /* 手機上選取列只排一列，放不下就左右滑，不會疊成好幾列擋住畫面 */
   .board-selbar {
     top: auto;
     bottom: calc(max(16px, env(safe-area-inset-bottom)) + 60px);
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .board-selbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .board-selbar > * {
+    flex: none;
   }
 }
 
@@ -4752,6 +4766,87 @@ button.board-link {
 .board-text-form:has(.board-text-outline) {
   flex-basis: 100%;
   justify-content: center;
+}
+
+/* ---------- DP 表 ---------- */
+
+.board-dp-index {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.board-dp-head {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+input.board-dp-head-input {
+  border: 1px solid var(--pen);
+  border-radius: 4px;
+  background: var(--sheet);
+  text-align: center;
+}
+
+/* 格子各自定位，框線疊在一起看起來是一條 */
+.board-cell.board-dp-cell {
+  position: absolute;
+  border-width: 1px;
+}
+
+.board-cell.board-dp-cell[data-dep] {
+  background: var(--pen-soft);
+}
+
+.board-cell.board-dp-cell[data-picked] {
+  z-index: 1;
+  box-shadow: inset 0 0 0 3px var(--pen);
+}
+
+.board-dp-arrows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.board-dp-arrow {
+  fill: none;
+  stroke: var(--board-orange);
+  stroke-width: 2;
+}
+
+.board-dp-arrowhead {
+  fill: var(--board-orange);
+}
+
+.input.board-weight.board-dp-value {
+  width: 96px;
+}
+
+.board-dp-deps {
+  width: auto;
+  min-height: 30px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
 }
 
 .board-text-form .input.board-text-outline {

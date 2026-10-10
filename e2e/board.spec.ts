@@ -595,3 +595,40 @@ test('traces a recursion tree: returns, pruning, child calls, and a pointer walk
   await selbar.getByRole('button', { name: 'Stop coloring repeats' }).click();
   await expect(selbar.getByRole('button', { name: 'Color repeated calls' })).toBeVisible();
 });
+
+test('fills a DP table cell by cell with arrows, and builds one from the problem’s input', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'DP table', exact: true }).click();
+  const table = page.getByRole('group', { name: /^DP table dp/ });
+  await expect(table).toHaveAccessibleName('DP table dp (filling dp[1][1]): 0 0 0 0; 0 · · ·; 0 · · ·; 0 · · ·; 0 · · ·; 0 · · ·');
+  // LCS：dp[1][1] 從上、左、左上三格算來
+  await expect(table.locator('.board-dp-arrow')).toHaveCount(3);
+
+  // 輸入值按 Enter：填進去並跳到下一格，每一格記成一步
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await selbar.getByRole('checkbox', { name: 'Record each filled cell' }).check();
+  const value = selbar.getByRole('textbox', { name: 'Value' });
+  await value.fill('1');
+  await value.press('Enter');
+  await value.fill('1');
+  await value.press('Enter');
+  await expect(table).toHaveAccessibleName(/^DP table dp \(filling dp\[1\]\[3\]\): 0 0 0 0; 0 1 1 ·;/);
+  await expect(page.getByRole('button', { name: 'Play all 2 steps from the start' })).toBeVisible();
+
+  // 點一格、用方向鍵移動；換成只看上和左
+  await table.locator('[data-cell="11"]').click();
+  await expect(table).toHaveAccessibleName(/\(filling dp\[2\]\[3\]\)/);
+  await page.keyboard.press('ArrowLeft');
+  await expect(table).toHaveAccessibleName(/\(filling dp\[2\]\[2\]\)/);
+  await selbar.getByRole('combobox', { name: 'Depends on' }).selectOption('upLeft');
+  await expect(table.locator('.board-dp-arrow')).toHaveCount(2);
+
+  // 直接貼題目的輸入：硬幣 [1,2,5]、金額 6，dp[6] 從 dp[5]、dp[4]、dp[1] 算來
+  await selbar.getByRole('button', { name: 'Build from text' }).click();
+  await selbar.getByRole('textbox', { name: 'Build from text' }).fill('coins = [1,2,5], amount = 6');
+  await selbar.getByRole('button', { name: 'Apply' }).click();
+  await expect(table).toHaveAccessibleName('DP table dp (filling dp[0]): · · · · · · ·');
+  await expect(selbar.getByRole('textbox', { name: 'Steps back' })).toHaveValue('1, 2, 5');
+  await table.locator('[data-cell="6"]').click();
+  await expect(table.locator('.board-dp-arrow')).toHaveCount(3);
+});

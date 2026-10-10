@@ -238,6 +238,29 @@ export const boardElementSchema = z.discriminatedUnion('type', [
     /** 字一樣的呼叫標同一個顏色，看出哪裡重複算 */
     repeats: z.boolean().optional(),
   }),
+  /**
+   * DP 表：一格一格填，正在填的那一格（at）用箭頭標出它從哪幾格算來；只有一列時是一維的 dp[i]。
+   * 空字串是還沒填；rowHead、colHead 是標在列和欄旁邊的字（例如兩個字串的字元）
+   */
+  z.object({
+    type: z.literal('dp'),
+    ...placed,
+    label: text(40),
+    cells: z
+      .array(z.array(cell).min(1).max(30))
+      .min(1)
+      .max(26)
+      .refine((rows) => rows.every((row) => row.length === rows[0].length), 'rows have the same length'),
+    rowHead: z.array(cell).max(26).optional(),
+    colHead: z.array(cell).max(30).optional(),
+    /** 每一格從哪幾格算來 */
+    deps: z.enum(['prev1', 'prev2', 'before', 'steps', 'upLeft', 'upLeftDiag', 'diag', 'upDiag', 'downLeft']).optional(),
+    /** deps 是 steps 時往回看幾格，例如硬幣 [1,2,5] */
+    steps: z.array(z.number().int().min(1).max(29)).min(1).max(6).optional(),
+    /** 填表的順序：沒寫是由上往下一列一列填，up 是從最下面一列往上（例如回文） */
+    order: z.enum(['up']).optional(),
+    at: z.object({ r: z.number().int().min(0).max(25), c: z.number().int().min(0).max(29) }).optional(),
+  }),
   /** 範圍框：框住同一個陣列上兩個指標之間的格子，指標移動時跟著變（滑動視窗）；位置由指標決定，不存座標 */
   z.object({
     type: z.literal('range'),

@@ -74,7 +74,7 @@ describe('creating elements', () => {
     for (const { kinds } of PALETTE) {
       for (const kind of kinds) doc = addElement(doc, createElement(kind, { x: 10.6, y: -3.2 }, `k${doc.elements.length}`, texts));
     }
-    expect(doc.elements).toHaveLength(17);
+    expect(doc.elements).toHaveLength(18);
     expect(boardDocSchema.parse(doc)).toEqual(doc);
     expect(doc.elements[0]).toMatchObject({ x: 11, y: -3 });
   });
