@@ -144,6 +144,10 @@ export function sizeOf(el: Placed, measured?: { w: number; h: number }): { w: nu
       const { w, h } = dpLayout(el);
       return { w, h };
     }
+    case 'intervals': {
+      const { w, h } = intervalsLayout(el);
+      return { w, h };
+    }
     case 'table': {
       const cols = columns(el);
       const cellW = tableCellWidth(el);
@@ -301,6 +305,7 @@ export type PaletteKind =
   | 'heap'
   | 'recursionTree'
   | 'dpTable'
+  | 'intervals'
   | 'treeNode'
   | 'listNode'
   | 'graphNode'
@@ -313,7 +318,7 @@ export type PaletteGroup = 'linear' | 'nodes' | 'lookup' | 'notes';
  * 標題併進文字（選取後可以切換），單一的樹節點和串列節點換成整棵樹、整條串列；舊白板上的照樣顯示。
  */
 export const PALETTE: { group: PaletteGroup; kinds: PaletteKind[] }[] = [
-  { group: 'linear', kinds: ['array', 'pointer', 'stack', 'queue'] },
+  { group: 'linear', kinds: ['array', 'pointer', 'stack', 'queue', 'intervals'] },
   { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graph', 'heap', 'recursionTree'] },
   { group: 'lookup', kinds: ['dict', 'set', 'grid', 'dpTable', 'table'] },
   { group: 'notes', kinds: ['text', 'code', 'sticky', 'var'] },
@@ -393,6 +398,19 @@ export function createElement(kind: PaletteKind, at: Point, id: string, texts: D
           { text: 'f(2)', parent: 0 },
           { text: 'f(1)', parent: 6 },
           { text: 'f(0)', parent: 6 },
+        ],
+      };
+    case 'intervals':
+      // Merge Intervals 的範例：[1,3] 和 [2,6] 重疊
+      return {
+        type: 'intervals',
+        ...placed,
+        label: 'intervals',
+        items: [
+          { a: 1, b: 3 },
+          { a: 2, b: 6 },
+          { a: 8, b: 10 },
+          { a: 15, b: 18 },
         ],
       };
     case 'dpTable':
@@ -1417,6 +1435,179 @@ export function setRepeats(doc: BoardDoc, id: string, on: boolean): BoardDoc {
   const el = findElement(doc, id);
   if (el?.type !== 'recursion') return doc;
   return updateElement<ElementOf<'recursion'>>(doc, id, { repeats: on || undefined });
+}
+
+// ---------- 區間 ----------
+
+export const INTERVALS_MAX = 30;
+/** 數線左右留的空間，最左邊的刻度數字才不會被切掉 */
+const IV_PAD = 14;
+/** 數線那一列（刻度數字和線）的高度 */
+export const IV_AXIS_H = 30;
+/** 每個區間一列 */
+export const IV_ROW_H = 26;
+export const IV_BAR_H = 14;
+/** 區間右邊寫 [1,3] 的空間 */
+const IV_LABEL_W = 72;
+/** 掃描線下面寫「進行中幾個」的空間 */
+export const IV_SWEEP_H = 26;
+/** 一個單位畫多寬；整條數線限制在這個範圍內 */
+const IV_UNIT = 32;
+const IV_MIN_W = 240;
+const IV_MAX_W = 560;
+
+export type Interval = ElementOf<'intervals'>['items'][number];
+
+/** 刻度的間隔：1、2、5 乘上 10 的次方，整條數線大約八、九個刻度 */
+export function niceStep(span: number): number {
+  const rough = Math.max(span, 1e-9) / 8;
+  const power = 10 ** Math.floor(Math.log10(rough));
+  const k = rough / power;
+  return (k < 1.5 ? 1 : k < 3.5 ? 2 : k < 7.5 ? 5 : 10) * power;
+}
+
+/** 數字寫短一點：整數照寫，小數最多兩位 */
+export function formatValue(v: number): string {
+  return Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100);
+}
+
+export function intervalText(item: Interval): string {
+  return `[${formatValue(item.a)},${formatValue(item.b)}]`;
+}
+
+export interface IntervalsLayout {
+  lo: number;
+  hi: number;
+  step: number;
+  ticks: number[];
+  /** 數線上的值在元件裡的 x */
+  x: (v: number) => number;
+  /** 第一列區間的上緣 */
+  rowsTop: number;
+  w: number;
+  h: number;
+}
+
+/** 數線的範圍對齊刻度，剛好包住所有區間（和掃描線）；沒有區間時是 0 到 10 */
+export function intervalsLayout(el: ElementOf<'intervals'>): IntervalsLayout {
+  const values = el.items.flatMap((item) => [item.a, item.b]).concat(el.sweep === undefined ? [] : [el.sweep]);
+  const min = values.length > 0 ? Math.min(...values) : 0;
+  const max = values.length > 0 ? Math.max(...values) : 10;
+  const step = niceStep(max - min);
+  const lo = Math.floor(min / step) * step;
+  const hi = Math.max(lo + step, Math.ceil(max / step) * step);
+  const width = Math.min(IV_MAX_W, Math.max(IV_MIN_W, (hi - lo) * IV_UNIT));
+  const scale = width / (hi - lo);
+  const ticks: number[] = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v / step) * step);
+  const rowsTop = LABEL_H + IV_AXIS_H;
+  return {
+    lo,
+    hi,
+    step,
+    ticks,
+    x: (v) => IV_PAD + (v - lo) * scale,
+    rowsTop,
+    w: IV_PAD + width + IV_LABEL_W,
+    h: rowsTop + Math.max(1, el.items.length) * IV_ROW_H + (el.sweep === undefined ? 0 : IV_SWEEP_H) + 4,
+  };
+}
+
+/** 掃描線會停的地方：所有（沒被移除的）區間的起點和終點，由小到大 */
+export function intervalEvents(el: ElementOf<'intervals'>): number[] {
+  const points = el.items.filter((item) => !item.removed).flatMap((item) => [item.a, item.b]);
+  return [...new Set(points)].sort((p, q) => p - q);
+}
+
+/** 掃描線在 t 時有幾個區間正在進行：起點算、終點不算，[1,5] 和 [5,8] 不會同時進行（會議室） */
+export function activeAt(el: ElementOf<'intervals'>, t: number): number {
+  return el.items.filter((item) => !item.removed && item.a <= t && t < item.b).length;
+}
+
+/** 兩個區間重疊（端點碰到也算，[1,4] 和 [4,5] 可以合併） */
+export function intervalsOverlap(p: Interval, q: Interval): boolean {
+  return p.a <= q.b && q.a <= p.b;
+}
+
+/** 依起點排序（起點一樣看終點）：合併區間、移除最少區間的第一步 */
+export function sortIntervals(doc: BoardDoc, id: string): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'intervals') return doc;
+  const items = [...el.items].sort((p, q) => p.a - q.a || p.b - q.b);
+  return updateElement<ElementOf<'intervals'>>(doc, id, { items });
+}
+
+/** 這個區間和下一列的重疊時，可以合併成一個 */
+export function canMergeNext(el: ElementOf<'intervals'>, index: number): boolean {
+  const p = el.items[index];
+  const q = el.items[index + 1];
+  return !!p && !!q && intervalsOverlap(p, q);
+}
+
+/** 把下一列併進這一列：[min 起點, max 終點]，顏色留這一列的 */
+export function mergeWithNext(doc: BoardDoc, id: string, index: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'intervals' || !canMergeNext(el, index)) return doc;
+  const p = el.items[index];
+  const q = el.items[index + 1];
+  const merged: Interval = { ...p, a: Math.min(p.a, q.a), b: Math.max(p.b, q.b) };
+  delete merged.removed;
+  const items = [...el.items.slice(0, index), merged, ...el.items.slice(index + 2)];
+  return updateElement<ElementOf<'intervals'>>(doc, id, { items });
+}
+
+export interface IntervalPatch {
+  a?: number;
+  b?: number;
+  color?: CellColor | null;
+  removed?: boolean;
+}
+
+/** 改一個區間：起點、終點（反了就對調）、底色、標成移除；null 和 false 就拿掉 */
+export function updateInterval(doc: BoardDoc, id: string, index: number, patch: IntervalPatch): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'intervals' || !el.items[index]) return doc;
+  const items = el.items.map((item, i) => {
+    if (i !== index) return item;
+    const next: Record<string, unknown> = { ...item, ...patch };
+    for (const key of ['color', 'removed']) if (!next[key]) delete next[key];
+    const a = Math.min(next.a as number, next.b as number);
+    const b = Math.max(next.a as number, next.b as number);
+    return { ...next, a, b } as Interval;
+  });
+  return updateElement<ElementOf<'intervals'>>(doc, id, { items });
+}
+
+/** 在最後加一個區間，接在目前最右邊的後面；回傳新區間的位置 */
+export function addInterval(doc: BoardDoc, id: string): { doc: BoardDoc; index: number } | null {
+  const el = findElement(doc, id);
+  if (el?.type !== 'intervals' || el.items.length >= INTERVALS_MAX) return null;
+  const end = el.items.length > 0 ? Math.max(...el.items.map((item) => item.b)) : 0;
+  const items = [...el.items, { a: end + 1, b: end + 3 }];
+  return { doc: updateElement<ElementOf<'intervals'>>(doc, id, { items }), index: items.length - 1 };
+}
+
+export function deleteInterval(doc: BoardDoc, id: string, index: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'intervals' || !el.items[index]) return doc;
+  return updateElement<ElementOf<'intervals'>>(doc, id, { items: el.items.filter((_, i) => i !== index) });
+}
+
+/** 打開或關掉掃描線；打開時放在第一個起點 */
+export function toggleSweep(doc: BoardDoc, id: string): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'intervals') return doc;
+  return updateElement<ElementOf<'intervals'>>(doc, id, { sweep: el.sweep === undefined ? (intervalEvents(el)[0] ?? 0) : undefined });
+}
+
+/** 掃描線移到下一個或上一個起點、終點 */
+export function stepSweep(doc: BoardDoc, id: string, dir: 'next' | 'prev'): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'intervals' || el.sweep === undefined) return doc;
+  const events = intervalEvents(el);
+  const t = el.sweep;
+  const to = dir === 'next' ? events.find((v) => v > t) : [...events].reverse().find((v) => v < t);
+  return to === undefined ? doc : updateElement<ElementOf<'intervals'>>(doc, id, { sweep: to });
 }
 
 // ---------- DP 表 ----------

@@ -5,6 +5,7 @@ import {
   DP_MAX_ROWS,
   dpOrder,
   findElement,
+  INTERVALS_MAX,
   GRAPH_MAX_EDGES,
   GRAPH_MAX_NODES,
   hasTreeNode,
@@ -20,6 +21,7 @@ import {
   type DpDeps,
   type ElementOf,
   type GraphEdge,
+  type Interval,
   type RecursionNode,
 } from './model';
 
@@ -478,6 +480,43 @@ export function parseDp(text: string): ParsedDp | { error: ParseError } {
   return { error: 'badFormat' };
 }
 
+const PAIR_COLORS = ['yellow', 'green', 'blue', 'purple', 'red'] as const;
+
+function isPair(v: unknown): v is [number, number] {
+  return Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === 'number' && Number.isFinite(n));
+}
+
+/**
+ * 區間：intervals = [[1,3],[2,6]]；再給一個 newInterval = [2,5]（插入區間）會加在最後並標黃色；
+ * 員工的空閒時間 schedule = [[[1,2],[5,6]],[[1,3]]] 每個人一個顏色。起點比終點大的會對調
+ */
+export function parseIntervals(text: string): { items: Interval[] } | { error: ParseError } {
+  const values = readArgs(text);
+  if (values.length === 0) return { error: 'empty' };
+  const items: Interval[] = [];
+  const add = (pair: [number, number], color?: Interval['color']) =>
+    items.push({ a: Math.min(...pair), b: Math.max(...pair), ...(color ? { color } : {}) });
+  const list = values.find((v): v is unknown[] => Array.isArray(v) && v.length > 0 && v.every(isPair));
+  const schedule = values.find((v): v is unknown[][] => Array.isArray(v) && v.length > 0 && v.every((p) => Array.isArray(p) && p.every(isPair)));
+  if (list) {
+    (list as [number, number][]).forEach((pair) => add(pair));
+    const extra = values.find((v) => v !== list && isPair(v));
+    if (extra) add(extra as [number, number], 'yellow');
+  } else if (schedule) {
+    schedule.forEach((person, i) => (person as [number, number][]).forEach((pair) => add(pair, PAIR_COLORS[i % PAIR_COLORS.length])));
+  } else if (values.some(isPair)) {
+    // 只給一兩個區間：[1,3], [2,6]
+    values.filter(isPair).forEach((pair) => add(pair));
+  } else {
+    return { error: values.some((v) => Array.isArray(v) && v.length === 0) ? 'empty' : 'badFormat' };
+  }
+  return items.length > INTERVALS_MAX ? { error: 'tooMany' } : { items };
+}
+
+export function serializeIntervals(el: ElementOf<'intervals'>): string {
+  return `intervals = [${el.items.map((item) => `[${item.a},${item.b}]`).join(',')}]`;
+}
+
 /** 目前的表格寫成文字：看得出來是兩個字串、一個字串或數字排出來的，就寫回那個樣子；不然寫出每一格的內容 */
 export function serializeDp(el: ElementOf<'dp'>): string {
   const chars = (head?: string[]) => (head && head[0] === '' && head.slice(1).every((ch) => [...ch].length === 1) ? head.slice(1).join('') : null);
@@ -499,11 +538,18 @@ export function serializeDp(el: ElementOf<'dp'>): string {
   return `[${el.cells.map((row) => `[${row.map((v) => (v ? literal(v) : '""')).join(',')}]`).join(',')}]`;
 }
 
-export type TextElement = ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'> | ElementOf<'table'> | ElementOf<'recursion'> | ElementOf<'dp'>;
+export type TextElement =
+  | ElementOf<'list'>
+  | ElementOf<'tree'>
+  | ElementOf<'graph'>
+  | ElementOf<'table'>
+  | ElementOf<'recursion'>
+  | ElementOf<'dp'>
+  | ElementOf<'intervals'>;
 
 /** 可以用文字建立的元件 */
 export function acceptsText(el: { type: string } | undefined): el is TextElement {
-  return ['list', 'tree', 'graph', 'table', 'recursion', 'dp'].includes(el?.type ?? '');
+  return ['list', 'tree', 'graph', 'table', 'recursion', 'dp', 'intervals'].includes(el?.type ?? '');
 }
 
 /** 目前內容的文字版，放進「用文字建立」的輸入框 */
@@ -515,6 +561,8 @@ export function structureText(el: TextElement): string {
       return serializeRecursion(el);
     case 'dp':
       return serializeDp(el);
+    case 'intervals':
+      return serializeIntervals(el);
     case 'tree':
       return serializeTree(el);
     case 'table':
@@ -536,6 +584,13 @@ export function applyStructureText(doc: BoardDoc, id: string, text: string): { d
     if ('error' in parsed) return parsed;
     const next = updateElement<ElementOf<'recursion'>>(doc, id, { nodes: parsed.nodes });
     return { doc: detachMissing(doc, next, id, (index) => index < parsed.nodes.length) };
+  }
+  if (el?.type === 'intervals') {
+    const parsed = parseIntervals(text);
+    if ('error' in parsed) return parsed;
+    // 掃描線開著的話放回第一個起點
+    const sweep = el.sweep === undefined ? undefined : Math.min(...parsed.items.map((item) => item.a));
+    return { doc: updateElement<ElementOf<'intervals'>>(doc, id, { items: parsed.items, sweep }) };
   }
   // DP 表讀的是題目的整串輸入（text1 = ..., text2 = ...），名稱不拿來改表格的名字
   if (el?.type === 'dp') {

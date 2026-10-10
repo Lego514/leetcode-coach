@@ -632,3 +632,37 @@ test('fills a DP table cell by cell with arrows, and builds one from the problem
   await table.locator('[data-cell="6"]').click();
   await expect(table.locator('.board-dp-arrow')).toHaveCount(3);
 });
+
+test('lines up intervals, merges after sorting, and sweeps to count the meeting rooms', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Intervals', exact: true }).click();
+  const line = page.getByRole('group', { name: /^Intervals intervals/ });
+  await expect(line).toHaveAccessibleName('Intervals intervals: [1,3], [2,6], [8,10], [15,18]');
+
+  // 點第一列，和下一列合併
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await line.locator('[data-cell="0"]').click();
+  await expect(selbar).toContainText('[1,3]');
+  await selbar.getByRole('button', { name: 'Merge with next' }).click();
+  await expect(line).toHaveAccessibleName('Intervals intervals: [1,6], [8,10], [15,18]');
+  await expect(selbar.getByRole('button', { name: 'Merge with next' })).toBeDisabled();
+
+  // 換成會議室的例子，排序後用掃描線數同時進行的會議
+  await line.locator('.board-label').click();
+  await selbar.getByRole('button', { name: 'Build from text' }).click();
+  await selbar.getByRole('textbox', { name: 'Build from text' }).fill('intervals = [[0,30],[15,20],[5,10]]');
+  await selbar.getByRole('button', { name: 'Apply' }).click();
+  await selbar.getByRole('button', { name: 'Sort by start' }).click();
+  await expect(line).toHaveAccessibleName('Intervals intervals: [0,30], [5,10], [15,20]');
+  await selbar.getByRole('button', { name: 'Sweep line' }).click();
+  await expect(line).toHaveAccessibleName(/^Intervals intervals \(t = 0: 1 active\)/);
+  await selbar.getByRole('button', { name: 'Next point' }).click();
+  await expect(line).toHaveAccessibleName(/\(t = 5: 2 active\)/);
+  await page.keyboard.press('ArrowRight');
+  await expect(line).toHaveAccessibleName(/\(t = 10: 1 active\)/);
+
+  // 標成移除的不算進行中
+  await line.locator('[data-cell="0"]').click();
+  await selbar.getByRole('button', { name: 'Mark removed' }).click();
+  await expect(line).toHaveAccessibleName('Intervals intervals (t = 10: 0 active): [0,30] ✕, [5,10], [15,20]');
+});
