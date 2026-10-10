@@ -19,7 +19,7 @@ import {
   summarizePatterns,
   weeklyCounts,
 } from '../lib/stats';
-import { useAttempts, useCardReviews, useCatalog, useMocks, useProgressMap, useSettings, useToday } from '../store/queries';
+import { useAttempts, useCardReviews, useCatalog, useMocks, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
 
 /** 熱度圖顯示一整年（含本週共 53 週） */
 const HEATMAP_WEEKS = 53;
@@ -33,6 +33,7 @@ export function ProgressPage() {
   const attempts = useAttempts();
   const mocks = useMocks();
   const cardReviews = useCardReviews();
+  const rehearsals = useRehearsals();
   const [listChoice, setListChoice] = useState<ListFilter | null>(null);
   const list = listChoice ?? settings.activeList;
 
@@ -47,7 +48,7 @@ export function ProgressPage() {
   const started = problems.filter((p) => progress.has(p.id)).length;
   const mastered = problems.filter((p) => stageOf(progress.get(p.id)) === 'mastered').length;
   // 做過微複習的日子也算連續天數
-  const streak = practiceStreak(streakDays(allAttempts, cardReviews ?? []), day);
+  const streak = practiceStreak(streakDays(allAttempts, cardReviews ?? [], rehearsals ?? []), day);
   // 熱度圖的範圍：練題目或做微複習都算有練習的一天，和連續天數的算法一樣
   const yearStart = addDays(startOfWeek(day), -7 * (HEATMAP_WEEKS - 1));
   const inYear = (d: string) => d >= yearStart && d <= day;

@@ -1,11 +1,12 @@
 import { COLLECTIONS } from '../../shared/constants';
-import { db, type AttemptRecord, type BoardRecord, type CardReviewRecord, type MockRecord, type StoryRecord } from './db';
+import { db, type AttemptRecord, type BoardRecord, type CardReviewRecord, type MockRecord, type RehearsalRecord, type StoryRecord } from './db';
 import { keyOf, rebuildAllProgress, track, type LocalRecord } from './tracking';
 
 const APP_ID = 'leetcode-coach';
 const BACKUP_VERSION = 1;
 
 type MockWithoutAudio = Omit<MockRecord, 'audio'>;
+type RehearsalWithoutAudio = Omit<RehearsalRecord, 'audio'>;
 
 export interface BackupFile {
   app: typeof APP_ID;
@@ -26,6 +27,7 @@ export interface BackupFile {
     boards?: unknown[];
     /** 加入行為面試之前的備份沒有這一項 */
     stories?: unknown[];
+    rehearsals?: RehearsalWithoutAudio[];
   };
 }
 
@@ -55,6 +57,11 @@ export async function exportBackup(): Promise<BackupFile> {
         cardReviews: await db.cardReviews.toArray(),
         boards: await db.boards.toArray(),
         stories: await db.stories.toArray(),
+        rehearsals: (await db.rehearsals.toArray()).map((r) => {
+          const copy: RehearsalRecord = { ...r };
+          delete copy.audio;
+          return copy;
+        }),
       },
     };
   });
@@ -81,7 +88,7 @@ export function parseBackup(text: string): BackupFile {
   if (file.version !== BACKUP_VERSION) throw new BackupError('unsupported_version');
   const data = file.data as Record<string, unknown> | undefined;
   if (!data || TABLE_KEYS.some((key) => !Array.isArray(data[key]))) throw new BackupError('incomplete');
-  for (const optional of ['cardReviews', 'boards', 'stories']) {
+  for (const optional of ['cardReviews', 'boards', 'stories', 'rehearsals']) {
     if (data[optional] !== undefined && !Array.isArray(data[optional])) throw new BackupError('incomplete');
   }
   return file as BackupFile;
@@ -116,6 +123,7 @@ export async function restoreBackup(file: BackupFile): Promise<void> {
     await db.cardReviews.bulkPut(withUid<CardReviewRecord>(data.cardReviews ?? []));
     await db.boards.bulkPut((data.boards ?? []) as BoardRecord[]);
     await db.stories.bulkPut((data.stories ?? []) as StoryRecord[]);
+    await db.rehearsals.bulkPut(withUid<RehearsalRecord>(data.rehearsals ?? []));
     await rebuildAllProgress(db);
 
     // 匯入的資料視為最新的修改，登入時會覆蓋雲端

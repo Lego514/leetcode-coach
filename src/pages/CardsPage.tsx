@@ -33,7 +33,7 @@ import { practiceAttempts, practiceStreak, streakDays } from '../lib/stats';
 import { useRestTimer, type RestTimer } from '../lib/useRestTimer';
 import { recordCardReview } from '../store/actions';
 import type { AttemptRecord, CardReviewRecord, ProgressRecord } from '../store/db';
-import { useAttempts, useCardReviews, useCatalog, useProgressMap, useToday } from '../store/queries';
+import { useAttempts, useCardReviews, useCatalog, useProgressMap, useRehearsals, useToday } from '../store/queries';
 
 const TIPS = new Map(PYTHON_TIPS.map((tip) => [tip.id, tip]));
 const TIP_IDS = PYTHON_TIPS.map((tip) => tip.id);
@@ -103,6 +103,7 @@ interface QueueItem {
 
 /** 一回合：開始時發好牌，之後資料變動也不重發 */
 function Round({ catalog, progress, reviews, attempts, scope, settings, timerButton, onAgain }: RoundProps) {
+  const rehearsals = useRehearsals();
   const { t, locale } = useI18n();
   const day = useToday();
   const toast = useToast();
@@ -249,7 +250,7 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
         forgotExplain={cards.some((c, i) => firstTry[i] === 'again' && c.options.length === 0)}
         problems={catalog.byId}
         todayCount={reviews.filter((r) => r.day === day).length}
-        streak={practiceStreak(streakDays(practiceAttempts(attempts), reviews), day)}
+        streak={practiceStreak(streakDays(practiceAttempts(attempts), reviews, rehearsals ?? []), day)}
         onAgain={onAgain}
       />
     );

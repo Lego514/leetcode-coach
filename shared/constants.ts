@@ -60,6 +60,10 @@ export const BEHAVIORAL_THEMES = [
 ] as const;
 export type BehavioralTheme = (typeof BEHAVIORAL_THEMES)[number];
 
+/** 行為面試回答的五個評分重點：STAR 四段，再加上講的是「我」做了什麼 */
+export const BEHAVIORAL_POINTS = ['situation', 'task', 'action', 'result', 'ownership'] as const;
+export type BehavioralPoint = (typeof BEHAVIORAL_POINTS)[number];
+
 /** 微複習卡片的作答結果：答對或記得、有點模糊、答錯或忘了 */
 export const CARD_RESULTS = ['good', 'fuzzy', 'again'] as const;
 export type CardResult = (typeof CARD_RESULTS)[number];
@@ -76,6 +80,7 @@ export const COLLECTIONS = [
   'cardReviews',
   'boards',
   'stories',
+  'rehearsals',
 ] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 

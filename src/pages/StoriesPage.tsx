@@ -8,12 +8,14 @@ import { useI18n } from '../i18n';
 import { needsMoreAction, storiesByTheme, storyLength } from '../lib/stories';
 import { createStory, deleteStory, saveStory } from '../store/actions';
 import type { StoryRecord } from '../store/db';
-import { useStories, useStory } from '../store/queries';
+import { formatDuration } from '../lib/dates';
+import { useRehearsals, useStories, useStory } from '../store/queries';
 
 /** 行為面試：每個主題有沒有故事、我的故事、常見題目 */
 export function StoriesPage() {
-  const { t, locale } = useI18n();
+  const { t, locale, fmt } = useI18n();
   const stories = useStories();
+  const rehearsals = useRehearsals();
   const navigate = useNavigate();
   const [theme, setTheme] = useState<BehavioralTheme | null>(null);
   const byTheme = useMemo(() => storiesByTheme(stories ?? []), [stories]);
@@ -28,6 +30,38 @@ export function StoriesPage() {
     <div className="page">
       <PageHead title={s.title} lede={s.lede} />
       <div className="stack">
+        <Sheet
+          title={t.rehearse.practiceTitle}
+          id="practice"
+          note={t.rehearse.practiceNote}
+          actions={
+            <Link className="btn btn-primary btn-small" to="/stories/practice">
+              {t.rehearse.practiceButton}
+            </Link>
+          }
+        >
+          {rehearsals && rehearsals.length > 0 && (
+            <ul className="story-list">
+              {rehearsals.slice(0, 5).map((r) => {
+                const question = BEHAVIORAL_QUESTIONS.find((q) => q.id === r.questionId);
+                const story = stories?.find((st) => st.id === r.storyId);
+                const total = r.feedback?.points.reduce((sum, p) => sum + p.score, 0);
+                return (
+                  <li key={r.uid} className="story-row rehearsal-row">
+                    <span className="story-title" lang="en">
+                      {question?.en ?? r.questionId}
+                    </span>
+                    <span className="sheet-note">
+                      {t.rehearse.historyLine(fmt.day(r.day), formatDuration(r.usedSec), story ? story.title || s.untitled : t.rehearse.noStory)}
+                      {total !== undefined && ` · ${t.mock.aiTotal(total, r.feedback!.points.length * 2)}`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Sheet>
+
         <Sheet title={s.coverageTitle} id="coverage" note={s.coverageNote(covered, BEHAVIORAL_THEMES.length)}>
           <ul className="sheet-body theme-grid">
             {BEHAVIORAL_THEMES.map((th) => {

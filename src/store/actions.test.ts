@@ -4,6 +4,7 @@ import {
   createStory,
   deleteCustomProblem,
   deleteMock,
+  deleteRehearsal,
   deleteStory,
   markSolvedBefore,
   parseSlug,
@@ -12,6 +13,7 @@ import {
   resetProgress,
   saveMock,
   saveNote,
+  saveRehearsal,
   saveStory,
   setCompanies,
   updateSettings,
@@ -21,6 +23,7 @@ import { BackupError, clearAllData, exportBackup, parseBackup, restoreBackup } f
 import { db } from './db';
 import { distinctCompanies } from './queries';
 import { wipeLocalData } from './sync';
+import { toSyncData } from './tracking';
 
 beforeEach(async () => {
   await wipeLocalData(db);
@@ -323,5 +326,28 @@ describe('behavioral stories', () => {
     // 刪掉的故事不能再存
     await saveStory(id, { title: 'gone' });
     expect(await db.stories.get(id)).toBeUndefined();
+  });
+});
+
+describe('behavioral practice', () => {
+  it('saves a practice with its audio kept on this device, and syncs the rest', async () => {
+    const uid = await saveRehearsal({
+      questionId: 'failure-failed',
+      day: '2026-10-10',
+      startedAt: '2026-10-10T09:00:00.000Z',
+      limitSec: 150,
+      usedSec: 104,
+      covered: ['situation', 'action'],
+      transcript: 'I broke the build once.',
+      audio: new Blob(['x']),
+    });
+    expect(await outbox()).toEqual(['rehearsals:put']);
+    expect(toSyncData('rehearsals', (await db.rehearsals.where('uid').equals(uid).first())!)).not.toHaveProperty('audio');
+    // 備份裡沒有錄音
+    const file = parseBackup(JSON.stringify(await exportBackup()));
+    expect(file.data.rehearsals?.[0]).not.toHaveProperty('audio');
+    await deleteRehearsal(uid);
+    expect(await db.rehearsals.count()).toBe(0);
+    expect(await outbox()).toEqual(['rehearsals:del']);
   });
 });

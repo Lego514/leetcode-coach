@@ -11,6 +11,7 @@ import type {
   MockRecord,
   NoteRecord,
   PatternNoteRecord,
+  RehearsalRecord,
   SettingsRecord,
   StoryRecord,
   SyncStateRecord,
@@ -28,7 +29,8 @@ export type LocalRecord =
   | SettingsRecord
   | CardReviewRecord
   | BoardRecord
-  | StoryRecord;
+  | StoryRecord
+  | RehearsalRecord;
 
 export function outboxId(collection: Collection, key: string): string {
   return `${collection}:${key}`;
@@ -47,7 +49,8 @@ export function keyOf(collection: Collection, record: LocalRecord): string {
     case 'attempts':
     case 'mocks':
     case 'cardReviews':
-      return (record as AttemptRecord | MockRecord | CardReviewRecord).uid;
+    case 'rehearsals':
+      return (record as AttemptRecord | MockRecord | CardReviewRecord | RehearsalRecord).uid;
     case 'notes':
     case 'meta':
       return String((record as NoteRecord | MetaRecord).problemId);
@@ -77,6 +80,8 @@ export function toSyncData(collection: Collection, record: LocalRecord): unknown
       return omit(record as AttemptRecord, 'id', 'uid');
     case 'mocks':
       return omit(record as MockRecord, 'id', 'uid', 'audio');
+    case 'rehearsals':
+      return omit(record as RehearsalRecord, 'id', 'uid', 'audio');
     case 'notes':
     case 'meta':
       return omit(record as NoteRecord | MetaRecord, 'problemId');
@@ -101,6 +106,8 @@ export async function findLocal(database: CoachDB, collection: Collection, key: 
       return database.attempts.where('uid').equals(key).first();
     case 'mocks':
       return database.mocks.where('uid').equals(key).first();
+    case 'rehearsals':
+      return database.rehearsals.where('uid').equals(key).first();
     case 'notes':
       return database.notes.get(Number(key));
     case 'meta':
@@ -198,6 +205,20 @@ export async function applyRemote(
       if (deleted) await database.stories.delete(key);
       else await database.stories.put({ ...(data as Omit<StoryRecord, 'id'>), id: key });
       return undefined;
+    case 'rehearsals': {
+      const local = existing as RehearsalRecord | undefined;
+      if (deleted) {
+        if (local?.id !== undefined) await database.rehearsals.delete(local.id);
+        return undefined;
+      }
+      await database.rehearsals.put({
+        ...(data as Omit<RehearsalRecord, 'id' | 'uid' | 'audio'>),
+        uid: key,
+        ...(local?.id !== undefined ? { id: local.id } : {}),
+        ...(local?.audio ? { audio: local.audio } : {}),
+      });
+      return undefined;
+    }
   }
 }
 
@@ -211,7 +232,8 @@ export function knownUpdatedAt(collection: Collection, record: LocalRecord): num
     case 'attempts':
       return parse((record as AttemptRecord).at);
     case 'mocks':
-      return parse((record as MockRecord).startedAt);
+    case 'rehearsals':
+      return parse((record as MockRecord | RehearsalRecord).startedAt);
     case 'cardReviews':
       return parse((record as CardReviewRecord).at);
     case 'notes':

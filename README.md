@@ -109,6 +109,11 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 - **Behavioral interviews**: a STAR story bank for the non-coding round.
   - Write each story as Situation, Task, Action, and Result, and tag what it can answer: conflict, failure, leadership, deadlines, ambiguity, influence, learning, proudest work, feedback, or teamwork. Stories autosave and sync like notes.
   - The editor offers English opening phrases for each part (click one to add it), estimates how long the story takes to say at about 140 words a minute (1½–2½ minutes is the target), and points out when Action, what you did, is less than 40% of it.
+  - **Practice out loud**: draw a question (any theme or one theme), pick the story to answer with (stories for that theme come first), glance at your notes, then answer in English against a 1½–2½ minute target with optional audio recording and a live transcript.
+    - Afterwards you see the transcript with word count, pace, filler words, and how often you said "I" versus "we".
+    - Tick a STAR self-check and rate how it felt.
+    - Optional **AI feedback (Claude)** scores Situation, Task, Action, Result, and your own part, quotes what to fix, and rewrites the answer in about two minutes of spoken English while keeping your facts, using placeholders instead of invented numbers. It shares the daily AI limit with explanation feedback.
+    - Practices sync (audio stays on the device) and count toward the streak.
   - A coverage grid shows which themes still have no story. Thirty common questions are grouped by theme, each with what interviewers look for (and a Chinese translation in the Chinese interface), links to your stories for that theme, or a button to start one.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
@@ -295,7 +300,7 @@ Notes:
 
 **複習排程（FSRS）**：每一題有「穩定度」（隔幾天之後，記得的機率會掉到 90%）和 1 到 10 的難度。自己解出算 Good、看提示算 Hard、看解答或看完還不懂算 Again；晚了才複習但還記得，下次的間隔會拉得更長。題目會在你大概還記得「目標記憶率」那麼多的時候再出現（「設定」可以選 80%–95%，預設 90%），改了之後每一題都會重新排程。複習頁把最可能已經忘了的題目排在最前面，題目頁顯示現在還記得的機率、大約記得住幾天和難度。排程是照 FSRS-6 的公式自己寫的，測試裡拿官方的 `ts-fsrs` 在幾百組隨機的複習紀錄上逐一比對。
 
-**行為面試**：用 STAR（情境、任務、行動、結果）寫自己的故事，標上它能回答哪些主題（衝突、失敗、領導、期限、不確定、說服、學習、最自豪、回饋、團隊合作），會自動儲存並同步。每一段有英文開頭句可以點來用，也會估計講完要多久（每分鐘約 140 字，目標 1.5–2.5 分鐘），行動那段不到四成時會提醒。覆蓋率一眼看出哪些主題還沒有故事；30 題常見題目依主題分類，附中文翻譯和面試官想看什麼，旁邊列出可以用的故事，或直接幫這題寫一個。
+**行為面試**：用 STAR（情境、任務、行動、結果）寫自己的故事，標上它能回答哪些主題（衝突、失敗、領導、期限、不確定、說服、學習、最自豪、回饋、團隊合作），會自動儲存並同步。每一段有英文開頭句可以點來用，也會估計講完要多久（每分鐘約 140 字，目標 1.5–2.5 分鐘），行動那段不到四成時會提醒。「開口練習」可以抽一題（不限主題或指定主題），選一個故事回答（這個主題的故事排前面），先看一下筆記，再用英文計時回答，目標 1.5–2.5 分鐘，可以錄音、顯示即時逐字稿。講完看逐字稿的字數、語速、贅字，以及講了幾次「I」、幾次「we」，勾 STAR 自我檢查、選講起來的感覺；也可以拿 AI 回饋：Claude 依 STAR 和「你自己的貢獻」打分數，引用要修改的句子，並保留你的事實，改寫成大約兩分鐘的英文回答（不會亂編數字），跟講解回饋共用每天的次數。練習紀錄會同步（錄音只留在本機），也算進連續天數。覆蓋率一眼看出哪些主題還沒有故事；30 題常見題目依主題分類，附中文翻譯和面試官想看什麼，旁邊列出可以用的故事，或直接幫這題寫一個。
 
 **解題步驟**：練習頁、模擬面試和題目頁共用模擬面試的七個步驟（釐清題意、舉例與邊界、暴力解、優化、寫程式、驗證、複雜度），每一步寫一句自己的想法。舉例拆成「例子」和「邊界情況」，優化拆成三個問題：笨在哪、哪裡重複算、要留下什麼。寫的內容存在這題的筆記裡、會同步，複習時看得到當時怎麼想的；模擬面試時會出現在每一步的檢查清單下面。寫完可以按「照步驟寫英文講解稿」，講解稿的五句各列出相關步驟寫過的內容，自己逐句講成英文。提示面板可以先選「卡在哪一步」，看這一步怎麼想和自己上一步寫的內容，不算用了提示；卡在優化或寫程式時可以直接打開關鍵觀察或模板。
 

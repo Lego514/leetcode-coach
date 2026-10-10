@@ -14,6 +14,7 @@ import {
   type NoteRecord,
   type PatternNoteRecord,
   type ProgressRecord,
+  type RehearsalRecord,
   type SettingsRecord,
   type StoryRecord,
 } from './db';
@@ -26,6 +27,11 @@ const EMPTY_PROGRESS: ReadonlyMap<number, ProgressRecord> = new Map();
 export function useSettings(): SettingsRecord {
   const settings = useLiveQuery(() => db.settings.get('app'), []);
   return settings ?? DEFAULT_SETTINGS;
+}
+
+/** 行為面試的練習紀錄，最近的在前面 */
+export function useRehearsals(): RehearsalRecord[] | undefined {
+  return useLiveQuery(async () => (await db.rehearsals.toArray()).sort((a, b) => b.startedAt.localeCompare(a.startedAt)), []);
 }
 
 /** 全部的故事，最近改過的在前面 */

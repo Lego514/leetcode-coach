@@ -4450,6 +4450,48 @@ textarea.board-text-input {
   color: var(--danger);
 }
 
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.rehearse-question p {
+  margin: 0;
+}
+
+.rehearse-big-question {
+  margin: 12px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.story-notes summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.story-notes .facts {
+  margin-top: 10px;
+}
+
+/* 故事是一般的句子，數字不用對齊，標點前面才不會多一個空隙 */
+.story-notes .facts dd {
+  font-variant-numeric: normal;
+}
+
+.rehearsal-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+li[data-warn] {
+  color: var(--danger);
+}
+
 /* ---------- 登入入口 ---------- */
 
 .nav-signin {

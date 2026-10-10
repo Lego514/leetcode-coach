@@ -42,8 +42,12 @@ export function practiceStreak(days: Iterable<Day>, today: Day): number {
 }
 
 /** 算連續天數用的日子：有練習題目，或做過微複習 */
-export function streakDays(practiced: readonly { day: Day }[], cardReviews: readonly { day: Day }[]): Day[] {
-  return [...practiced, ...cardReviews].map((item) => item.day);
+export function streakDays(
+  practiced: readonly { day: Day }[],
+  cardReviews: readonly { day: Day }[],
+  rehearsals: readonly { day: Day }[] = [],
+): Day[] {
+  return [...practiced, ...cardReviews, ...rehearsals].map((item) => item.day);
 }
 
 /** 最長連續幾天；日子不用排序，重複的會合併 */

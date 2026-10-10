@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BEHAVIORAL_QUESTIONS, BEHAVIORAL_THEMES, STAR_PARTS, STAR_PHRASES } from '../data/behavioral';
-import { coveredThemes, needsMoreAction, storiesByTheme, storyLength } from './stories';
+import { coveredThemes, drawQuestion, needsMoreAction, pronounCounts, storiesByTheme, storyLength } from './stories';
 
 const words = (n: number) => Array.from({ length: n }, () => 'word').join(' ');
 
@@ -44,5 +44,20 @@ describe('story length', () => {
     expect(needsMoreAction(storyLength(story(30, 20, 120, 40)))).toBe(false);
     // 太短的還不用提醒
     expect(needsMoreAction(storyLength(story(20, 10, 5, 5)))).toBe(false);
+  });
+});
+
+describe('practicing out loud', () => {
+  it('counts how often you say “I” versus “we”', () => {
+    expect(pronounCounts('We had a problem, so I traced it. I’m proud of my fix, and our team adopted it.')).toEqual({ i: 3, we: 2 });
+    expect(pronounCounts('')).toEqual({ i: 0, we: 0 });
+  });
+
+  it('draws a question other than the last one', () => {
+    const questions = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    expect(drawQuestion(questions, 'a', () => 0)?.id).toBe('b');
+    expect(drawQuestion(questions, 'c', () => 0.99)?.id).toBe('b');
+    expect(drawQuestion([{ id: 'a' }], 'a')?.id).toBe('a');
+    expect(drawQuestion([])).toBeUndefined();
   });
 });
