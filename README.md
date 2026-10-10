@@ -39,7 +39,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Practice everything, only problems you've done, only clues, only Python tips, or one pattern.
   - A **rest timer** (60–180 seconds) counts down between sets. When it ends it beeps, vibrates where supported, and shows an alert, and it asks the browser to keep the screen on while it runs.
   - Answers save one at a time, sync like attempts, and count toward the streak.
-- **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
+- **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
   - **Range frames** box the cells between two pointers on the same array and follow them as they move, for sliding windows: select the two pointers and choose "Frame between pointers".
   - **Templates** set up a common scene in one click, with the pointers already named: two pointers, sliding window, reversing a linked list, tree DFS, and grid BFS. The whole group is placed in free space and selected so it can be dragged at once.
   - The palette is grouped by how often problems use each element, with line icons. Text switches to a heading from the selection bar.
@@ -58,7 +58,11 @@ You still solve problems on LeetCode. This app handles the parts around solving:
     - Edges can carry weights and be marked as visited.
     - Pick a node to connect it to another, color it, add a pointer, or delete it. Pick an edge to mark it, weigh it, or delete it.
     - Up to 20 nodes and 60 edges.
-  - **Build from text**: arrays, stacks, queues, sets, dicts, 2D arrays, linked lists, trees, and graphs can all be filled by pasting a problem's example instead of typing cell by cell:
+  - **Heaps** draw the same values as a tree and as an array with indices, or either one alone.
+    - Push and Pop sift values into place by the heap rules; "Record each step for playback" saves every swap as a step, captioned like `swap 0 ↔ 2`.
+    - Switch between a min-heap and a max-heap. Nodes that break the order turn red, and Heapify fixes them all at once.
+    - Values compare as numbers when they are numbers. Up to 31 values (five levels).
+  - **Build from text**: arrays, stacks, queues, heaps, sets, dicts, 2D arrays, linked lists, trees, and graphs can all be filled by pasting a problem's example instead of typing cell by cell:
     - `nums = [2,7,11,15], target = 9` takes the first value and renames the element `nums`
     - `"abcabcbb"` splits into characters
     - `{'a': 1}` or JSON for dicts, and `[[1,0],[0,1]]` for grids
@@ -75,7 +79,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Mouse, trackpad, keyboard, and touch all work. Pan with the scroll wheel, Space + drag, the hand tool, or two fingers; zoom with Ctrl + scroll or a pinch.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - On the practice page the board opens on top, so the timer keeps running.
-  - No whiteboard library is used: the editor is about 90 KB (27 KB gzipped) and loads the first time a board opens.
+  - No whiteboard library is used: the editor is about 98 KB (29 KB gzipped) and loads the first time a board opens.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
@@ -270,14 +274,15 @@ Notes:
 - 做微複習的日子也算進連續天數。
 
 **白板**是自己從頭寫的，沒有用繪圖套件：
-- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖節點、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
+- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
 - 指標會吸附在陣列格子上，用方向鍵移動，依名字自動上色。
 - **鏈結串列**是一整條：點兩個節點之間的箭頭可以在往後、反過來、斷開之間切換，反轉串列可以一段一段翻；尾巴可以接回任一個節點（有環）；prev、curr、next 指標吸附在節點下面。
 - **二元樹**自動依中序排版（二元搜尋樹由左到右剛好排好序）：點一個節點可以從虛線位置加左右子節點、上底色、刪掉子樹；指標放在節點上方，用方向鍵走到子節點或父節點；最多 6 層。
 - **範圍框**：選取同一個陣列上的兩個指標，按「框住兩個指標之間」，框會跟著指標移動，適合滑動視窗。
 - 元件庫最上面有**模板**，點一下就擺好一整套常見的場景，指標名字也取好：雙指標、滑動視窗、反轉鏈結串列、樹的 DFS、網格 BFS。整組會一起選取，可以直接拖動。
 - **圖**：節點自動排成一圈，有向圖有箭頭，兩個方向都有的邊會彎開；邊可以寫權重、標記走過。點一個節點可以連到別的節點、上色、加指標或刪除；最多 20 個節點、60 條邊。
-- **用文字建立**：陣列、堆疊、佇列、集合、字典、二維陣列、鏈結串列、樹和圖都可以直接貼題目的範例，不用一格一格輸入。例如 `nums = [2,7,11,15], target = 9`（取第一個值，名稱也改成 nums）、`"abcabcbb"`（拆成一個一個字元）、`{'a': 1}`、`[[1,0],[0,1]]`、`1->2->3`、`[3,9,20,null,null,15,7]`、`n = 5, edges = [[0,1],[0,2]]`（可以有權重）或鄰接串列。
+- **堆積**：同一份資料同時畫成樹和陣列（標上索引），也可以只看其中一個。Push、Pop 會照堆積的規則往上或往下換；勾「每一步記成逐步播放」，每次交換都會存成一步，可以播放。可以切換最小堆和最大堆，順序不對的節點會變紅，按 Heapify 一次修好；最多 31 個值。
+- **用文字建立**：陣列、堆疊、佇列、堆積、集合、字典、二維陣列、鏈結串列、樹和圖都可以直接貼題目的範例，不用一格一格輸入。例如 `nums = [2,7,11,15], target = 9`（取第一個值，名稱也改成 nums）、`"abcabcbb"`（拆成一個一個字元）、`{'a': 1}`、`[[1,0],[0,1]]`、`1->2->3`、`[3,9,20,null,null,15,7]`、`n = 5, edges = [[0,1],[0,2]]`（可以有權重）或鄰接串列。
 - 點一格可以上底色、在那格加指標、插入或刪除格子。
 - 還有矩形框、圓形框、箭頭連線、直線（無向圖的邊）、畫筆、橡皮擦、復原、清空。
 - 在空白處拖曳可以框選，框住的東西可以一起移動、複製、刪除或換色。

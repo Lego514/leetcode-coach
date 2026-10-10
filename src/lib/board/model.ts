@@ -66,9 +66,18 @@ export function isPlaced(el: BoardElement): el is Placed {
   return el.type !== 'arrow' && el.type !== 'stroke' && el.type !== 'range';
 }
 
-/** 陣列和佇列有索引，格子下面標 0、1、2… */
+/** 陣列、佇列和堆積有索引，格子下面標 0、1、2… */
 export function isIndexed(el: BoardElement): el is ElementOf<'list'> {
-  return el.type === 'list' && (el.variant === 'array' || el.variant === 'queue');
+  return el.type === 'list' && (el.variant === 'array' || el.variant === 'queue' || el.variant === 'heap');
+}
+
+export function isHeap(el: BoardElement | undefined): el is ElementOf<'list'> {
+  return el?.type === 'list' && el.variant === 'heap';
+}
+
+/** 堆積只畫樹時，指標改放在樹的節點上 */
+function heapTreeOnly(el: BoardElement | undefined): boolean {
+  return isHeap(el) && el.view === 'tree';
 }
 
 export function isLinked(el: BoardElement): el is ElementOf<'list'> {
@@ -80,9 +89,10 @@ export function holdsPointers(el: BoardElement | undefined): el is ElementOf<'li
   return !!el && (isIndexed(el) || isLinked(el) || el.type === 'tree' || el.type === 'graph');
 }
 
-/** 二元樹和圖：每個節點的中心（相對於元件左上角） */
-export function nodeCenters(el: ElementOf<'tree'> | ElementOf<'graph'>): Map<number, Point> {
+/** 二元樹、圖和堆積的樹：每個節點的中心（相對於元件左上角） */
+export function nodeCenters(el: ElementOf<'tree'> | ElementOf<'graph'> | ElementOf<'list'>): Map<number, Point> {
   if (el.type === 'tree') return treeLayout(el).centers;
+  if (el.type === 'list') return heapLayout(el).centers;
   return new Map(graphLayout(el).centers.map((c, i) => [i, c]));
 }
 
@@ -103,6 +113,10 @@ export function sizeOf(el: Placed, measured?: { w: number; h: number }): { w: nu
     case 'list': {
       const n = Math.max(1, el.items.length);
       if (el.variant === 'stack') return { w: CELL, h: LABEL_H + n * CELL };
+      if (el.variant === 'heap') {
+        const { w, h } = heapLayout(el);
+        return { w, h };
+      }
       if (el.variant === 'linked') {
         // 有環時尾巴的回頭箭頭畫在下面；沒有環時尾巴接一個 null
         const tail = el.cycle === undefined ? LINK_GAP + NULL_W : 0;
@@ -151,10 +165,11 @@ export function findElement(doc: BoardDoc, id: string): BoardElement | undefined
 
 // ---------- 指標 ----------
 
-/** 陣列或鏈結串列第 index 格的位置 */
+/** 陣列或鏈結串列第 index 格的位置；堆積的陣列畫在樹下面 */
 export function cellRect(list: ElementOf<'list'>, index: number): Rect {
   const step = list.variant === 'linked' ? CELL + LINK_GAP : CELL;
-  return { x: list.x + index * step, y: list.y + LABEL_H, w: CELL, h: CELL };
+  const top = list.variant === 'heap' ? heapLayout(list).arrayTop : LABEL_H;
+  return { x: list.x + index * step, y: list.y + top, w: CELL, h: CELL };
 }
 
 /** 格子下方從哪裡開始放指標：陣列空出索引那一列，有環的鏈結串列空出回頭箭頭 */
@@ -166,6 +181,7 @@ function belowCells(list: ElementOf<'list'>): number {
 /** 指標吸附在二元樹或圖上時放在節點上方、箭頭朝下，免得蓋住連線 */
 export function pointsDown(doc: BoardDoc, pointer: ElementOf<'pointer'>): boolean {
   const target = pointer.attach && findElement(doc, pointer.attach.id);
+  if (heapTreeOnly(target)) return true;
   if (target?.type === 'tree') return hasTreeNode(target, pointer.attach!.index);
   return target?.type === 'graph' && pointer.attach!.index < target.nodes.length;
 }
@@ -184,7 +200,7 @@ export function pointerPosition(doc: BoardDoc, pointer: ElementOf<'pointer'>): P
     (el): el is ElementOf<'pointer'> => el.type === 'pointer' && el.attach?.id === target.id && slotOf(target, el.attach.index) === slot,
   );
   const stack = Math.max(0, sameCell.findIndex((el) => el.id === pointer.id));
-  if (target.type !== 'list') {
+  if (target.type !== 'list' || heapTreeOnly(target)) {
     const center = nodeCenters(target).get(slot);
     if (!center) return { x: pointer.x, y: pointer.y };
     return { x: target.x + center.x - POINTER_W / 2, y: target.y + center.y - TREE_D / 2 - POINTER_H - 2 - stack * POINTER_H };
@@ -203,7 +219,7 @@ export function snapTarget(doc: BoardDoc, at: Point): { id: string; index: numbe
     if (distance <= SNAP_DISTANCE && (!best || distance < best.distance)) best = { id, index, distance };
   };
   for (const el of doc.elements) {
-    if (el.type === 'tree' || el.type === 'graph') {
+    if (el.type === 'tree' || el.type === 'graph' || (el.type === 'list' && el.variant === 'heap' && el.view === 'tree')) {
       for (const [index, c] of nodeCenters(el)) consider(el.id, index, el.x + c.x, el.y + c.y);
     } else if (isIndexed(el) || isLinked(el)) {
       for (let index = 0; index < el.items.length; index += 1) {
@@ -269,6 +285,7 @@ export type PaletteKind =
   | 'binaryTree'
   | 'linkedList'
   | 'graph'
+  | 'heap'
   | 'treeNode'
   | 'listNode'
   | 'graphNode'
@@ -282,7 +299,7 @@ export type PaletteGroup = 'linear' | 'nodes' | 'lookup' | 'notes';
  */
 export const PALETTE: { group: PaletteGroup; kinds: PaletteKind[] }[] = [
   { group: 'linear', kinds: ['array', 'pointer', 'stack', 'queue'] },
-  { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graph'] },
+  { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graph', 'heap'] },
   { group: 'lookup', kinds: ['dict', 'set', 'grid', 'table'] },
   { group: 'notes', kinds: ['text', 'code', 'sticky', 'var'] },
 ];
@@ -328,6 +345,8 @@ export function createElement(kind: PaletteKind, at: Point, id: string, texts: D
       return { type: 'var', ...placed, name: 'ans', value: '0' };
     case 'linkedList':
       return { type: 'list', ...placed, variant: 'linked', label: 'head', items: ['1', '2', '3'] };
+    case 'heap':
+      return { type: 'list', ...placed, variant: 'heap', label: 'heap', items: ['1', '3', '2', '7', '4'] };
     case 'graph':
       return {
         type: 'graph',
@@ -561,7 +580,7 @@ function rangeCells(doc: BoardDoc, fromId: string, toId: string): { list: Elemen
   const b = findElement(doc, toId);
   if (a?.type !== 'pointer' || b?.type !== 'pointer' || !a.attach || !b.attach || a.attach.id !== b.attach.id) return null;
   const list = findElement(doc, a.attach.id);
-  if (!list || !(isIndexed(list) || isLinked(list))) return null;
+  if (!list || !(isIndexed(list) || isLinked(list)) || heapTreeOnly(list)) return null;
   const last = list.items.length - 1;
   const i = Math.min(a.attach.index, last);
   const j = Math.min(b.attach.index, last);
@@ -623,7 +642,7 @@ function normalizeLinks(links: Link[]): Link[] | undefined {
 /** 在 index 插入一個空格；原本在這格之後的指標跟著值往後一格 */
 export function insertCell(doc: BoardDoc, id: string, index: number): BoardDoc {
   const el = findElement(doc, id);
-  if (!el || el.type !== 'list' || el.items.length >= MAX_CELLS) return doc;
+  if (!el || el.type !== 'list' || el.items.length >= (el.variant === 'heap' ? HEAP_MAX : MAX_CELLS)) return doc;
   const at = Math.min(Math.max(0, index), el.items.length);
   const items = [...el.items.slice(0, at), '', ...el.items.slice(at)];
   const colors = el.colors && normalizeColors([...el.colors.slice(0, at), null, ...el.colors.slice(at)], items.length);
@@ -720,11 +739,16 @@ export interface TreeLayout {
  * 二元搜尋樹的值由左到右剛好是排好序的。
  */
 export function treeLayout(tree: ElementOf<'tree'>): TreeLayout {
+  return inOrderLayout((index) => hasTreeNode(tree, index));
+}
+
+/** 依中序排開 exists 為真的位置（第 i 個的子節點是 2i+1、2i+2） */
+function inOrderLayout(exists: (index: number) => boolean): TreeLayout {
   const centers = new Map<number, Point>();
   let rank = 0;
   let deepest = 0;
   const visit = (index: number) => {
-    if (!hasTreeNode(tree, index)) return;
+    if (!exists(index)) return;
     visit(2 * index + 1);
     const depth = treeDepth(index);
     deepest = Math.max(deepest, depth);
@@ -793,6 +817,168 @@ export function setNodeColor(doc: BoardDoc, id: string, index: number, color: Ce
   if (el?.type !== 'tree' || !hasTreeNode(el, index)) return doc;
   const colors = el.nodes.map((_, i) => (i === index ? color : (el.colors?.[i] ?? null)));
   return updateElement<ElementOf<'tree'>>(doc, id, { colors: treeColors(colors, el.nodes) });
+}
+
+// ---------- 堆積 ----------
+
+/** 堆積最多 5 層（31 個），樹還放得下 */
+export const HEAP_MAX = 31;
+
+export interface HeapLayout {
+  /** 樹的節點中心；只畫陣列時是空的 */
+  centers: Map<number, Point>;
+  /** 陣列那一列的上緣，相對於元件左上角 */
+  arrayTop: number;
+  showTree: boolean;
+  showArray: boolean;
+  w: number;
+  h: number;
+}
+
+/** 堆積的兩種畫法：上面是完全二元樹，下面是同一份資料的陣列（帶索引） */
+export function heapLayout(heap: ElementOf<'list'>): HeapLayout {
+  const n = heap.items.length;
+  const showTree = heap.view !== 'array' && n > 0;
+  const showArray = heap.view !== 'tree' || n === 0;
+  const tree = showTree ? inOrderLayout((i) => i < n) : { centers: new Map<number, Point>(), w: 0, h: LABEL_H };
+  const arrayTop = showTree ? tree.h + 14 : LABEL_H;
+  const arrayW = Math.max(1, n) * CELL;
+  return {
+    centers: tree.centers,
+    arrayTop,
+    showTree,
+    showArray,
+    w: Math.max(tree.w, showArray ? arrayW : 0),
+    h: showArray ? arrayTop + CELL + INDEX_H : tree.h,
+  };
+}
+
+/** 比較兩個值：都是數字就比大小，不然比字串 */
+function compareValues(a: string, b: string): number {
+  const x = Number(a);
+  const y = Number(b);
+  if (a.trim() !== '' && b.trim() !== '' && !Number.isNaN(x) && !Number.isNaN(y)) return x - y;
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** child 應該在 parent 下面嗎（最小堆：child 不小於 parent） */
+function inOrder(heap: ElementOf<'list'>, parent: string, child: string): boolean {
+  const c = compareValues(parent, child);
+  return heap.order === 'max' ? c >= 0 : c <= 0;
+}
+
+/** 違反堆積性質的節點（比父節點更該在上面）；樹上畫成紅色 */
+export function heapViolations(heap: ElementOf<'list'>): Set<number> {
+  const bad = new Set<number>();
+  for (let i = 1; i < heap.items.length; i += 1) {
+    if (!inOrder(heap, heap.items[treeParent(i)], heap.items[i])) bad.add(i);
+  }
+  return bad;
+}
+
+export interface HeapStep {
+  doc: BoardDoc;
+  /** 逐步播放時這一步的說明 */
+  caption: string;
+}
+
+/** 交換兩格；底色跟著值走，指標留在原本的位置 */
+function swapCells(doc: BoardDoc, id: string, i: number, j: number): BoardDoc {
+  const el = findElement(doc, id) as ElementOf<'list'>;
+  const items = [...el.items];
+  [items[i], items[j]] = [items[j], items[i]];
+  const colors = el.colors && [...el.colors];
+  if (colors) [colors[i], colors[j]] = [colors[j] ?? null, colors[i] ?? null];
+  return updateElement<ElementOf<'list'>>(doc, id, { items, colors });
+}
+
+function siftUp(doc: BoardDoc, id: string, start: number, steps: HeapStep[]): BoardDoc {
+  let next = doc;
+  let i = start;
+  for (;;) {
+    const heap = findElement(next, id) as ElementOf<'list'>;
+    const p = treeParent(i);
+    if (i <= 0 || inOrder(heap, heap.items[p], heap.items[i])) return next;
+    next = swapCells(next, id, i, p);
+    steps.push({ doc: next, caption: `swap ${heap.items[i]} ↔ ${heap.items[p]}` });
+    i = p;
+  }
+}
+
+function siftDown(doc: BoardDoc, id: string, start: number, steps: HeapStep[]): BoardDoc {
+  let next = doc;
+  let i = start;
+  for (;;) {
+    const heap = findElement(next, id) as ElementOf<'list'>;
+    const n = heap.items.length;
+    let best = i;
+    for (const child of [2 * i + 1, 2 * i + 2]) {
+      if (child < n && !inOrder(heap, heap.items[best], heap.items[child])) best = child;
+    }
+    if (best === i) return next;
+    next = swapCells(next, id, i, best);
+    steps.push({ doc: next, caption: `swap ${heap.items[i]} ↔ ${heap.items[best]}` });
+    i = best;
+  }
+}
+
+/** push：放在最後，再往上換到對的位置。回傳每一步（第一步是放進去） */
+export function heapPush(doc: BoardDoc, id: string, value: string): HeapStep[] {
+  const el = findElement(doc, id);
+  if (!isHeap(el) || el.items.length >= HEAP_MAX) return [];
+  const items = [...el.items, value.slice(0, 40)];
+  const colors = el.colors && [...el.colors, null];
+  const added = updateElement<ElementOf<'list'>>(doc, id, { items, colors });
+  const steps: HeapStep[] = [{ doc: added, caption: `push ${value}` }];
+  siftUp(added, id, items.length - 1, steps);
+  return steps;
+}
+
+/** pop：拿掉頂端，最後一個補上來再往下換。回傳取出的值和每一步 */
+export function heapPop(doc: BoardDoc, id: string): { value: string; steps: HeapStep[] } | null {
+  const el = findElement(doc, id);
+  if (!isHeap(el) || el.items.length === 0) return null;
+  const value = el.items[0];
+  const last = el.items.length - 1;
+  const items = last === 0 ? [] : [el.items[last], ...el.items.slice(1, last)];
+  const colors = el.colors && (last === 0 ? undefined : normalizeColors([el.colors[last] ?? null, ...el.colors.slice(1, last)], items.length));
+  // 指標指著被拿掉的最後一格時，往前一格
+  let moved = updateElement<ElementOf<'list'>>(doc, id, { items, colors });
+  moved = mapPointers(moved, id, (i) => Math.max(0, Math.min(i, items.length - 1)));
+  const steps: HeapStep[] = [{ doc: moved, caption: `pop ${value}` }];
+  siftDown(moved, id, 0, steps);
+  return { value, steps };
+}
+
+/** 把目前的內容整理成合法的堆積：從最後一個有子節點的位置往前 sift down */
+export function heapify(doc: BoardDoc, id: string): HeapStep[] {
+  const el = findElement(doc, id);
+  if (!isHeap(el)) return [];
+  const steps: HeapStep[] = [];
+  let next = doc;
+  for (let i = Math.floor(el.items.length / 2) - 1; i >= 0; i -= 1) next = siftDown(next, id, i, steps);
+  return steps;
+}
+
+/** 把堆積的每一步記成逐步播放的步驟，畫面停在最後一步；超過 50 步的不記 */
+export function recordHeapSteps(base: BoardDoc, steps: HeapStep[]): BoardDoc {
+  const last = steps[steps.length - 1];
+  if (!last) return base;
+  let recorded: BoardDoc = { ...base };
+  for (const step of steps) recorded = captureStep({ ...step.doc, steps: recorded.steps }, newStepId(recorded), step.caption);
+  return { ...last.doc, steps: recorded.steps };
+}
+
+export function setHeapOrder(doc: BoardDoc, id: string, order: 'min' | 'max'): BoardDoc {
+  return updateElement<ElementOf<'list'>>(doc, id, { order: order === 'max' ? 'max' : undefined });
+}
+
+/** 兩個都畫 → 只畫陣列 → 只畫樹 → 兩個都畫 */
+export function cycleHeapView(doc: BoardDoc, id: string): BoardDoc {
+  const el = findElement(doc, id);
+  if (!isHeap(el)) return doc;
+  const view = el.view === undefined ? 'array' : el.view === 'array' ? 'tree' : undefined;
+  return updateElement<ElementOf<'list'>>(doc, id, { view });
 }
 
 // ---------- 圖 ----------

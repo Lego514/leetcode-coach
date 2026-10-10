@@ -4606,3 +4606,48 @@ button.board-link {
   font-family: var(--font-mono);
   font-size: 14px;
 }
+
+/* ---------- 白板：堆積 ---------- */
+
+.board-heap-array {
+  position: absolute;
+  left: 0;
+}
+
+.board-heap-empty {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px dashed var(--ink-3);
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+/* 比父節點更該在上面的節點：紅框、紅色虛線 */
+.board-cell.board-tree-node.board-heap-bad {
+  border-color: var(--danger);
+}
+
+.board-tree-edges .board-heap-bad-edge {
+  stroke: var(--danger);
+  stroke-dasharray: 4 3;
+}
+
+.board-heap-push {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.board-heap-push .input.board-weight {
+  width: 150px;
+}
+
+.board-heap-record {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}

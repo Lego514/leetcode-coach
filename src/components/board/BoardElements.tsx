@@ -7,6 +7,8 @@ import {
   edgeShape,
   graphLayout,
   hasTreeNode,
+  heapLayout,
+  heapViolations,
   INDEX_H,
   isIndexed,
   LABEL_H,
@@ -129,6 +131,7 @@ function Body({ el, editing, onChange, onDoneEditing, ...rest }: BodyProps) {
       return <TextBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} />;
     case 'list':
       if (el.variant === 'linked') return <LinkedBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
+      if (el.variant === 'heap') return <HeapBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
       return <ListBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'tree':
       return <TreeBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
@@ -505,6 +508,82 @@ function TreeBody({ el, editing, snapIndex, cellIndex, focusIndex, onAddChild, o
   );
 }
 
+/** 堆積：上面是完全二元樹，下面是同一份資料的陣列；比父節點更該在上面的節點標紅 */
+function HeapBody({ el, editing, snapIndex, cellIndex, focusIndex, onChange, onDoneEditing }: { el: ElementOf<'list'> } & Omit<BodyProps, 'el'>) {
+  const { t } = useI18n();
+  const layout = heapLayout(el);
+  const bad = heapViolations(el);
+  const n = el.items.length;
+  const setItem = (index: number, value: string) => onChange({ items: el.items.map((v, i) => (i === index ? value : v)) });
+  const focus = focusIndex ?? 0;
+  // 編輯時只在一個地方放輸入框：有陣列就在陣列上，只畫樹時在樹上
+  const editTree = editing && !layout.showArray;
+  const editArray = editing && layout.showArray;
+  return (
+    <>
+      <Label value={el.label} editing={editing} onChange={(label) => onChange({ label })} onDone={onDoneEditing} />
+      {layout.showTree && (
+        <>
+          <svg className="board-tree-edges" width={layout.w} height={layout.arrayTop} aria-hidden>
+            {[...layout.centers].map(([i, c]) => {
+              const p = layout.centers.get(treeParent(i));
+              if (!p) return null;
+              const [a, b] = trimSegment(p, c, TREE_D / 2);
+              return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={bad.has(i) ? 'board-heap-bad-edge' : undefined} />;
+            })}
+          </svg>
+          {[...layout.centers].map(([i, c]) => (
+            <Cell
+              key={`t${i}:${n}`}
+              index={i}
+              value={el.items[i]}
+              color={el.colors?.[i]}
+              picked={cellIndex === i}
+              editing={editTree}
+              autoFocus={editTree && i === focus}
+              label={t.board.treeSlotLabel(i)}
+              snap={!layout.showArray && snapIndex === i}
+              className={bad.has(i) ? 'board-tree-node board-heap-bad' : 'board-tree-node'}
+              style={{ left: c.x - TREE_D / 2, top: c.y - TREE_D / 2, width: TREE_D, height: TREE_D }}
+              onChange={(v) => setItem(i, v)}
+              onDone={onDoneEditing}
+            />
+          ))}
+        </>
+      )}
+      {layout.showArray && (
+        <div className="board-heap-array" style={{ top: layout.arrayTop }}>
+          <div className="board-cells">
+            {el.items.map((value, i) => (
+              <Cell
+                key={`a${i}:${n}`}
+                index={i}
+                value={value}
+                color={el.colors?.[i]}
+                picked={cellIndex === i}
+                editing={editArray}
+                autoFocus={editArray && i === focus}
+                label={t.board.cellLabel(i)}
+                snap={snapIndex === i}
+                onChange={(v) => setItem(i, v)}
+                onDone={onDoneEditing}
+              />
+            ))}
+            {n === 0 && <span className="board-heap-empty">{t.board.heap.empty}</span>}
+          </div>
+          <div className="board-indices" aria-hidden>
+            {el.items.map((_, i) => (
+              <span key={i} style={{ width: CELL }}>
+                {i}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /** 圖：節點排成一圈，邊依有向、無向畫箭頭或直線；選取時邊可以點，右下角可以加節點 */
 function GraphBody({
   el,
@@ -741,6 +820,9 @@ function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t'])
     case 'text':
       return `${t.board.kinds[el.variant]}: ${el.text}`;
     case 'list':
+      if (el.variant === 'heap') {
+        return `${t.board.kinds.heap} ${el.label} (${el.order === 'max' ? t.board.heap.max : t.board.heap.min}): ${el.items.join(', ')}`;
+      }
       return `${t.board.kinds[el.variant]} ${el.label}: ${el.items.join(el.variant === 'linked' ? ' → ' : ', ')}`;
     case 'tree':
       return `${t.board.kinds.binaryTree} ${el.label}: ${serializeTree(el)}`;

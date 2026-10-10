@@ -3,6 +3,7 @@ import {
   GRAPH_MAX_EDGES,
   GRAPH_MAX_NODES,
   hasTreeNode,
+  HEAP_MAX,
   MAX_CELLS,
   pointerPosition,
   TREE_MAX_NODES,
@@ -370,6 +371,7 @@ export function applyStructureText(doc: BoardDoc, id: string, text: string): { d
   if (el?.type === 'list') {
     const parsed = parseList(text);
     if ('error' in parsed) return parsed;
+    if (el.variant === 'heap' && parsed.items.length > HEAP_MAX) return { error: 'tooMany' };
     const next = updateElement<ElementOf<'list'>>(doc, id, { items: parsed.items, colors: undefined, ...label });
     return { doc: detachMissing(doc, next, id, (index) => index < parsed.items.length) };
   }
