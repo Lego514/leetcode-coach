@@ -137,7 +137,15 @@ const placed = { id: boardElementId, x: coord, y: coord };
 
 /** 白板上的一個元件；陣列、表格這些結構化元件存的是內容，畫面依內容排版 */
 export const boardElementSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('text'), ...placed, variant: z.enum(['heading', 'text', 'code', 'sticky']), text: text(2000), w: z.number().min(40).max(2000) }),
+  z.object({
+    type: z.literal('text'),
+    ...placed,
+    variant: z.enum(['heading', 'text', 'code', 'sticky']),
+    text: text(2000),
+    w: z.number().min(40).max(2000),
+    /** 程式碼逐行追蹤：現在跑到第幾行（從 0 數）；沒寫就是沒在追蹤 */
+    line: z.number().int().min(0).max(399).optional(),
+  }),
   z.object({
     type: z.literal('list'),
     ...placed,

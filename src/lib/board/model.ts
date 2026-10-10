@@ -1437,6 +1437,65 @@ export function setRepeats(doc: BoardDoc, id: string, on: boolean): BoardDoc {
   return updateElement<ElementOf<'recursion'>>(doc, id, { repeats: on || undefined });
 }
 
+// ---------- 程式碼逐行追蹤 ----------
+
+/** 追蹤時行號那一欄比平常的左邊留白多出來的寬度 */
+export const CODE_GUTTER = 18;
+/** 程式碼框的字級和左右留白（跟 CSS 一樣）；追蹤時最多加寬到多寬 */
+export const CODE_FONT = 13;
+const CODE_PAD = 12;
+const CODE_MAX_W = 720;
+
+/** 一行開頭縮排幾個字（tab 算 4 個）；換行後接下去的那幾列再多縮兩格，看得出是同一行 */
+export function hangingIndent(line: string): number {
+  return (/^[ \t]*/.exec(line)?.[0] ?? '').replace(/\t/g, '    ').length + 2;
+}
+
+export function codeLines(el: ElementOf<'text'>): string[] {
+  return el.text.split('\n');
+}
+
+function isBlank(line: string | undefined): boolean {
+  return !line || !line.trim();
+}
+
+/** 第一個不是空白的行；整段都是空白就是第 0 行 */
+export function firstCodeLine(el: ElementOf<'text'>): number {
+  return Math.max(0, codeLines(el).findIndex((line) => !isBlank(line)));
+}
+
+/** 往下或往上一行，跳過空白行；走不過去就停在原地 */
+export function nextCodeLine(el: ElementOf<'text'>, dir: 'next' | 'prev'): number {
+  const lines = codeLines(el);
+  const from = Math.min(el.line ?? 0, lines.length - 1);
+  const step = dir === 'next' ? 1 : -1;
+  for (let i = from + step; i >= 0 && i < lines.length; i += step) if (!isBlank(lines[i])) return i;
+  return from;
+}
+
+/** 開始追蹤（停在第一行有程式的地方，框加寬到放得下最長的一行，少換行比較好讀）或結束追蹤 */
+export function setCodeTracing(doc: BoardDoc, id: string, on: boolean): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'text' || el.variant !== 'code') return doc;
+  if (!on) return updateElement<ElementOf<'text'>>(doc, id, { line: undefined });
+  const longest = Math.round(Math.max(...codeLines(el).map((line) => monoWidth(line.replace(/\t/g, '    '), CODE_FONT))));
+  const w = Math.min(CODE_MAX_W, Math.max(el.w, longest + CODE_PAD * 2 + CODE_GUTTER + 2));
+  return updateElement<ElementOf<'text'>>(doc, id, { line: firstCodeLine(el), w });
+}
+
+/**
+ * 走到第 line 行。要記錄的話先把目前的畫面存成一步：標著剛執行完的那一行，
+ * 變數、陣列也是執行完的樣子，這樣播放時每一步都是「這一行做了什麼」。
+ */
+export function traceCodeTo(doc: BoardDoc, id: string, line: number, record: boolean): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'text' || el.line === undefined) return doc;
+  const to = Math.min(Math.max(0, line), codeLines(el).length - 1, 399);
+  if (to === el.line) return doc;
+  const saved = record ? captureStep(doc, newStepId(doc)) : doc;
+  return updateElement<ElementOf<'text'>>(saved, id, { line: to });
+}
+
 // ---------- 區間 ----------
 
 export const INTERVALS_MAX = 30;

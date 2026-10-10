@@ -3434,6 +3434,35 @@ textarea.board-text-input {
   tab-size: 4;
 }
 
+/* 逐行追蹤：行號佔左邊的留白再多一點，現在這一行整列加底色、左邊一條線 */
+.board-code-line {
+  display: flex;
+  margin: 0 -12px;
+  padding-right: 12px;
+  cursor: pointer;
+}
+
+.board-code-line[data-current] {
+  background: var(--pen-soft);
+  box-shadow: inset 3px 0 0 var(--pen);
+}
+
+.board-code-no {
+  flex: none;
+  width: 30px;
+  color: var(--ink-3);
+  font-size: 11px;
+  text-align: center;
+  user-select: none;
+}
+
+.board-code-src {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .board-el-text[data-variant='sticky'] {
   padding: 12px;
   background: var(--marker);

@@ -666,3 +666,37 @@ test('lines up intervals, merges after sorting, and sweeps to count the meeting 
   await selbar.getByRole('button', { name: 'Mark removed' }).click();
   await expect(line).toHaveAccessibleName('Intervals intervals (t = 10: 0 active): [0,30] ✕, [5,10], [15,20]');
 });
+
+test('traces code line by line and records each line for playback', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Code', exact: true }).click();
+  const code = page.getByRole('group', { name: /^Code/ });
+  await code.dblclick();
+  await page.getByRole('textbox', { name: 'Code' }).fill('total = 0\nfor x in nums:\n\n    total += x\nreturn total');
+  await page.keyboard.press('Escape');
+
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await selbar.getByRole('button', { name: 'Trace line by line' }).click();
+  await expect(code).toHaveAccessibleName(/^Code \(Line 1\)/);
+  await selbar.getByRole('checkbox', { name: 'Record each line' }).check();
+
+  // ↓ 走到下一行，空白行跳過；點一行直接走到那裡
+  await page.keyboard.press('ArrowDown');
+  await expect(code).toHaveAccessibleName(/^Code \(Line 2\)/);
+  await page.keyboard.press('ArrowDown');
+  await expect(code).toHaveAccessibleName(/^Code \(Line 4\)/);
+  await code.locator('[data-cell="4"]').click();
+  await expect(code).toHaveAccessibleName(/^Code \(Line 5\)/);
+  await expect(code.locator('[data-current]')).toHaveText(/return total/);
+
+  // 每走一步都記下了走之前那一行
+  await page.getByRole('button', { name: 'Play all 3 steps from the start' }).click();
+  await expect(code).toHaveAccessibleName(/^Code \(Line 1\)/);
+  await page.keyboard.press('ArrowRight');
+  await expect(code).toHaveAccessibleName(/^Code \(Line 2\)/);
+  await page.keyboard.press('Escape');
+
+  await code.click();
+  await selbar.getByRole('button', { name: 'Stop tracing' }).click();
+  await expect(code).toHaveAccessibleName(/^Code: total = 0/);
+});
