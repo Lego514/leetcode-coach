@@ -1,9 +1,9 @@
 import { PATTERN_ORDER, type PatternId } from '../data/patterns';
 import type { Difficulty, Problem } from '../data/problems';
 import { addDays, diffDays, startOfWeek, type Day } from './dates';
-import { masteryOf, stageOf, type ReviewState } from './srs';
+import { masteryOf, recallOn, stageOf, type ReviewState } from './srs';
 
-type StateMap = ReadonlyMap<number, Pick<ReviewState, 'interval' | 'due'>>;
+type StateMap = ReadonlyMap<number, Pick<ReviewState, 'interval' | 'due'> & Partial<Pick<ReviewState, 'stability' | 'lastReview'>>>;
 
 interface AttemptLike {
   problemId: number;
@@ -145,7 +145,12 @@ export function dueProblems(problems: Problem[], progress: StateMap, today: Day)
       const state = progress.get(p.id);
       return state !== undefined && state.due <= today;
     })
-    .sort((a, b) => progress.get(a.id)!.due.localeCompare(progress.get(b.id)!.due));
+    // 今天最可能已經忘了的排前面；一樣的話早到期的先
+    .sort((a, b) => {
+      const sa = progress.get(a.id)!;
+      const sb = progress.get(b.id)!;
+      return (recallOn(sa, today) ?? 0) - (recallOn(sb, today) ?? 0) || sa.due.localeCompare(sb.due);
+    });
 }
 
 export interface TargetPlan {

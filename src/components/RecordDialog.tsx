@@ -5,7 +5,8 @@ import { diffDays } from '../lib/dates';
 import { RATINGS, schedule, type Rating } from '../lib/srs';
 import { recordAttempt, saveNote } from '../store/actions';
 import type { AttemptMode, ProgressRecord } from '../store/db';
-import { useNote, useProgress, useToday } from '../store/queries';
+import { retentionOf } from '../store/progress';
+import { useNote, useProgress, useSettings, useToday } from '../store/queries';
 import { useToast } from './toast';
 import { Dialog } from './ui';
 
@@ -62,6 +63,7 @@ export function RecordForm({
   const { t, fmt } = useI18n();
   const day = useToday();
   const progress = useProgress(problem.id);
+  const retention = retentionOf(useSettings());
   const note = useNote(problem.id);
   const toast = useToast();
   const [rating, setRating] = useState<Rating | null>(initialRating ?? null);
@@ -105,7 +107,7 @@ export function RecordForm({
         )}
         <div className="rating-grid">
           {RATINGS.map((id) => {
-            const next = progress !== undefined ? schedule(progress ?? undefined, id, day) : null;
+            const next = progress !== undefined ? schedule(progress ?? undefined, id, day, 0, retention) : null;
             return (
               <button key={id} type="button" className="rating-option" aria-pressed={rating === id} onClick={() => setRating(id)}>
                 <span className="rating-label">{t.ratings[id].label}</span>

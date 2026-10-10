@@ -117,6 +117,8 @@ export const settingsDataSchema = z.object({
   dailyNew: z.number().int().min(0).max(20),
   language: text(20),
   targetDate: day.optional(),
+  /** 複習排程的目標記憶率（FSRS）；沒寫是 0.9 */
+  retention: z.number().min(0.7).max(0.97).optional(),
 });
 
 /** 微複習的一次作答；卡片 id 像 pattern:217、tip:heap-max、signal:arrays:0 */

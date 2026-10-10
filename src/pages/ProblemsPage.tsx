@@ -11,6 +11,7 @@ import { useI18n } from '../i18n';
 import { inList, LIST_FILTERS } from '../lib/catalog';
 import { IMPORT_DUE_PER_DAY, schedule, stageOf, STAGES, type Rating, type Stage } from '../lib/srs';
 import { markSolvedBefore } from '../store/actions';
+import { retentionOf } from '../store/progress';
 import { useCatalog, useCompanies, useMetaMap, useProgressMap, useSettings, useToday } from '../store/queries';
 
 type StatusFilter = 'any' | 'due' | Stage;
@@ -294,6 +295,7 @@ interface BatchBarProps {
 
 function BatchBar({ day, selectedIds, onMarked, onExit }: BatchBarProps) {
   const { t, fmt } = useI18n();
+  const retention = retentionOf(useSettings());
   const toast = useToast();
   const [rating, setRating] = useState<Rating>('solo');
   const [busy, setBusy] = useState(false);
@@ -321,14 +323,14 @@ function BatchBar({ day, selectedIds, onMarked, onExit }: BatchBarProps) {
             key={option.rating}
             type="button"
             aria-pressed={rating === option.rating}
-            title={t.problems.batchReviewIn(schedule(undefined, option.rating, day).interval, IMPORT_DUE_PER_DAY)}
+            title={t.problems.batchReviewIn(schedule(undefined, option.rating, day, 0, retention).interval, IMPORT_DUE_PER_DAY)}
             onClick={() => setRating(option.rating)}
           >
             {t.problems[option.label]}
           </button>
         ))}
       </div>
-      <span className="sheet-note">{t.problems.batchReviewIn(schedule(undefined, rating, day).interval, IMPORT_DUE_PER_DAY)}</span>
+      <span className="sheet-note">{t.problems.batchReviewIn(schedule(undefined, rating, day, 0, retention).interval, IMPORT_DUE_PER_DAY)}</span>
       <div className="btn-row batch-actions">
         <button className="btn btn-primary" disabled={count === 0 || busy} onClick={() => void mark()}>
           {t.problems.batchMark(count)}

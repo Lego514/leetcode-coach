@@ -113,7 +113,7 @@ describe('rebuildProgress', () => {
   it('keeps the spread-out due date of a batch-marked problem', async () => {
     await recordAttempt(1, 'solo', { mode: 'import', delayDays: 3, day: '2026-09-01', at: new Date('2026-09-01T10:00:00Z') });
     const incremental = await db.progress.get(1);
-    expect(incremental?.due).toBe('2026-09-08');
+    expect(incremental?.due).toBe('2026-09-06');
     const attempt = (await db.attempts.toArray())[0];
     expect(COLLECTION_SCHEMAS.attempts.data.parse(toSyncData('attempts', attempt))).toMatchObject({ delayDays: 3 });
     await db.progress.clear();

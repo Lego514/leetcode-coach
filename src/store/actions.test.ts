@@ -46,8 +46,8 @@ describe('recordAttempt', () => {
     await recordAttempt(1, 'solo', { day: '2026-09-17', minutes: 12, mode: 'review' });
     progress = await db.progress.get(1);
     expect(progress).toMatchObject({
-      interval: 4,
-      due: '2026-09-21',
+      interval: 2,
+      due: '2026-09-19',
       firstDay: '2026-09-16',
       attempts: 2,
       lastRating: 'solo',
@@ -174,7 +174,7 @@ describe('backup', () => {
 
     await wipeLocalData(db);
     await restoreBackup(file);
-    expect(await db.progress.get(1)).toMatchObject({ due: '2026-09-20' });
+    expect(await db.progress.get(1)).toMatchObject({ due: '2026-09-18' });
     expect((await db.notes.get(1))?.idea).toBe('hash map');
     expect(await db.mocks.count()).toBe(1);
     expect(await outbox()).toEqual(['attempts:put', 'mocks:put', 'notes:put']);
@@ -241,12 +241,12 @@ describe('markSolvedBefore', () => {
     await recordAttempt(1, 'fail', { day: '2026-09-16' });
     expect(await markSolvedBefore([1, 15, 15, 42], 'solo', new Date('2026-09-16T12:00:00'))).toEqual({
       marked: 2,
-      firstDue: '2026-09-20',
-      lastDue: '2026-09-20',
+      firstDue: '2026-09-18',
+      lastDue: '2026-09-18',
     });
     const attempts = await db.attempts.where('problemId').anyOf(15, 42).toArray();
     expect(attempts.map((a) => a.mode)).toEqual(['import', 'import']);
-    expect((await db.progress.get(15))?.interval).toBe(4);
+    expect((await db.progress.get(15))?.interval).toBe(2);
     expect((await db.progress.get(1))?.lastRating).toBe('fail');
     expect((await db.attempts.where('problemId').equals(1).count())).toBe(1);
     expect(await outbox()).toEqual(['attempts:put', 'attempts:put', 'attempts:put']);
@@ -254,18 +254,18 @@ describe('markSolvedBefore', () => {
 
   it('spreads a big batch so no more than five come due a day', async () => {
     const at = new Date('2026-09-16T12:00:00');
-    // 9/20 原本就有一題到期
+    // 9/18 原本就有一題到期
     await recordAttempt(500, 'solo', { day: '2026-09-16', at });
     const first = Array.from({ length: 12 }, (_, i) => i + 1);
-    expect(await markSolvedBefore(first, 'solo', at)).toEqual({ marked: 12, firstDue: '2026-09-20', lastDue: '2026-09-22' });
-    // 第二批接在後面，不會又擠回 9/20
-    expect(await markSolvedBefore([20, 21, 22, 23], 'solo', at)).toEqual({ marked: 4, firstDue: '2026-09-22', lastDue: '2026-09-23' });
+    expect(await markSolvedBefore(first, 'solo', at)).toEqual({ marked: 12, firstDue: '2026-09-18', lastDue: '2026-09-20' });
+    // 第二批接在後面，不會又擠回 9/18
+    expect(await markSolvedBefore([20, 21, 22, 23], 'solo', at)).toEqual({ marked: 4, firstDue: '2026-09-20', lastDue: '2026-09-21' });
 
     const perDay = new Map<string, number>();
     for (const p of await db.progress.toArray()) perDay.set(p.due, (perDay.get(p.due) ?? 0) + 1);
-    expect(Object.fromEntries(perDay)).toEqual({ '2026-09-20': 5, '2026-09-21': 5, '2026-09-22': 5, '2026-09-23': 2 });
+    expect(Object.fromEntries(perDay)).toEqual({ '2026-09-18': 5, '2026-09-19': 5, '2026-09-20': 5, '2026-09-21': 2 });
     // 延後的只是到期日，間隔照舊
-    expect((await db.progress.get(23))?.interval).toBe(4);
+    expect((await db.progress.get(23))?.interval).toBe(2);
     expect((await db.attempts.where('problemId').equals(1).first())?.delayDays).toBeUndefined();
     expect((await db.attempts.where('problemId').equals(12).first())?.delayDays).toBe(2);
   });
@@ -281,5 +281,23 @@ describe('distinctCompanies', () => {
 
   it('is empty when nothing is tagged', () => {
     expect(distinctCompanies([])).toEqual([]);
+  });
+});
+
+describe('target retention', () => {
+  it('reschedules every problem when the target retention changes, keeping what was learned', async () => {
+    await recordAttempt(1, 'solo', { day: '2026-09-01', at: new Date('2026-09-01T10:00:00Z') });
+    await recordAttempt(1, 'solo', { day: '2026-09-03', at: new Date('2026-09-03T10:00:00Z') });
+    const before = (await db.progress.get(1))!;
+    await updateSettings({ retention: 0.95 });
+    const after = (await db.progress.get(1))!;
+    // 想記得更牢，就要更早複習；記憶本身（穩定度）不變
+    expect(after.interval).toBeLessThan(before.interval);
+    expect(after.stability).toBe(before.stability);
+    // 之後新記的紀錄也用新的目標：第一次自己解出，90% 時是 2 天後，95% 時隔天就再做
+    await recordAttempt(2, 'solo', { day: '2026-09-03' });
+    expect((await db.progress.get(2))?.interval).toBe(1);
+    await updateSettings({ dailyNew: 5 });
+    expect(await db.progress.get(1)).toEqual(after);
   });
 });

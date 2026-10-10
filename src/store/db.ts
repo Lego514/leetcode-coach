@@ -6,6 +6,7 @@ import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import type { Day } from '../lib/dates';
 import type { Rating, ReviewState } from '../lib/srs';
+import { groupByProblem, progressFromAttempts, retentionOf } from './progress';
 
 export type { AttemptMode, MockKind };
 
@@ -124,6 +125,8 @@ export interface SettingsRecord {
   activeList: ListId;
   dailyNew: number;
   language: string;
+  /** 複習排程的目標記憶率；沒寫是 0.9 */
+  retention?: number;
 }
 
 export const DEFAULT_SETTINGS: SettingsRecord = {
@@ -203,6 +206,18 @@ export class CoachDB extends Dexie {
     this.version(4).stores({
       boards: 'id',
     });
+    // 第 5 版：複習排程改用 FSRS，依練習紀錄重算每一題（練習紀錄本身不動）
+    this.version(5)
+      .stores({ progress: 'problemId, due' })
+      .upgrade(async (tx) => {
+        const retention = retentionOf(await tx.table('settings').get('app'));
+        const progress = tx.table('progress');
+        await progress.clear();
+        for (const [problemId, attempts] of groupByProblem(await tx.table('attempts').toArray())) {
+          const record = progressFromAttempts(problemId, attempts, retention);
+          if (record) await progress.put(record);
+        }
+      });
   }
 
   /** 會同步的資料表，依集合名稱查 */

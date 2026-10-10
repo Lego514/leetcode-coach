@@ -65,7 +65,7 @@ test('marks problems solved before without counting them as practice', async ({ 
   await expect(bar).toContainText(`${marked} problems selected`);
 
   await bar.getByRole('button', { name: 'Roughly remember' }).click();
-  await expect(bar).toContainText('First review in 2 days');
+  await expect(bar).toContainText('First review in 1 day');
   await bar.getByRole('button', { name: `Mark ${marked} problems` }).click();
   // 題目多的時候分散到之後幾天
   await expect(page.getByRole('status')).toContainText(new RegExp(`Scheduled ${marked} problems for review (on|between) `));
@@ -99,7 +99,8 @@ test('shows the plan as numbers and what a target date needs', async ({ page }) 
   await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
   const target = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   await page.getByLabel('Target date').fill(target);
-  await page.goto('/');
+  // 只換網址的 # 後面，不重新載入頁面，剛存的設定才不會被打斷
+  await page.goto('/#/');
   await expect(stat('until')).toContainText(/\d+ days/);
   await expect(stat('needed a day')).toHaveAttribute('data-warn', '');
   await expect(page.getByText('At your goal of 3 a day, you won’t make it.')).toBeVisible();
