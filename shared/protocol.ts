@@ -261,6 +261,26 @@ export const boardElementSchema = z.discriminatedUnion('type', [
     order: z.enum(['up']).optional(),
     at: z.object({ r: z.number().int().min(0).max(25), c: z.number().int().min(0).max(29) }).optional(),
   }),
+  /**
+   * 區間：每個區間一列，畫在同一條數線上，重疊的一眼看得出來；
+   * removed 是要移除的（畫成虛線），sweep 是掃描線停在數線上的哪個值
+   */
+  z.object({
+    type: z.literal('intervals'),
+    ...placed,
+    label: text(40),
+    items: z
+      .array(
+        z.object({
+          a: z.number().min(-1e9).max(1e9),
+          b: z.number().min(-1e9).max(1e9),
+          color: z.enum(CELL_COLORS).optional(),
+          removed: z.boolean().optional(),
+        }),
+      )
+      .max(30),
+    sweep: z.number().min(-1e9).max(1e9).optional(),
+  }),
   /** 範圍框：框住同一個陣列上兩個指標之間的格子，指標移動時跟著變（滑動視窗）；位置由指標決定，不存座標 */
   z.object({
     type: z.literal('range'),

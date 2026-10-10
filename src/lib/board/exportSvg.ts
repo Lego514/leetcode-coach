@@ -1,4 +1,5 @@
 import {
+  activeAt,
   arrowPoints,
   rangeRect,
   CELL,
@@ -10,11 +11,17 @@ import {
   DP_HEAD_H,
   DP_HEAD_W,
   edgeShape,
+  formatValue,
   graphLayout,
   heapLayout,
   heapViolations,
   INDEX_H,
+  intervalsLayout,
+  intervalText,
   isIndexed,
+  IV_AXIS_H,
+  IV_BAR_H,
+  IV_ROW_H,
   LABEL_H,
   LINK_GAP,
   linksOf,
@@ -55,6 +62,8 @@ export interface ExportOptions {
   /** 佇列頭尾的文字，跟著介面語言 */
   front: string;
   back: string;
+  /** 掃描線下面寫的「t = 5：進行中 2 個」，跟著介面語言 */
+  active?: (t: string, count: number) => string;
   padding?: number;
 }
 
@@ -224,6 +233,47 @@ function drawTree(el: ElementOf<'tree'>, options: ExportOptions): string {
     parts.push(
       `<circle cx="${el.x + c.x}" cy="${el.y + c.y}" r="${r - 1}" fill="${fill}" stroke="${INK_2}" stroke-width="2"/>`,
       cellText(el.nodes[i] ?? '', el.x + c.x, el.y + c.y, TREE_D, options.measure),
+    );
+  }
+  return parts.join('');
+}
+
+/** 區間：數線和刻度，每個區間一條橫條（移除的畫虛線），掃描線和進行中的數量 */
+function drawIntervals(el: ElementOf<'intervals'>, options: ExportOptions): string {
+  const parts = [label(el.label, el.x, el.y)];
+  const layout = intervalsLayout(el);
+  const x = (v: number) => el.x + layout.x(v);
+  const axisY = el.y + LABEL_H + IV_AXIS_H - 8;
+  const bottom = el.y + layout.rowsTop + Math.max(1, el.items.length) * IV_ROW_H;
+  for (const v of layout.ticks) {
+    parts.push(
+      `<line x1="${x(v)}" y1="${axisY + 4}" x2="${x(v)}" y2="${bottom}" stroke="${RULE}" stroke-dasharray="2 3"/>`,
+      `<line x1="${x(v)}" y1="${axisY - 4}" x2="${x(v)}" y2="${axisY + 4}" stroke="${INK_2}" stroke-width="1.5"/>`,
+      text(x(v), axisY - 11, formatValue(v), { size: 11, mono: true, color: INK_3, anchor: 'middle' }),
+    );
+  }
+  parts.push(`<line x1="${x(layout.lo)}" y1="${axisY}" x2="${x(layout.hi)}" y2="${axisY}" stroke="${INK_2}" stroke-width="1.5"/>`);
+  el.items.forEach((item, i) => {
+    const y = el.y + layout.rowsTop + i * IV_ROW_H + (IV_ROW_H - IV_BAR_H) / 2;
+    const fill = item.removed ? 'none' : item.color ? CELL_FILLS[item.color] : PEN_SOFT;
+    const extra = ` stroke-width="2" rx="4"${item.removed ? ' stroke-dasharray="4 3"' : ''}`;
+    parts.push(
+      rect(x(item.a), y, Math.max(4, x(item.b) - x(item.a)), IV_BAR_H, fill, item.removed ? INK_3 : PEN, extra),
+      text(x(item.b) + 6, y + IV_BAR_H / 2, intervalText(item), { size: 12, mono: true, color: item.removed ? INK_3 : INK_2 }),
+    );
+  });
+  if (el.sweep !== undefined) {
+    const n = activeAt(el, el.sweep);
+    const value = formatValue(el.sweep);
+    parts.push(
+      `<line x1="${x(el.sweep)}" y1="${axisY - 6}" x2="${x(el.sweep)}" y2="${bottom + 2}" stroke="${STROKE_COLORS.orange}" stroke-width="2" stroke-dasharray="5 4"/>`,
+      text(x(el.sweep), bottom + 14, options.active ? options.active(value, n) : `t = ${value}: ${n}`, {
+        size: 12,
+        mono: true,
+        bold: true,
+        color: STROKE_COLORS.orange,
+        anchor: 'middle',
+      }),
     );
   }
   return parts.join('');
@@ -532,6 +582,8 @@ function drawPlaced(doc: BoardDoc, el: Placed, sizes: Sizes | undefined, options
       return drawRecursion(el, options);
     case 'dp':
       return drawDp(el, options);
+    case 'intervals':
+      return drawIntervals(el, options);
     case 'pointer':
       return drawPointer(doc, el, options);
     case 'var':

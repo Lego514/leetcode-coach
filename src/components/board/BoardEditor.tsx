@@ -276,6 +276,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   const pickedRec =
     cellSel && single?.type === 'recursion' && single.id === cellSel.id && cellSel.index < single.nodes.length ? single : undefined;
   const recNode = pickedRec ? cellSel!.index : undefined;
+  // 區間選了一列
+  const pickedIv =
+    cellSel && single?.type === 'intervals' && single.id === cellSel.id && cellSel.index < single.items.length ? single : undefined;
+  const ivIndex = pickedIv ? cellSel!.index : undefined;
 
   const startEditing = (id: string, focus?: number) => {
     setHistory((h) => m.checkpoint(h));
@@ -389,6 +393,19 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     setCellSel({ id: tree.id, index: m.treeParent(index) });
   };
 
+  /** 在最後加一個區間並選取它，可以直接改起點和終點 */
+  const addIntervalTo = (el: m.ElementOf<'intervals'>) => {
+    const result = m.addInterval(doc, el.id);
+    if (!result) return;
+    apply(result.doc);
+    setCellSel({ id: el.id, index: result.index });
+  };
+
+  const deleteIntervalAt = (el: m.ElementOf<'intervals'>, index: number) => {
+    apply(m.deleteInterval(doc, el.id, index));
+    setCellSel(el.items.length > 1 ? { id: el.id, index: Math.min(index, el.items.length - 2) } : null);
+  };
+
   /** 在遞迴樹的一個呼叫底下加子呼叫，選取它並直接開始輸入 */
   const addCallAt = (tree: m.ElementOf<'recursion'>, parent: number) => {
     const result = m.addRecursionChild(doc, tree.id, parent);
@@ -493,7 +510,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
 
   /** 匯出目前畫面上的內容（播放時是那一步）成 PNG */
   const exportImage = async () => {
-    const out = boardToSvg(shownDoc, sizes, { measure: canvasMeasure(), front: t.board.front, back: t.board.back });
+    const out = boardToSvg(shownDoc, sizes, { measure: canvasMeasure(), front: t.board.front, back: t.board.back, active: t.board.intervals.active });
     if (!out) return;
     try {
       const blob = await svgToPng(out.svg, out.width, out.height);
@@ -947,6 +964,18 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         e.preventDefault();
         const n = pickedGraph.nodes.length;
         setCellSel({ id: pickedGraph.id, index: (graphNode + (e.key === 'ArrowRight' ? 1 : -1) + n) % n });
+      } else if (pickedIv && ivIndex !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
+        // 選了一個區間：刪的是這一個
+        e.preventDefault();
+        deleteIntervalAt(pickedIv, ivIndex);
+      } else if (pickedIv && ivIndex !== undefined && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        const index = Math.min(Math.max(0, ivIndex + (e.key === 'ArrowDown' ? 1 : -1)), pickedIv.items.length - 1);
+        setCellSel({ id: pickedIv.id, index });
+      } else if (single?.type === 'intervals' && single.sweep !== undefined && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        // 掃描線移到上一個、下一個端點
+        e.preventDefault();
+        apply(m.stepSweep(doc, single.id, e.key === 'ArrowRight' ? 'next' : 'prev'));
       } else if (pickedRec && recNode !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
         // 選了遞迴樹的一個呼叫：刪的是這一枝（根節點不刪）
         e.preventDefault();
@@ -1157,13 +1186,21 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                         ? graphNode
                         : pickedRec?.id === el.id
                           ? recNode
-                          : undefined
+                          : pickedIv?.id === el.id
+                            ? ivIndex
+                            : undefined
                 }
                 edgeIndex={pickedGraph?.id === el.id ? graphEdge : undefined}
                 onAddNode={canAdd(el) && el.type === 'graph' ? () => addGraphNodeTo(el) : undefined}
                 onPickEdge={canAdd(el) && el.type === 'graph' ? (index) => pickEdge(el, index) : undefined}
                 focusIndex={editingId === el.id ? editFocus : undefined}
-                onAddCell={canAdd(el) && el.type === 'list' ? () => insertCellAt(el, el.items.length) : undefined}
+                onAddCell={
+                  canAdd(el) && el.type === 'list'
+                    ? () => insertCellAt(el, el.items.length)
+                    : canAdd(el) && el.type === 'intervals' && el.items.length < m.INTERVALS_MAX
+                      ? () => addIntervalTo(el)
+                      : undefined
+                }
                 onToggleLink={canAdd(el) && m.isLinked(el) ? (gap) => toggleLinkAt(el, gap) : undefined}
                 onAddChild={canAdd(el) && el.type === 'tree' ? (index) => addChildAt(el, index) : undefined}
                 onAddCall={canAdd(el) && el.type === 'recursion' ? (parent) => addCallAt(el, parent) : undefined}
@@ -1316,6 +1353,15 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                   onAddPointer={() => addPointerOn(pickedGraph, graphNode)}
                   onConnect={(to) => apply(m.addGraphEdge(doc, pickedGraph.id, graphNode, to))}
                   onDelete={() => deleteGraphNodeAt(pickedGraph, graphNode)}
+                />
+              ) : pickedIv && ivIndex !== undefined ? (
+                <IntervalActions
+                  key={`${pickedIv.id}:${ivIndex}`}
+                  el={pickedIv}
+                  index={ivIndex}
+                  onChange={(patch) => apply(m.updateInterval(doc, pickedIv.id, ivIndex, patch))}
+                  onMerge={() => apply(m.mergeWithNext(doc, pickedIv.id, ivIndex))}
+                  onDelete={() => deleteIntervalAt(pickedIv, ivIndex)}
                 />
               ) : pickedRec && recNode !== undefined ? (
                 <RecursionNodeActions
@@ -1596,6 +1642,42 @@ function NodeActions({ tree, index, onColor, onAddPointer, onAddChild, onDelete 
   );
 }
 
+interface IntervalActionsProps {
+  el: m.ElementOf<'intervals'>;
+  index: number;
+  onChange: (patch: m.IntervalPatch) => void;
+  onMerge: () => void;
+  onDelete: () => void;
+}
+
+/** 選了一個區間：上底色、改起點終點、和下一列合併、標成移除、刪掉 */
+function IntervalActions({ el, index, onChange, onMerge, onDelete }: IntervalActionsProps) {
+  const { t } = useI18n();
+  const v = t.board.intervals;
+  const item = el.items[index];
+  const number = (field: 'a' | 'b') => (text: string) => {
+    const value = Number(text);
+    if (text.trim() && Number.isFinite(value)) onChange(field === 'a' ? { a: value } : { b: value });
+  };
+  return (
+    <>
+      <span className="board-selbar-title">{m.intervalText(item)}</span>
+      <CellColors current={item.color ?? null} onColor={(color) => onChange({ color })} />
+      <SelbarField key={`a:${item.a}`} label={v.start} value={m.formatValue(item.a)} onCommit={number('a')} />
+      <SelbarField key={`b:${item.b}`} label={v.end} value={m.formatValue(item.b)} onCommit={number('b')} />
+      <button type="button" className="btn btn-small" disabled={!m.canMergeNext(el, index)} onClick={onMerge}>
+        {v.mergeNext}
+      </button>
+      <button type="button" className="btn btn-small" aria-pressed={!!item.removed} onClick={() => onChange({ removed: !item.removed })}>
+        {item.removed ? v.restore : v.remove}
+      </button>
+      <button type="button" className="btn btn-small btn-danger" onClick={onDelete}>
+        {v.delete}
+      </button>
+    </>
+  );
+}
+
 interface RecursionNodeActionsProps {
   tree: m.ElementOf<'recursion'>;
   index: number;
@@ -1842,6 +1924,8 @@ function textPlaceholder(el: TextElement, s: ReturnType<typeof useI18n>['t']['bo
       return s.recursion;
     case 'dp':
       return s.dp;
+    case 'intervals':
+      return s.intervals;
     case 'table':
       return el.variant === 'dict' ? s.dict : s.grid;
     case 'list':
@@ -1874,6 +1958,13 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   }
   if (el.type === 'recursion') {
     buttons.push([el.repeats ? r.repeatsOff : r.repeatsOn, () => apply(m.setRepeats(doc, el.id, !el.repeats))]);
+  }
+  if (el.type === 'intervals') {
+    const v = t.board.intervals;
+    buttons.push([v.sort, () => apply(m.sortIntervals(doc, el.id))], [el.sweep === undefined ? v.sweepOn : v.sweepOff, () => apply(m.toggleSweep(doc, el.id))]);
+    if (el.sweep !== undefined) {
+      buttons.push([v.prevPoint, () => apply(m.stepSweep(doc, el.id, 'prev'))], [v.nextPoint, () => apply(m.stepSweep(doc, el.id, 'next'))]);
+    }
   }
   if (el.type === 'dp') {
     buttons.push(
@@ -2283,6 +2374,13 @@ const PALETTE_ICONS: Record<m.PaletteKind, ReactNode> = {
     </>
   ),
   table: <path d="M4 5h16v14H4zM4 10h16M4 14.5h16M10 5v14" />,
+  intervals: (
+    <>
+      <rect x="2.5" y="4" width="10" height="3.5" rx="1" />
+      <rect x="8.5" y="10.5" width="13" height="3.5" rx="1" />
+      <path d="M2 19.5h20M4 17.5v4M12 17.5v4M20 17.5v4" />
+    </>
+  ),
   dpTable: <path d="M3.5 3.5h17v17h-17zM3.5 9.2h17M3.5 14.8h17M9.2 3.5v17M14.8 3.5v17M6.4 6.4l11 11M17.4 13.4v4h-4" />,
   recursionTree: (
     <>

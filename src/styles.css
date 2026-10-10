@@ -4768,6 +4768,129 @@ button.board-link {
   justify-content: center;
 }
 
+/* ---------- 區間 ---------- */
+
+.board-iv-axis {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.board-iv-line,
+.board-iv-tick {
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+}
+
+.board-iv-grid {
+  stroke: var(--rule);
+  stroke-dasharray: 2 3;
+}
+
+.board-iv-tick-label {
+  fill: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.board-iv-sweep {
+  stroke: var(--board-orange);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+/* 整列都可以點，區間很短也點得到 */
+.board-iv-row {
+  position: absolute;
+  left: 0;
+  border-radius: 4px;
+}
+
+.board-iv-row[data-picked] {
+  background: var(--sheet-2);
+}
+
+.board-iv-bar {
+  position: absolute;
+  top: 6px;
+  box-sizing: border-box;
+  height: 14px;
+  border: 2px solid var(--pen);
+  border-radius: 4px;
+  background: var(--pen-soft);
+}
+
+.board-iv-row[data-picked] .board-iv-bar {
+  box-shadow: 0 0 0 2px var(--pen-soft), 0 0 0 4px var(--pen);
+}
+
+.board-iv-bar[data-color='yellow'] {
+  background: var(--cell-yellow);
+}
+
+.board-iv-bar[data-color='green'] {
+  background: var(--cell-green);
+}
+
+.board-iv-bar[data-color='blue'] {
+  background: var(--cell-blue);
+}
+
+.board-iv-bar[data-color='red'] {
+  background: var(--cell-red);
+}
+
+.board-iv-bar[data-color='purple'] {
+  background: var(--cell-purple);
+}
+
+.board-iv-bar[data-color='gray'] {
+  background: var(--cell-gray);
+}
+
+.board-iv-bar[data-removed] {
+  border-style: dashed;
+  border-color: var(--ink-3);
+  background: transparent;
+}
+
+.board-iv-label {
+  position: absolute;
+  top: 0;
+  line-height: 26px;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.board-iv-label[data-removed] {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+.board-iv-empty {
+  position: absolute;
+  display: grid;
+  align-items: center;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.board-iv-count {
+  position: absolute;
+  transform: translateX(-50%);
+  color: var(--board-orange);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* ---------- DP 表 ---------- */
 
 .board-dp-index {

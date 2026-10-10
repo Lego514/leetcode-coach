@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useI18n } from '../../i18n';
 import {
+  activeAt,
   CELL,
   colorVar,
   CYCLE_H,
@@ -11,12 +12,17 @@ import {
   DP_HEAD_H,
   DP_HEAD_W,
   edgeShape,
+  formatValue,
   graphLayout,
   hasTreeNode,
   heapLayout,
   heapViolations,
   INDEX_H,
+  intervalsLayout,
+  intervalText,
   isIndexed,
+  IV_AXIS_H,
+  IV_ROW_H,
   LABEL_H,
   LINK_GAP,
   linksOf,
@@ -154,6 +160,8 @@ function Body({ el, editing, onChange, onDoneEditing, ...rest }: BodyProps) {
       return <RecursionBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'dp':
       return <DpBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
+    case 'intervals':
+      return <IntervalsBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'table':
       return <TableBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'var':
@@ -629,6 +637,70 @@ function RecursionBody({
 }
 
 /**
+ * 區間：上面是數線，每個區間一列畫成橫條，右邊寫 [起點,終點]，移除的畫成虛線；
+ * 掃描線是一條直的虛線，下面寫那個時間點有幾個區間正在進行
+ */
+function IntervalsBody({ el, editing, cellIndex, onAddCell, onChange, onDoneEditing }: { el: ElementOf<'intervals'> } & Omit<BodyProps, 'el'>) {
+  const { t } = useI18n();
+  const layout = intervalsLayout(el);
+  const { x, rowsTop } = layout;
+  const axisY = LABEL_H + IV_AXIS_H - 8;
+  const bottom = rowsTop + Math.max(1, el.items.length) * IV_ROW_H;
+  return (
+    <>
+      <Label value={el.label} editing={editing} onChange={(label) => onChange({ label })} onDone={onDoneEditing} />
+      <svg className="board-iv-axis" width={layout.w} height={layout.h} aria-hidden>
+        {layout.ticks.map((v) => (
+          <g key={v}>
+            <line x1={x(v)} y1={axisY + 4} x2={x(v)} y2={bottom} className="board-iv-grid" />
+            <line x1={x(v)} y1={axisY - 4} x2={x(v)} y2={axisY + 4} className="board-iv-tick" />
+            <text x={x(v)} y={axisY - 11} className="board-iv-tick-label">
+              {formatValue(v)}
+            </text>
+          </g>
+        ))}
+        <line x1={x(layout.lo)} y1={axisY} x2={x(layout.hi)} y2={axisY} className="board-iv-line" />
+        {el.sweep !== undefined && <line x1={x(el.sweep)} y1={axisY - 6} x2={x(el.sweep)} y2={bottom + 2} className="board-iv-sweep" />}
+      </svg>
+      {el.items.map((item, i) => (
+        <div
+          key={i}
+          className="board-iv-row"
+          data-cell={i}
+          data-picked={cellIndex === i || undefined}
+          style={{ top: rowsTop + i * IV_ROW_H, height: IV_ROW_H, width: layout.w }}
+        >
+          <span
+            className="board-iv-bar"
+            data-color={item.color}
+            data-removed={item.removed || undefined}
+            style={{ left: x(item.a), width: Math.max(4, x(item.b) - x(item.a)) }}
+          />
+          <span className="board-iv-label" data-removed={item.removed || undefined} style={{ left: x(item.b) + 6 }}>
+            {intervalText(item)}
+          </span>
+        </div>
+      ))}
+      {el.items.length === 0 && (
+        <span className="board-iv-empty" style={{ top: rowsTop, left: x(layout.lo), height: IV_ROW_H }}>
+          {t.board.intervals.empty}
+        </span>
+      )}
+      {el.sweep !== undefined && (
+        <span className="board-iv-count" style={{ left: x(el.sweep), top: bottom + 4 }}>
+          {t.board.intervals.active(formatValue(el.sweep), activeAt(el, el.sweep))}
+        </span>
+      )}
+      {onAddCell && (
+        <button type="button" className="board-add board-add-row" aria-label={t.board.intervals.add} title={t.board.intervals.add} onClick={onAddCell}>
+          +
+        </button>
+      )}
+    </>
+  );
+}
+
+/**
  * DP 表：上面標欄的索引（和字串的字元），二維時左邊標列的索引；
  * 正在填的那一格加框，箭頭標出它從哪幾格算來（一維畫在格子下面的弧線）
  */
@@ -1055,6 +1127,11 @@ function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t'])
       return `${t.board.kinds.graph} ${el.label}${el.directed ? ` (${t.board.directed})` : ''}: ${serializeGraph(el)}`;
     case 'recursion':
       return `${t.board.kinds.recursionTree} ${el.label}: ${inlineRecursion(el)}`;
+    case 'intervals': {
+      const items = el.items.map((item) => `${intervalText(item)}${item.removed ? ' ✕' : ''}`).join(', ');
+      const sweep = el.sweep === undefined ? '' : ` (${t.board.intervals.active(formatValue(el.sweep), activeAt(el, el.sweep))})`;
+      return `${t.board.kinds.intervals} ${el.label}${sweep}: ${items}`;
+    }
     case 'dp': {
       const grid = el.cells.map((row) => row.map((v) => v || '·').join(' ')).join('; ');
       return `${t.board.kinds.dpTable} ${el.label}${el.at ? ` (${t.board.dp.filling(dpName(el, el.at))})` : ''}: ${grid}`;
