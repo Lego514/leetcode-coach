@@ -15,6 +15,10 @@ import {
   LINK_GAP,
   linksOf,
   pointsDown,
+  prunedNodes,
+  REC_H,
+  recursionLayout,
+  repeatColors,
   TREE_D,
   TREE_GAP,
   TREE_LEVEL,
@@ -38,7 +42,7 @@ import {
   type ElementOf,
   type Placed,
 } from '../../lib/board/model';
-import { serializeGraph, serializeTree } from '../../lib/board/structures';
+import { inlineRecursion, serializeGraph, serializeTree } from '../../lib/board/structures';
 
 // 白板上每一種元件的樣子。雙擊進入編輯時，格子和文字變成輸入框。
 
@@ -59,6 +63,8 @@ interface ElementViewProps {
   onToggleLink?: (gap: number) => void;
   /** 選了二元樹的一個節點時，點空的子節點位置加一個子節點 */
   onAddChild?: (index: number) => void;
+  /** 選了遞迴樹的一個呼叫時，節點下方的「＋」幫它加一個子呼叫；參數是這個呼叫的位置 */
+  onAddCall?: (parent: number) => void;
   /** 選取圖時：右下角的「＋」加節點、點一條邊選取它 */
   onAddNode?: () => void;
   onPickEdge?: (edge: number) => void;
@@ -137,6 +143,8 @@ function Body({ el, editing, onChange, onDoneEditing, ...rest }: BodyProps) {
       return <TreeBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'graph':
       return <GraphBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
+    case 'recursion':
+      return <RecursionBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'table':
       return <TableBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'var':
@@ -508,6 +516,105 @@ function TreeBody({ el, editing, snapIndex, cellIndex, focusIndex, onAddChild, o
   );
 }
 
+/**
+ * 遞迴樹：由上往下排的多叉樹，一個節點是一次呼叫。邊上可以寫字（選了什麼），節點可以帶回傳值；
+ * 剪掉的枝畫成虛線、淡色，字一樣的呼叫可以標同一個顏色
+ */
+function RecursionBody({
+  el,
+  editing,
+  snapIndex,
+  cellIndex,
+  focusIndex,
+  onAddCall,
+  onChange,
+  onDoneEditing,
+}: { el: ElementOf<'recursion'> } & Omit<BodyProps, 'el'>) {
+  const { t } = useI18n();
+  const layout = recursionLayout(el);
+  const pruned = prunedNodes(el);
+  const repeats = repeatColors(el);
+  const setText = (index: number, text: string) => onChange({ nodes: el.nodes.map((node, i) => (i === index ? { ...node, text } : node)) });
+  const focus = focusIndex ?? 0;
+  const picked = cellIndex === undefined ? undefined : layout.centers.get(cellIndex);
+  return (
+    <>
+      <Label value={el.label} editing={editing} onChange={(label) => onChange({ label })} onDone={onDoneEditing} />
+      <svg className="board-rec-edges" width={layout.w} height={layout.h} aria-hidden>
+        {el.nodes.map((node, i) => {
+          const c = layout.centers.get(i);
+          const p = i > 0 ? layout.centers.get(node.parent) : undefined;
+          if (!c || !p) return null;
+          const top = p.y + REC_H / 2;
+          const bottom = c.y - REC_H / 2;
+          return (
+            <g key={i} data-pruned={pruned.has(i) || undefined}>
+              <line x1={p.x} y1={top} x2={c.x} y2={bottom} className="board-rec-edge" />
+              {node.edge && (
+                <text x={(p.x + c.x) / 2} y={(top + bottom) / 2} className="board-rec-edge-label">
+                  {node.edge}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      {el.nodes.map((node, i) => {
+        const c = layout.centers.get(i)!;
+        const w = layout.widths[i];
+        const style = { left: c.x - w / 2, top: c.y - REC_H / 2, width: w, height: REC_H };
+        const color = node.color ?? repeats[i];
+        if (editing) {
+          return (
+            <Cell
+              key={`${i}:${el.nodes.length}`}
+              index={i}
+              value={node.text}
+              color={color}
+              editing
+              autoFocus={i === focus}
+              label={t.board.recursion.slot(i)}
+              className="board-rec-node"
+              style={style}
+              onChange={(v) => setText(i, v)}
+              onDone={onDoneEditing}
+            />
+          );
+        }
+        return (
+          <span
+            key={i}
+            className="board-cell board-rec-node"
+            style={style}
+            title={node.ret ? `${node.text} → ${node.ret}` : node.text}
+            data-cell={i}
+            data-color={color ?? undefined}
+            data-snap={snapIndex === i || undefined}
+            data-picked={cellIndex === i || undefined}
+            data-pruned={pruned.has(i) || undefined}
+            data-cut={node.cut || undefined}
+          >
+            <span className="board-rec-text">{node.text}</span>
+            {node.ret && <span className="board-rec-ret">{node.ret}</span>}
+          </span>
+        );
+      })}
+      {picked && cellIndex !== undefined && onAddCall && !editing && (
+        <button
+          type="button"
+          className="board-add board-rec-add"
+          style={{ left: picked.x - 11, top: picked.y + REC_H / 2 + 4 }}
+          aria-label={t.board.recursion.addCall}
+          title={t.board.recursion.addCall}
+          onClick={() => onAddCall(cellIndex)}
+        >
+          +
+        </button>
+      )}
+    </>
+  );
+}
+
 /** 堆積：上面是完全二元樹，下面是同一份資料的陣列；比父節點更該在上面的節點標紅 */
 function HeapBody({ el, editing, snapIndex, cellIndex, focusIndex, onChange, onDoneEditing }: { el: ElementOf<'list'> } & Omit<BodyProps, 'el'>) {
   const { t } = useI18n();
@@ -828,6 +935,8 @@ function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t'])
       return `${t.board.kinds.binaryTree} ${el.label}: ${serializeTree(el)}`;
     case 'graph':
       return `${t.board.kinds.graph} ${el.label}${el.directed ? ` (${t.board.directed})` : ''}: ${serializeGraph(el)}`;
+    case 'recursion':
+      return `${t.board.kinds.recursionTree} ${el.label}: ${inlineRecursion(el)}`;
     case 'table':
       return `${t.board.kinds[el.variant]} ${el.label}: ${el.rows.map((r) => r.join(' ')).join('; ')}`;
     case 'var':
@@ -838,6 +947,7 @@ function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t'])
       if (!el.attach) return `${t.board.kinds.pointer} ${el.name}`;
       const target = doc.elements.find((x) => x.id === el.attach!.id);
       if (target?.type === 'tree' || target?.type === 'graph') return t.board.pointerAtNode(el.name, target.nodes[el.attach.index] ?? '');
+      if (target?.type === 'recursion') return t.board.pointerAtNode(el.name, target.nodes[el.attach.index]?.text ?? '');
       return t.board.pointerAt(el.name, el.attach.index);
     }
     case 'shape':

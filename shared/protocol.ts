@@ -210,6 +210,34 @@ export const boardElementSchema = z.discriminatedUnion('type', [
     directed: z.boolean().optional(),
     colors: z.array(z.enum(CELL_COLORS).nullable()).max(20).optional(),
   }),
+  /**
+   * 遞迴樹（多叉樹）：依呼叫的順序（前序）存，parent 是呼叫它的節點的位置，一定排在自己前面（根節點是 -1）；
+   * 同一個父節點的子節點由左到右依位置排
+   */
+  z.object({
+    type: z.literal('recursion'),
+    ...placed,
+    label: text(40),
+    nodes: z
+      .array(
+        z.object({
+          text: cell,
+          parent: z.number().int().min(-1).max(62),
+          /** 從父節點連下來的邊上寫的字，例如這一步選了哪個數字 */
+          edge: text(12).optional(),
+          /** 回傳值 */
+          ret: text(12).optional(),
+          /** 剪枝（或備忘錄直接回傳）：這一枝和底下都畫成淡的 */
+          cut: z.boolean().optional(),
+          color: z.enum(CELL_COLORS).optional(),
+        }),
+      )
+      .min(1)
+      .max(63)
+      .refine((nodes) => nodes.every((node, i) => (i === 0 ? node.parent === -1 : node.parent >= 0 && node.parent < i)), 'parents come first'),
+    /** 字一樣的呼叫標同一個顏色，看出哪裡重複算 */
+    repeats: z.boolean().optional(),
+  }),
   /** 範圍框：框住同一個陣列上兩個指標之間的格子，指標移動時跟著變（滑動視窗）；位置由指標決定，不存座標 */
   z.object({
     type: z.literal('range'),

@@ -6,11 +6,15 @@ import {
   HEAP_MAX,
   MAX_CELLS,
   pointerPosition,
+  REC_MAX_DEPTH,
+  REC_MAX_NODES,
+  recursionChildren,
   TREE_MAX_NODES,
   updateElement,
   type BoardDoc,
   type ElementOf,
   type GraphEdge,
+  type RecursionNode,
 } from './model';
 
 // 用文字建立：直接貼題目給的範例，例如 nums = [2,7,11,15]、1->2->3、[3,9,20,null,null,15,7]、
@@ -315,11 +319,78 @@ export function serializeGraph(graph: ElementOf<'graph'>): string {
   return plain ? `n = ${graph.nodes.length}, edges = [${edges}]` : `edges = [${edges}]`;
 }
 
-export type TextElement = ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'> | ElementOf<'table'>;
+/** 行首的縮排：空白、tab、tree 指令畫的 │ ├── └──（也認 ASCII 的 |-- `--），和清單的 - * • */
+const OUTLINE_INDENT = /^(?:[ \t]|[│├└┌┬─]|\|(?=[ -])|`(?=-)|-(?=[- ])|[*•](?= ))*/;
+
+/**
+ * 遞迴樹：一行一個呼叫，縮排在呼叫它的那一行底下；tree 指令的輸出和縮排的清單也讀得懂。
+ * 「|」前面是邊上的字（例如這一步選了哪個數字），「=>」後面是回傳值：+1 | [1]、f(2) => 1
+ */
+export function parseRecursion(text: string): { nodes: RecursionNode[] } | { error: ParseError } {
+  const nodes: RecursionNode[] = [];
+  const open: { indent: number; index: number }[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const prefix = OUTLINE_INDENT.exec(line)![0];
+    let body = line.slice(prefix.length).trim();
+    if (!body) continue;
+    const indent = [...prefix].reduce((n, ch) => n + (ch === '\t' ? 4 : 1), 0);
+    let edge = '';
+    let ret = '';
+    const bar = body.indexOf('|');
+    if (bar > 0) {
+      edge = body.slice(0, bar).trim();
+      body = body.slice(bar + 1).trim();
+    }
+    const arrow = body.lastIndexOf('=>');
+    if (arrow >= 0) {
+      ret = body.slice(arrow + 2).trim();
+      body = body.slice(0, arrow).trim();
+    }
+    while (open.length > 0 && open[open.length - 1].indent >= indent) open.pop();
+    // 只能有一個根節點
+    if (open.length === 0 && nodes.length > 0) return { error: 'badFormat' };
+    if (open.length >= REC_MAX_DEPTH) return { error: 'tooDeep' };
+    if (nodes.length >= REC_MAX_NODES) return { error: 'tooMany' };
+    nodes.push({
+      text: body.slice(0, MAX_VALUE),
+      parent: open.length > 0 ? open[open.length - 1].index : -1,
+      ...(edge ? { edge: edge.slice(0, 12) } : {}),
+      ...(ret ? { ret: ret.slice(0, 12) } : {}),
+    });
+    open.push({ indent, index: nodes.length - 1 });
+  }
+  return nodes.length === 0 ? { error: 'empty' } : { nodes };
+}
+
+/** 寫回一行一個呼叫、每層縮排兩格 */
+export function serializeRecursion(el: ElementOf<'recursion'>): string {
+  const children = recursionChildren(el);
+  const lines: string[] = [];
+  const visit = (i: number, depth: number) => {
+    const node = el.nodes[i];
+    lines.push(`${'  '.repeat(depth)}${node.edge ? `${node.edge} | ` : ''}${node.text}${node.ret ? ` => ${node.ret}` : ''}`);
+    children[i].forEach((k) => visit(k, depth + 1));
+  };
+  visit(0, 0);
+  return lines.join('\n');
+}
+
+/** 一行寫完的遞迴樹，給螢幕閱讀器和測試用：f(2) = 1 (f(1), f(0))；剪掉的標 ✕ */
+export function inlineRecursion(el: ElementOf<'recursion'>): string {
+  const children = recursionChildren(el);
+  const visit = (i: number): string => {
+    const node = el.nodes[i];
+    const own = `${node.edge ? `${node.edge}: ` : ''}${node.text}${node.ret ? ` = ${node.ret}` : ''}${node.cut ? ' ✕' : ''}`;
+    return children[i].length > 0 ? `${own} (${children[i].map(visit).join(', ')})` : own;
+  };
+  return visit(0);
+}
+
+export type TextElement = ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'> | ElementOf<'table'> | ElementOf<'recursion'>;
 
 /** 可以用文字建立的元件 */
 export function acceptsText(el: { type: string } | undefined): el is TextElement {
-  return el?.type === 'list' || el?.type === 'tree' || el?.type === 'graph' || el?.type === 'table';
+  return el?.type === 'list' || el?.type === 'tree' || el?.type === 'graph' || el?.type === 'table' || el?.type === 'recursion';
 }
 
 /** 目前內容的文字版，放進「用文字建立」的輸入框 */
@@ -327,6 +398,8 @@ export function structureText(el: TextElement): string {
   switch (el.type) {
     case 'graph':
       return serializeGraph(el);
+    case 'recursion':
+      return serializeRecursion(el);
     case 'tree':
       return serializeTree(el);
     case 'table':
@@ -342,6 +415,13 @@ export function structureText(el: TextElement): string {
  */
 export function applyStructureText(doc: BoardDoc, id: string, text: string): { doc: BoardDoc } | { error: ParseError } {
   const el = findElement(doc, id);
+  // 遞迴樹一行一個呼叫，不讀「名稱 =」（f(n) = ... 這種字是節點的內容）
+  if (el?.type === 'recursion') {
+    const parsed = parseRecursion(text);
+    if ('error' in parsed) return parsed;
+    const next = updateElement<ElementOf<'recursion'>>(doc, id, { nodes: parsed.nodes });
+    return { doc: detachMissing(doc, next, id, (index) => index < parsed.nodes.length) };
+  }
   const { name, body } = splitName(text);
   const label = name ? { label: name } : {};
   if (el?.type === 'tree') {

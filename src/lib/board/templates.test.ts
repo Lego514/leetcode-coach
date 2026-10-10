@@ -28,6 +28,7 @@ describe('whiteboard templates', () => {
     expect(names('twoPointers')).toEqual(['l', 'r']);
     expect(names('reverseList')).toEqual(['prev', 'curr', 'next']);
     expect(names('treeDfs')).toEqual(['node']);
+    expect(names('backtracking')).toEqual(['cur']);
   });
 
   it('drops the whole group into free space and returns its ids', () => {
