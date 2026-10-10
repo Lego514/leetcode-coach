@@ -14,6 +14,10 @@ import {
   LINK_GAP,
   linksOf,
   pointsDown,
+  prunedNodes,
+  REC_H,
+  recursionLayout,
+  repeatColors,
   TREE_D,
   treeLayout,
   treeParent,
@@ -215,6 +219,52 @@ function drawTree(el: ElementOf<'tree'>, options: ExportOptions): string {
       cellText(el.nodes[i] ?? '', el.x + c.x, el.y + c.y, TREE_D, options.measure),
     );
   }
+  return parts.join('');
+}
+
+/** 遞迴樹：邊和邊上的字，再畫圓角長方形的節點和回傳值；剪掉的枝畫虛線、淡一點 */
+function drawRecursion(el: ElementOf<'recursion'>, options: ExportOptions): string {
+  const parts = [label(el.label, el.x, el.y)];
+  const { centers, widths } = recursionLayout(el);
+  const pruned = prunedNodes(el);
+  const repeats = repeatColors(el);
+  const font = `14px ${MONO}`;
+  const dash = (faded: boolean) => (faded ? ' stroke-dasharray="5 4"' : '');
+  el.nodes.forEach((node, i) => {
+    const c = centers.get(i);
+    const p = i > 0 ? centers.get(node.parent) : undefined;
+    if (!c || !p) return;
+    const faded = pruned.has(i);
+    const [x1, y1, x2, y2] = [el.x + p.x, el.y + p.y + REC_H / 2, el.x + c.x, el.y + c.y - REC_H / 2];
+    parts.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${faded ? INK_3 : INK_2}" stroke-width="2"${dash(faded)}/>`);
+    if (node.edge) {
+      parts.push(
+        `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2}" font-family="${escapeXml(MONO)}" font-size="12" fill="${INK}" stroke="${SHEET}" stroke-width="4" paint-order="stroke" text-anchor="middle" dominant-baseline="middle">${escapeXml(node.edge)}</text>`,
+      );
+    }
+  });
+  el.nodes.forEach((node, i) => {
+    const c = centers.get(i)!;
+    const w = widths[i];
+    const faded = pruned.has(i);
+    const color = node.color ?? repeats[i];
+    const left = el.x + c.x - w / 2;
+    const cy = el.y + c.y;
+    const shape = rect(left + 1, cy - REC_H / 2 + 1, w - 2, REC_H - 2, color ? CELL_FILLS[color] : SHEET, faded ? INK_3 : INK_2, ` stroke-width="2" rx="7"${dash(faded)}`);
+    // 字和回傳值排成一行置中，中間隔一條線
+    const retW = node.ret ? options.measure(node.ret, font) : 0;
+    const value = fit(node.text, w - 24 - (node.ret ? retW + 13 : 0), font, options.measure);
+    const textW = options.measure(value, font);
+    const start = el.x + c.x - (textW + (node.ret ? 13 + retW : 0)) / 2;
+    const body = [shape, text(start, cy, value, { size: 14, mono: true, color: faded ? INK_3 : INK })];
+    if (node.ret) {
+      body.push(
+        `<line x1="${start + textW + 6}" y1="${cy - 8}" x2="${start + textW + 6}" y2="${cy + 8}" stroke="${RULE}"/>`,
+        text(start + textW + 13, cy, node.ret, { size: 14, mono: true, bold: true, color: GOOD }),
+      );
+    }
+    parts.push(faded ? `<g opacity="0.6">${body.join('')}</g>` : body.join(''));
+  });
   return parts.join('');
 }
 
@@ -429,6 +479,8 @@ function drawPlaced(doc: BoardDoc, el: Placed, sizes: Sizes | undefined, options
       return drawTree(el, options);
     case 'graph':
       return drawGraph(el, options);
+    case 'recursion':
+      return drawRecursion(el, options);
     case 'pointer':
       return drawPointer(doc, el, options);
     case 'var':

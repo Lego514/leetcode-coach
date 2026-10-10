@@ -84,14 +84,18 @@ export function isLinked(el: BoardElement): el is ElementOf<'list'> {
   return el.type === 'list' && el.variant === 'linked';
 }
 
-/** 指標可以吸附的元件：陣列、佇列、鏈結串列的格子，和二元樹、圖的節點 */
-export function holdsPointers(el: BoardElement | undefined): el is ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'> {
-  return !!el && (isIndexed(el) || isLinked(el) || el.type === 'tree' || el.type === 'graph');
+/** 有節點、可以吸附指標的樹和圖 */
+export type NodeHolder = ElementOf<'tree'> | ElementOf<'graph'> | ElementOf<'recursion'>;
+
+/** 指標可以吸附的元件：陣列、佇列、鏈結串列的格子，和二元樹、圖、遞迴樹的節點 */
+export function holdsPointers(el: BoardElement | undefined): el is ElementOf<'list'> | NodeHolder {
+  return !!el && (isIndexed(el) || isLinked(el) || el.type === 'tree' || el.type === 'graph' || el.type === 'recursion');
 }
 
-/** 二元樹、圖和堆積的樹：每個節點的中心（相對於元件左上角） */
-export function nodeCenters(el: ElementOf<'tree'> | ElementOf<'graph'> | ElementOf<'list'>): Map<number, Point> {
+/** 二元樹、圖、遞迴樹和堆積的樹：每個節點的中心（相對於元件左上角） */
+export function nodeCenters(el: NodeHolder | ElementOf<'list'>): Map<number, Point> {
   if (el.type === 'tree') return treeLayout(el).centers;
+  if (el.type === 'recursion') return recursionLayout(el).centers;
   if (el.type === 'list') return heapLayout(el).centers;
   return new Map(graphLayout(el).centers.map((c, i) => [i, c]));
 }
@@ -130,6 +134,10 @@ export function sizeOf(el: Placed, measured?: { w: number; h: number }): { w: nu
     }
     case 'graph': {
       const { w, h } = graphLayout(el);
+      return { w, h };
+    }
+    case 'recursion': {
+      const { w, h } = recursionLayout(el);
       return { w, h };
     }
     case 'table': {
@@ -183,11 +191,11 @@ export function pointsDown(doc: BoardDoc, pointer: ElementOf<'pointer'>): boolea
   const target = pointer.attach && findElement(doc, pointer.attach.id);
   if (heapTreeOnly(target)) return true;
   if (target?.type === 'tree') return hasTreeNode(target, pointer.attach!.index);
-  return target?.type === 'graph' && pointer.attach!.index < target.nodes.length;
+  return (target?.type === 'graph' || target?.type === 'recursion') && pointer.attach!.index < target.nodes.length;
 }
 
 /** 指標吸附的那一格；陣列被刪短時落在最後一格 */
-function slotOf(target: ElementOf<'list'> | ElementOf<'tree'> | ElementOf<'graph'>, index: number): number {
+function slotOf(target: ElementOf<'list'> | NodeHolder, index: number): number {
   return target.type === 'list' ? Math.min(index, Math.max(0, target.items.length - 1)) : index;
 }
 
@@ -203,7 +211,8 @@ export function pointerPosition(doc: BoardDoc, pointer: ElementOf<'pointer'>): P
   if (target.type !== 'list' || heapTreeOnly(target)) {
     const center = nodeCenters(target).get(slot);
     if (!center) return { x: pointer.x, y: pointer.y };
-    return { x: target.x + center.x - POINTER_W / 2, y: target.y + center.y - TREE_D / 2 - POINTER_H - 2 - stack * POINTER_H };
+    const half = target.type === 'recursion' ? REC_H / 2 : TREE_D / 2;
+    return { x: target.x + center.x - POINTER_W / 2, y: target.y + center.y - half - POINTER_H - 2 - stack * POINTER_H };
   }
   const cell = cellRect(target, slot);
   return { x: cell.x + CELL / 2 - POINTER_W / 2, y: cell.y + CELL + belowCells(target) + stack * POINTER_H };
@@ -219,7 +228,7 @@ export function snapTarget(doc: BoardDoc, at: Point): { id: string; index: numbe
     if (distance <= SNAP_DISTANCE && (!best || distance < best.distance)) best = { id, index, distance };
   };
   for (const el of doc.elements) {
-    if (el.type === 'tree' || el.type === 'graph' || (el.type === 'list' && el.variant === 'heap' && el.view === 'tree')) {
+    if (el.type === 'tree' || el.type === 'graph' || el.type === 'recursion' || (el.type === 'list' && el.variant === 'heap' && el.view === 'tree')) {
       for (const [index, c] of nodeCenters(el)) consider(el.id, index, el.x + c.x, el.y + c.y);
     } else if (isIndexed(el) || isLinked(el)) {
       for (let index = 0; index < el.items.length; index += 1) {
@@ -286,6 +295,7 @@ export type PaletteKind =
   | 'linkedList'
   | 'graph'
   | 'heap'
+  | 'recursionTree'
   | 'treeNode'
   | 'listNode'
   | 'graphNode'
@@ -294,12 +304,12 @@ export type PaletteKind =
 export type PaletteGroup = 'linear' | 'nodes' | 'lookup' | 'notes';
 
 /**
- * 元件庫依刷題時用到的頻率排，每組剛好一列四個（節點三個）。
+ * 元件庫依刷題時用到的頻率排，每組一列四個（節點多一個遞迴樹）。
  * 標題併進文字（選取後可以切換），單一的樹節點和串列節點換成整棵樹、整條串列；舊白板上的照樣顯示。
  */
 export const PALETTE: { group: PaletteGroup; kinds: PaletteKind[] }[] = [
   { group: 'linear', kinds: ['array', 'pointer', 'stack', 'queue'] },
-  { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graph', 'heap'] },
+  { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graph', 'heap', 'recursionTree'] },
   { group: 'lookup', kinds: ['dict', 'set', 'grid', 'table'] },
   { group: 'notes', kinds: ['text', 'code', 'sticky', 'var'] },
 ];
@@ -361,6 +371,25 @@ export function createElement(kind: PaletteKind, at: Point, id: string, texts: D
       };
     case 'binaryTree':
       return { type: 'tree', ...placed, label: 'root', nodes: ['1', '2', '3'] };
+    case 'recursionTree':
+      // fib(4)：一眼看出 f(2)、f(1)、f(0) 被算了好幾次
+      return {
+        type: 'recursion',
+        ...placed,
+        label: 'fib',
+        repeats: true,
+        nodes: [
+          { text: 'f(4)', parent: -1 },
+          { text: 'f(3)', parent: 0 },
+          { text: 'f(2)', parent: 1 },
+          { text: 'f(1)', parent: 2 },
+          { text: 'f(0)', parent: 2 },
+          { text: 'f(1)', parent: 1 },
+          { text: 'f(2)', parent: 0 },
+          { text: 'f(1)', parent: 6 },
+          { text: 'f(0)', parent: 6 },
+        ],
+      };
     case 'treeNode':
       return { type: 'node', ...placed, variant: 'tree', value: '1' };
     case 'listNode':
@@ -1138,6 +1167,241 @@ export function setDirected(doc: BoardDoc, id: string, directed: boolean): Board
   return updateElement<ElementOf<'graph'>>(doc, id, { directed: undefined, edges });
 }
 
+// ---------- 遞迴樹 ----------
+
+/** 遞迴樹的節點是圓角長方形，寬度跟著字變；左右的留白要放得下 CSS 的 padding 和框線 */
+export const REC_H = 32;
+export const REC_FONT = 14;
+const REC_MIN_W = 40;
+const REC_PAD = 24;
+/** 節點上的字和回傳值之間隔一條線，兩邊各留一點 */
+const REC_RET_GAP = 14;
+/** 兄弟子樹之間至少隔多遠 */
+const REC_GAP = 14;
+/** 上下兩層節點中心的距離；中間寫得下邊上的字 */
+export const REC_LEVEL = 72;
+export const REC_MAX_NODES = 63;
+export const REC_MAX_DEPTH = 8;
+
+export type RecursionNode = ElementOf<'recursion'>['nodes'][number];
+
+/** 估計等寬字的寬度：中日韓字元算一個字高，其他算 0.6 個 */
+export function monoWidth(value: string, size: number): number {
+  let width = 0;
+  for (const ch of value) width += ch.charCodeAt(0) > 0x2e80 ? size : size * 0.6;
+  return width;
+}
+
+/** 節點的寬度：字，有回傳值時再加上回傳值 */
+export function recNodeWidth(node: RecursionNode): number {
+  const ret = node.ret ? monoWidth(node.ret, REC_FONT) + REC_RET_GAP : 0;
+  return Math.max(REC_MIN_W, Math.ceil(monoWidth(node.text, REC_FONT) + ret + REC_PAD));
+}
+
+/** 每個節點的子節點，由左到右 */
+export function recursionChildren(el: ElementOf<'recursion'>): number[][] {
+  const children = el.nodes.map((): number[] => []);
+  el.nodes.forEach((node, i) => {
+    if (i > 0 && node.parent >= 0 && node.parent < i) children[node.parent].push(i);
+  });
+  return children;
+}
+
+/** 這個節點和它底下的所有呼叫，依呼叫的順序 */
+export function recursionSubtree(el: ElementOf<'recursion'>, index: number): number[] {
+  const children = recursionChildren(el);
+  const out: number[] = [];
+  const visit = (i: number) => {
+    out.push(i);
+    children[i].forEach(visit);
+  };
+  if (index >= 0 && index < el.nodes.length) visit(index);
+  return out;
+}
+
+/** 呼叫的順序（前序走訪）：DFS 一路走下去的順序 */
+export function recursionPreorder(el: ElementOf<'recursion'>): number[] {
+  return recursionSubtree(el, 0);
+}
+
+function recursionDepth(el: ElementOf<'recursion'>, index: number): number {
+  let depth = 0;
+  for (let i = index; i > 0; i = el.nodes[i].parent) depth += 1;
+  return depth;
+}
+
+export interface RecursionLayout {
+  /** 每個節點的中心，相對於元件左上角 */
+  centers: Map<number, Point>;
+  widths: number[];
+  w: number;
+  h: number;
+}
+
+/**
+ * 由上往下排：每個子樹佔一段寬度，子樹之間留一點空，父節點放在第一個和最後一個子節點的正中間。
+ * 字比較長的節點會把它那一段撐寬，不會跟旁邊的疊在一起。
+ */
+export function recursionLayout(el: ElementOf<'recursion'>): RecursionLayout {
+  const children = recursionChildren(el);
+  const widths = el.nodes.map(recNodeWidth);
+  const span = el.nodes.map(() => 0);
+  const gaps = (kids: number[]) => REC_GAP * Math.max(0, kids.length - 1);
+  const measure = (i: number): number => {
+    const kids = children[i];
+    span[i] = Math.max(widths[i], kids.reduce((sum, k) => sum + measure(k), 0) + gaps(kids));
+    return span[i];
+  };
+  measure(0);
+  const centers = new Map<number, Point>();
+  let deepest = 0;
+  const place = (i: number, left: number, depth: number) => {
+    deepest = Math.max(deepest, depth);
+    const kids = children[i];
+    let x = left + span[i] / 2;
+    if (kids.length > 0) {
+      let start = left + (span[i] - kids.reduce((sum, k) => sum + span[k], 0) - gaps(kids)) / 2;
+      for (const k of kids) {
+        place(k, start, depth + 1);
+        start += span[k] + REC_GAP;
+      }
+      const middle = (centers.get(kids[0])!.x + centers.get(kids[kids.length - 1])!.x) / 2;
+      x = Math.min(Math.max(middle, left + widths[i] / 2), left + span[i] - widths[i] / 2);
+    }
+    centers.set(i, { x: Math.round(x), y: TREE_TOP + depth * REC_LEVEL + REC_H / 2 });
+  };
+  place(0, 0, 0);
+  return { centers, widths, w: Math.max(REC_MIN_W, span[0]), h: TREE_TOP + deepest * REC_LEVEL + REC_H };
+}
+
+/** 被剪掉的節點和它底下的呼叫（畫成淡的） */
+export function prunedNodes(el: ElementOf<'recursion'>): Set<number> {
+  const out = new Set<number>();
+  el.nodes.forEach((node, i) => {
+    if (node.cut || (i > 0 && out.has(node.parent))) out.add(i);
+  });
+  return out;
+}
+
+/** 重複的呼叫依第一次出現的順序輪流用這些顏色；灰色不用，免得跟剪掉的枝搞混 */
+const REPEAT_COLORS: CellColor[] = ['yellow', 'blue', 'green', 'purple', 'red'];
+
+/** 字一樣、出現兩次以上的呼叫標同一個顏色；沒開「標出重複」時全部是 null */
+export function repeatColors(el: ElementOf<'recursion'>): (CellColor | null)[] {
+  const out = el.nodes.map((): CellColor | null => null);
+  if (!el.repeats) return out;
+  const counts = new Map<string, number>();
+  for (const node of el.nodes) {
+    const key = node.text.trim();
+    if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const assigned = new Map<string, CellColor>();
+  for (const i of recursionPreorder(el)) {
+    const key = el.nodes[i].text.trim();
+    if ((counts.get(key) ?? 0) < 2) continue;
+    if (!assigned.has(key)) assigned.set(key, REPEAT_COLORS[assigned.size % REPEAT_COLORS.length]);
+    out[i] = assigned.get(key)!;
+  }
+  return out;
+}
+
+export type RecursionDirection = 'up' | 'down' | 'prev' | 'next';
+
+/** 回到呼叫者、走到第一個子呼叫，或依呼叫的順序往前往後走一步；走不過去是 null */
+export function recursionStep(el: ElementOf<'recursion'>, index: number, dir: RecursionDirection): number | null {
+  if (index < 0 || index >= el.nodes.length) return null;
+  if (dir === 'up') return index === 0 ? null : el.nodes[index].parent;
+  if (dir === 'down') return recursionChildren(el)[index][0] ?? null;
+  const order = recursionPreorder(el);
+  return order[order.indexOf(index) + (dir === 'next' ? 1 : -1)] ?? null;
+}
+
+/** 吸附在遞迴樹上的指標：用方向鍵沿著呼叫的順序走 */
+export function stepRecursionPointer(doc: BoardDoc, id: string, dir: RecursionDirection): BoardDoc {
+  return mapElement(doc, id, (el) => {
+    if (el.type !== 'pointer' || !el.attach) return el;
+    const target = findElement(doc, el.attach.id);
+    if (target?.type !== 'recursion') return el;
+    const index = recursionStep(target, el.attach.index, dir);
+    return index === null ? el : { ...el, attach: { ...el.attach, index } };
+  });
+}
+
+/** 吸附在這棵遞迴樹上的指標，依新的位置移動；fn 回傳 null 的指標留在原本畫面上的位置 */
+function remapRecursionPointers(before: BoardDoc, after: BoardDoc, id: string, fn: (index: number) => number | null): BoardDoc {
+  return {
+    ...after,
+    elements: after.elements.map((p) => {
+      if (p.type !== 'pointer' || p.attach?.id !== id) return p;
+      const index = fn(p.attach.index);
+      if (index !== null) return { ...p, attach: { ...p.attach, index } };
+      const at = pointerPosition(before, p);
+      return { ...p, x: Math.round(at.x), y: Math.round(at.y), attach: undefined };
+    }),
+  };
+}
+
+/**
+ * 在 parent 底下最右邊加一個呼叫（字是空的，等著輸入）；滿了或超過 8 層就不加。
+ * 新節點排在 parent 整個子樹的後面，存的順序維持呼叫的順序。回傳新節點的位置
+ */
+export function addRecursionChild(doc: BoardDoc, id: string, parent: number): { doc: BoardDoc; index: number } | null {
+  const el = findElement(doc, id);
+  if (el?.type !== 'recursion' || parent < 0 || parent >= el.nodes.length || el.nodes.length >= REC_MAX_NODES) return null;
+  if (recursionDepth(el, parent) + 1 >= REC_MAX_DEPTH) return null;
+  const at = Math.max(...recursionSubtree(el, parent)) + 1;
+  const shift = (i: number) => (i >= at ? i + 1 : i);
+  const nodes = [
+    ...el.nodes.slice(0, at),
+    { text: '', parent },
+    ...el.nodes.slice(at).map((node) => ({ ...node, parent: shift(node.parent) })),
+  ];
+  const next = updateElement<ElementOf<'recursion'>>(doc, id, { nodes });
+  return { doc: remapRecursionPointers(doc, next, id, shift), index: at };
+}
+
+/** 刪掉這個呼叫連同底下的呼叫；根節點不刪。後面的往前遞補，指標跟著；指著被刪節點的留在原地 */
+export function deleteRecursionNode(doc: BoardDoc, id: string, index: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'recursion' || index <= 0 || index >= el.nodes.length) return doc;
+  const gone = new Set(recursionSubtree(el, index));
+  const kept = new Map<number, number>();
+  el.nodes.forEach((_, i) => {
+    if (!gone.has(i)) kept.set(i, kept.size);
+  });
+  const nodes = el.nodes.filter((_, i) => !gone.has(i)).map((node) => (node.parent < 0 ? node : { ...node, parent: kept.get(node.parent)! }));
+  const next = updateElement<ElementOf<'recursion'>>(doc, id, { nodes });
+  return remapRecursionPointers(doc, next, id, (i) => kept.get(i) ?? null);
+}
+
+export interface RecursionPatch {
+  text?: string;
+  edge?: string;
+  ret?: string;
+  cut?: boolean;
+  color?: CellColor | null;
+}
+
+/** 改一個呼叫：字、邊上的字、回傳值、剪枝、底色；空字串、false 和 null 就拿掉那一項 */
+export function updateRecursionNode(doc: BoardDoc, id: string, index: number, patch: RecursionPatch): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'recursion' || index < 0 || index >= el.nodes.length) return doc;
+  const nodes = el.nodes.map((node, i) => {
+    if (i !== index) return node;
+    const next: Record<string, unknown> = { ...node, ...patch };
+    for (const key of ['edge', 'ret', 'cut', 'color']) if (!next[key]) delete next[key];
+    return next as RecursionNode;
+  });
+  return updateElement<ElementOf<'recursion'>>(doc, id, { nodes });
+}
+
+/** 開關「標出重複的呼叫」 */
+export function setRepeats(doc: BoardDoc, id: string, on: boolean): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'recursion') return doc;
+  return updateElement<ElementOf<'recursion'>>(doc, id, { repeats: on || undefined });
+}
+
 /** 表格加減一列或一欄，至少留一列一欄 */
 export function resizeTable(doc: BoardDoc, id: string, axis: 'row' | 'col', delta: 1 | -1): BoardDoc {
   const el = findElement(doc, id);
@@ -1366,6 +1630,23 @@ export function contentBounds(doc: BoardDoc, sizes?: Sizes): Rect | null {
     }
   }
   return minX === Infinity ? null : { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+// ---------- 畫面 ----------
+
+/**
+ * 選取列擋住選到的東西時，畫面要上下挪多少（螢幕像素）才露出來；沒擋到是 0。
+ * 選取列在下半部（手機）就往上挪，在上面（桌機）就往下挪；東西太高、整個放不下時對齊上緣。
+ */
+export function revealShift(target: Rect, bar: Rect, viewport: Rect, margin = 12): number {
+  const covered = target.x < bar.x + bar.w && bar.x < target.x + target.w && target.y < bar.y + bar.h && bar.y < target.y + target.h;
+  if (!covered) return 0;
+  if (bar.y + bar.h / 2 > viewport.y + viewport.h / 2) {
+    const shift = bar.y - margin - (target.y + target.h);
+    const top = viewport.y + margin;
+    return target.y + shift >= top ? shift : Math.min(0, top - target.y);
+  }
+  return bar.y + bar.h + margin - target.y;
 }
 
 // ---------- 逐步播放 ----------

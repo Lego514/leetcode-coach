@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { BOARD_COLORS, BOARD_MAX_BYTES, CELL_COLORS, type BoardColor, type CellColor } from '../../../shared/constants';
 import type { Difficulty } from '../../data/problems';
 import { useI18n } from '../../i18n';
@@ -272,6 +272,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       : undefined;
   const graphNode = pickedGraph && cellSel?.id === pickedGraph.id ? cellSel.index : undefined;
   const graphEdge = pickedGraph && graphNode === undefined && edgeSel?.id === pickedGraph.id ? edgeSel.index : undefined;
+  // 遞迴樹選了一個呼叫
+  const pickedRec =
+    cellSel && single?.type === 'recursion' && single.id === cellSel.id && cellSel.index < single.nodes.length ? single : undefined;
+  const recNode = pickedRec ? cellSel!.index : undefined;
 
   const startEditing = (id: string, focus?: number) => {
     setHistory((h) => m.checkpoint(h));
@@ -335,7 +339,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     setCellSel({ id: list.id, index: Math.max(0, Math.min(index, list.items.length - 2)) });
   };
 
-  const addPointerOn = (target: m.ElementOf<'list'> | m.ElementOf<'tree'> | m.ElementOf<'graph'>, index: number) => {
+  const addPointerOn = (target: m.ElementOf<'list'> | m.NodeHolder, index: number) => {
     const id = m.newId(doc);
     apply(m.addPointerAt(doc, target.id, index, id));
     setSelection(new Set([id]));
@@ -383,6 +387,22 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     if (index <= 0) return;
     apply(m.deleteTreeNode(doc, tree.id, index));
     setCellSel({ id: tree.id, index: m.treeParent(index) });
+  };
+
+  /** 在遞迴樹的一個呼叫底下加子呼叫，選取它並直接開始輸入 */
+  const addCallAt = (tree: m.ElementOf<'recursion'>, parent: number) => {
+    const result = m.addRecursionChild(doc, tree.id, parent);
+    if (!result) return;
+    apply(result.doc);
+    setCellSel({ id: tree.id, index: result.index });
+    startEditing(tree.id, result.index);
+  };
+
+  /** 刪掉這個呼叫和底下的呼叫，改選呼叫它的那個（位置在前面，不會變） */
+  const deleteCallAt = (tree: m.ElementOf<'recursion'>, index: number) => {
+    if (index <= 0) return;
+    apply(m.deleteRecursionNode(doc, tree.id, index));
+    setCellSel({ id: tree.id, index: tree.nodes[index].parent });
   };
 
   const removeSelected = () => {
@@ -506,6 +526,46 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     setTool(next);
     if (next !== 'select') setSelection(new Set());
   };
+
+  // ---------- 選取列不要擋住選到的東西 ----------
+
+  /** 選取時手指或滑鼠還按著（可能接著拖），等放開再挪 */
+  const revealLater = useRef(false);
+
+  /** 選到的東西（或選到的那一格、那條邊）被選取列擋住時，把畫面上下挪開 */
+  const revealSelection = () => {
+    const viewport = viewportRef.current;
+    const bar = viewport?.querySelector<HTMLElement>('.board-selbar');
+    if (!viewport || !bar || selected.size !== 1) return;
+    const id = [...selected][0];
+    const host = viewport.querySelector<HTMLElement>(`[data-el="${id}"]`);
+    if (!host) return;
+    const part =
+      cellSel?.id === id
+        ? host.querySelector(`[data-cell="${cellSel.index}"]`)
+        : edgeSel?.id === id
+          ? host.querySelector(`[data-edge="${edgeSel.index}"]`)
+          : null;
+    const box = (node: Element): m.Rect => {
+      const r = node.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height };
+    };
+    const dy = m.revealShift(box(part ?? host), box(bar), box(viewport));
+    if (dy !== 0) setView((v) => ({ ...v, y: v.y + dy }));
+  };
+
+  const selectionKey =
+    playIndex === null && tool === 'select'
+      ? `${[...selected].join(',')}|${cellSel ? `${cellSel.id}:${cellSel.index}` : ''}|${edgeSel ? `${edgeSel.id}:${edgeSel.index}` : ''}`
+      : '';
+  const revealOnChange = useEffectEvent(() => {
+    if (gesture.current) revealLater.current = true;
+    else revealSelection();
+  });
+  // 選取列畫出來之後、畫面顯示之前就挪好，不會先閃一下被擋住的樣子
+  useLayoutEffect(() => {
+    if (selectionKey) revealOnChange();
+  }, [selectionKey]);
 
   // ---------- 畫布上的指標事件 ----------
 
@@ -734,6 +794,8 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     gesture.current = null;
     setDraft(null);
     setSnap(null);
+    const reveal = revealLater.current;
+    revealLater.current = false;
     if (cancelled) return;
 
     switch (g.kind) {
@@ -748,6 +810,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
           lastTap.current = { id: g.clicked, cell: g.cell, time: e.timeStamp };
           // 選了一群東西時，點其中一個（沒拖動）就只選它；要一起拖就直接拖
           if (g.ids.size > 1) setSelection(new Set([g.clicked]));
+          else if (reveal) revealSelection();
         }
         return;
       case 'pen': {
@@ -876,6 +939,18 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         e.preventDefault();
         const n = pickedGraph.nodes.length;
         setCellSel({ id: pickedGraph.id, index: (graphNode + (e.key === 'ArrowRight' ? 1 : -1) + n) % n });
+      } else if (pickedRec && recNode !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
+        // 選了遞迴樹的一個呼叫：刪的是這一枝（根節點不刪）
+        e.preventDefault();
+        deleteCallAt(pickedRec, recNode);
+      } else if (pickedRec && recNode !== undefined && e.key === 'Enter') {
+        e.preventDefault();
+        startEditing(pickedRec.id, recNode);
+      } else if (pickedRec && recNode !== undefined && e.key.startsWith('Arrow')) {
+        // ← → 照呼叫的順序走，↑ 回到呼叫者，↓ 到第一個子呼叫
+        e.preventDefault();
+        const next = m.recursionStep(pickedRec, recNode, recursionDirection(e.key));
+        if (next !== null) setCellSel({ id: pickedRec.id, index: next });
       } else if (pickedTree && pickedNode !== undefined && (e.key === 'Delete' || e.key === 'Backspace')) {
         // 選了樹的一個節點：刪的是這個子樹，不是整棵樹（根節點不刪）
         e.preventDefault();
@@ -922,6 +997,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         // 吸附在陣列上的指標左右移一格；吸附在樹上的走到子節點或父節點；其他元件移 10
         const target = single?.type === 'pointer' && single.attach ? m.findElement(doc, single.attach.id) : undefined;
         if (target?.type === 'tree') apply(m.stepTreePointer(doc, single!.id, arrowDirection(e.key)));
+        else if (target?.type === 'recursion') apply(m.stepRecursionPointer(doc, single!.id, recursionDirection(e.key)));
         // 吸附著的指標用上下鍵不會被拖離
         else if (m.holdsPointers(target)) {
           if (dx !== 0) apply(m.shiftPointer(doc, single!.id, dx));
@@ -1049,7 +1125,15 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 editing={editingId === el.id}
                 snapIndex={snap?.id === el.id ? snap.index : undefined}
                 cellIndex={
-                  pickedList?.id === el.id ? pickedIndex : pickedTree?.id === el.id ? pickedNode : pickedGraph?.id === el.id ? graphNode : undefined
+                  pickedList?.id === el.id
+                    ? pickedIndex
+                    : pickedTree?.id === el.id
+                      ? pickedNode
+                      : pickedGraph?.id === el.id
+                        ? graphNode
+                        : pickedRec?.id === el.id
+                          ? recNode
+                          : undefined
                 }
                 edgeIndex={pickedGraph?.id === el.id ? graphEdge : undefined}
                 onAddNode={canAdd(el) && el.type === 'graph' ? () => addGraphNodeTo(el) : undefined}
@@ -1058,6 +1142,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                 onAddCell={canAdd(el) && el.type === 'list' ? () => insertCellAt(el, el.items.length) : undefined}
                 onToggleLink={canAdd(el) && m.isLinked(el) ? (gap) => toggleLinkAt(el, gap) : undefined}
                 onAddChild={canAdd(el) && el.type === 'tree' ? (index) => addChildAt(el, index) : undefined}
+                onAddCall={canAdd(el) && el.type === 'recursion' ? (parent) => addCallAt(el, parent) : undefined}
                 onAddRow={canAdd(el) && el.type === 'table' ? () => apply(m.resizeTable(doc, el.id, 'row', 1)) : undefined}
                 onAddCol={canAdd(el) && el.type === 'table' ? () => apply(m.resizeTable(doc, el.id, 'col', 1)) : undefined}
                 register={register}
@@ -1195,6 +1280,16 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                   onAddPointer={() => addPointerOn(pickedGraph, graphNode)}
                   onConnect={(to) => apply(m.addGraphEdge(doc, pickedGraph.id, graphNode, to))}
                   onDelete={() => deleteGraphNodeAt(pickedGraph, graphNode)}
+                />
+              ) : pickedRec && recNode !== undefined ? (
+                <RecursionNodeActions
+                  key={`${pickedRec.id}:${recNode}`}
+                  tree={pickedRec}
+                  index={recNode}
+                  onChange={(patch) => apply(m.updateRecursionNode(doc, pickedRec.id, recNode, patch))}
+                  onAddChild={() => addCallAt(pickedRec, recNode)}
+                  onAddPointer={() => addPointerOn(pickedRec, recNode)}
+                  onDelete={() => deleteCallAt(pickedRec, recNode)}
                 />
               ) : pickedTree && pickedNode !== undefined ? (
                 <NodeActions
@@ -1465,6 +1560,69 @@ function NodeActions({ tree, index, onColor, onAddPointer, onAddChild, onDelete 
   );
 }
 
+interface RecursionNodeActionsProps {
+  tree: m.ElementOf<'recursion'>;
+  index: number;
+  onChange: (patch: m.RecursionPatch) => void;
+  onAddChild: () => void;
+  onAddPointer: () => void;
+  onDelete: () => void;
+}
+
+/** 選了遞迴樹的一個呼叫：上底色、加子呼叫、寫回傳值和上面那條邊的字、剪掉這枝、加指標、刪除 */
+function RecursionNodeActions({ tree, index, onChange, onAddChild, onAddPointer, onDelete }: RecursionNodeActionsProps) {
+  const { t } = useI18n();
+  const a = t.board.actions;
+  const r = t.board.recursion;
+  const node = tree.nodes[index];
+  const canAdd = m.addRecursionChild({ elements: [tree] }, tree.id, index) !== null;
+  return (
+    <>
+      <span className="board-selbar-title">{t.board.nodeLabel(node.text)}</span>
+      <CellColors current={node.color ?? null} onColor={(color) => onChange({ color })} />
+      <button type="button" className="btn btn-small" disabled={!canAdd} title={canAdd ? undefined : r.full} onClick={onAddChild}>
+        {r.addCall}
+      </button>
+      <SelbarField key={`ret:${node.ret ?? ''}`} label={r.ret} value={node.ret ?? ''} onCommit={(ret) => onChange({ ret })} />
+      {index > 0 && <SelbarField key={`edge:${node.edge ?? ''}`} label={r.edge} value={node.edge ?? ''} onCommit={(edge) => onChange({ edge })} />}
+      {index > 0 && (
+        <button type="button" className="btn btn-small" aria-pressed={!!node.cut} onClick={() => onChange({ cut: !node.cut })}>
+          {node.cut ? r.uncut : r.cut}
+        </button>
+      )}
+      <button type="button" className="btn btn-small" onClick={onAddPointer}>
+        {a.addPointer}
+      </button>
+      <button type="button" className="btn btn-small btn-danger" disabled={index === 0} onClick={onDelete}>
+        {a.deleteSubtree}
+      </button>
+    </>
+  );
+}
+
+/** 選取列上的小輸入框：按 Enter 或離開時才寫進白板，一次一筆復原紀錄 */
+function SelbarField({ label, value, onCommit }: { label: string; value: string; onCommit: (value: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  const commit = () => {
+    if (draft.trim() !== value) onCommit(draft.trim());
+  };
+  return (
+    <input
+      className="input board-weight board-rec-field"
+      value={draft}
+      aria-label={label}
+      placeholder={label}
+      maxLength={12}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') commit();
+      }}
+    />
+  );
+}
+
 interface GraphNodeActionsProps {
   graph: m.ElementOf<'graph'>;
   index: number;
@@ -1567,6 +1725,19 @@ function StructureTextForm({ el, doc, sizes, apply, onClose }: StructureTextForm
   const s = t.board.structureText;
   const [text, setText] = useState(() => structureText(el));
   const [error, setError] = useState('');
+  // 遞迴樹一行一個呼叫：Enter 換行，Ctrl+Enter 套用
+  const outline = el.type === 'recursion';
+  const field = {
+    value: text,
+    'aria-label': s.label,
+    placeholder: textPlaceholder(el, s),
+    autoFocus: true,
+    spellCheck: false,
+  };
+  const onTextChange = (value: string) => {
+    setText(value);
+    setError('');
+  };
   return (
     <form
       className="board-text-form"
@@ -1581,23 +1752,34 @@ function StructureTextForm({ el, doc, sizes, apply, onClose }: StructureTextForm
         onClose();
       }}
     >
-      <input
-        className="input"
-        value={text}
-        aria-label={s.label}
-        placeholder={textPlaceholder(el, s)}
-        maxLength={2000}
-        autoFocus
-        spellCheck={false}
-        onChange={(e) => {
-          setText(e.target.value);
-          setError('');
-        }}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.key === 'Escape') onClose();
-        }}
-      />
+      {outline ? (
+        <textarea
+          {...field}
+          className="input board-text-outline"
+          rows={Math.min(12, Math.max(5, text.split('\n').length + 1))}
+          maxLength={6000}
+          onChange={(e) => onTextChange(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
+        />
+      ) : (
+        <input
+          {...field}
+          className="input"
+          maxLength={2000}
+          onChange={(e) => onTextChange(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Escape') onClose();
+          }}
+        />
+      )}
       <button type="submit" className="btn btn-small btn-primary">
         {t.board.actions.applyText}
       </button>
@@ -1620,6 +1802,8 @@ function textPlaceholder(el: TextElement, s: ReturnType<typeof useI18n>['t']['bo
       return s.tree;
     case 'graph':
       return s.graph;
+    case 'recursion':
+      return s.recursion;
     case 'table':
       return el.variant === 'dict' ? s.dict : s.grid;
     case 'list':
@@ -1639,6 +1823,7 @@ interface SelectionActionsProps {
 function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsProps) {
   const { t } = useI18n();
   const a = t.board.actions;
+  const r = t.board.recursion;
   const [writing, setWriting] = useState(false);
   const buttons: [string, () => void][] = [];
   const structure = acceptsText(el) ? el : undefined;
@@ -1647,6 +1832,9 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
   if (structure) buttons.push([a.fromText, () => setWriting(true)]);
   if (el.type === 'graph') {
     buttons.push([el.directed ? a.makeUndirected : a.makeDirected, () => apply(m.setDirected(doc, el.id, !el.directed))]);
+  }
+  if (el.type === 'recursion') {
+    buttons.push([el.repeats ? r.repeatsOff : r.repeatsOn, () => apply(m.setRepeats(doc, el.id, !el.repeats))]);
   }
   if (m.isPlaced(el) && el.type !== 'shape') buttons.push([a.edit, onEdit]);
   // 元件庫只有「文字」，選取後可以切換成標題
@@ -1665,11 +1853,19 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
     const plain = el.head === 'none';
     buttons.push([plain ? a.makeArrow : a.makeLine, () => apply(m.setArrowHead(doc, el.id, plain ? 'end' : 'none'))]);
   }
-  if (el.type === 'pointer' && el.attach && m.findElement(doc, el.attach.id)?.type === 'tree') {
+  const attachedTo = el.type === 'pointer' && el.attach ? m.findElement(doc, el.attach.id)?.type : undefined;
+  if (el.type === 'pointer' && attachedTo === 'tree') {
     buttons.push(
       [a.pointerToParent, () => apply(m.stepTreePointer(doc, el.id, 'up'))],
       [a.pointerToLeft, () => apply(m.stepTreePointer(doc, el.id, 'left'))],
       [a.pointerToRight, () => apply(m.stepTreePointer(doc, el.id, 'right'))],
+    );
+  } else if (el.type === 'pointer' && attachedTo === 'recursion') {
+    // 照呼叫的順序走，追蹤 DFS 跑到哪裡
+    buttons.push(
+      [r.prevCall, () => apply(m.stepRecursionPointer(doc, el.id, 'prev'))],
+      [r.nextCall, () => apply(m.stepRecursionPointer(doc, el.id, 'next'))],
+      [r.toCaller, () => apply(m.stepRecursionPointer(doc, el.id, 'up'))],
     );
   } else if (el.type === 'pointer' && el.attach) {
     buttons.push([a.pointerLeft, () => apply(m.shiftPointer(doc, el.id, -1))], [a.pointerRight, () => apply(m.shiftPointer(doc, el.id, 1))]);
@@ -1756,6 +1952,11 @@ function HeapActions({ el, doc, apply }: { el: m.ElementOf<'list'>; doc: m.Board
 /** 在二元樹上，方向鍵對應的走法 */
 function arrowDirection(key: string): m.TreeDirection {
   return key === 'ArrowLeft' ? 'left' : key === 'ArrowRight' ? 'right' : key === 'ArrowUp' ? 'up' : 'down';
+}
+
+/** 在遞迴樹上：← → 照呼叫的順序走，↑ 回到呼叫者，↓ 到第一個子呼叫 */
+function recursionDirection(key: string): m.RecursionDirection {
+  return key === 'ArrowLeft' ? 'prev' : key === 'ArrowRight' ? 'next' : key === 'ArrowUp' ? 'up' : 'down';
 }
 
 /** 用 canvas 量文字寬度，匯出時換行和截斷才跟畫面一致 */
@@ -1955,6 +2156,15 @@ const PALETTE_ICONS: Record<m.PaletteKind, ReactNode> = {
     </>
   ),
   table: <path d="M4 5h16v14H4zM4 10h16M4 14.5h16M10 5v14" />,
+  recursionTree: (
+    <>
+      <rect x="8.5" y="2.5" width="7" height="4.5" rx="1.2" />
+      <rect x="1.5" y="17" width="6" height="4.5" rx="1.2" />
+      <rect x="9" y="17" width="6" height="4.5" rx="1.2" />
+      <rect x="16.5" y="17" width="6" height="4.5" rx="1.2" />
+      <path d="M12 7v10M10.5 7 4.5 17M13.5 7l6 10" />
+    </>
+  ),
 };
 
 const TEMPLATE_ICONS: Record<TemplateKind, ReactNode> = {
@@ -1970,4 +2180,11 @@ const TEMPLATE_ICONS: Record<TemplateKind, ReactNode> = {
     </>
   ),
   gridBfs: <path d="M3 3h12v12H3zM3 9h12M9 3v12M18 18l3 3M20.5 15.5a4 4 0 1 1-5 5" />,
+  backtracking: (
+    <>
+      <rect x="8.5" y="2.5" width="7" height="4.5" rx="1.2" />
+      <rect x="2" y="17" width="6.5" height="4.5" rx="1.2" />
+      <path d="M10.5 7 5.5 17M13.5 7l3 5.5M15 15l4 4M19 15l-4 4" />
+    </>
+  ),
 };

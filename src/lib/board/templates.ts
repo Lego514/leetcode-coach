@@ -21,9 +21,9 @@ import {
 // 模板：點一下就擺好一整套常見的追蹤場景，指標名字也取好。
 // 內容是常見的小例子，可以再用「用文字建立」或雙擊換成題目的範例。
 
-export type TemplateKind = 'twoPointers' | 'slidingWindow' | 'reverseList' | 'treeDfs' | 'gridBfs';
+export type TemplateKind = 'twoPointers' | 'slidingWindow' | 'reverseList' | 'treeDfs' | 'gridBfs' | 'backtracking';
 
-export const TEMPLATES: TemplateKind[] = ['twoPointers', 'slidingWindow', 'reverseList', 'treeDfs', 'gridBfs'];
+export const TEMPLATES: TemplateKind[] = ['twoPointers', 'slidingWindow', 'reverseList', 'treeDfs', 'gridBfs', 'backtracking'];
 
 /** 兩個元件之間留的空間 */
 const GAP = 40;
@@ -98,6 +98,33 @@ export function templateElements(kind: TemplateKind, nextId: () => string): Boar
         grid,
         queue,
         { type: 'list', id: nextId(), x: right, y: sizeOf(queue).h + GAP / 2, variant: 'set', label: 'visited', items: ['0,0'] },
+      ];
+    }
+    case 'backtracking': {
+      // 子集合：每一層選下一個數字，邊上寫選了什麼；cur 指著目前這一層，path 跟著改
+      const nums: ElementOf<'list'> = { type: 'list', id: nextId(), x: 0, y: 0, variant: 'array', label: 'nums', items: ['1', '2', '3'] };
+      const tree: ElementOf<'recursion'> = {
+        type: 'recursion',
+        id: nextId(),
+        x: 0,
+        y: LABEL_H + CELL + INDEX_H + GAP,
+        label: 'subsets',
+        nodes: [
+          { text: '[]', parent: -1 },
+          { text: '[1]', parent: 0, edge: '+1' },
+          { text: '[1,2]', parent: 1, edge: '+2' },
+          { text: '[1,2,3]', parent: 2, edge: '+3' },
+          { text: '[1,3]', parent: 1, edge: '+3' },
+          { text: '[2]', parent: 0, edge: '+2' },
+          { text: '[2,3]', parent: 5, edge: '+3' },
+          { text: '[3]', parent: 0, edge: '+3' },
+        ],
+      };
+      return [
+        nums,
+        { type: 'var', id: nextId(), x: sizeOf(nums).w + GAP, y: LABEL_H, name: 'path', value: '[]' },
+        tree,
+        pointer(nextId(), 'cur', { id: tree.id, index: 0 }),
       ];
     }
   }

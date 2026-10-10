@@ -3455,6 +3455,7 @@ textarea.board-text-input {
   margin-inline: auto;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
   gap: 6px;
   max-width: calc(100% - 24px);
@@ -4651,3 +4652,112 @@ button.board-link {
   color: var(--ink-2);
   white-space: nowrap;
 }
+
+/* ---------- 遞迴樹 ---------- */
+
+.board-rec-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.board-rec-edge {
+  stroke: var(--ink-2);
+  stroke-width: 2;
+}
+
+.board-rec-edges g[data-pruned] .board-rec-edge {
+  stroke: var(--ink-3);
+  stroke-dasharray: 5 4;
+}
+
+.board-rec-edge-label {
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 4;
+  paint-order: stroke;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* 節點是圓角長方形，寬度由排版算好；剪掉的標記畫在右上角，所以不裁切 */
+.board-cell.board-rec-node {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  overflow: visible;
+  border-width: 2px;
+  border-color: var(--ink-2);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.board-rec-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-rec-ret {
+  padding-left: 6px;
+  border-left: 1px solid var(--rule-strong);
+  color: var(--good);
+  font-weight: 700;
+}
+
+.board-cell.board-rec-node[data-pruned] {
+  border-style: dashed;
+  border-color: var(--ink-3);
+  color: var(--ink-3);
+  opacity: 0.6;
+}
+
+.board-cell.board-rec-node[data-cut]::after {
+  content: '✕';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--sheet);
+  font-size: 10px;
+}
+
+.board-add.board-rec-add {
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sheet);
+  font-size: 16px;
+}
+
+.input.board-weight.board-rec-field {
+  width: 104px;
+}
+
+/* 多行的輸入框自己佔一列，複製、刪除排到下一列 */
+.board-text-form:has(.board-text-outline) {
+  flex-basis: 100%;
+  justify-content: center;
+}
+
+.board-text-form .input.board-text-outline {
+  width: min(420px, 80vw);
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+

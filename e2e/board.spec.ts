@@ -549,3 +549,49 @@ test('pushes and pops a heap, records each swap, and fixes a broken order', asyn
   await expect(heap.locator('.board-heap-array')).toHaveCount(0);
   await expect(selbar.getByRole('button', { name: 'Show: tree' })).toBeVisible();
 });
+
+test('traces a recursion tree: returns, pruning, child calls, and a pointer walking in call order', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Recursion tree', exact: true }).click();
+  const tree = page.getByRole('group', { name: /^Recursion tree fib/ });
+  await expect(tree).toHaveAccessibleName('Recursion tree fib: f(4) (f(3) (f(2) (f(1), f(0)), f(1)), f(2) (f(1), f(0)))');
+  // 重複的呼叫標同一個顏色：f(2) 兩次、f(1) 三次
+  await expect(tree.locator('.board-rec-node[data-color="yellow"]')).toHaveCount(2);
+  await expect(tree.locator('.board-rec-node[data-color="blue"]')).toHaveCount(3);
+
+  // 點右邊的 f(2)：寫回傳值、剪掉這枝、加一個子呼叫
+  const selbar = page.getByRole('toolbar', { name: 'Selected element' });
+  await tree.locator('[data-cell="6"]').click();
+  await expect(selbar).toContainText('Node f(2)');
+  const ret = selbar.getByRole('textbox', { name: 'Returns' });
+  await ret.fill('1');
+  await ret.press('Enter');
+  await selbar.getByRole('button', { name: 'Prune here' }).click();
+  await expect(tree).toHaveAccessibleName(/, f\(2\) = 1 ✕ \(f\(1\), f\(0\)\)\)$/);
+  await expect(tree.locator('.board-rec-node[data-pruned]')).toHaveCount(3);
+  await selbar.getByRole('button', { name: '+ Child call' }).click();
+  await page.getByRole('textbox', { name: 'Call 9' }).fill('f(-1)');
+  await page.keyboard.press('Enter');
+  await expect(tree).toHaveAccessibleName(/f\(2\) = 1 ✕ \(f\(1\), f\(0\), f\(-1\)\)\)$/);
+
+  // 指標照呼叫的順序走：f(4) → f(3) → f(2)，↑ 回到呼叫者
+  await tree.locator('[data-cell="0"]').click();
+  await selbar.getByRole('button', { name: '+ Pointer' }).click();
+  const pointer = page.getByRole('group', { name: /^Pointer i/ });
+  await expect(pointer).toHaveAccessibleName('Pointer i at node f(4)');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(pointer).toHaveAccessibleName('Pointer i at node f(2)');
+  await selbar.getByRole('button', { name: 'Back to caller' }).click();
+  await expect(pointer).toHaveAccessibleName('Pointer i at node f(3)');
+
+  // 用縮排的文字整個換掉；指標還指得到就留著
+  await tree.locator('.board-label').click();
+  await selbar.getByRole('button', { name: 'Build from text' }).click();
+  await selbar.getByRole('textbox', { name: 'Build from text' }).fill('f(2) => 1\n  f(1) => 1\n  f(0) => 0');
+  await selbar.getByRole('button', { name: 'Apply' }).click();
+  await expect(tree).toHaveAccessibleName('Recursion tree fib: f(2) = 1 (f(1) = 1, f(0) = 0)');
+  await expect(pointer).toHaveAccessibleName('Pointer i at node f(1)');
+  await selbar.getByRole('button', { name: 'Stop coloring repeats' }).click();
+  await expect(selbar.getByRole('button', { name: 'Color repeated calls' })).toBeVisible();
+});
