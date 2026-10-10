@@ -1,8 +1,10 @@
-import { Fragment, useEffect, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { backspaceEdit, highlightPython, indentEdit, newlineEdit, type CodeEdit } from '../../lib/board/code';
 import { useI18n } from '../../i18n';
 import {
   activeAt,
   CELL,
+  CODE_GUTTER_W,
   colorVar,
   CYCLE_H,
   dpArrowPath,
@@ -13,7 +15,6 @@ import {
   DP_HEAD_W,
   edgeShape,
   formatValue,
-  hangingIndent,
   graphLayout,
   hasTreeNode,
   heapLayout,
@@ -95,7 +96,7 @@ interface ElementViewProps {
 export function ElementView({ el, doc, selected, editing, register, ...rest }: ElementViewProps) {
   const { t } = useI18n();
   const at = el.type === 'pointer' ? pointerPosition(doc, el) : el;
-  const fixedSize = el.type === 'text' || el.type === 'var' ? undefined : sizeOf(el);
+  const fixedSize = (el.type === 'text' && el.variant !== 'code') || el.type === 'var' ? undefined : sizeOf(el);
   return (
     <div
       ref={(node) => register(el.id, node)}
@@ -104,6 +105,7 @@ export function ElementView({ el, doc, selected, editing, register, ...rest }: E
       data-variant={'variant' in el ? el.variant : undefined}
       data-tone={el.type === 'pointer' ? pointerTone(el.name) : undefined}
       data-down={(el.type === 'pointer' && pointsDown(doc, el)) || undefined}
+      data-tracing={(el.type === 'text' && el.line !== undefined) || undefined}
       data-selected={selected || undefined}
       data-editing={editing || undefined}
       role="group"
@@ -148,6 +150,7 @@ function Body({ el, editing, onChange, onDoneEditing, ...rest }: BodyProps) {
     case 'shape':
       return null;
     case 'text':
+      if (el.variant === 'code') return <CodeBody el={el} editing={editing} focusIndex={rest.focusIndex} onChange={onChange} onDoneEditing={onDoneEditing} />;
       return <TextBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} />;
     case 'list':
       if (el.variant === 'linked') return <LinkedBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
@@ -275,25 +278,6 @@ function TextBody({ el, editing, onChange, onDoneEditing }: { el: ElementOf<'tex
     area.style.height = 'auto';
     area.style.height = `${area.scrollHeight}px`;
   }, [editing, el.text]);
-  // 逐行追蹤：每一行前面有行號，現在這一行加底色；點一行就走到那一行
-  if (!editing && el.variant === 'code' && el.line !== undefined) {
-    const lines = el.text.split('\n');
-    const current = Math.min(el.line, lines.length - 1);
-    return (
-      <div className="board-text board-code-lines">
-        {lines.map((line, i) => (
-          <div key={i} className="board-code-line" data-cell={i} data-current={i === current || undefined}>
-            <span className="board-code-no" aria-hidden>
-              {i + 1}
-            </span>
-            <span className="board-code-src" style={{ paddingLeft: `${hangingIndent(line)}ch`, textIndent: `-${hangingIndent(line)}ch` }}>
-              {line || ' '}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  }
   if (!editing) return <div className="board-text">{el.text || ' '}</div>;
   return (
     <textarea
@@ -303,10 +287,115 @@ function TextBody({ el, editing, onChange, onDoneEditing }: { el: ElementOf<'tex
       aria-label={t.board.kinds[el.variant]}
       maxLength={2000}
       autoFocus
-      spellCheck={el.variant !== 'code'}
+      spellCheck
       onChange={(e) => onChange({ text: e.target.value })}
       onKeyDown={editKeys(onDoneEditing, true)}
     />
+  );
+}
+
+/**
+ * 程式碼框：像 LeetCode 的編輯器，上面一條標題列、左邊行號、Python 上色，不換行。
+ * 編輯時把一個透明的輸入框疊在上色的程式碼上面，打字時顏色和行號一直都在；
+ * Tab、Shift+Tab、Enter、Backspace 照程式碼的縮排規則。逐行追蹤時目前那一行加底色，點一行就走到那一行
+ */
+function CodeBody({
+  el,
+  editing,
+  focusIndex,
+  onChange,
+  onDoneEditing,
+}: { el: ElementOf<'text'>; editing: boolean; focusIndex?: number } & Pick<BodyProps, 'onChange' | 'onDoneEditing'>) {
+  const { t } = useI18n();
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const lines = el.text.split('\n');
+  const current = el.line === undefined ? -1 : Math.min(el.line, lines.length - 1);
+  // 雙擊哪一行就把游標放在那一行的最後面
+  useLayoutEffect(() => {
+    const area = ref.current;
+    if (!editing || !area) return;
+    const row = Math.min(focusIndex ?? lines.length - 1, lines.length - 1);
+    const at = lines.slice(0, row + 1).join('\n').length;
+    area.setSelectionRange(at, at);
+    // 只在開始編輯時放一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+  const applyEdit = (area: HTMLTextAreaElement, edit: CodeEdit) => {
+    area.setSelectionRange(edit.from, edit.to);
+    // 用 insertText 改，瀏覽器的復原（Ctrl+Z）才記得住；不支援時直接改值
+    const done = document.execCommand?.('insertText', false, edit.insert);
+    if (!done) {
+      area.setRangeText(edit.insert, edit.from, edit.to, 'end');
+      area.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    area.setSelectionRange(edit.selStart, edit.selEnd);
+  };
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    e.stopPropagation();
+    // 中文輸入法選字時按 Enter 是選字，不是換行
+    if (e.nativeEvent.isComposing) return;
+    const area = e.currentTarget;
+    const { value, selectionStart: start, selectionEnd: end } = area;
+    if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
+      e.preventDefault();
+      onDoneEditing();
+      return;
+    }
+    let edit: CodeEdit | null = null;
+    if (e.key === 'Tab') edit = indentEdit(value, start, end, e.shiftKey);
+    else if (e.key === 'Enter' && !e.shiftKey && !e.altKey) edit = newlineEdit(value, start, end);
+    else if (e.key === 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey) edit = backspaceEdit(value, start, end);
+    if (e.key === 'Tab') e.preventDefault();
+    if (!edit) return;
+    e.preventDefault();
+    applyEdit(area, edit);
+  };
+  return (
+    <>
+      <div className="board-code-head" aria-hidden>
+        <span className="board-code-icon">{'</>'}</span>
+        Python3
+      </div>
+      <div className="board-code-body">
+        {lines.map((line, i) => (
+          <div key={i} className="board-code-line" data-cell={i} data-current={i === current || undefined}>
+            <span className="board-code-no" aria-hidden>
+              {i + 1}
+            </span>
+            <span className="board-code-src">
+              {line
+                ? highlightPython(line).map((token, k) => (
+                    <span key={k} className={token.kind === 'plain' ? undefined : `tok-${token.kind}`}>
+                      {token.text}
+                    </span>
+                  ))
+                : ' '}
+            </span>
+          </div>
+        ))}
+        {editing && (
+          <textarea
+            ref={ref}
+            className="board-code-input"
+            style={{ left: CODE_GUTTER_W }}
+            value={el.text}
+            aria-label={t.board.kinds.code}
+            maxLength={2000}
+            autoFocus
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            wrap="off"
+            onChange={(e) => onChange({ text: e.target.value })}
+            onKeyDown={onKeyDown}
+            // 框跟著內容長，輸入框本身不該上下捲；捲了就拉回來，字才對得上
+            onScroll={(e) => {
+              if (e.currentTarget.scrollTop !== 0) e.currentTarget.scrollTop = 0;
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 }
 

@@ -3,6 +3,8 @@ import { boardDocSchema } from '../../../shared/protocol';
 import { boardToSvg, estimateWidth } from './exportSvg';
 import {
   addElement,
+  codeSize,
+  createElement,
   EMPTY_DOC,
   findElement,
   firstCodeLine,
@@ -48,11 +50,11 @@ describe('tracing code line by line', () => {
     expect(code(traceCodeTo(doc, 'c', 99, false)).line).toBe(6);
   });
 
-  it('widens the box to fit the longest line when tracing starts, up to a limit', () => {
-    expect(code(setCodeTracing(codeDoc(), 'c', true)).w).toBe(260);
-    const long = 'x'.repeat(50);
-    expect(code(setCodeTracing(codeDoc(long), 'c', true)).w).toBe(434);
-    expect(code(setCodeTracing(codeDoc('y'.repeat(200)), 'c', true)).w).toBe(720);
+  it('sizes the box to the code: the longest line and the number of lines', () => {
+    const fresh = createElement('code', { x: 0, y: 0 }, 'c', { heading: 'Title', text: 'Text', sticky: 'Idea' }) as ElementOf<'text'>;
+    expect(codeSize(fresh)).toEqual({ w: 399, h: 166 });
+    expect(codeSize(code(codeDoc('x'))).w).toBe(220);
+    expect(codeSize(code(codeDoc('y'.repeat(200)))).w).toBe(880);
   });
 
   it('only traces code boxes, and saves the line with the board', () => {
@@ -62,15 +64,14 @@ describe('tracing code line by line', () => {
   });
 });
 
-describe('exporting traced code', () => {
-  it('adds line numbers and highlights the current line, leaving plain code as it was', () => {
+describe('exporting code', () => {
+  it('draws line numbers and Python colors, keeps indentation, and highlights the traced line', () => {
     const plain = svgOf(codeDoc());
-    expect(plain).not.toContain('>7</text>');
+    expect(plain).toContain('>7</text>');
+    expect(plain).toContain('<tspan fill="#0000ff">def</tspan>');
+    expect(plain).toContain('xml:space="preserve" dominant-baseline="middle"><tspan fill="#16233a">        s += x</tspan>');
     expect(plain).not.toContain('#e7edfa');
     const traced = svgOf(traceCodeTo(setCodeTracing(codeDoc(), 'c', true), 'c', 5, false));
-    expect(traced).toContain('>7</text>');
     expect(traced.match(/fill="#e7edfa"/g)).toHaveLength(1);
-    // 原本的每一行都還在，縮排也保留
-    expect(traced).toContain('xml:space="preserve" dominant-baseline="middle">        s += x</text>');
   });
 });

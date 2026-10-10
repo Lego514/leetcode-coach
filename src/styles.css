@@ -3420,47 +3420,178 @@ textarea.board-text-input {
   line-height: 1.5;
 }
 
+/* 程式碼框：像 LeetCode 的編輯器。大小由排版算好（標題列 28、上下留白 8、每行 20、行號 40） */
 .board-el-text[data-variant='code'] {
-  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  background: var(--sheet-2);
+  border-radius: 6px;
+  background: var(--sheet);
+  color: var(--ink);
   font-family: var(--font-mono);
   font-size: 13px;
-  line-height: 1.55;
-}
-
-.board-el-text[data-variant='code'] .board-text {
+  font-variant-ligatures: none;
+  line-height: 20px;
   tab-size: 4;
 }
 
-/* 逐行追蹤：行號佔左邊的留白再多一點，現在這一行整列加底色、左邊一條線 */
-.board-code-line {
+.board-code-head {
   display: flex;
-  margin: 0 -12px;
-  padding-right: 12px;
-  cursor: pointer;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--sheet-2);
+  color: var(--ink-2);
+  font-family: var(--font-sans, inherit);
+  font-size: 12px;
+  line-height: 1;
 }
 
+.board-code-icon {
+  color: var(--good);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.board-code-body {
+  position: relative;
+  flex: 1;
+  padding: 8px 0;
+}
+
+.board-code-line {
+  display: flex;
+  height: 20px;
+  white-space: pre;
+}
+
+/* 逐行追蹤：目前那一行整列加底色、左邊一條線 */
 .board-code-line[data-current] {
   background: var(--pen-soft);
   box-shadow: inset 3px 0 0 var(--pen);
 }
 
+.board-el-text[data-variant='code'][data-tracing] .board-code-line {
+  cursor: pointer;
+}
+
 .board-code-no {
   flex: none;
-  width: 30px;
-  color: var(--ink-3);
+  box-sizing: border-box;
+  width: 40px;
+  padding-right: 12px;
+  color: var(--code-line-no);
   font-size: 11px;
-  text-align: center;
+  text-align: right;
   user-select: none;
 }
 
 .board-code-src {
   flex: 1;
   min-width: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+}
+
+/* 編輯時的輸入框疊在上色的程式碼上：字是透明的，只看得到游標和選取範圍 */
+.board-code-input {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  bottom: 8px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--ink);
+  font: inherit;
+  line-height: 20px;
+  white-space: pre;
+  tab-size: 4;
+  resize: none;
+}
+
+.board-code-input::selection {
+  background: var(--code-selection);
+}
+
+/* 上色跟 VS Code（LeetCode 的編輯器）一樣：淺色 Light+、深色 Dark+ */
+:root {
+  --code-line-no: #237893;
+  --code-selection: rgb(173 214 255 / 0.7);
+  --tok-keyword: #0000ff;
+  --tok-control: #af00db;
+  --tok-function: #795e26;
+  --tok-type: #267f99;
+  --tok-string: #a31515;
+  --tok-number: #098658;
+  --tok-comment: #008000;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --code-line-no: #858585;
+    --code-selection: rgb(38 79 120 / 0.8);
+    --tok-keyword: #569cd6;
+    --tok-control: #c586c0;
+    --tok-function: #dcdcaa;
+    --tok-type: #4ec9b0;
+    --tok-string: #ce9178;
+    --tok-number: #b5cea8;
+    --tok-comment: #6a9955;
+  }
+}
+
+:root[data-theme='dark'] {
+  --code-line-no: #858585;
+  --code-selection: rgb(38 79 120 / 0.8);
+  --tok-keyword: #569cd6;
+  --tok-control: #c586c0;
+  --tok-function: #dcdcaa;
+  --tok-type: #4ec9b0;
+  --tok-string: #ce9178;
+  --tok-number: #b5cea8;
+  --tok-comment: #6a9955;
+}
+
+.tok-keyword,
+.tok-self {
+  color: var(--tok-keyword);
+}
+
+.tok-control {
+  color: var(--tok-control);
+}
+
+.tok-function,
+.tok-decorator {
+  color: var(--tok-function);
+}
+
+.tok-type {
+  color: var(--tok-type);
+}
+
+.tok-string {
+  color: var(--tok-string);
+}
+
+.tok-number {
+  color: var(--tok-number);
+}
+
+.tok-comment {
+  color: var(--tok-comment);
+  font-style: italic;
 }
 
 .board-el-text[data-variant='sticky'] {

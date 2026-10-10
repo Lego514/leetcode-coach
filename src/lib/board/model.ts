@@ -159,6 +159,7 @@ export function sizeOf(el: Placed, measured?: { w: number; h: number }): { w: nu
     case 'pointer':
       return { w: POINTER_W, h: POINTER_H };
     case 'text':
+      if (el.variant === 'code') return codeSize(el);
       return measured ?? { w: el.w, h: el.variant === 'heading' ? 36 : 44 };
     case 'var':
       return measured ?? { w: 110, h: 36 };
@@ -344,7 +345,14 @@ export function createElement(kind: PaletteKind, at: Point, id: string, texts: D
     case 'sticky':
       return { type: 'text', ...placed, variant: kind, text: texts[kind], w: kind === 'heading' ? 240 : 200 };
     case 'code':
-      return { type: 'text', ...placed, variant: 'code', text: 'for i in range(n):\n    pass', w: 260 };
+      // 跟 LeetCode 的範本一樣從 class Solution 開始
+      return {
+        type: 'text',
+        ...placed,
+        variant: 'code',
+        text: 'class Solution:\n    def solve(self, nums: List[int]) -> int:\n        ans = 0\n        for i in range(len(nums)):\n            pass\n        return ans',
+        w: 400,
+      };
     case 'array':
       return { type: 'list', ...placed, variant: 'array', label: 'nums', items: ['1', '2', '3', '4'] };
     case 'stack':
@@ -1437,18 +1445,26 @@ export function setRepeats(doc: BoardDoc, id: string, on: boolean): BoardDoc {
   return updateElement<ElementOf<'recursion'>>(doc, id, { repeats: on || undefined });
 }
 
-// ---------- 程式碼逐行追蹤 ----------
+// ---------- 程式碼框 ----------
 
-/** 追蹤時行號那一欄比平常的左邊留白多出來的寬度 */
-export const CODE_GUTTER = 18;
-/** 程式碼框的字級和左右留白（跟 CSS 一樣）；追蹤時最多加寬到多寬 */
+/** 程式碼框的排版（跟 CSS 一樣）：上面一條標題列，左邊行號，每行固定高度、不換行 */
 export const CODE_FONT = 13;
-const CODE_PAD = 12;
-const CODE_MAX_W = 720;
+export const CODE_LINE_H = 20;
+export const CODE_HEAD_H = 28;
+export const CODE_GUTTER_W = 40;
+export const CODE_PAD_Y = 8;
+const CODE_PAD_R = 14;
+const CODE_MIN_W = 220;
+const CODE_MAX_W = 880;
 
-/** 一行開頭縮排幾個字（tab 算 4 個）；換行後接下去的那幾列再多縮兩格，看得出是同一行 */
-export function hangingIndent(line: string): number {
-  return (/^[ \t]*/.exec(line)?.[0] ?? '').replace(/\t/g, '    ').length + 2;
+/** 程式碼框的大小跟著內容：寬度放得下最長的一行（tab 算 4 格），高度是行數 */
+export function codeSize(el: ElementOf<'text'>): { w: number; h: number } {
+  const lines = codeLines(el);
+  const longest = Math.round(Math.max(0, ...lines.map((line) => monoWidth(line.replace(/\t/g, '    '), CODE_FONT))));
+  return {
+    w: Math.min(CODE_MAX_W, Math.max(CODE_MIN_W, longest + CODE_GUTTER_W + CODE_PAD_R + 2)),
+    h: CODE_HEAD_H + CODE_PAD_Y * 2 + lines.length * CODE_LINE_H + 2,
+  };
 }
 
 export function codeLines(el: ElementOf<'text'>): string[] {
@@ -1473,14 +1489,11 @@ export function nextCodeLine(el: ElementOf<'text'>, dir: 'next' | 'prev'): numbe
   return from;
 }
 
-/** 開始追蹤（停在第一行有程式的地方，框加寬到放得下最長的一行，少換行比較好讀）或結束追蹤 */
+/** 開始逐行追蹤（停在第一行有程式的地方）或結束追蹤 */
 export function setCodeTracing(doc: BoardDoc, id: string, on: boolean): BoardDoc {
   const el = findElement(doc, id);
   if (el?.type !== 'text' || el.variant !== 'code') return doc;
-  if (!on) return updateElement<ElementOf<'text'>>(doc, id, { line: undefined });
-  const longest = Math.round(Math.max(...codeLines(el).map((line) => monoWidth(line.replace(/\t/g, '    '), CODE_FONT))));
-  const w = Math.min(CODE_MAX_W, Math.max(el.w, longest + CODE_PAD * 2 + CODE_GUTTER + 2));
-  return updateElement<ElementOf<'text'>>(doc, id, { line: firstCodeLine(el), w });
+  return updateElement<ElementOf<'text'>>(doc, id, { line: on ? firstCodeLine(el) : undefined });
 }
 
 /**
