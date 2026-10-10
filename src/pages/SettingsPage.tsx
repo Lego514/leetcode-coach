@@ -6,6 +6,7 @@ import { Dialog, PageHead, Sheet } from '../components/ui';
 import { STUDY_LISTS, type ListId } from '../data/lists';
 import { useI18n } from '../i18n';
 import { isDay, toDay } from '../lib/dates';
+import { RETENTIONS } from '../lib/srs';
 import { LANGUAGES } from '../lib/languages';
 import { useTheme, type ThemeChoice } from '../lib/theme';
 import { updateSettings } from '../store/actions';
@@ -19,6 +20,7 @@ import {
   type BackupFile,
 } from '../store/backup';
 import { useCloud } from '../store/cloud';
+import { retentionOf } from '../store/progress';
 import { useSettings, useToday } from '../store/queries';
 
 const THEMES: ThemeChoice[] = ['system', 'light', 'dark'];
@@ -83,6 +85,17 @@ export function SettingsPage() {
                   }}
                 />
                 <span className="field-hint">{t.settings.dailyNewHint}</span>
+              </label>
+              <label className="field">
+                <span className="field-label">{t.settings.retention}</span>
+                <select className="input" value={retentionOf(settings)} onChange={(e) => void updateSettings({ retention: Number(e.target.value) })}>
+                  {RETENTIONS.map((r) => (
+                    <option key={r} value={r}>
+                      {t.settings.retentionOption(Math.round(r * 100), r === 0.9)}
+                    </option>
+                  ))}
+                </select>
+                <span className="field-hint">{t.settings.retentionHint}</span>
               </label>
               <TargetDateField value={settings.targetDate} today={day} />
             </div>

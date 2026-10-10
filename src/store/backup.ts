@@ -1,6 +1,6 @@
 import { COLLECTIONS } from '../../shared/constants';
 import { db, type AttemptRecord, type BoardRecord, type CardReviewRecord, type MockRecord } from './db';
-import { keyOf, track, type LocalRecord } from './tracking';
+import { keyOf, rebuildAllProgress, track, type LocalRecord } from './tracking';
 
 const APP_ID = 'leetcode-coach';
 const BACKUP_VERSION = 1;
@@ -112,6 +112,7 @@ export async function restoreBackup(file: BackupFile): Promise<void> {
     await db.settings.bulkPut(data.settings as never[]);
     await db.cardReviews.bulkPut(withUid<CardReviewRecord>(data.cardReviews ?? []));
     await db.boards.bulkPut((data.boards ?? []) as BoardRecord[]);
+    await rebuildAllProgress(db);
 
     // 匯入的資料視為最新的修改，登入時會覆蓋雲端
     for (const collection of COLLECTIONS) {

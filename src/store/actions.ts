@@ -16,7 +16,8 @@ import {
   type ProgressRecord,
   type SettingsRecord,
 } from './db';
-import { track } from './tracking';
+import { retentionOf } from './progress';
+import { rebuildAllProgress, track } from './tracking';
 
 // 所有寫入都集中在這裡。每次修改都會記進待上傳清單，登入後由同步程式上傳。
 
@@ -37,9 +38,9 @@ export async function recordAttempt(
   { mode = 'practice', minutes, hints, sawSolution, delayDays, day, at = new Date() }: RecordAttemptOptions = {},
 ): Promise<ProgressRecord> {
   const attemptDay = day ?? toDay(at);
-  return db.transaction('rw', db.progress, db.attempts, db.outbox, async () => {
+  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
     const prev = await db.progress.get(problemId);
-    const state = schedule(prev, rating, attemptDay, delayDays);
+    const state = schedule(prev, rating, attemptDay, delayDays, retentionOf(await db.settings.get('app')));
     const record: ProgressRecord = {
       problemId,
       ...state,
@@ -80,14 +81,14 @@ export interface MarkResult {
  * 免得幾十題同一天到期。
  */
 export async function markSolvedBefore(problemIds: readonly number[], rating: Rating, at = new Date()): Promise<MarkResult> {
-  return db.transaction('rw', db.progress, db.attempts, db.outbox, async () => {
+  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
     const fresh: number[] = [];
     for (const problemId of new Set(problemIds)) {
       if (!(await db.progress.get(problemId))) fresh.push(problemId);
     }
     if (fresh.length === 0) return { marked: 0 };
 
-    const start = schedule(undefined, rating, toDay(at)).due;
+    const start = schedule(undefined, rating, toDay(at), 0, retentionOf(await db.settings.get('app'))).due;
     // 整張表讀出來自己數：iOS 的 WebKit 在某些索引游標上會出錯，資料量也很小
     const load = new Map<Day, number>();
     for (const p of await db.progress.toArray()) {
@@ -176,12 +177,16 @@ export async function savePatternNote(
 }
 
 export async function updateSettings(patch: Partial<Omit<SettingsRecord, 'key'>>): Promise<void> {
-  await db.transaction('rw', db.settings, db.outbox, async () => {
+  // 只有改目標記憶率時才需要重算排程；其他設定不要卡住練習紀錄的資料表
+  const tables = 'retention' in patch ? [db.settings, db.outbox, db.progress, db.attempts] : [db.settings, db.outbox];
+  await db.transaction('rw', tables, async () => {
     const prev = (await db.settings.get('app')) ?? DEFAULT_SETTINGS;
     const next: SettingsRecord = { ...prev, ...patch, key: 'app' };
     if (!next.targetDate) delete next.targetDate;
     await db.settings.put(next);
     await track(db, 'settings', 'app');
+    // 目標記憶率變了，每一題的下次複習日都要重算
+    if (retentionOf(next) !== retentionOf(prev)) await rebuildAllProgress(db);
   });
 }
 

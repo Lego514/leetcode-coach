@@ -145,8 +145,8 @@
 
   <rect class="item" x="440" y="660" width="340" height="104" rx="6" />
   <text class="t" x="458" y="688">GitHub Actions</text>
-  <text class="d" x="458" y="710">ESLint · tsc · Vitest: 325 unit &amp; API tests</text>
-  <text class="d" x="458" y="730">Playwright: 56 e2e tests on Chromium</text>
+  <text class="d" x="458" y="710">ESLint · tsc · Vitest: 330 unit &amp; API tests</text>
+  <text class="d" x="458" y="730">Playwright: 57 e2e tests on Chromium</text>
   <text class="d" x="458" y="750">and iPhone WebKit, against PostgreSQL 17</text>
 
   <rect class="item" x="860" y="660" width="290" height="96" rx="6" />

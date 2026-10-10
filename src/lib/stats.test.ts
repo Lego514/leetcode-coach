@@ -73,6 +73,15 @@ describe('summaries and queues', () => {
   it('returns due problems, most overdue first', () => {
     expect(dueProblems(BUILTIN_PROBLEMS, progress, '2026-09-16').map((p) => p.id)).toEqual([b.id, c.id]);
   });
+
+  it('puts the problem you are most likely to have forgotten first', () => {
+    // 同一天到期，但一題記得很牢、一題很快就會忘
+    const states = new Map([
+      [a.id, { interval: 20, due: '2026-09-16', stability: 20, lastReview: '2026-08-27' }],
+      [b.id, { interval: 2, due: '2026-09-16', stability: 2, lastReview: '2026-09-10' }],
+    ]);
+    expect(dueProblems(BUILTIN_PROBLEMS, states, '2026-09-16').map((p) => p.id)).toEqual([b.id, a.id]);
+  });
 });
 
 describe('planning', () => {

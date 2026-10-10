@@ -15,7 +15,7 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays } from '../lib/dates';
 import { LANGUAGES } from '../lib/languages';
-import { stageOf } from '../lib/srs';
+import { recallOn, stageOf } from '../lib/srs';
 import { deleteCustomProblem, resetProgress, saveNote, setCompanies } from '../store/actions';
 import type { NoteRecord } from '../store/db';
 import {
@@ -108,6 +108,14 @@ function ProblemDetail({ problem }: { problem: Problem }) {
                 <dl className="facts">
                   <dt>{t.detail.stage}</dt>
                   <dd>{t.stages[stageOf(progress)]}</dd>
+                  {recallOn(progress, day) !== undefined && (
+                    <>
+                      <dt>{t.detail.recallNow}</dt>
+                      <dd>{Math.round(recallOn(progress, day)! * 100)}%</dd>
+                      <dt>{t.detail.memory}</dt>
+                      <dd>{t.detail.memoryValue(Math.round(progress.stability), Math.round(progress.difficulty * 10) / 10)}</dd>
+                    </>
+                  )}
                   <dt>{t.detail.nextReview}</dt>
                   <dd className={progress.due < day ? 'overdue' : undefined}>
                     {t.detail.nextReviewValue(fmt.day(progress.due), t.date.relative(diffDays(day, progress.due)))}

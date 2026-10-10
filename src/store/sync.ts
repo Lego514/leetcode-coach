@@ -8,6 +8,7 @@ import {
   getSyncState,
   markAllDirty,
   outboxId,
+  rebuildAllProgress,
   rebuildProgress,
   toSyncData,
 } from './tracking';
@@ -61,7 +62,9 @@ async function applyResponse(database: CoachDB, userId: string, sent: OutboxReco
       if (problemId !== undefined) affected.add(problemId);
       applied += 1;
     }
-    await rebuildProgress(database, affected);
+    // 別台裝置改了目標記憶率：每一題都重算；不然只重算收到新紀錄的題目
+    if (res.changes.some((change) => change.collection === 'settings')) await rebuildAllProgress(database);
+    else await rebuildProgress(database, affected);
     await database.syncState.put({ ...state, cursor: res.cursor, lastSyncedAt: Date.now() });
     return applied;
   });

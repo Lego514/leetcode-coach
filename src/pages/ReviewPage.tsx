@@ -9,11 +9,12 @@ import { useI18n } from '../i18n';
 import { rich } from '../i18n/rich';
 import { diffDays } from '../lib/dates';
 import { languageLabel } from '../lib/languages';
-import { RATINGS, schedule, type Rating } from '../lib/srs';
+import { RATINGS, recallOn, schedule, type Rating } from '../lib/srs';
 import { dueProblems } from '../lib/stats';
 import { recordAttempt } from '../store/actions';
 import type { ProgressRecord } from '../store/db';
-import { useCatalog, useNote, useProgressMap, useToday } from '../store/queries';
+import { retentionOf } from '../store/progress';
+import { useCatalog, useNote, useProgressMap, useSettings, useToday } from '../store/queries';
 
 export function ReviewPage() {
   const { t, fmt } = useI18n();
@@ -89,6 +90,8 @@ interface ReviewCardProps {
 function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, onSkip }: ReviewCardProps) {
   const { t, fmt, locale } = useI18n();
   const note = useNote(problem.id);
+  const retention = retentionOf(useSettings());
+  const recall = recallOn(progress, today);
   const toast = useToast();
   const [showPattern, setShowPattern] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -126,6 +129,7 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
           </button>
         )}
         <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>
+        {recall !== undefined && <span>{t.common.recallChance(Math.round(recall * 100))}</span>}
         <Link to={`/problems/${problem.id}`}>{t.review.details}</Link>
       </div>
 
@@ -198,7 +202,7 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
                 <button key={r} className="rating-option" disabled={saving} onClick={() => void rate(r)}>
                   <span className="rating-label">{t.ratings[r].label}</span>
                   <span className="rating-detail">{t.ratings[r].detail}</span>
-                  <span className="rating-next">{t.common.reviewIn(schedule(progress, r, today).interval)}</span>
+                  <span className="rating-next">{t.common.reviewIn(schedule(progress, r, today, 0, retention).interval)}</span>
                 </button>
               ))}
             </div>

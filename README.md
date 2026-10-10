@@ -19,7 +19,11 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 - **Solving steps**: practice, mock interviews, and the problem page share the seven interview steps (clarify, examples, brute force, optimize, code, test, complexity), and you write one line per step. Examples split into an example and its edge cases, and Optimize asks three questions: what's slow, what's repeated, and what to keep. The lines are saved with the problem's notes and synced, so a review starts from how you thought it through, not just the code. In a mock interview they sit under each step's checklist.
   - **Write the script from your steps**: a dialog lays out the five sentences of the English explanation script, each with the step notes that feed it (for example, the edge-case sentence shows your edge cases). You write each sentence yourself, which is the practice, and save it as the problem's script.
   - **Hints that start from where you're stuck**: pick the step you're stuck on to see how to think about it, next to what you wrote in the step before. This doesn't count as a hint. Optimize and Code can jump straight to the key insight or the template.
-- **Spaced repetition**: after each attempt you rate yourself (solved alone / needed a hint / read the solution / still stuck), and an SM-2–style scheduler picks the next review date.
+- **Spaced repetition with FSRS**: after each attempt you rate yourself (solved alone / needed a hint / read the solution / still stuck), and FSRS, the scheduler Anki uses, picks the next review date.
+  - Each problem has a stability (days until your chance of remembering it drops to 90%) and a difficulty from 1 to 10. Solved alone counts as Good, a hint as Hard, and reading the solution or still being stuck as Again. A review that came late but still went well grows the interval more.
+  - Problems come back when you're about as likely to remember them as the target retention in Settings (90% by default; 80–95%). Changing it reschedules every problem.
+  - The review queue puts the problem you're most likely to have forgotten first. Problem pages show how likely you are to remember it now, how long it holds, and its difficulty.
+  - The scheduler is written from the FSRS-6 formulas with the default parameters, and the tests compare it with the official `ts-fsrs` (a test-only dependency) on hundreds of random review histories.
 - **Daily plan**: the Today page lists the reviews that are due plus N new problems in roadmap order. At the top, a progress bar and three numbers show how much of the list is left, your daily pace, and when you'll finish the first pass. With a target date set, they show the days left and how many new problems a day you need, flagged when your daily goal is too low.
   - Any new problem you start counts toward the daily goal, wherever you start it. **One more problem** adds the next one in roadmap order.
   - **Record another problem** finds a problem by number, title, or LeetCode URL. If it isn't in your lists yet, you add its details and record it in the same dialog.
@@ -147,6 +151,7 @@ src/                 Web app
     actions.ts           Every local write; each one also records a change in the outbox
     queries.ts           Every read, as React hooks
     tracking.ts          Local record ⇄ sync payload conversion, schedule replay
+    progress.ts          Rebuilds a problem's FSRS state from its attempts
     sync.ts              Sync engine (push outbox, pull changes, apply)
     cloud.ts             Account state and automatic sync scheduling
   i18n/                Locale detection, typed dictionaries (zh-TW, en), date formatting
@@ -277,12 +282,14 @@ Notes:
 這是一個幫忙準備美國軟體工程師面試的刷題教練。題目還是在 LeetCode 上寫，這個 App 負責三件事：
 
 - 決定今天該刷哪些題
-- 計時作答，卡住時一層一層給提示，再用間隔複習排好每一題的複習日
+- 計時作答，卡住時一層一層給提示，再用 FSRS（Anki 用的排程演算法）排好每一題的複習日
 - 用模擬面試練習把解法講清楚
 
 介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
 
 今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
+
+**複習排程（FSRS）**：每一題有「穩定度」（隔幾天之後，記得的機率會掉到 90%）和 1 到 10 的難度。自己解出算 Good、看提示算 Hard、看解答或看完還不懂算 Again；晚了才複習但還記得，下次的間隔會拉得更長。題目會在你大概還記得「目標記憶率」那麼多的時候再出現（「設定」可以選 80%–95%，預設 90%），改了之後每一題都會重新排程。複習頁把最可能已經忘了的題目排在最前面，題目頁顯示現在還記得的機率、大約記得住幾天和難度。排程是照 FSRS-6 的公式自己寫的，測試裡拿官方的 `ts-fsrs` 在幾百組隨機的複習紀錄上逐一比對。
 
 **解題步驟**：練習頁、模擬面試和題目頁共用模擬面試的七個步驟（釐清題意、舉例與邊界、暴力解、優化、寫程式、驗證、複雜度），每一步寫一句自己的想法。舉例拆成「例子」和「邊界情況」，優化拆成三個問題：笨在哪、哪裡重複算、要留下什麼。寫的內容存在這題的筆記裡、會同步，複習時看得到當時怎麼想的；模擬面試時會出現在每一步的檢查清單下面。寫完可以按「照步驟寫英文講解稿」，講解稿的五句各列出相關步驟寫過的內容，自己逐句講成英文。提示面板可以先選「卡在哪一步」，看這一步怎麼想和自己上一步寫的內容，不算用了提示；卡在優化或寫程式時可以直接打開關鍵觀察或模板。
 

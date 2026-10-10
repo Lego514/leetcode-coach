@@ -1,6 +1,6 @@
 import { COLLECTIONS, type Collection } from '../../shared/constants';
 import type { PatternId } from '../data/patterns';
-import { schedule, type ReviewState } from '../lib/srs';
+import { groupByProblem, progressFromAttempts, retentionOf } from './progress';
 import type {
   AttemptRecord,
   BoardRecord,
@@ -235,24 +235,24 @@ export async function markAllDirty(database: CoachDB): Promise<number> {
  * 每次記錄時是逐筆累加，結果和重播相同；同步收到別台裝置的紀錄後用這個重算。
  */
 export async function rebuildProgress(database: CoachDB, problemIds: Iterable<number>): Promise<void> {
+  const retention = retentionOf(await database.settings.get('app'));
   for (const problemId of new Set(problemIds)) {
     const attempts = await database.attempts.where('problemId').equals(problemId).toArray();
-    if (attempts.length === 0) {
-      await database.progress.delete(problemId);
-      continue;
-    }
-    attempts.sort((a, b) => a.at.localeCompare(b.at) || (a.id ?? 0) - (b.id ?? 0));
-    let state: ReviewState | undefined;
-    for (const attempt of attempts) state = schedule(state, attempt.rating, attempt.day, attempt.delayDays);
-    const last = attempts[attempts.length - 1];
-    await database.progress.put({
-      problemId,
-      ...state!,
-      lastRating: last.rating,
-      lastDay: last.day,
-      firstDay: attempts[0].day,
-      attempts: attempts.length,
-    });
+    const record = progressFromAttempts(problemId, attempts, retention);
+    if (record) await database.progress.put(record);
+    else await database.progress.delete(problemId);
+  }
+}
+
+/** 全部重算：改了目標記憶率、收到別台裝置改的設定、匯入備份之後 */
+export async function rebuildAllProgress(database: CoachDB): Promise<void> {
+  const retention = retentionOf(await database.settings.get('app'));
+  // 整張表讀出來自己分組：iOS 的 WebKit 在某些索引游標上會出錯
+  const groups = groupByProblem(await database.attempts.toArray());
+  await database.progress.clear();
+  for (const [problemId, attempts] of groups) {
+    const record = progressFromAttempts(problemId, attempts, retention);
+    if (record) await database.progress.put(record);
   }
 }
 
