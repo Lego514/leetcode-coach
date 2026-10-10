@@ -45,6 +45,21 @@ export type ExplainPoint = (typeof EXPLAIN_POINTS)[number];
 export const LOCALE_IDS = ['zh-TW', 'en'] as const;
 export type MockKind = (typeof MOCK_KINDS)[number];
 
+/** 行為面試故事可以回答的主題（名稱和說明在 i18n 字典） */
+export const BEHAVIORAL_THEMES = [
+  'conflict',
+  'failure',
+  'leadership',
+  'deadline',
+  'ambiguity',
+  'influence',
+  'learning',
+  'proud',
+  'feedback',
+  'teamwork',
+] as const;
+export type BehavioralTheme = (typeof BEHAVIORAL_THEMES)[number];
+
 /** 微複習卡片的作答結果：答對或記得、有點模糊、答錯或忘了 */
 export const CARD_RESULTS = ['good', 'fuzzy', 'again'] as const;
 export type CardResult = (typeof CARD_RESULTS)[number];
@@ -60,6 +75,7 @@ export const COLLECTIONS = [
   'settings',
   'cardReviews',
   'boards',
+  'stories',
 ] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 

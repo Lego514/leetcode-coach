@@ -15,6 +15,7 @@ import {
   type PatternNoteRecord,
   type ProgressRecord,
   type SettingsRecord,
+  type StoryRecord,
 } from './db';
 
 // 所有讀取都集中在這裡；資料變動時 useLiveQuery 會自動重新渲染。
@@ -25,6 +26,16 @@ const EMPTY_PROGRESS: ReadonlyMap<number, ProgressRecord> = new Map();
 export function useSettings(): SettingsRecord {
   const settings = useLiveQuery(() => db.settings.get('app'), []);
   return settings ?? DEFAULT_SETTINGS;
+}
+
+/** 全部的故事，最近改過的在前面 */
+export function useStories(): StoryRecord[] | undefined {
+  return useLiveQuery(async () => (await db.stories.toArray()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), []);
+}
+
+/** 一個故事；找不到是 null，還在讀取是 undefined */
+export function useStory(id: string): StoryRecord | null | undefined {
+  return useLiveQuery(async () => (await db.stories.get(id)) ?? null, [id]);
 }
 
 export function useCatalog(): Catalog {

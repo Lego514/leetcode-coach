@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
-import type { AttemptMode, CardResult, Collection, MockKind, StepNoteKey } from '../../shared/constants';
+import type { AttemptMode, BehavioralTheme, CardResult, Collection, MockKind, StepNoteKey } from '../../shared/constants';
 import type { BoardDoc, ExplanationFeedback } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
@@ -118,6 +118,19 @@ export interface BoardRecord {
 
 export type CustomProblemRecord = Problem;
 
+/** 行為面試的一個故事；id 是 UUID，同步時當主鍵 */
+export interface StoryRecord {
+  id: string;
+  title: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  themes: BehavioralTheme[];
+  /** ISO 時間戳 */
+  updatedAt: string;
+}
+
 export interface SettingsRecord {
   key: 'app';
   /** 目標日期（面試日或預計刷完的日子），可以不設定 */
@@ -170,6 +183,7 @@ export class CoachDB extends Dexie {
   syncState!: EntityTable<SyncStateRecord, 'key'>;
   cardReviews!: EntityTable<CardReviewRecord, 'id'>;
   boards!: EntityTable<BoardRecord, 'id'>;
+  stories!: EntityTable<StoryRecord, 'id'>;
 
   constructor(name = 'leetcode-coach') {
     super(name);
@@ -218,6 +232,10 @@ export class CoachDB extends Dexie {
           if (record) await progress.put(record);
         }
       });
+    // 第 6 版：行為面試的故事
+    this.version(6).stores({
+      stories: 'id',
+    });
   }
 
   /** 會同步的資料表，依集合名稱查 */
@@ -238,6 +256,7 @@ export class CoachDB extends Dexie {
       this.settings,
       this.cardReviews,
       this.boards,
+      this.stories,
     ];
   }
 }

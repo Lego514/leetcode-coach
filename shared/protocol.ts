@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import {
   ATTEMPT_MODES,
+  BEHAVIORAL_THEMES,
   BOARD_COLORS,
   BOARD_MAX_BYTES,
   CARD_RESULTS,
@@ -327,12 +328,24 @@ export const boardDataSchema = z
   .object({ doc: boardDocSchema, updatedAt: timestamp })
   .refine((data) => JSON.stringify(data).length <= BOARD_MAX_BYTES, 'Board is too large');
 
+/** 行為面試的一個故事，用 STAR 四段寫 */
+export const storyDataSchema = z.object({
+  title: text(120),
+  situation: text(3000),
+  task: text(3000),
+  action: text(5000),
+  result: text(3000),
+  themes: z.array(z.enum(BEHAVIORAL_THEMES)).max(BEHAVIORAL_THEMES.length),
+  updatedAt: timestamp,
+});
+
 const uuidKey = z.uuid();
 const problemKey = z.string().regex(/^[1-9]\d{0,6}$/);
 
 /** 每個集合的主鍵格式與資料格式 */
 export const COLLECTION_SCHEMAS = {
   attempts: { key: uuidKey, data: attemptDataSchema },
+  stories: { key: uuidKey, data: storyDataSchema },
   mocks: { key: uuidKey, data: mockDataSchema },
   notes: { key: problemKey, data: noteDataSchema },
   meta: { key: problemKey, data: metaDataSchema },

@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   addCustomProblem,
+  createStory,
   deleteCustomProblem,
   deleteMock,
+  deleteStory,
   markSolvedBefore,
   parseSlug,
   recordAttempt,
@@ -10,6 +12,7 @@ import {
   resetProgress,
   saveMock,
   saveNote,
+  saveStory,
   setCompanies,
   updateSettings,
   ValidationError,
@@ -299,5 +302,26 @@ describe('target retention', () => {
     expect((await db.progress.get(2))?.interval).toBe(1);
     await updateSettings({ dailyNew: 5 });
     expect(await db.progress.get(1)).toEqual(after);
+  });
+});
+
+describe('behavioral stories', () => {
+  it('creates, edits, and deletes a story, queuing each change for sync', async () => {
+    const id = await createStory(['conflict']);
+    expect(await db.stories.get(id)).toMatchObject({ title: '', themes: ['conflict'] });
+    await saveStory(id, { title: 'Pipeline fix', action: 'I added retries.' });
+    expect(await db.stories.get(id)).toMatchObject({ title: 'Pipeline fix', action: 'I added retries.', themes: ['conflict'] });
+    expect(await outbox()).toEqual(['stories:put']);
+    // 備份和還原都帶著故事
+    const file = parseBackup(JSON.stringify(await exportBackup()));
+    await wipeLocalData(db);
+    await restoreBackup(file);
+    expect((await db.stories.get(id))?.title).toBe('Pipeline fix');
+    await deleteStory(id);
+    expect(await db.stories.get(id)).toBeUndefined();
+    expect(await outbox()).toEqual(['stories:del']);
+    // 刪掉的故事不能再存
+    await saveStory(id, { title: 'gone' });
+    expect(await db.stories.get(id)).toBeUndefined();
   });
 });

@@ -3,7 +3,7 @@ import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { toDay, type Day } from '../lib/dates';
 import { parseSlug } from '../lib/catalog';
 import { schedule, spreadDelays, type Rating } from '../lib/srs';
-import type { CardResult } from '../../shared/constants';
+import type { BehavioralTheme, CardResult } from '../../shared/constants';
 import type { BoardDoc } from '../../shared/protocol';
 import {
   db,
@@ -15,6 +15,7 @@ import {
   type PatternNoteRecord,
   type ProgressRecord,
   type SettingsRecord,
+  type StoryRecord,
 } from './db';
 import { retentionOf } from './progress';
 import { rebuildAllProgress, track } from './tracking';
@@ -137,6 +138,34 @@ export async function saveNote(problemId: number, patch: Partial<Omit<NoteRecord
       updatedAt: new Date().toISOString(),
     });
     await track(db, 'notes', String(problemId));
+  });
+}
+
+// ---------- 行為面試的故事 ----------
+
+/** 新增一個空白的故事，可以先標好主題；回傳它的 id */
+export async function createStory(themes: BehavioralTheme[] = []): Promise<string> {
+  const id = crypto.randomUUID();
+  await db.transaction('rw', db.stories, db.outbox, async () => {
+    await db.stories.put({ id, title: '', situation: '', task: '', action: '', result: '', themes, updatedAt: new Date().toISOString() });
+    await track(db, 'stories', id);
+  });
+  return id;
+}
+
+export async function saveStory(id: string, patch: Partial<Omit<StoryRecord, 'id' | 'updatedAt'>>): Promise<void> {
+  await db.transaction('rw', db.stories, db.outbox, async () => {
+    const prev = await db.stories.get(id);
+    if (!prev) return;
+    await db.stories.put({ ...prev, ...patch, id, updatedAt: new Date().toISOString() });
+    await track(db, 'stories', id);
+  });
+}
+
+export async function deleteStory(id: string): Promise<void> {
+  await db.transaction('rw', db.stories, db.outbox, async () => {
+    await db.stories.delete(id);
+    await track(db, 'stories', id, true);
   });
 }
 

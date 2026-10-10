@@ -12,7 +12,7 @@ import { ThemeToggle } from './ThemeToggle';
 
 type NavKey = keyof Pick<
   Messages['nav'],
-  'today' | 'review' | 'cards' | 'mock' | 'problems' | 'patterns' | 'phrases' | 'board' | 'progress' | 'settings' | 'feedback'
+  'today' | 'review' | 'cards' | 'mock' | 'stories' | 'problems' | 'patterns' | 'phrases' | 'board' | 'progress' | 'settings' | 'feedback'
 >;
 
 interface NavItem {
@@ -28,6 +28,7 @@ const NAV_GROUPS: NavItem[][] = [
     { to: '/review', key: 'review', badge: 'due' },
     { to: '/cards', key: 'cards' },
     { to: '/mock', key: 'mock' },
+    { to: '/stories', key: 'stories' },
   ],
   [
     { to: '/problems', key: 'problems' },
