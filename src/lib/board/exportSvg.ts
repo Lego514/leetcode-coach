@@ -1,11 +1,15 @@
+import { highlightPython, type TokenKind } from './code';
 import {
   activeAt,
   arrowPoints,
   rangeRect,
   CELL,
   contentBounds,
-  CODE_FONT,
-  CODE_GUTTER,
+  CODE_GUTTER_W,
+  CODE_HEAD_H,
+  CODE_LINE_H,
+  CODE_PAD_Y,
+  codeSize,
   CYCLE_H,
   dpArrowPath,
   dpDependencies,
@@ -15,7 +19,6 @@ import {
   edgeShape,
   formatValue,
   graphLayout,
-  hangingIndent,
   heapLayout,
   heapViolations,
   INDEX_H,
@@ -549,42 +552,66 @@ const TEXT_STYLES: Record<ElementOf<'text'>['variant'], { size: number; line: nu
   sticky: { size: 15, line: 1.5, pad: 12 },
 };
 
-/** 程式碼的一行換成好幾列：第一列照原本的寬度，接下去的列縮排到這一行的縮排再多兩格（跟畫面一樣） */
-function hangingWrap(source: string, width: number, font: string, measure: Measure): { text: string; dx: number }[] {
-  const rows = wrapText(source, width, font, measure);
-  if (rows.length <= 1) return rows.map((row) => ({ text: row, dx: 0 }));
-  const dx = hangingIndent(source) * CODE_FONT * 0.6;
-  const rest = source.slice(rows[0].length).trimStart();
-  return [{ text: rows[0], dx: 0 }, ...wrapText(rest, width - dx, font, measure).map((row) => ({ text: row, dx }))];
+/** 程式碼上色，跟畫面的淺色主題一樣（VS Code 的 Light+） */
+const CODE_COLORS: Record<TokenKind, string> = {
+  plain: INK,
+  keyword: '#0000ff',
+  control: '#af00db',
+  function: '#795e26',
+  type: '#267f99',
+  string: '#a31515',
+  number: '#098658',
+  comment: '#008000',
+  self: '#0000ff',
+  decorator: '#795e26',
+};
+
+/** 程式碼框：標題列、行號、上色的程式碼；逐行追蹤時目前那一行加底色。超出框的部分裁掉 */
+function drawCode(el: ElementOf<'text'>): string {
+  const { w, h } = codeSize(el);
+  const lines = el.text.split('\n');
+  const current = el.line === undefined ? -1 : Math.min(el.line, lines.length - 1);
+  const clip = `code-${el.id}`;
+  const parts = [
+    `<clipPath id="${clip}"><rect x="${el.x}" y="${el.y}" width="${w}" height="${h}" rx="6"/></clipPath>`,
+    `<g clip-path="url(#${clip})">`,
+    rect(el.x, el.y, w, h, SHEET),
+    rect(el.x, el.y, w, CODE_HEAD_H, SHEET_2),
+    `<line x1="${el.x}" y1="${el.y + CODE_HEAD_H}" x2="${el.x + w}" y2="${el.y + CODE_HEAD_H}" stroke="${RULE}"/>`,
+    text(el.x + 12, el.y + CODE_HEAD_H / 2, '</>', { size: 12, mono: true, bold: true, color: GOOD }),
+    text(el.x + 40, el.y + CODE_HEAD_H / 2, 'Python3', { size: 12, color: INK_2 }),
+  ];
+  lines.forEach((line, i) => {
+    const top = el.y + CODE_HEAD_H + CODE_PAD_Y + i * CODE_LINE_H;
+    const middle = top + CODE_LINE_H / 2;
+    if (i === current) parts.push(rect(el.x, top, w, CODE_LINE_H, PEN_SOFT), rect(el.x, top, 3, CODE_LINE_H, PEN));
+    parts.push(
+      `<text x="${el.x + CODE_GUTTER_W - 12}" y="${middle}" font-family="${escapeXml(MONO)}" font-size="11" fill="#237893" text-anchor="end" dominant-baseline="middle">${i + 1}</text>`,
+    );
+    const spans = highlightPython(line.replace(/\t/g, '    '))
+      .map((token) => `<tspan fill="${CODE_COLORS[token.kind]}">${escapeXml(token.text)}</tspan>`)
+      .join('');
+    if (spans) {
+      parts.push(
+        `<text x="${el.x + CODE_GUTTER_W}" y="${middle}" font-family="${escapeXml(MONO)}" font-size="13" xml:space="preserve" dominant-baseline="middle">${spans}</text>`,
+      );
+    }
+  });
+  parts.push('</g>', rect(el.x + 0.5, el.y + 0.5, w - 1, h - 1, 'none', RULE, ' rx="6"'));
+  return parts.join('');
 }
 
 function drawText(el: ElementOf<'text'>, sizes: Sizes | undefined, options: ExportOptions): string {
+  if (el.variant === 'code') return drawCode(el);
   const style = TEXT_STYLES[el.variant];
   const font = `${style.bold ? 'bold ' : ''}${style.size}px ${style.mono ? MONO : SANS}`;
-  // 程式碼逐行追蹤時多一欄行號，現在這一行加底色；一行一行換行，才知道每一行佔畫面上的哪幾列
-  const tracing = el.variant === 'code' && el.line !== undefined;
-  const gutter = tracing ? CODE_GUTTER : 0;
-  const sources = el.text.split('\n');
-  const width = el.w - style.pad * 2 - gutter;
-  const rows = sources.map((source) =>
-    tracing ? hangingWrap(source, width, font, options.measure) : wrapText(source, width, font, options.measure).map((row) => ({ text: row, dx: 0 })),
-  );
+  const lines = wrapText(el.text, el.w - style.pad * 2, font, options.measure);
   const lineH = style.size * style.line;
-  const total = rows.reduce((n, wrapped) => n + wrapped.length, 0);
-  const h = Math.max(sizes?.get(el.id)?.h ?? 0, total * lineH + style.pad * 2);
+  const h = Math.max(sizes?.get(el.id)?.h ?? 0, lines.length * lineH + style.pad * 2);
   const parts: string[] = [];
   if (el.variant === 'sticky') parts.push(rect(el.x, el.y, el.w, h, MARKER));
-  if (el.variant === 'code') parts.push(rect(el.x, el.y, el.w, h, SHEET_2, RULE, ' rx="4"'));
-  const current = tracing ? Math.min(el.line!, sources.length - 1) : -1;
-  let row = 0;
-  rows.forEach((wrapped, i) => {
-    const top = el.y + style.pad + row * lineH;
-    if (i === current) parts.push(rect(el.x + 1, top, el.w - 2, wrapped.length * lineH, PEN_SOFT), rect(el.x + 1, top, 3, wrapped.length * lineH, PEN));
-    if (tracing) parts.push(text(el.x + (style.pad + gutter) / 2, top + lineH / 2, String(i + 1), { size: 11, mono: true, color: INK_3, anchor: 'middle' }));
-    wrapped.forEach((row, k) => {
-      parts.push(text(el.x + style.pad + gutter + row.dx, top + lineH * k + lineH / 2, row.text, { size: style.size, mono: style.mono, bold: style.bold }));
-    });
-    row += wrapped.length;
+  lines.forEach((line, i) => {
+    parts.push(text(el.x + style.pad, el.y + style.pad + lineH * i + lineH / 2, line, { size: style.size, mono: style.mono, bold: style.bold }));
   });
   return parts.join('');
 }

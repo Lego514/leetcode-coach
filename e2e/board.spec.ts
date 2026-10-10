@@ -700,3 +700,26 @@ test('traces code line by line and records each line for playback', async ({ pag
   await selbar.getByRole('button', { name: 'Stop tracing' }).click();
   await expect(code).toHaveAccessibleName(/^Code: total = 0/);
 });
+
+test('types code like an editor: Python colors, indentation after a colon, and Shift+Tab', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await page.getByRole('button', { name: 'Code', exact: true }).click();
+  const code = page.getByRole('group', { name: /^Code/ });
+  // 預設是 LeetCode 的 class Solution 範本，關鍵字上色
+  await expect(code.locator('.tok-keyword', { hasText: 'class' })).toBeVisible();
+  await expect(code.locator('.tok-function', { hasText: 'solve' })).toBeVisible();
+
+  await code.dblclick();
+  const area = page.getByRole('textbox', { name: 'Code' });
+  await area.fill('');
+  await page.keyboard.type('for x in nums:');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('total += x');
+  await expect(area).toHaveValue('for x in nums:\n    total += x');
+  await page.keyboard.press('Shift+Tab');
+  await expect(area).toHaveValue('for x in nums:\ntotal += x');
+  await page.keyboard.press('Escape');
+  await expect(area).toBeHidden();
+  await expect(code).toHaveAccessibleName(/^Code: for x in nums:\s+total \+= x$/);
+  await expect(code.locator('.board-code-no')).toHaveText(['1', '2']);
+});
