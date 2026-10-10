@@ -12,6 +12,7 @@ import type {
   NoteRecord,
   PatternNoteRecord,
   SettingsRecord,
+  StoryRecord,
   SyncStateRecord,
 } from './db';
 
@@ -26,7 +27,8 @@ export type LocalRecord =
   | CustomProblemRecord
   | SettingsRecord
   | CardReviewRecord
-  | BoardRecord;
+  | BoardRecord
+  | StoryRecord;
 
 export function outboxId(collection: Collection, key: string): string {
   return `${collection}:${key}`;
@@ -57,6 +59,8 @@ export function keyOf(collection: Collection, record: LocalRecord): string {
       return 'app';
     case 'boards':
       return (record as BoardRecord).id;
+    case 'stories':
+      return (record as StoryRecord).id;
   }
 }
 
@@ -86,6 +90,8 @@ export function toSyncData(collection: Collection, record: LocalRecord): unknown
       return omit(record as CardReviewRecord, 'id', 'uid');
     case 'boards':
       return omit(record as BoardRecord, 'id');
+    case 'stories':
+      return omit(record as StoryRecord, 'id');
   }
 }
 
@@ -109,6 +115,8 @@ export async function findLocal(database: CoachDB, collection: Collection, key: 
       return database.cardReviews.where('uid').equals(key).first();
     case 'boards':
       return database.boards.get(key);
+    case 'stories':
+      return database.stories.get(key);
   }
 }
 
@@ -186,6 +194,10 @@ export async function applyRemote(
       if (deleted) await database.boards.delete(key);
       else await database.boards.put({ ...(data as Omit<BoardRecord, 'id'>), id: key });
       return undefined;
+    case 'stories':
+      if (deleted) await database.stories.delete(key);
+      else await database.stories.put({ ...(data as Omit<StoryRecord, 'id'>), id: key });
+      return undefined;
   }
 }
 
@@ -205,7 +217,8 @@ export function knownUpdatedAt(collection: Collection, record: LocalRecord): num
     case 'notes':
     case 'patternNotes':
     case 'boards':
-      return parse((record as NoteRecord | PatternNoteRecord | BoardRecord).updatedAt);
+    case 'stories':
+      return parse((record as NoteRecord | PatternNoteRecord | BoardRecord | StoryRecord).updatedAt);
     default:
       return 0;
   }

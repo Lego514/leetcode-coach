@@ -152,6 +152,26 @@ describe('POST /api/sync', () => {
     }
   });
 
+  it('stores behavioral stories and rejects unknown themes', async () => {
+    const data = {
+      title: 'Pipeline fix',
+      situation: 'Nightly jobs failed.',
+      task: 'I owned the fix.',
+      action: 'I added retries and alerts.',
+      result: 'Failures dropped to zero.',
+      themes: ['failure', 'deadline'],
+      updatedAt: '2026-10-10T12:00:00.000Z',
+    };
+    const key = '0b1f6f6e-1c2d-4e5f-8a9b-0c1d2e3f4a5b';
+    const ok = await client.sync(0, [{ collection: 'stories', key, updatedAt: 1, deleted: false, data }]);
+    expect(ok.changes).toEqual([{ collection: 'stories', key, updatedAt: 1, deleted: false, data }]);
+    const res = await client.request('POST', '/api/sync', {
+      cursor: 0,
+      changes: [{ collection: 'stories', key, updatedAt: 2, deleted: false, data: { ...data, themes: ['bragging'] } }],
+    });
+    expect(res.status).toBe(400);
+  });
+
   it('stores solving-step notes and rejects unknown steps', async () => {
     const data = { ...note('hash map'), steps: { clarify: 'Find two indices that add up to target', edge: 'Duplicates, negatives', keep: 'Map value to index' } };
     const ok = await client.sync(0, [{ collection: 'notes', key: '1', updatedAt: 1, deleted: false, data }]);

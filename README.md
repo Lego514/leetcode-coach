@@ -106,6 +106,10 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - On the practice page the board opens on top, so the timer keeps running.
   - No whiteboard library is used: the editor is about 141 KB (42 KB gzipped) and loads the first time a board opens.
+- **Behavioral interviews**: a STAR story bank for the non-coding round.
+  - Write each story as Situation, Task, Action, and Result, and tag what it can answer: conflict, failure, leadership, deadlines, ambiguity, influence, learning, proudest work, feedback, or teamwork. Stories autosave and sync like notes.
+  - The editor offers English opening phrases for each part (click one to add it), estimates how long the story takes to say at about 140 words a minute (1½–2½ minutes is the target), and points out when Action, what you did, is less than 40% of it.
+  - A coverage grid shows which themes still have no story. Thirty common questions are grouped by theme, each with what interviewers look for (and a Chinese translation in the Chinese interface), links to your stories for that theme, or a button to start one.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
@@ -113,7 +117,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - An optional live English transcript (Web Speech API). Afterwards you can fix it, see your word count, speaking pace, and filler words, and save it as the problem's explanation script.
   - **AI feedback (Claude)** on the transcript: a 0–2 score for each of the five explanation points with comments, strengths, concrete rewrites of unclear phrases, and a model answer you can save as your script. Requires an account; the server holds the API key and enforces a daily limit per user. In the live app it is on for allow-listed accounts only (`AI_ALLOWED_EMAILS`), so a public sign-up can't run up the API bill.
 - **Progress**: a year-long activity heatmap like LeetCode's (darker squares mean more problems that day; flashcard-only days show the lightest shade) with active days and the longest streak, a per-pattern mastery grid, a weekly practice chart, and a breakdown by difficulty.
-- **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, settings, flashcard answers, and whiteboards between devices. Everything keeps working offline and without an account. Sign-in has its own page, linked from the sidebar, the More tab, and a dismissible banner on Today on phones. Passwords can be reset by email, and the password fields have a show/hide toggle.
+- **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, settings, flashcard answers, whiteboards, and behavioral stories between devices. Everything keeps working offline and without an account. Sign-in has its own page, linked from the sidebar, the More tab, and a dismissible banner on Today on phones. Passwords can be reset by email, and the password fields have a show/hide toggle.
 - **Bug reports and suggestions**: a "Report a problem" page, a Report button on every flashcard once it's answered, and a link on the error screen. Reports work without an account; the form shows exactly what gets attached (page, card, version, browser). Signed-in users can follow the status of their own reports, and admin accounts (`ADMIN_EMAILS`) get an inbox to mark them resolved.
   - A reset link works once, expires in an hour, and signs you out on other devices. It needs `BREVO_API_KEY` and `MAIL_FROM`; without them the feature is hidden.
 - **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It follows the browser language by default, and you can switch from the sidebar or Settings.
@@ -290,6 +294,8 @@ Notes:
 今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
 
 **複習排程（FSRS）**：每一題有「穩定度」（隔幾天之後，記得的機率會掉到 90%）和 1 到 10 的難度。自己解出算 Good、看提示算 Hard、看解答或看完還不懂算 Again；晚了才複習但還記得，下次的間隔會拉得更長。題目會在你大概還記得「目標記憶率」那麼多的時候再出現（「設定」可以選 80%–95%，預設 90%），改了之後每一題都會重新排程。複習頁把最可能已經忘了的題目排在最前面，題目頁顯示現在還記得的機率、大約記得住幾天和難度。排程是照 FSRS-6 的公式自己寫的，測試裡拿官方的 `ts-fsrs` 在幾百組隨機的複習紀錄上逐一比對。
+
+**行為面試**：用 STAR（情境、任務、行動、結果）寫自己的故事，標上它能回答哪些主題（衝突、失敗、領導、期限、不確定、說服、學習、最自豪、回饋、團隊合作），會自動儲存並同步。每一段有英文開頭句可以點來用，也會估計講完要多久（每分鐘約 140 字，目標 1.5–2.5 分鐘），行動那段不到四成時會提醒。覆蓋率一眼看出哪些主題還沒有故事；30 題常見題目依主題分類，附中文翻譯和面試官想看什麼，旁邊列出可以用的故事，或直接幫這題寫一個。
 
 **解題步驟**：練習頁、模擬面試和題目頁共用模擬面試的七個步驟（釐清題意、舉例與邊界、暴力解、優化、寫程式、驗證、複雜度），每一步寫一句自己的想法。舉例拆成「例子」和「邊界情況」，優化拆成三個問題：笨在哪、哪裡重複算、要留下什麼。寫的內容存在這題的筆記裡、會同步，複習時看得到當時怎麼想的；模擬面試時會出現在每一步的檢查清單下面。寫完可以按「照步驟寫英文講解稿」，講解稿的五句各列出相關步驟寫過的內容，自己逐句講成英文。提示面板可以先選「卡在哪一步」，看這一步怎麼想和自己上一步寫的內容，不算用了提示；卡在優化或寫程式時可以直接打開關鍵觀察或模板。
 

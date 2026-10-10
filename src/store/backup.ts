@@ -1,5 +1,5 @@
 import { COLLECTIONS } from '../../shared/constants';
-import { db, type AttemptRecord, type BoardRecord, type CardReviewRecord, type MockRecord } from './db';
+import { db, type AttemptRecord, type BoardRecord, type CardReviewRecord, type MockRecord, type StoryRecord } from './db';
 import { keyOf, rebuildAllProgress, track, type LocalRecord } from './tracking';
 
 const APP_ID = 'leetcode-coach';
@@ -24,6 +24,8 @@ export interface BackupFile {
     cardReviews?: unknown[];
     /** 加入白板之前的備份沒有這一項 */
     boards?: unknown[];
+    /** 加入行為面試之前的備份沒有這一項 */
+    stories?: unknown[];
   };
 }
 
@@ -52,6 +54,7 @@ export async function exportBackup(): Promise<BackupFile> {
         settings: await db.settings.toArray(),
         cardReviews: await db.cardReviews.toArray(),
         boards: await db.boards.toArray(),
+        stories: await db.stories.toArray(),
       },
     };
   });
@@ -78,7 +81,7 @@ export function parseBackup(text: string): BackupFile {
   if (file.version !== BACKUP_VERSION) throw new BackupError('unsupported_version');
   const data = file.data as Record<string, unknown> | undefined;
   if (!data || TABLE_KEYS.some((key) => !Array.isArray(data[key]))) throw new BackupError('incomplete');
-  for (const optional of ['cardReviews', 'boards']) {
+  for (const optional of ['cardReviews', 'boards', 'stories']) {
     if (data[optional] !== undefined && !Array.isArray(data[optional])) throw new BackupError('incomplete');
   }
   return file as BackupFile;
@@ -112,6 +115,7 @@ export async function restoreBackup(file: BackupFile): Promise<void> {
     await db.settings.bulkPut(data.settings as never[]);
     await db.cardReviews.bulkPut(withUid<CardReviewRecord>(data.cardReviews ?? []));
     await db.boards.bulkPut((data.boards ?? []) as BoardRecord[]);
+    await db.stories.bulkPut((data.stories ?? []) as StoryRecord[]);
     await rebuildAllProgress(db);
 
     // 匯入的資料視為最新的修改，登入時會覆蓋雲端

@@ -8,6 +8,7 @@ import { useCloud } from '../store/cloud';
 import { stashError } from '../store/reports';
 
 const MORE_LINKS = [
+  { to: '/stories', key: 'stories' },
   { to: '/cards', key: 'cards' },
   { to: '/board', key: 'board' },
   { to: '/progress', key: 'progress' },
