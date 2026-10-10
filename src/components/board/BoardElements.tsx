@@ -4,6 +4,12 @@ import {
   CELL,
   colorVar,
   CYCLE_H,
+  dpArrowPath,
+  dpDependencies,
+  dpLayout,
+  dpName,
+  DP_HEAD_H,
+  DP_HEAD_W,
   edgeShape,
   graphLayout,
   hasTreeNode,
@@ -39,6 +45,7 @@ import {
   WIDE_CELL,
   type BoardDoc,
   type CellColor,
+  type DpCell,
   type ElementOf,
   type Placed,
 } from '../../lib/board/model';
@@ -145,6 +152,8 @@ function Body({ el, editing, onChange, onDoneEditing, ...rest }: BodyProps) {
       return <GraphBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'recursion':
       return <RecursionBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
+    case 'dp':
+      return <DpBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'table':
       return <TableBody el={el} editing={editing} onChange={onChange} onDoneEditing={onDoneEditing} {...rest} />;
     case 'var':
@@ -179,6 +188,7 @@ function Cell({
   index,
   color,
   picked,
+  dep,
   className = '',
   style: extraStyle,
 }: {
@@ -197,6 +207,8 @@ function Cell({
   index?: number;
   color?: CellColor | null;
   picked?: boolean;
+  /** DP 表：正在填的那一格從這一格算來 */
+  dep?: boolean;
 }) {
   const style = { width: wide ? WIDE_CELL : CELL, height: CELL, ...extraStyle };
   const data = {
@@ -204,6 +216,7 @@ function Cell({
     'data-color': color ?? undefined,
     'data-snap': snap || undefined,
     'data-picked': picked || undefined,
+    'data-dep': dep || undefined,
   };
   if (!editing) {
     return (
@@ -615,6 +628,111 @@ function RecursionBody({
   );
 }
 
+/**
+ * DP 表：上面標欄的索引（和字串的字元），二維時左邊標列的索引；
+ * 正在填的那一格加框，箭頭標出它從哪幾格算來（一維畫在格子下面的弧線）
+ */
+function DpBody({ el, editing, focusIndex, onAddRow, onAddCol, onChange, onDoneEditing }: { el: ElementOf<'dp'> } & Omit<BodyProps, 'el'>) {
+  const { t } = useI18n();
+  const { rows, cols, left, top, w, h } = dpLayout(el);
+  const oneD = rows === 1;
+  const deps = el.at ? dpDependencies(el, el.at) : [];
+  const isDep = (cell: DpCell) => deps.some((d) => d.r === cell.r && d.c === cell.c);
+  const marker = `board-dp-head-${el.id}`;
+  const setCell = (r: number, c: number, value: string) =>
+    onChange({ cells: el.cells.map((row, i) => (i === r ? row.map((v, j) => (j === c ? value : v)) : row)) });
+  const head = (key: 'rowHead' | 'colHead', i: number, style: CSSProperties) => {
+    const value = el[key]?.[i] ?? '';
+    if (!editing) {
+      return (
+        <span key={`${key}${i}`} className="board-dp-head" style={style} title={value}>
+          {value}
+        </span>
+      );
+    }
+    return (
+      <input
+        key={`${key}${i}`}
+        className="board-dp-head board-dp-head-input"
+        style={style}
+        value={value}
+        aria-label={t.board.dp.headLabel(key === 'rowHead' ? 'row' : 'col', i)}
+        maxLength={40}
+        onChange={(e) => onChange({ [key]: el[key]!.map((v, j) => (j === i ? e.target.value : v)) })}
+        onKeyDown={editKeys(onDoneEditing)}
+      />
+    );
+  };
+  return (
+    <>
+      <Label value={el.label} editing={editing} onChange={(label) => onChange({ label })} onDone={onDoneEditing} />
+      {Array.from({ length: cols }, (_, c) => (
+        <span key={`ci${c}`} className="board-dp-index" style={{ left: left + c * CELL, top: LABEL_H, width: CELL, height: INDEX_H }}>
+          {c}
+        </span>
+      ))}
+      {el.colHead && Array.from({ length: cols }, (_, c) => head('colHead', c, { left: left + c * CELL, top: LABEL_H + INDEX_H, width: CELL, height: DP_HEAD_H }))}
+      {!oneD &&
+        Array.from({ length: rows }, (_, r) => (
+          <span key={`ri${r}`} className="board-dp-index" style={{ left: 0, top: top + r * CELL, width: ROW_INDEX_W, height: CELL }}>
+            {r}
+          </span>
+        ))}
+      {!oneD &&
+        el.rowHead &&
+        Array.from({ length: rows }, (_, r) => head('rowHead', r, { left: ROW_INDEX_W, top: top + r * CELL, width: DP_HEAD_W, height: CELL }))}
+      {el.cells.map((row, r) =>
+        row.map((value, c) => {
+          const index = r * cols + c;
+          return (
+            <Cell
+              key={`${r}:${c}:${cols}`}
+              index={index}
+              value={value}
+              editing={editing}
+              autoFocus={index === (focusIndex ?? 0)}
+              label={t.board.dp.cellLabel(dpName(el, { r, c }))}
+              picked={!editing && el.at?.r === r && el.at?.c === c}
+              dep={!editing && isDep({ r, c })}
+              className="board-dp-cell"
+              style={{ left: left + c * CELL, top: top + r * CELL, width: CELL + 1, height: CELL + 1 }}
+              onChange={(v) => setCell(r, c, v)}
+              onDone={onDoneEditing}
+            />
+          );
+        }),
+      )}
+      <svg className="board-dp-arrows" width={w} height={h} aria-hidden>
+        <defs>
+          <marker id={marker} viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" className="board-dp-arrowhead" />
+          </marker>
+        </defs>
+        {!editing &&
+          el.at &&
+          deps.map((d) => <path key={`${d.r}:${d.c}`} d={dpArrowPath(el, d, el.at!)} className="board-dp-arrow" markerEnd={`url(#${marker})`} />)}
+      </svg>
+      {onAddRow && (
+        <button type="button" className="board-add board-add-row" aria-label={t.board.actions.addRow} title={t.board.actions.addRow} onClick={onAddRow}>
+          +
+        </button>
+      )}
+      {onAddCol && (
+        <button
+          type="button"
+          className="board-add board-add-col"
+          aria-label={t.board.actions.addCol}
+          title={t.board.actions.addCol}
+          style={{ top, height: rows * CELL }}
+          onClick={onAddCol}
+        >
+          +
+        </button>
+      )}
+    </>
+  );
+}
+
 /** 堆積：上面是完全二元樹，下面是同一份資料的陣列；比父節點更該在上面的節點標紅 */
 function HeapBody({ el, editing, snapIndex, cellIndex, focusIndex, onChange, onDoneEditing }: { el: ElementOf<'list'> } & Omit<BodyProps, 'el'>) {
   const { t } = useI18n();
@@ -937,6 +1055,10 @@ function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t'])
       return `${t.board.kinds.graph} ${el.label}${el.directed ? ` (${t.board.directed})` : ''}: ${serializeGraph(el)}`;
     case 'recursion':
       return `${t.board.kinds.recursionTree} ${el.label}: ${inlineRecursion(el)}`;
+    case 'dp': {
+      const grid = el.cells.map((row) => row.map((v) => v || '·').join(' ')).join('; ');
+      return `${t.board.kinds.dpTable} ${el.label}${el.at ? ` (${t.board.dp.filling(dpName(el, el.at))})` : ''}: ${grid}`;
+    }
     case 'table':
       return `${t.board.kinds[el.variant]} ${el.label}: ${el.rows.map((r) => r.join(' ')).join('; ')}`;
     case 'var':

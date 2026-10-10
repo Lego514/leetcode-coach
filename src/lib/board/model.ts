@@ -140,6 +140,10 @@ export function sizeOf(el: Placed, measured?: { w: number; h: number }): { w: nu
       const { w, h } = recursionLayout(el);
       return { w, h };
     }
+    case 'dp': {
+      const { w, h } = dpLayout(el);
+      return { w, h };
+    }
     case 'table': {
       const cols = columns(el);
       const cellW = tableCellWidth(el);
@@ -296,6 +300,7 @@ export type PaletteKind =
   | 'graph'
   | 'heap'
   | 'recursionTree'
+  | 'dpTable'
   | 'treeNode'
   | 'listNode'
   | 'graphNode'
@@ -310,7 +315,7 @@ export type PaletteGroup = 'linear' | 'nodes' | 'lookup' | 'notes';
 export const PALETTE: { group: PaletteGroup; kinds: PaletteKind[] }[] = [
   { group: 'linear', kinds: ['array', 'pointer', 'stack', 'queue'] },
   { group: 'nodes', kinds: ['binaryTree', 'linkedList', 'graph', 'heap', 'recursionTree'] },
-  { group: 'lookup', kinds: ['dict', 'set', 'grid', 'table'] },
+  { group: 'lookup', kinds: ['dict', 'set', 'grid', 'dpTable', 'table'] },
   { group: 'notes', kinds: ['text', 'code', 'sticky', 'var'] },
 ];
 
@@ -389,6 +394,18 @@ export function createElement(kind: PaletteKind, at: Point, id: string, texts: D
           { text: 'f(1)', parent: 6 },
           { text: 'f(0)', parent: 6 },
         ],
+      };
+    case 'dpTable':
+      // LCS("abcde", "ace")：邊界先填好 0，從 dp[1][1] 開始填
+      return {
+        type: 'dp',
+        ...placed,
+        label: 'dp',
+        cells: Array.from({ length: 6 }, (_, r) => Array.from({ length: 4 }, (_, c) => (r === 0 || c === 0 ? '0' : ''))),
+        rowHead: ['', 'a', 'b', 'c', 'd', 'e'],
+        colHead: ['', 'a', 'c', 'e'],
+        deps: 'upLeftDiag',
+        at: { r: 1, c: 1 },
       };
     case 'treeNode':
       return { type: 'node', ...placed, variant: 'tree', value: '1' };
@@ -1400,6 +1417,265 @@ export function setRepeats(doc: BoardDoc, id: string, on: boolean): BoardDoc {
   const el = findElement(doc, id);
   if (el?.type !== 'recursion') return doc;
   return updateElement<ElementOf<'recursion'>>(doc, id, { repeats: on || undefined });
+}
+
+// ---------- DP 表 ----------
+
+/** 欄旁邊標字的那一列有多高、列旁邊標字的那一欄有多寬 */
+export const DP_HEAD_H = 22;
+export const DP_HEAD_W = 26;
+/** 一維的 DP 表在格子下面畫弧線箭頭 */
+export const DP_ARC_H = 32;
+export const DP_MAX_ROWS = 26;
+export const DP_MAX_COLS = 30;
+
+export type DpDeps = NonNullable<ElementOf<'dp'>['deps']>;
+export interface DpCell {
+  r: number;
+  c: number;
+}
+
+/** 一維、二維各自可以選的相依關係（下拉選單的順序） */
+export const DP_DEPS_1D: DpDeps[] = ['prev1', 'prev2', 'before', 'steps'];
+export const DP_DEPS_2D: DpDeps[] = ['upLeft', 'upLeftDiag', 'diag', 'upDiag', 'downLeft'];
+
+/** 相依關係寫成算式，兩種語言都一樣 */
+export const DP_DEP_FORMULAS: Record<DpDeps, string> = {
+  prev1: 'dp[i-1]',
+  prev2: 'dp[i-1], dp[i-2]',
+  before: 'dp[j], j < i',
+  steps: 'dp[i-k]',
+  upLeft: 'dp[i-1][j], dp[i][j-1]',
+  upLeftDiag: 'dp[i-1][j], dp[i][j-1], dp[i-1][j-1]',
+  diag: 'dp[i-1][j-1]',
+  upDiag: 'dp[i-1][j], dp[i-1][j-1]',
+  downLeft: 'dp[i+1][j-1]',
+};
+
+export function isDp1d(el: ElementOf<'dp'>): boolean {
+  return el.cells.length === 1;
+}
+
+export interface DpLayout {
+  rows: number;
+  cols: number;
+  /** 格子從哪裡開始（相對於元件左上角）：左邊是列的索引和字，上面是欄的索引和字 */
+  left: number;
+  top: number;
+  w: number;
+  h: number;
+}
+
+export function dpLayout(el: ElementOf<'dp'>): DpLayout {
+  const rows = el.cells.length;
+  const cols = el.cells[0]?.length ?? 1;
+  const oneD = rows === 1;
+  const left = oneD ? 0 : ROW_INDEX_W + (el.rowHead ? DP_HEAD_W : 0);
+  const top = LABEL_H + INDEX_H + (el.colHead ? DP_HEAD_H : 0);
+  return { rows, cols, left, top, w: left + cols * CELL, h: top + rows * CELL + (oneD ? DP_ARC_H : 0) };
+}
+
+/** 第 r 列第 c 欄的格子（相對於元件左上角） */
+export function dpCellRect(el: ElementOf<'dp'>, cell: DpCell): Rect {
+  const { left, top } = dpLayout(el);
+  return { x: left + cell.c * CELL, y: top + cell.r * CELL, w: CELL, h: CELL };
+}
+
+/** 畫面上每一格的編號（data-cell）：一列一列往下數 */
+export function dpIndex(el: ElementOf<'dp'>, cell: DpCell): number {
+  return cell.r * (el.cells[0]?.length ?? 1) + cell.c;
+}
+
+export function dpCellAt(el: ElementOf<'dp'>, index: number): DpCell {
+  const cols = el.cells[0]?.length ?? 1;
+  return { r: Math.floor(index / cols), c: index % cols };
+}
+
+/** 一維寫成 dp[i]，二維寫成 dp[i][j] */
+export function dpName(el: ElementOf<'dp'>, cell: DpCell): string {
+  return isDp1d(el) ? `dp[${cell.c}]` : `dp[${cell.r}][${cell.c}]`;
+}
+
+/** 這一格從哪幾格算來；超出表格的不算 */
+export function dpDependencies(el: ElementOf<'dp'>, cell: DpCell): DpCell[] {
+  const { rows, cols } = dpLayout(el);
+  const { r, c } = cell;
+  let out: DpCell[];
+  switch (el.deps) {
+    case 'prev1':
+      out = [{ r, c: c - 1 }];
+      break;
+    case 'prev2':
+      out = [{ r, c: c - 1 }, { r, c: c - 2 }];
+      break;
+    case 'before':
+      out = Array.from({ length: c }, (_, k) => ({ r, c: k }));
+      break;
+    case 'steps':
+      out = (el.steps ?? []).map((k) => ({ r, c: c - k }));
+      break;
+    case 'upLeft':
+      out = [{ r: r - 1, c }, { r, c: c - 1 }];
+      break;
+    case 'upLeftDiag':
+      out = [{ r: r - 1, c }, { r, c: c - 1 }, { r: r - 1, c: c - 1 }];
+      break;
+    case 'diag':
+      out = [{ r: r - 1, c: c - 1 }];
+      break;
+    case 'upDiag':
+      out = [{ r: r - 1, c }, { r: r - 1, c: c - 1 }];
+      break;
+    case 'downLeft':
+      out = [{ r: r + 1, c: c - 1 }];
+      break;
+    default:
+      out = [];
+  }
+  return out.filter((d) => d.r >= 0 && d.r < rows && d.c >= 0 && d.c < cols);
+}
+
+/** 填表的順序：一列一列由左到右，order 是 up 時從最下面一列往上 */
+export function dpOrder(el: ElementOf<'dp'>): DpCell[] {
+  const { rows, cols } = dpLayout(el);
+  const out: DpCell[] = [];
+  for (let k = 0; k < rows; k += 1) {
+    const r = el.order === 'up' ? rows - 1 - k : k;
+    for (let c = 0; c < cols; c += 1) out.push({ r, c });
+  }
+  return out;
+}
+
+function sameCell(a: DpCell | undefined, b: DpCell): boolean {
+  return !!a && a.r === b.r && a.c === b.c;
+}
+
+/**
+ * 從 from 那一格指到正在填的那一格的箭頭（SVG 路徑，相對於元件左上角）。
+ * 一維的畫成格子下面的弧線；二維的是直線，從那一格裡面出發、停在正在填的格子邊上。
+ */
+export function dpArrowPath(el: ElementOf<'dp'>, from: DpCell, to: DpCell): string {
+  const a = dpCellRect(el, from);
+  const b = dpCellRect(el, to);
+  if (isDp1d(el)) {
+    const y = a.y + CELL + 2;
+    const x1 = a.x + CELL / 2;
+    const x2 = b.x + CELL / 2;
+    const dip = Math.min(DP_ARC_H - 6, 8 + Math.abs(to.c - from.c) * 5);
+    return `M${x1} ${y}Q${(x1 + x2) / 2} ${y + dip * 2} ${x2 + (x1 < x2 ? -4 : 4)} ${y + 1}`;
+  }
+  const ax = a.x + CELL / 2;
+  const ay = a.y + CELL / 2;
+  const bx = b.x + CELL / 2;
+  const by = b.y + CELL / 2;
+  const d = Math.hypot(bx - ax, by - ay) || 1;
+  const ux = (bx - ax) / d;
+  const uy = (by - ay) / d;
+  // 中心到格子邊緣的距離（斜的比較遠）
+  const edge = CELL / 2 / Math.max(Math.abs(ux), Math.abs(uy));
+  return `M${ax + ux * edge * 0.35} ${ay + uy * edge * 0.35}L${bx - ux * (edge + 1)} ${by - uy * (edge + 1)}`;
+}
+
+/** 依填表的順序往前或往後一格；還沒選格子時從第一格開始 */
+export function dpStep(el: ElementOf<'dp'>, dir: 'next' | 'prev'): DpCell | null {
+  const order = dpOrder(el);
+  const at = order.findIndex((cell) => sameCell(el.at, cell));
+  if (at < 0) return order[0] ?? null;
+  return order[at + (dir === 'next' ? 1 : -1)] ?? null;
+}
+
+/** 照填表的順序，目前這格之後第一個還沒填的格子；都填好了是 null */
+export function dpNextEmpty(el: ElementOf<'dp'>): DpCell | null {
+  const order = dpOrder(el);
+  const at = order.findIndex((cell) => sameCell(el.at, cell));
+  return order.slice(at + 1).find((cell) => !el.cells[cell.r][cell.c]) ?? null;
+}
+
+/** 把正在填的格子移到 cell；超出表格就停在邊上 */
+export function setDpCursor(doc: BoardDoc, id: string, cell: DpCell | undefined): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp') return doc;
+  if (!cell) return updateElement<ElementOf<'dp'>>(doc, id, { at: undefined });
+  const { rows, cols } = dpLayout(el);
+  const at = { r: Math.min(Math.max(0, cell.r), rows - 1), c: Math.min(Math.max(0, cell.c), cols - 1) };
+  return sameCell(el.at, at) ? doc : updateElement<ElementOf<'dp'>>(doc, id, { at });
+}
+
+/** 用方向鍵上下左右移動正在填的格子 */
+export function moveDpCursor(doc: BoardDoc, id: string, dr: number, dc: number): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp') return doc;
+  const from = el.at ?? { r: 0, c: 0 };
+  return setDpCursor(doc, id, el.at ? { r: from.r + dr, c: from.c + dc } : from);
+}
+
+export function stepDpCursor(doc: BoardDoc, id: string, dir: 'next' | 'prev'): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp') return doc;
+  const next = dpStep(el, dir);
+  return next ? setDpCursor(doc, id, next) : doc;
+}
+
+export function setDpValue(doc: BoardDoc, id: string, cell: DpCell, value: string): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp' || !el.cells[cell.r] || el.cells[cell.r][cell.c] === undefined) return doc;
+  const cells = el.cells.map((row, r) => (r === cell.r ? row.map((v, c) => (c === cell.c ? value : v)) : row));
+  return updateElement<ElementOf<'dp'>>(doc, id, { cells });
+}
+
+/**
+ * 填正在填的那一格：寫進值；要記錄的話把這一刻存成一步（說明寫 dp[i][j] = 值，箭頭也一起存），
+ * 再移到下一個還沒填的格子。
+ */
+export function fillDpCell(doc: BoardDoc, id: string, value: string, record: boolean): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp' || !el.at) return doc;
+  let next = setDpValue(doc, id, el.at, value);
+  if (record) next = captureStep(next, newStepId(next), `${dpName(el, el.at)} = ${value}`);
+  const filled = findElement(next, id) as ElementOf<'dp'>;
+  const to = dpNextEmpty(filled);
+  return to ? setDpCursor(next, id, to) : next;
+}
+
+/** 清掉所有的值，從第一格重新填；表格大小、旁邊的字和相依關係都留著 */
+export function clearDpValues(doc: BoardDoc, id: string): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp') return doc;
+  const cells = el.cells.map((row) => row.map(() => ''));
+  return updateElement<ElementOf<'dp'>>(doc, id, { cells, at: dpOrder({ ...el, cells })[0] });
+}
+
+/** 換相依關係；steps 是往回看幾格（只有 deps 是 steps 時用到） */
+export function setDpDeps(doc: BoardDoc, id: string, deps: DpDeps | undefined, steps?: number[]): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp') return doc;
+  const clean = [...new Set((steps ?? el.steps ?? []).filter((k) => Number.isInteger(k) && k >= 1 && k <= 29))].sort((a, b) => a - b).slice(0, 6);
+  return updateElement<ElementOf<'dp'>>(doc, id, { deps, steps: clean.length > 0 ? clean : undefined });
+}
+
+export function setDpOrder(doc: BoardDoc, id: string, order: 'down' | 'up'): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp') return doc;
+  return updateElement<ElementOf<'dp'>>(doc, id, { order: order === 'up' ? 'up' : undefined });
+}
+
+/** 加減一列或一欄（至少留一列一欄）；旁邊的字跟著加減，正在填的格子不會跑到表格外 */
+export function resizeDp(doc: BoardDoc, id: string, axis: 'row' | 'col', delta: 1 | -1): BoardDoc {
+  const el = findElement(doc, id);
+  if (el?.type !== 'dp') return doc;
+  const { rows, cols } = dpLayout(el);
+  const nextRows = axis === 'row' ? Math.min(DP_MAX_ROWS, Math.max(1, rows + delta)) : rows;
+  const nextCols = axis === 'col' ? Math.min(DP_MAX_COLS, Math.max(1, cols + delta)) : cols;
+  if (nextRows === rows && nextCols === cols) return doc;
+  const fit = (list: string[], length: number) => Array.from({ length }, (_, i) => list[i] ?? '');
+  const cells = Array.from({ length: nextRows }, (_, r) => fit(el.cells[r] ?? [], nextCols));
+  const at = el.at && { r: Math.min(el.at.r, nextRows - 1), c: Math.min(el.at.c, nextCols - 1) };
+  return updateElement<ElementOf<'dp'>>(doc, id, {
+    cells,
+    rowHead: el.rowHead && fit(el.rowHead, nextRows),
+    colHead: el.colHead && fit(el.colHead, nextCols),
+    at,
+  });
 }
 
 /** 表格加減一列或一欄，至少留一列一欄 */
