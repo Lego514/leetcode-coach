@@ -546,6 +546,9 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
 
   // ---------- 選取列不要擋住選到的東西 ----------
 
+  /** 程式碼逐行追蹤：每走一行先把畫面記成一步 */
+  const [traceRecord, setTraceRecord] = useState(false);
+
   /** 選取時手指或滑鼠還按著（可能接著拖），等放開再挪 */
   const revealLater = useRef(false);
 
@@ -557,12 +560,14 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     const id = [...selected][0];
     const host = viewport.querySelector<HTMLElement>(`[data-el="${id}"]`);
     if (!host) return;
-    // DP 表看的是正在填的那一格：按 Enter 一路往下填時，畫面跟著那一格走
+    // DP 表看的是正在填的那一格、追蹤中的程式碼看的是現在那一行：一路往下時，畫面跟著走
     const el = m.findElement(doc, id);
     const part =
       el?.type === 'dp' && el.at
         ? host.querySelector(`[data-cell="${m.dpIndex(el, el.at)}"]`)
-        : cellSel?.id === id
+        : el?.type === 'text' && el.line !== undefined
+          ? host.querySelector('[data-current]')
+          : cellSel?.id === id
           ? host.querySelector(`[data-cell="${cellSel.index}"]`)
           : edgeSel?.id === id
             ? host.querySelector(`[data-edge="${edgeSel.index}"]`)
@@ -575,7 +580,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
     if (dy !== 0) setView((v) => ({ ...v, y: v.y + dy }));
   };
 
-  const dpAt = single?.type === 'dp' && single.at ? `${single.at.r}:${single.at.c}` : '';
+  const dpAt = single?.type === 'dp' && single.at ? `${single.at.r}:${single.at.c}` : single?.type === 'text' ? String(single.line ?? '') : '';
   const selectionKey =
     playIndex === null && tool === 'select'
       ? `${[...selected].join(',')}|${cellSel ? `${cellSel.id}:${cellSel.index}` : ''}|${edgeSel ? `${edgeSel.id}:${edgeSel.index}` : ''}|${dpAt}`
@@ -836,6 +841,8 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
           // 點 DP 表的一格：改成正在填這一格，箭頭跟著換
           const clicked = m.findElement(doc, g.clicked);
           if (clicked?.type === 'dp' && g.cell !== undefined) apply(m.setDpCursor(doc, clicked.id, m.dpCellAt(clicked, g.cell)));
+          // 追蹤中的程式碼：點一行就走到那一行
+          if (clicked?.type === 'text' && clicked.line !== undefined && g.cell !== undefined) apply(m.traceCodeTo(doc, clicked.id, g.cell, traceRecord));
         }
         return;
       case 'pen': {
@@ -912,7 +919,9 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest('input, textarea, select')) return;
+      // 打字的地方自己處理按鍵；勾選框（例如「每一步記下來」）只用空白鍵和 Enter，其他快捷鍵照常
+      const checkbox = target instanceof HTMLInputElement && target.type === 'checkbox';
+      if (checkbox ? e.key === ' ' || e.key === 'Enter' : target.closest('input, textarea, select')) return;
       if (playIndex !== null) {
         if (e.type !== 'keydown' || e.metaKey || e.ctrlKey) return;
         // 焦點在按鈕上時，Enter 和空白鍵交給按鈕
@@ -1015,6 +1024,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
         const step = e.key === forward ? 1 : e.key === backward ? -1 : 0;
         const index = Math.min(Math.max(0, pickedIndex + step), pickedList.items.length - 1);
         setCellSel({ id: pickedList.id, index });
+      } else if (single?.type === 'text' && single.line !== undefined && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        // 程式碼逐行追蹤：上下鍵走到上一行、下一行（跳過空白行）
+        e.preventDefault();
+        apply(m.traceCodeTo(doc, single.id, m.nextCodeLine(single, e.key === 'ArrowDown' ? 'next' : 'prev'), traceRecord));
       } else if (single?.type === 'dp' && single.at && e.key.startsWith('Arrow')) {
         // DP 表：方向鍵移動正在填的格子
         e.preventDefault();
@@ -1399,6 +1412,9 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
                     <button type="button" className="btn btn-small" onClick={() => frameBetween(pair)}>
                       {t.board.actions.frameBetween}
                     </button>
+                  )}
+                  {single?.type === 'text' && single.variant === 'code' && single.line !== undefined && (
+                    <CodeTraceActions el={single} doc={doc} apply={apply} record={traceRecord} onRecord={setTraceRecord} />
                   )}
                   {single && <SelectionActions key={single.id} el={single} doc={doc} sizes={sizes} apply={apply} onEdit={() => startEditing(single.id)} />}
                   {/* 箭頭和範圍框要連著的東西一起選才複製得出來 */}
@@ -1974,6 +1990,11 @@ function SelectionActions({ el, doc, sizes, apply, onEdit }: SelectionActionsPro
     );
   }
   if (m.isPlaced(el) && el.type !== 'shape') buttons.push([a.edit, onEdit]);
+  // 程式碼可以逐行追蹤（追蹤中的操作在 CodeTraceActions）
+  if (el.type === 'text' && el.variant === 'code') {
+    const tracing = el.line !== undefined;
+    buttons.push([tracing ? t.board.code.stop : t.board.code.trace, () => apply(m.setCodeTracing(doc, el.id, !tracing))]);
+  }
   // 元件庫只有「文字」，選取後可以切換成標題
   if (el.type === 'text' && (el.variant === 'text' || el.variant === 'heading')) {
     const heading = el.variant === 'heading';
@@ -2095,6 +2116,38 @@ function DpActions({ el, doc, apply }: { el: m.ElementOf<'dp'>; doc: m.BoardDoc;
       <label className="board-heap-record">
         <input type="checkbox" checked={record} onChange={(e) => setRecord(e.target.checked)} />
         {d.record}
+      </label>
+    </>
+  );
+}
+
+interface CodeTraceActionsProps {
+  el: m.ElementOf<'text'>;
+  doc: m.BoardDoc;
+  apply: (doc: m.BoardDoc) => void;
+  record: boolean;
+  onRecord: (on: boolean) => void;
+}
+
+/** 程式碼逐行追蹤中：現在第幾行、上一行、下一行，和「每走一行記成一步」 */
+function CodeTraceActions({ el, doc, apply, record, onRecord }: CodeTraceActionsProps) {
+  const { t } = useI18n();
+  const c = t.board.code;
+  const lines = m.codeLines(el);
+  const current = Math.min(el.line ?? 0, lines.length - 1);
+  const go = (dir: 'next' | 'prev') => apply(m.traceCodeTo(doc, el.id, m.nextCodeLine(el, dir), record));
+  return (
+    <>
+      <span className="board-selbar-title">{c.line(current + 1)}</span>
+      <button type="button" className="btn btn-small" aria-label={c.prev} title={c.prev} disabled={m.nextCodeLine(el, 'prev') === current} onClick={() => go('prev')}>
+        ↑
+      </button>
+      <button type="button" className="btn btn-small" aria-label={c.next} title={c.next} disabled={m.nextCodeLine(el, 'next') === current} onClick={() => go('next')}>
+        ↓
+      </button>
+      <label className="board-heap-record" title={c.recordHint}>
+        <input type="checkbox" checked={record} onChange={(e) => onRecord(e.target.checked)} />
+        {c.record}
       </label>
     </>
   );

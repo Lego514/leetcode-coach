@@ -75,6 +75,9 @@ You still solve problems on LeetCode. This app handles the parts around solving:
     - "Sort by start" is the first step of merging. Pick an interval to change its start or end, merge it with the next row when they overlap (touching ends count), mark it removed (dashed), or color it.
     - The sweep line stops at each start and end point and shows how many intervals are in progress there, counting starts but not ends, so its peak is the answer to Meeting Rooms II.
     - Up to 30 intervals.
+  - **Code tracing** turns a code box into a dry run, the Test step of an interview.
+    - "Trace line by line" numbers the lines, widens the box to fit the longest one, and highlights the line running. Move with ↑ ↓ or by clicking a line; blank lines are skipped.
+    - With "Record each line" on, every move first saves the board as a step with the line that just ran highlighted. Update the variables and arrays beside it as you go, and playback replays the whole run, with room for a one-line note per step.
   - **Build from text**: arrays, stacks, queues, heaps, sets, dicts, 2D arrays, linked lists, trees, graphs, recursion trees, DP tables, and intervals can all be filled by pasting a problem's example instead of typing cell by cell:
     - `nums = [2,7,11,15], target = 9` takes the first value and renames the element `nums`
     - `"abcabcbb"` splits into characters
@@ -96,7 +99,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Mouse, trackpad, keyboard, and touch all work. Pan with the scroll wheel, Space + drag, the hand tool, or two fingers; zoom with Ctrl + scroll or a pinch.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - On the practice page the board opens on top, so the timer keeps running.
-  - No whiteboard library is used: the editor is about 133 KB (39 KB gzipped) and loads the first time a board opens.
+  - No whiteboard library is used: the editor is about 137 KB (40 KB gzipped) and loads the first time a board opens.
 - **Mock interviews**:
   - A timed, seven-step US interview flow (clarify, examples, brute force, optimize, code, test, complexity) with a checklist and English phrases for each step. The same hint panel is available, the way an interviewer would give hints.
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
@@ -302,6 +305,7 @@ Notes:
 - **遞迴樹**：一個節點是一次呼叫，由上往下排，呼叫者在它呼叫的那些節點正上方；適合回溯、備忘錄 DP 和字典樹。點一個呼叫可以加子呼叫、寫回傳值或上面那條邊的字（這一步選了什麼），也可以剪掉這枝（畫成虛線、淡色）。「標出重複的呼叫」會把字一樣的呼叫標同一個顏色，看出備忘錄能省掉什麼。吸附在上面的指標用 ← → 照 DFS 的順序走、↑ 回到呼叫者，可以一步一步記下來播放。最多 63 個呼叫、8 層。
 - **DP 表**：一格一格填，一維（`dp[i]`）或二維（`dp[i][j]`），列和欄旁邊可以標題目給的字串或數字。選好每一格從哪幾格算來（`dp[i-1], dp[i-2]`、前面所有的 `dp[j]`、硬幣的 `dp[i-k]`、上／左／左上，或回文從最後一列往上填的 `dp[i+1][j-1]`），正在填的那一格就會用箭頭標出來（一維畫成格子下面的弧線）。在選取列輸入值、按 Enter 就跳到下一個還沒填的格子；勾「每填一格記成一步」，每一格都會存成一步（說明寫 `dp[2][3] = 2`），可以回放整張表怎麼填出來。最多 26 列、30 欄。
 - **區間**：每個區間一列，畫在同一條有刻度的數線上，重疊的會對齊，適合合併區間、插入區間、會議室這類題目。「依起點排序」是合併的第一步；點一個區間可以改起點終點、和下一列合併（端點碰到也算重疊）、標成移除（虛線）或上色。掃描線停在每個起點和終點，顯示那時有幾個區間正在進行（起點算、終點不算），最大值就是會議室 II 的答案。最多 30 個區間。
+- **程式碼逐行追蹤**：把程式碼框變成一次 dry run（面試的 Test 那一步）。按「逐行追蹤」會標上行號、把框加寬到放得下最長的一行，並標出正在執行的那一行；用 ↑ ↓ 或點一行移動，空白行會跳過。勾「每走一行記成一步」，每次移動前都會先把畫面存成一步、標著剛執行完的那一行；旁邊的變數和陣列跟著改，播放時就能完整回放，每一步還能寫一句說明。
 - **用文字建立**：陣列、堆疊、佇列、堆積、集合、字典、二維陣列、鏈結串列、樹、圖、遞迴樹、DP 表和區間都可以直接貼題目的範例，不用一格一格輸入。例如 `nums = [2,7,11,15], target = 9`（取第一個值，名稱也改成 nums）、`"abcabcbb"`（拆成一個一個字元）、`{'a': 1}`、`[[1,0],[0,1]]`、`1->2->3`、`[3,9,20,null,null,15,7]`、`n = 5, edges = [[0,1],[0,2]]`（可以有權重）或鄰接串列；遞迴樹是一行一個呼叫、用縮排表示誰呼叫誰（`|` 前面寫在邊上，`=>` 後面是回傳值），`tree` 指令的輸出也讀得懂；DP 表直接讀題目的輸入，例如 `text1 = "abcde", text2 = "ace"`（6×4，旁邊標字母）、`m = 3, n = 7`、`n = 5`、`coins = [1,2,5], amount = 11`（往回看 1、2、5 格）、`s = "226"` 或 `nums = [...]`；區間貼 `intervals = [[1,3],[2,6]]`，再給 `newInterval = [4,8]` 會標成黃色，員工的 `schedule` 每個人一個顏色。
 - 點一格可以上底色、在那格加指標、插入或刪除格子。
 - 還有矩形框、圓形框、箭頭連線、直線（無向圖的邊）、畫筆、橡皮擦、復原、清空。

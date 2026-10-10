@@ -4,6 +4,8 @@ import {
   rangeRect,
   CELL,
   contentBounds,
+  CODE_FONT,
+  CODE_GUTTER,
   CYCLE_H,
   dpArrowPath,
   dpDependencies,
@@ -13,6 +15,7 @@ import {
   edgeShape,
   formatValue,
   graphLayout,
+  hangingIndent,
   heapLayout,
   heapViolations,
   INDEX_H,
@@ -119,9 +122,10 @@ interface TextStyle {
 
 function text(x: number, y: number, value: string, style: TextStyle): string {
   const family = style.mono ? MONO : SANS;
+  // 等寬字（程式碼、格子）保留空白，縮排才不會被吃掉
   return `<text x="${x}" y="${y}" font-family="${escapeXml(family)}" font-size="${style.size}"${style.bold ? ' font-weight="700"' : ''} fill="${style.color ?? INK}"${
     style.anchor === 'middle' ? ' text-anchor="middle"' : ''
-  } dominant-baseline="middle">${escapeXml(value)}</text>`;
+  }${style.mono ? ' xml:space="preserve"' : ''} dominant-baseline="middle">${escapeXml(value)}</text>`;
 }
 
 function rect(x: number, y: number, w: number, h: number, fill: string, stroke?: string, extra = ''): string {
@@ -545,17 +549,42 @@ const TEXT_STYLES: Record<ElementOf<'text'>['variant'], { size: number; line: nu
   sticky: { size: 15, line: 1.5, pad: 12 },
 };
 
+/** 程式碼的一行換成好幾列：第一列照原本的寬度，接下去的列縮排到這一行的縮排再多兩格（跟畫面一樣） */
+function hangingWrap(source: string, width: number, font: string, measure: Measure): { text: string; dx: number }[] {
+  const rows = wrapText(source, width, font, measure);
+  if (rows.length <= 1) return rows.map((row) => ({ text: row, dx: 0 }));
+  const dx = hangingIndent(source) * CODE_FONT * 0.6;
+  const rest = source.slice(rows[0].length).trimStart();
+  return [{ text: rows[0], dx: 0 }, ...wrapText(rest, width - dx, font, measure).map((row) => ({ text: row, dx }))];
+}
+
 function drawText(el: ElementOf<'text'>, sizes: Sizes | undefined, options: ExportOptions): string {
   const style = TEXT_STYLES[el.variant];
   const font = `${style.bold ? 'bold ' : ''}${style.size}px ${style.mono ? MONO : SANS}`;
-  const lines = wrapText(el.text, el.w - style.pad * 2, font, options.measure);
+  // 程式碼逐行追蹤時多一欄行號，現在這一行加底色；一行一行換行，才知道每一行佔畫面上的哪幾列
+  const tracing = el.variant === 'code' && el.line !== undefined;
+  const gutter = tracing ? CODE_GUTTER : 0;
+  const sources = el.text.split('\n');
+  const width = el.w - style.pad * 2 - gutter;
+  const rows = sources.map((source) =>
+    tracing ? hangingWrap(source, width, font, options.measure) : wrapText(source, width, font, options.measure).map((row) => ({ text: row, dx: 0 })),
+  );
   const lineH = style.size * style.line;
-  const h = Math.max(sizes?.get(el.id)?.h ?? 0, lines.length * lineH + style.pad * 2);
+  const total = rows.reduce((n, wrapped) => n + wrapped.length, 0);
+  const h = Math.max(sizes?.get(el.id)?.h ?? 0, total * lineH + style.pad * 2);
   const parts: string[] = [];
   if (el.variant === 'sticky') parts.push(rect(el.x, el.y, el.w, h, MARKER));
   if (el.variant === 'code') parts.push(rect(el.x, el.y, el.w, h, SHEET_2, RULE, ' rx="4"'));
-  lines.forEach((line, i) => {
-    parts.push(text(el.x + style.pad, el.y + style.pad + lineH * i + lineH / 2, line, { size: style.size, mono: style.mono, bold: style.bold }));
+  const current = tracing ? Math.min(el.line!, sources.length - 1) : -1;
+  let row = 0;
+  rows.forEach((wrapped, i) => {
+    const top = el.y + style.pad + row * lineH;
+    if (i === current) parts.push(rect(el.x + 1, top, el.w - 2, wrapped.length * lineH, PEN_SOFT), rect(el.x + 1, top, 3, wrapped.length * lineH, PEN));
+    if (tracing) parts.push(text(el.x + (style.pad + gutter) / 2, top + lineH / 2, String(i + 1), { size: 11, mono: true, color: INK_3, anchor: 'middle' }));
+    wrapped.forEach((row, k) => {
+      parts.push(text(el.x + style.pad + gutter + row.dx, top + lineH * k + lineH / 2, row.text, { size: style.size, mono: style.mono, bold: style.bold }));
+    });
+    row += wrapped.length;
   });
   return parts.join('');
 }

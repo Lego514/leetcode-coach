@@ -13,6 +13,7 @@ import {
   DP_HEAD_W,
   edgeShape,
   formatValue,
+  hangingIndent,
   graphLayout,
   hasTreeNode,
   heapLayout,
@@ -274,6 +275,25 @@ function TextBody({ el, editing, onChange, onDoneEditing }: { el: ElementOf<'tex
     area.style.height = 'auto';
     area.style.height = `${area.scrollHeight}px`;
   }, [editing, el.text]);
+  // 逐行追蹤：每一行前面有行號，現在這一行加底色；點一行就走到那一行
+  if (!editing && el.variant === 'code' && el.line !== undefined) {
+    const lines = el.text.split('\n');
+    const current = Math.min(el.line, lines.length - 1);
+    return (
+      <div className="board-text board-code-lines">
+        {lines.map((line, i) => (
+          <div key={i} className="board-code-line" data-cell={i} data-current={i === current || undefined}>
+            <span className="board-code-no" aria-hidden>
+              {i + 1}
+            </span>
+            <span className="board-code-src" style={{ paddingLeft: `${hangingIndent(line)}ch`, textIndent: `-${hangingIndent(line)}ch` }}>
+              {line || ' '}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
   if (!editing) return <div className="board-text">{el.text || ' '}</div>;
   return (
     <textarea
@@ -1115,6 +1135,9 @@ function PointerBody({ el, editing, onChange, onDoneEditing }: { el: ElementOf<'
 function describe(el: Placed, doc: BoardDoc, t: ReturnType<typeof useI18n>['t']): string {
   switch (el.type) {
     case 'text':
+      if (el.variant === 'code' && el.line !== undefined) {
+        return `${t.board.kinds.code} (${t.board.code.line(Math.min(el.line, el.text.split('\n').length - 1) + 1)}): ${el.text}`;
+      }
       return `${t.board.kinds[el.variant]}: ${el.text}`;
     case 'list':
       if (el.variant === 'heap') {
