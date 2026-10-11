@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import type { ExplanationFeedback } from '../../shared/protocol';
+import type { ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
 import { FeedbackView } from '../components/AiFeedbackPanel';
+import { FollowUpResult } from '../components/FollowUpPanel';
 import { BlobAudio } from '../components/BlobAudio';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
 import { TranscriptReview } from '../components/TranscriptReview';
@@ -622,6 +623,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   const [reflection, setReflection] = useState('');
   const [transcript, setTranscript] = useState(result.transcript ?? '');
   const [feedback, setFeedback] = useState<ExplanationFeedback | null>(null);
+  const [followUp, setFollowUp] = useState<FollowUpRecord | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const canSave = isFull ? rating !== null : clarity !== null;
@@ -646,6 +648,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
     if (result.audio) record.audio = result.audio;
     if (transcript.trim()) record.transcript = transcript.trim();
     if (feedback) record.feedback = feedback;
+    if (followUp?.items.length) record.followUp = followUp;
     await saveMock(record);
     if (isFull && rating) {
       await recordAttempt(problem.id, rating, {
@@ -700,6 +703,8 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
               onChange={setTranscript}
               usedSec={result.usedSec}
               currentScript={note?.explanation ?? ''}
+              followUp={followUp}
+              onFollowUp={setFollowUp}
             />
           )}
 
@@ -875,6 +880,14 @@ function MockHistory() {
                     <summary>{t.mock.showFeedback}</summary>
                     <div style={{ marginTop: 8 }}>
                       <FeedbackView feedback={m.feedback} />
+                    </div>
+                  </details>
+                )}
+                {m.followUp && m.followUp.items.length > 0 && (
+                  <details>
+                    <summary>{t.followUp.showInHistory(m.followUp.items.length)}</summary>
+                    <div style={{ marginTop: 8 }}>
+                      <FollowUpResult record={m.followUp} />
                     </div>
                   </details>
                 )}

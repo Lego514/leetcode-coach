@@ -11,6 +11,7 @@ import {
   COLLECTIONS,
   DIFFICULTIES,
   EXPLAIN_POINTS,
+  FOLLOW_UP_KINDS,
   LIST_IDS,
   LOCALE_IDS,
   MOCK_KINDS,
@@ -66,6 +67,39 @@ export const explanationFeedbackSchema = z.object({
 });
 export type ExplanationFeedback = z.infer<typeof explanationFeedbackSchema>;
 
+const score = z.union([z.literal(0), z.literal(1), z.literal(2)]);
+
+/** 面試官的一個追問：英文的問題，和面試官想確認什麼（用介面語言） */
+export const followUpQuestionSchema = z.object({
+  kind: z.enum(FOLLOW_UP_KINDS),
+  question: text(400),
+  intent: text(400),
+});
+export type FollowUpQuestion = z.infer<typeof followUpQuestionSchema>;
+
+/** 對追問回答的評分：每題 0 沒答到、1 不完整、2 清楚，加上更好的答法 */
+export const followUpGradeSchema = z.object({
+  summary: text(1000),
+  answers: z.array(z.object({ score, comment: text(600), betterAnswer: text(1500) })).max(3),
+});
+export type FollowUpGrade = z.infer<typeof followUpGradeSchema>;
+
+/** 存在練習紀錄裡的追問：問題、我的回答，有評分的話也一起存 */
+export const followUpRecordSchema = z.object({
+  items: z
+    .array(
+      followUpQuestionSchema.extend({
+        answer: text(5000),
+        score: score.optional(),
+        comment: text(600).optional(),
+        betterAnswer: text(1500).optional(),
+      }),
+    )
+    .max(3),
+  summary: text(1000).optional(),
+});
+export type FollowUpRecord = z.infer<typeof followUpRecordSchema>;
+
 /** AI 對一次行為面試回答的回饋；分數 0 沒講到、1 不完整、2 清楚 */
 export const behavioralFeedbackSchema = z.object({
   summary: text(1000),
@@ -108,6 +142,8 @@ export const mockDataSchema = z.object({
   reflection: text(5000),
   transcript: text(20000).optional(),
   feedback: explanationFeedbackSchema.optional(),
+  /** 講完之後面試官的追問和回答 */
+  followUp: followUpRecordSchema.optional(),
 });
 
 export const noteDataSchema = z.object({
@@ -532,6 +568,30 @@ export const feedbackRequestSchema = z.object({
   language: z.enum(LOCALE_IDS),
 });
 export type FeedbackRequest = z.infer<typeof feedbackRequestSchema>;
+
+/** 請面試官追問：跟講解回饋送一樣的東西 */
+export const followUpQuestionsRequestSchema = feedbackRequestSchema;
+
+/** 請 Claude 評分追問的回答；沒講話的回答可以是空的 */
+export const followUpGradeRequestSchema = feedbackRequestSchema.extend({
+  answers: z
+    .array(z.object({ question: z.string().trim().min(1).max(400), answer: z.string().trim().max(5000) }))
+    .min(1)
+    .max(3),
+});
+export type FollowUpGradeRequest = z.infer<typeof followUpGradeRequestSchema>;
+
+export interface FollowUpQuestionsResponse {
+  questions: FollowUpQuestion[];
+  usedToday: number;
+  dailyLimit: number;
+}
+
+export interface FollowUpGradeResponse {
+  grade: FollowUpGrade;
+  usedToday: number;
+  dailyLimit: number;
+}
 
 export const behavioralFeedbackRequestSchema = z.object({
   /** 面試官問的英文題目 */

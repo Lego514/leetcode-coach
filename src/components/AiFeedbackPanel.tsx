@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
-import type { AiStatus, ExplanationFeedback } from '../../shared/protocol';
+import type { ExplanationFeedback } from '../../shared/protocol';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { rich } from '../i18n/rich';
-import { fetchAiStatus, requestExplanationFeedback } from '../store/ai';
+import { markAiQuotaUsed, requestExplanationFeedback, updateAiUsage, useAiStatus } from '../store/ai';
 import { errorCode } from '../store/api';
 import { useCloud } from '../store/cloud';
 
 /** 送出前至少要有這麼多字，跟後端的檢查一致 */
-const MIN_TRANSCRIPT_LENGTH = 20;
+export const MIN_TRANSCRIPT_LENGTH = 20;
 
 interface AiFeedbackPanelProps {
   problem: Problem;
@@ -24,22 +24,11 @@ interface AiFeedbackPanelProps {
 export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeedback, onUseScript }: AiFeedbackPanelProps) {
   const { t, locale } = useI18n();
   const signedIn = useCloud().account.kind === 'signed-in';
-  const [status, setStatus] = useState<AiStatus | null>(null);
+  const status = useAiStatus(signedIn);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requestedFor, setRequestedFor] = useState<string | null>(null);
   const text = transcript.trim();
-
-  useEffect(() => {
-    if (!signedIn) return;
-    let active = true;
-    fetchAiStatus()
-      .then((s) => active && setStatus(s))
-      .catch(() => active && setStatus({ available: false, dailyLimit: 0, usedToday: 0 }));
-    return () => {
-      active = false;
-    };
-  }, [signedIn]);
 
   async function request() {
     setLoading(true);
@@ -58,11 +47,11 @@ export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeed
       });
       onFeedback(response.feedback);
       setRequestedFor(text);
-      setStatus({ available: true, dailyLimit: response.dailyLimit, usedToday: response.usedToday });
+      updateAiUsage(response.usedToday, response.dailyLimit);
     } catch (err) {
       const code = errorCode(err);
       setError(t.errors.api[code]);
-      if (code === 'ai_quota_exceeded' && status) setStatus({ ...status, usedToday: status.dailyLimit });
+      if (code === 'ai_quota_exceeded') markAiQuotaUsed();
     } finally {
       setLoading(false);
     }

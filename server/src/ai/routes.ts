@@ -3,19 +3,25 @@ import { Hono } from 'hono';
 import {
   behavioralFeedbackRequestSchema,
   feedbackRequestSchema,
+  followUpGradeRequestSchema,
+  followUpQuestionsRequestSchema,
   type AiStatus,
   type BehavioralFeedbackResponse,
   type FeedbackResponse,
+  type FollowUpGradeResponse,
+  type FollowUpQuestionsResponse,
 } from '../../../shared/protocol';
 import { RateLimiter } from '../auth/rate-limit';
 import { aiUsage } from '../db/schema';
 import { HttpError, readJson, requireUser, type AppDeps, type AppEnv } from '../http';
-import { FeedbackError, type BehavioralFeedbackGenerator, type FeedbackGenerator, type Usage } from './feedback';
+import { FeedbackError, type BehavioralFeedbackGenerator, type FeedbackGenerator, type FollowUpGenerator, type Usage } from './feedback';
 
 export interface AiOptions {
   generate: FeedbackGenerator;
   /** 行為面試的回饋；沒設定時這個功能顯示為沒開 */
   generateBehavioral?: BehavioralFeedbackGenerator;
+  /** 面試官追問；沒設定時這個功能顯示為沒開 */
+  followUp?: FollowUpGenerator;
   /** 每位使用者每天（UTC）最多呼叫幾次 */
   dailyLimit: number;
   /** 可以使用的帳號 email（小寫）；'*' 表示所有登入的帳號 */
@@ -69,8 +75,29 @@ export function aiRoutes(deps: AppDeps, ai: AiOptions | undefined) {
       const { feedback, usedToday } = await withQuota(c.get('user').id, options, () => generate(request));
       const body: BehavioralFeedbackResponse = { feedback, usedToday, dailyLimit: options.dailyLimit };
       return c.json(body);
+    })
+    .post('/follow-up-questions', requireUser(deps), async (c) => {
+      const options = checkAccess(c.get('user'));
+      const followUp = requireFollowUp(options);
+      const request = await readJson(c, followUpQuestionsRequestSchema);
+      const { feedback: questions, usedToday } = await withQuota(c.get('user').id, options, () => followUp.ask(request));
+      const body: FollowUpQuestionsResponse = { questions, usedToday, dailyLimit: options.dailyLimit };
+      return c.json(body);
+    })
+    .post('/follow-up-grade', requireUser(deps), async (c) => {
+      const options = checkAccess(c.get('user'));
+      const followUp = requireFollowUp(options);
+      const request = await readJson(c, followUpGradeRequestSchema);
+      const { feedback: grade, usedToday } = await withQuota(c.get('user').id, options, () => followUp.grade(request));
+      const body: FollowUpGradeResponse = { grade, usedToday, dailyLimit: options.dailyLimit };
+      return c.json(body);
     });
   return routes;
+
+  function requireFollowUp(options: AiOptions): FollowUpGenerator {
+    if (!options.followUp) throw new HttpError(503, 'ai_unavailable', 'Follow-up questions are not configured on this server');
+    return options.followUp;
+  }
 
   /** 有設定 AI、這個帳號在允許名單，而且沒有連續狂按 */
   function checkAccess(user: { id: string; email: string }): AiOptions {

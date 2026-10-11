@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
 import type { AttemptMode, BehavioralPoint, BehavioralTheme, CardResult, Collection, MockKind, StepNoteKey } from '../../shared/constants';
-import type { BehavioralFeedback, BoardDoc, ExplanationFeedback } from '../../shared/protocol';
+import type { BehavioralFeedback, BoardDoc, ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -95,6 +95,8 @@ export interface MockRecord {
   transcript?: string;
   /** Claude 對逐字稿的講解回饋 */
   feedback?: ExplanationFeedback;
+  /** 講完之後面試官的追問、我的回答和評分 */
+  followUp?: FollowUpRecord;
   /** 錄音只留在這台裝置，不會同步 */
   audio?: Blob;
 }
