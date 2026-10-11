@@ -148,6 +148,16 @@ export const settingsDataSchema = z.object({
   targetDate: day.optional(),
   /** 複習排程的目標記憶率（FSRS）；沒寫是 0.9 */
   retention: z.number().min(0.7).max(0.97).optional(),
+  /** 面試衝刺：面試日、公司、每天的時間、最後只複習幾天 */
+  sprint: z
+    .object({
+      date: day,
+      company: text(60).optional(),
+      weekdayMinutes: z.number().int().min(0).max(24 * 60),
+      weekendMinutes: z.number().int().min(0).max(24 * 60),
+      reviewDays: z.number().int().min(0).max(14),
+    })
+    .optional(),
 });
 
 /** 微複習的一次作答；卡片 id 像 pattern:217、tip:heap-max、signal:arrays:0 */

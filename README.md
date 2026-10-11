@@ -11,6 +11,12 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 ## Features
 
 - **Study lists**: NeetCode 150, Blind 75 and Grind 169 (213 unique problems), grouped into 18 patterns. You can add any other LeetCode problem.
+- **Interview sprint**: enter the interview date, the company (optional), and how many minutes you have on weekdays and weekends. Every day until the interview gets a plan, and the last days (2 by default) are review only.
+  - New problems come in priority order: problems tagged with the company, then one problem from each pattern you haven't touched, then two more from patterns you keep forgetting, then the rest of your list. Each day takes as many as fit after its reviews, using rough times (Easy 20, Medium 35, Hard 50 minutes, 10 per review). Problems that don't fit are listed instead of crammed in.
+  - Reviews are forecast with FSRS, including the first reviews of problems you'll learn during the sprint. A problem you'd remember with less than 90% chance on the interview day is pulled into the review-only days.
+  - One full mock interview two days before (and every week before that), and behavioral practice every three days ending the day before. Today shows the countdown, today's minutes, and these to-dos.
+  - Paste problem numbers, links, or titles to tag a company's problems in one go, which also works for noting what came up after the interview.
+  - Nothing is stored except the settings: the plan is recalculated from your progress every day, so a missed day spreads over the days left.
 - **Timed practice with tiered hints**:
   - Starting a problem starts a timer against a target time for its difficulty. The browser tab title shows the timer, so you can see it while you write code on LeetCode.
   - The timer survives a page reload.
@@ -298,6 +304,8 @@ Notes:
 介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
 
 今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
+
+**面試衝刺**：輸入面試日期、公司（選填）、平日和週末每天能花幾分鐘，排好到面試前每天要做的事，最後幾天（預設 2 天）只複習。新題的順序：有標這家公司的題目、每個還沒碰過的模式各一題、比較弱的模式多兩題，然後是清單的其他題；每天扣掉複習之後放得下幾題就排幾題（估算 Easy 20、Medium 35、Hard 50 分鐘，複習一題 10 分鐘），排不進去的會列出來，不會硬塞。複習用 FSRS 預估，包含衝刺中新做的題目；到面試那天記得的機率低於 90% 的題目，提前到最後幾天複習。面試前兩天（以及再往前每週）一場完整模擬面試，每三天一次行為面試練習，最後一次在面試前一天；今天頁會顯示倒數、今天大約幾分鐘和這些待辦。可以一次貼上很多題號、網址或題名標上公司，面試完也可以用來記下考了哪些題。只存設定，計畫每天依進度重新計算，哪天沒做到，剩下的天數會自動分攤。
 
 **複習排程（FSRS）**：每一題有「穩定度」（隔幾天之後，記得的機率會掉到 90%）和 1 到 10 的難度。自己解出算 Good、看提示算 Hard、看解答或看完還不懂算 Again；晚了才複習但還記得，下次的間隔會拉得更長。題目會在你大概還記得「目標記憶率」那麼多的時候再出現（「設定」可以選 80%–95%，預設 90%），改了之後每一題都會重新排程。複習頁把最可能已經忘了的題目排在最前面，題目頁顯示現在還記得的機率、大約記得住幾天和難度。排程是照 FSRS-6 的公式自己寫的，測試裡拿官方的 `ts-fsrs` 在幾百組隨機的複習紀錄上逐一比對。
 

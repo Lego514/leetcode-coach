@@ -204,6 +204,20 @@ export async function setCompanies(problemId: number, companies: string[]): Prom
   });
 }
 
+/** 幫很多題一次標上同一家公司；已經標過的不會重複 */
+export async function tagProblems(problemIds: readonly number[], company: string): Promise<void> {
+  const name = normalizeCompany(company);
+  if (!name) return;
+  await db.transaction('rw', db.meta, db.outbox, async () => {
+    for (const problemId of problemIds) {
+      const companies = (await db.meta.get(problemId))?.companies ?? [];
+      if (companies.some((c) => c.toLowerCase() === name.toLowerCase())) continue;
+      await db.meta.put({ problemId, companies: [...companies, name] });
+      await track(db, 'meta', String(problemId));
+    }
+  });
+}
+
 export async function savePatternNote(
   patternId: PatternId,
   patch: Partial<Omit<PatternNoteRecord, 'patternId' | 'updatedAt'>>,
@@ -230,6 +244,7 @@ export async function updateSettings(patch: Partial<Omit<SettingsRecord, 'key'>>
     const prev = (await db.settings.get('app')) ?? DEFAULT_SETTINGS;
     const next: SettingsRecord = { ...prev, ...patch, key: 'app' };
     if (!next.targetDate) delete next.targetDate;
+    if (!next.sprint) delete next.sprint;
     await db.settings.put(next);
     await track(db, 'settings', 'app');
     // 目標記憶率變了，每一題的下次複習日都要重算
