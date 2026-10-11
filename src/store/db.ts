@@ -5,6 +5,7 @@ import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import type { Day } from '../lib/dates';
+import type { SprintSettings } from '../lib/sprint';
 import type { Rating, ReviewState } from '../lib/srs';
 import { groupByProblem, progressFromAttempts, retentionOf } from './progress';
 
@@ -164,6 +165,8 @@ export interface SettingsRecord {
   language: string;
   /** 複習排程的目標記憶率；沒寫是 0.9 */
   retention?: number;
+  /** 面試衝刺；沒有就是平常的每日計畫 */
+  sprint?: SprintSettings;
 }
 
 export const DEFAULT_SETTINGS: SettingsRecord = {

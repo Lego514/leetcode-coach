@@ -110,3 +110,23 @@ export function lookupProblem(catalog: Catalog, input: string): ProblemLookup {
   const problem = catalog.problems.find((p) => p.title.toLowerCase() === lower || p.slug === lower);
   return problem ? { kind: 'found', problem } : { kind: 'unknown' };
 }
+
+/** 一次貼上很多題：用逗號、分號（全形的也可以）或換行分開；一串只有題號時也可以用空白分開 */
+export function parseProblemList(catalog: Catalog, input: string): { found: Problem[]; unknown: string[] } {
+  const found: Problem[] = [];
+  const unknown: string[] = [];
+  const tokens = input
+    .split(/[\n,;\uff0c\u3001\uff1b]+/)
+    .flatMap((part) => (/^[#\d\s]+$/.test(part) ? part.trim().split(/\s+/) : [part]))
+    .map((part) => part.trim())
+    .filter(Boolean);
+  for (const token of tokens) {
+    const result = lookupProblem(catalog, token);
+    if (result.kind === 'found') {
+      if (!found.some((p) => p.id === result.problem.id)) found.push(result.problem);
+    } else if (!unknown.includes(token)) {
+      unknown.push(token);
+    }
+  }
+  return { found, unknown };
+}

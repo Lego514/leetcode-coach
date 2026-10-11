@@ -3,7 +3,7 @@ import { LIST_IDS, PATTERN_IDS } from '../../shared/constants';
 import { STUDY_LISTS } from '../data/lists';
 import { PATTERN_ORDER } from '../data/patterns';
 import { BUILTIN_PROBLEMS } from '../data/problems';
-import { buildCatalog, lookupProblem, nextNewProblems, problemsInList } from './catalog';
+import { buildCatalog, lookupProblem, nextNewProblems, parseProblemList, problemsInList } from './catalog';
 
 describe('built-in data', () => {
   it('has unique ids and slugs', () => {
@@ -104,5 +104,19 @@ describe('lookupProblem', () => {
     });
     expect(lookupProblem(catalog, 'something else')).toEqual({ kind: 'unknown' });
     expect(lookupProblem(catalog, '  ')).toEqual({ kind: 'empty' });
+  });
+});
+
+describe('parseProblemList', () => {
+  const catalog = buildCatalog([]);
+
+  it('reads numbers, links, and titles separated by commas, new lines, or spaces between numbers', () => {
+    const { found, unknown } = parseProblemList(catalog, '1, 15 146\nhttps://leetcode.com/problems/number-of-islands/\nLRU Cache\uff1b#1\nnot a problem');
+    expect(found.map((p) => p.id)).toEqual([1, 15, 146, 200]);
+    expect(unknown).toEqual(['not a problem']);
+  });
+
+  it('ignores empty input', () => {
+    expect(parseProblemList(catalog, ' ,\n ')).toEqual({ found: [], unknown: [] });
   });
 });

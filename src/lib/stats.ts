@@ -17,16 +17,19 @@ export function practiceAttempts<T extends { mode: string }>(attempts: readonly 
   return attempts.filter((a) => a.mode !== 'import');
 }
 
-/** 某天第一次練習的題目數；批次標記的題目不佔每天的新題額度 */
-export function newProblemsStartedOn(attempts: readonly AttemptLike[], day: Day): number {
+/** 某天第一次練習的題目；批次標記的題目不佔每天的新題額度 */
+export function problemsStartedOn(attempts: readonly AttemptLike[], day: Day): number[] {
   const first = new Map<number, AttemptLike>();
   for (const a of attempts) {
     const prev = first.get(a.problemId);
     if (!prev || a.at < prev.at) first.set(a.problemId, a);
   }
-  let count = 0;
-  for (const a of first.values()) if (a.day === day && a.mode !== 'import') count += 1;
-  return count;
+  return [...first.values()].filter((a) => a.day === day && a.mode !== 'import').map((a) => a.problemId);
+}
+
+/** 某天第一次練習的題目數 */
+export function newProblemsStartedOn(attempts: readonly AttemptLike[], day: Day): number {
+  return problemsStartedOn(attempts, day).length;
 }
 
 /** 連續練習天數；今天還沒練習時從昨天往回算，不會因為早上打開就歸零 */

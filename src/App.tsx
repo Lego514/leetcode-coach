@@ -46,6 +46,10 @@ const router = createHashRouter([
         lazy: async () => ({ Component: (await import('./pages/MockPage')).MockPage }),
       },
       {
+        path: 'sprint',
+        lazy: async () => ({ Component: (await import('./pages/SprintPage')).SprintPage }),
+      },
+      {
         path: 'stories',
         lazy: async () => ({ Component: (await import('./pages/StoriesPage')).StoriesPage }),
       },
