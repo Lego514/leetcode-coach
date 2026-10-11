@@ -94,6 +94,8 @@ export type BehavioralFeedback = z.infer<typeof behavioralFeedbackSchema>;
 export const mockDataSchema = z.object({
   problemId: z.number().int().positive(),
   kind: z.enum(MOCK_KINDS),
+  /** 在白板上照著步驟講的講解練習 */
+  board: z.boolean().optional(),
   day,
   startedAt: timestamp,
   limitSec: z.number().int().min(0).max(24 * 3600),

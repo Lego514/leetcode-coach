@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import type { ExplanationFeedback } from '../../shared/protocol';
-import { AiFeedbackPanel, FeedbackView } from '../components/AiFeedbackPanel';
+import { FeedbackView } from '../components/AiFeedbackPanel';
 import { BlobAudio } from '../components/BlobAudio';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
+import { TranscriptReview } from '../components/TranscriptReview';
 import { HintPanel } from '../components/HintPanel';
 import { LeaveGuard } from '../components/LeaveGuard';
 import { StepFields, useStepNotes } from '../components/SolvingSteps';
@@ -28,8 +29,7 @@ import { HINT_LEVELS, suggestRating } from '../lib/practice';
 import { useRecorder, useStopwatch } from '../lib/session';
 import { speechSupported, useSpeechTranscript } from '../lib/speech';
 import { masteryOf, RATINGS, type Rating } from '../lib/srs';
-import { transcriptStats } from '../lib/transcript';
-import { deleteMock, recordAttempt, saveMock, saveNote } from '../store/actions';
+import { deleteMock, recordAttempt, saveMock } from '../store/actions';
 import type { Clarity, MockKind, MockRecord } from '../store/db';
 import { useCatalog, useMocks, useNote, useProgressMap, useSettings } from '../store/queries';
 
@@ -817,98 +817,6 @@ function ReviewReference({ problemId }: { problemId: number }) {
   );
 }
 
-interface TranscriptReviewProps {
-  problem: Problem;
-  feedback: ExplanationFeedback | null;
-  onFeedback: (feedback: ExplanationFeedback) => void;
-  value: string;
-  onChange: (value: string) => void;
-  usedSec: number;
-  currentScript: string;
-}
-
-function TranscriptReview({ problem, feedback, onFeedback, value, onChange, usedSec, currentScript }: TranscriptReviewProps) {
-  const { t } = useI18n();
-  const toast = useToast();
-  // 等待確認要存成講解稿的文字：逐字稿本身或 AI 的參考講法
-  const [pendingScript, setPendingScript] = useState<string | null>(null);
-  const text = value.trim();
-  const stats = useMemo(() => transcriptStats(text, usedSec), [text, usedSec]);
-
-  async function saveScript(script: string) {
-    setPendingScript(null);
-    await saveNote(problem.id, { explanation: script });
-    toast(t.mock.scriptSaved);
-  }
-
-  function requestSave(script: string) {
-    if (currentScript.trim() && currentScript.trim() !== script.trim()) setPendingScript(script);
-    else void saveScript(script);
-  }
-
-  return (
-    <Sheet title={t.mock.transcriptTitle} id="transcript-review" note={t.mock.transcriptReviewNote}>
-      <div className="sheet-body stack" style={{ gap: 12 }}>
-        <label className="visually-hidden" htmlFor="transcript-input">
-          {t.mock.transcriptLabel}
-        </label>
-        <textarea
-          id="transcript-input"
-          className="textarea"
-          rows={6}
-          lang="en"
-          value={value}
-          placeholder={t.mock.transcriptNone}
-          onChange={(e) => onChange(e.target.value)}
-        />
-        {text && (
-          <ul className="bullets">
-            <li>
-              {t.mock.transcriptStats(stats.words, stats.wpm)}
-              {stats.wpm !== null && ` ${t.mock.pace(stats.wpm)}`}
-            </li>
-            <li>
-              {stats.fillers.length > 0
-                ? t.mock.fillers(stats.fillers.map((f) => t.mock.fillerItem(f.word, f.count)).join(', '))
-                : t.mock.noFillers}
-            </li>
-          </ul>
-        )}
-        <div>
-          <button type="button" className="btn btn-small" disabled={!text} onClick={() => requestSave(text)}>
-            {t.mock.saveAsScript}
-          </button>
-        </div>
-        <AiFeedbackPanel
-          problem={problem}
-          transcript={value}
-          usedSec={usedSec}
-          feedback={feedback}
-          onFeedback={onFeedback}
-          onUseScript={requestSave}
-        />
-      </div>
-      <Dialog
-        open={pendingScript !== null}
-        onClose={() => setPendingScript(null)}
-        title={t.mock.replaceScriptTitle}
-        footer={
-          <>
-            <button className="btn btn-quiet" onClick={() => setPendingScript(null)}>
-              {t.common.cancel}
-            </button>
-            <button className="btn btn-primary" onClick={() => pendingScript !== null && void saveScript(pendingScript)}>
-              {t.mock.replaceScript}
-            </button>
-          </>
-        }
-      >
-        <p>{t.mock.replaceScriptBody}</p>
-      </Dialog>
-    </Sheet>
-  );
-}
-
 /* ---------- 紀錄 ---------- */
 
 function MockHistory() {
@@ -943,6 +851,7 @@ function MockHistory() {
                 </div>
                 <div className="problem-meta">
                   <span className="chip">{t.mock.kinds[m.kind]}</span>
+                  {m.board && <span className="chip">{t.mock.onBoard}</span>}
                   <span>{fmt.day(m.day)}</span>
                   <span>{t.mock.usedOfLimit(formatDuration(m.usedSec), formatDuration(m.limitSec))}</span>
                   <span>

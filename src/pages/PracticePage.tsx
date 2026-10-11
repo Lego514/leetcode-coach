@@ -240,6 +240,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
             title={t.board.problemTitle(problem.id, problem.title)}
             caption={t.board.problemCaption}
             difficulty={problem.difficulty}
+            problem={problem}
             onClose={() => setBoardOpen(false)}
           />
         </Suspense>

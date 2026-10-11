@@ -83,6 +83,8 @@ export interface MockRecord {
   steps: string[];
   /** 完整模擬的解題結果 */
   rating?: Rating;
+  /** 在白板上照著步驟講的講解練習 */
+  board?: boolean;
   /** 講解練習的自評：1 講得很順、2 有卡住、3 講不出來 */
   clarity?: Clarity;
   hints?: number;
