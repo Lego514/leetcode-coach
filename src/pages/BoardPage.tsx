@@ -48,6 +48,7 @@ export function BoardPage() {
       title={t.board.problemTitle(problem.id, problem.title)}
       caption={t.board.problemCaption}
       difficulty={problem.difficulty}
+      problem={problem}
       onClose={close}
     />
   );

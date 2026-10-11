@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { BOARD_COLORS, BOARD_MAX_BYTES, CELL_COLORS, type BoardColor, type CellColor } from '../../../shared/constants';
-import type { Difficulty } from '../../data/problems';
+import type { Difficulty, Problem } from '../../data/problems';
 import { useI18n } from '../../i18n';
 import { boardToSvg, estimateWidth, type Measure } from '../../lib/board/exportSvg';
 import * as m from '../../lib/board/model';
@@ -12,6 +12,7 @@ import { DifficultyTag, Dialog } from '../ui';
 import { saveBoard } from '../../store/actions';
 import { useBoard } from '../../store/queries';
 import { ElementView } from './BoardElements';
+import { ExplainReview, ExplainSession, type ExplainResult } from './BoardExplain';
 import { PlaybackBar, StepsWidget } from './BoardSteps';
 
 // 自己寫的數位白板：左邊拖元件、中間是可以平移縮放的畫布、下面是工具列。
@@ -64,6 +65,8 @@ interface BoardEditorProps {
   /** 標題上面的小字：題目白板，或自由白板 */
   caption: string;
   difficulty?: Difficulty;
+  /** 題目的白板：講解完可以存成講解練習、請 AI 回饋 */
+  problem?: Problem;
   onClose: () => void;
 }
 
@@ -81,7 +84,7 @@ export function BoardEditor({ boardId, onClose, ...heading }: BoardEditorProps) 
   return <Editor key={boardId} boardId={boardId} {...heading} initial={record?.doc ?? m.EMPTY_DOC} onClose={onClose} />;
 }
 
-function Editor({ boardId, title, caption, difficulty, initial, onClose }: BoardEditorProps & { initial: m.BoardDoc }) {
+function Editor({ boardId, title, caption, difficulty, problem, initial, onClose }: BoardEditorProps & { initial: m.BoardDoc }) {
   const { t } = useI18n();
   const signedIn = useCloud().account.kind === 'signed-in';
   const toast = useToast();
@@ -109,6 +112,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   /** 正在播放第幾步；null 是一般編輯 */
   const [playing, setPlaying] = useState<number | null>(null);
   const [autoPlay, setAutoPlay] = useState(false);
+  /** 講解模式：播放時一邊講一邊錄音；講完是那次的結果 */
+  const [explaining, setExplaining] = useState(false);
+  const [explained, setExplained] = useState<ExplainResult | null>(null);
+  const finishExplain = useRef<(() => void) | null>(null);
   const [savedDoc, setSavedDoc] = useState(initial);
   const [tooLarge, setTooLarge] = useState(false);
 
@@ -474,6 +481,19 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
   const exitPlayback = () => {
     setAutoPlay(false);
     setPlaying(null);
+    setExplaining(false);
+  };
+
+  /** 從第一步開始講解 */
+  const startExplain = () => {
+    setExplained(null);
+    startPlayback(0);
+    setExplaining(true);
+  };
+
+  const endExplain = (result: ExplainResult) => {
+    exitPlayback();
+    setExplained(result);
   };
 
   const goToStep = (index: number) => setPlaying(Math.max(0, Math.min(index, steps.length - 1)));
@@ -922,14 +942,22 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       // 打字的地方自己處理按鍵；勾選框（例如「每一步記下來」）只用空白鍵和 Enter，其他快捷鍵照常
       const checkbox = target instanceof HTMLInputElement && target.type === 'checkbox';
       if (checkbox ? e.key === ' ' || e.key === 'Enter' : target.closest('input, textarea, select')) return;
+      // 講解完的回顧蓋在白板上面，白板的快捷鍵先停用
+      if (explained) {
+        if (e.type === 'keydown' && e.key === 'Escape') setExplained(null);
+        return;
+      }
       if (playIndex !== null) {
         if (e.type !== 'keydown' || e.metaKey || e.ctrlKey) return;
         // 焦點在按鈕上時，Enter 和空白鍵交給按鈕
         if (target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
         if (e.key === 'ArrowRight') goToStep(playIndex + 1);
         else if (e.key === 'ArrowLeft') goToStep(playIndex - 1);
-        else if (e.key === ' ') toggleAutoPlay();
-        else if (e.key === 'Escape') exitPlayback();
+        else if (e.key === ' ' && !explaining) toggleAutoPlay();
+        else if (e.key === 'Escape') {
+          if (explaining) finishExplain.current?.();
+          else exitPlayback();
+        }
         else return;
         e.preventDefault();
         return;
@@ -1329,6 +1357,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
               full={steps.length >= m.MAX_STEPS}
               onCapture={captureCurrentStep}
               onPlay={() => startPlayback(0)}
+              onExplain={startExplain}
             />
           )}
 
@@ -1345,6 +1374,7 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
               onCaptionStart={() => setHistory((h) => m.checkpoint(h))}
               onCaption={(caption) => setHistory((h) => m.replace(h, m.setStepCaption(h.present, playIndex, caption)))}
               onCaptionEnd={() => setHistory((h) => m.dropEmptyCheckpoint(h))}
+              explain={explaining && <ExplainSession index={playIndex} stepCount={steps.length} finishRef={finishExplain} onFinish={endExplain} />}
             />
           )}
 
@@ -1537,6 +1567,10 @@ function Editor({ boardId, title, caption, difficulty, initial, onClose }: Board
       >
         <p>{t.board.clearBody}</p>
       </Dialog>
+
+      {explained && (
+        <ExplainReview result={explained} steps={steps} problem={problem} onAgain={startExplain} onClose={() => setExplained(null)} />
+      )}
 
       {ghost && (
         <div className="board-ghost" style={{ left: ghost.x, top: ghost.y }} aria-hidden>

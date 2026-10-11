@@ -27,6 +27,12 @@ const ICON_PLAY = (
     <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />
   </Icon>
 );
+const ICON_MIC = (
+  <Icon>
+    <rect x="9" y="3.5" width="6" height="11" rx="3" />
+    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5" />
+  </Icon>
+);
 const ICON_PAUSE = (
   <Icon>
     <path d="M8 5.5v13M16 5.5v13" strokeWidth="3" />
@@ -38,10 +44,11 @@ interface StepsWidgetProps {
   full: boolean;
   onCapture: () => void;
   onPlay: () => void;
+  onExplain: () => void;
 }
 
-/** 編輯時左上角：把目前的畫面記成一步、從頭播放 */
-export function StepsWidget({ count, full, onCapture, onPlay }: StepsWidgetProps) {
+/** 編輯時左上角：把目前的畫面記成一步、從頭播放、照著步驟講解 */
+export function StepsWidget({ count, full, onCapture, onPlay, onExplain }: StepsWidgetProps) {
   const { t } = useI18n();
   const s = t.board.steps;
   return (
@@ -61,7 +68,24 @@ export function StepsWidget({ count, full, onCapture, onPlay }: StepsWidgetProps
         <span className="board-steps-play" aria-hidden>
           {ICON_PLAY}
         </span>
-        <span aria-live="polite">{s.count(count)}</span>
+        <span aria-live="polite">
+          <span className="board-steps-text">{s.count(count)}</span>
+          {/* 手機上位置不夠，只顯示步數 */}
+          <span className="board-steps-num">{count}</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        className="btn btn-small"
+        disabled={count === 0}
+        aria-label={count === 0 ? t.board.explain.needSteps : t.board.explain.startHint}
+        title={count === 0 ? t.board.explain.needSteps : t.board.explain.startHint}
+        onClick={onExplain}
+      >
+        <span className="board-steps-play" aria-hidden>
+          {ICON_MIC}
+        </span>
+        <span className="board-steps-text">{t.board.explain.start}</span>
       </button>
     </div>
   );
@@ -79,6 +103,8 @@ interface PlaybackBarProps {
   onCaptionStart: () => void;
   onCaption: (caption: string) => void;
   onCaptionEnd: () => void;
+  /** 講解中：說明只能看（當作提詞），下方換成講解的計時和「講完了」 */
+  explain?: ReactNode;
 }
 
 /** 播放時下方的播放列：換步、自動播放、這一步的說明、從這步繼續編輯 */
@@ -94,12 +120,13 @@ export function PlaybackBar({
   onCaptionStart,
   onCaption,
   onCaptionEnd,
+  explain,
 }: PlaybackBarProps) {
   const { t } = useI18n();
   const s = t.board.steps;
   const last = index === steps.length - 1;
   return (
-    <div className="board-playback" role="toolbar" aria-label={s.playbackLabel} data-ui>
+    <div className="board-playback" role="toolbar" aria-label={explain ? t.board.explain.label : s.playbackLabel} data-ui>
       <div className="board-playback-row">
         <button type="button" className="board-tool" aria-label={s.prev} title={s.prev} disabled={index === 0} onClick={() => onGo(index - 1)}>
           {ICON_PREV}
@@ -110,16 +137,18 @@ export function PlaybackBar({
         <button type="button" className="board-tool" aria-label={s.next} title={s.next} disabled={last} onClick={() => onGo(index + 1)}>
           {ICON_NEXT}
         </button>
-        <button
-          type="button"
-          className="board-tool"
-          aria-label={autoPlay ? s.pause : s.play}
-          title={autoPlay ? s.pause : s.play}
-          aria-pressed={autoPlay}
-          onClick={onToggleAuto}
-        >
-          {autoPlay ? ICON_PAUSE : ICON_PLAY}
-        </button>
+        {!explain && (
+          <button
+            type="button"
+            className="board-tool"
+            aria-label={autoPlay ? s.pause : s.play}
+            title={autoPlay ? s.pause : s.play}
+            aria-pressed={autoPlay}
+            onClick={onToggleAuto}
+          >
+            {autoPlay ? ICON_PAUSE : ICON_PLAY}
+          </button>
+        )}
         <ol className="board-step-dots">
           {steps.map((step, i) => (
             <li key={step.id}>
@@ -130,32 +159,43 @@ export function PlaybackBar({
           ))}
         </ol>
       </div>
-      <input
-        className="input board-playback-caption"
-        value={steps[index].caption}
-        placeholder={s.captionPlaceholder}
-        aria-label={s.captionLabel(index + 1)}
-        maxLength={200}
-        onFocus={onCaptionStart}
-        onBlur={onCaptionEnd}
-        onChange={(e) => onCaption(e.target.value)}
-        onKeyDown={(e) => {
-          // 打字時不要觸發白板的快捷鍵；Enter 或 Esc 結束輸入
-          e.stopPropagation();
-          if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur();
-        }}
-      />
-      <div className="board-playback-row board-playback-actions">
-        <button type="button" className="btn btn-small" onClick={onRestore}>
-          {s.restore}
-        </button>
-        <button type="button" className="btn btn-small btn-danger" onClick={onDelete}>
-          {s.delete}
-        </button>
-        <button type="button" className="btn btn-small btn-primary" onClick={onExit}>
-          {s.exit}
-        </button>
-      </div>
+      {explain ? (
+        steps[index].caption && (
+          <p className="board-playback-notes" lang="en">
+            {steps[index].caption}
+          </p>
+        )
+      ) : (
+        <>
+          <input
+            className="input board-playback-caption"
+            value={steps[index].caption}
+            placeholder={s.captionPlaceholder}
+            aria-label={s.captionLabel(index + 1)}
+            maxLength={200}
+            onFocus={onCaptionStart}
+            onBlur={onCaptionEnd}
+            onChange={(e) => onCaption(e.target.value)}
+            onKeyDown={(e) => {
+              // 打字時不要觸發白板的快捷鍵；Enter 或 Esc 結束輸入
+              e.stopPropagation();
+              if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur();
+            }}
+          />
+          <div className="board-playback-row board-playback-actions">
+            <button type="button" className="btn btn-small" onClick={onRestore}>
+              {s.restore}
+            </button>
+            <button type="button" className="btn btn-small btn-danger" onClick={onDelete}>
+              {s.delete}
+            </button>
+            <button type="button" className="btn btn-small btn-primary" onClick={onExit}>
+              {s.exit}
+            </button>
+          </div>
+        </>
+      )}
+      {explain}
     </div>
   );
 }

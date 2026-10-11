@@ -100,6 +100,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
     - undo/redo and clear canvas
   - **Box selection**: drag across empty space to select everything inside, then move, duplicate, delete, or recolor it together. Copies keep pointers on their copied arrays and rewire arrows to the copied elements.
   - **Step playback**: "Record step" saves a snapshot of the board with an optional one-line note (writing it in English doubles as explanation practice). Playback steps through the snapshots with the arrow keys or plays them automatically; elements slide from one step to the next. You can continue editing from any step.
+  - **Explain mode**: walk through your steps out loud in English. The current step's note shows as a prompt while a timer, audio recording, and live transcript run. Afterwards you see how long you spent on each step (the slow one is usually the part you can't explain smoothly yet), play back the audio, and fix the transcript. On a problem's whiteboard you can also tick which of the five points you covered, get AI feedback, save the transcript as the problem's script, and save the run as an explanation drill, marked "Whiteboard" in the mock interview history.
   - **Export image**: the board, or the step being played, is redrawn from its data as an SVG and saved as a 2× PNG.
   - When the selection bar would cover what you just picked (or the DP cell being filled), the board moves just enough to show it. It waits until you let go, so it never moves during a drag. On phones the bar is a single row that scrolls sideways instead of stacking into several rows.
   - Mouse, trackpad, keyboard, and touch all work. Pan with the scroll wheel, Space + drag, the hand tool, or two fingers; zoom with Ctrl + scroll or a pinch.
@@ -333,6 +334,7 @@ Notes:
 - 在空白處拖曳可以框選，框住的東西可以一起移動、複製、刪除或換色。
 - 選取列會擋住剛選到的東西（或 DP 表正在填的那一格）時，畫面自動挪開剛好露出來；按著拖曳時不會動。手機上選取列只排一列，放不下就左右滑，不會疊成好幾列擋住畫面。
 - **逐步播放**：按「記一步」把目前的畫面存成一步，可以寫一句說明（用英文寫就是在練講解）；播放時一步一步看，指標會滑到下一格，也可以從任何一步繼續編輯。
+- **講解模式**：照著記好的步驟用英文講出來。這一步的說明會當作提詞，同時計時、錄音、顯示即時逐字稿。講完看每一步講了多久（特別久的那步通常就是還講不順的地方）、聽錄音、修正逐字稿；在題目的白板上還可以勾有講到哪幾個重點、拿 AI 回饋、把逐字稿存成講解稿，並存成一筆講解練習，在模擬面試的紀錄裡標成「白板」。
 - 可以把白板（或播放中的那一步）匯出成圖片。
 - 每一題有自己的白板，另外有一張自由白板；在「我的白板」可以看到全部。白板存在這台裝置，登入後會同步到雲端。
 - 練習頁打開白板時，計時不會中斷。
