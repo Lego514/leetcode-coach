@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
-import type { AttemptMode, BehavioralTheme, CardResult, Collection, MockKind, StepNoteKey } from '../../shared/constants';
-import type { BoardDoc, ExplanationFeedback } from '../../shared/protocol';
+import type { AttemptMode, BehavioralPoint, BehavioralTheme, CardResult, Collection, MockKind, StepNoteKey } from '../../shared/constants';
+import type { BehavioralFeedback, BoardDoc, ExplanationFeedback } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -96,6 +96,28 @@ export interface MockRecord {
   audio?: Blob;
 }
 
+/** 練習講一題行為面試 */
+export interface RehearsalRecord {
+  id?: number;
+  uid: string;
+  /** 題庫裡的題目 id，例如 conflict-disagree */
+  questionId: string;
+  /** 用哪個故事回答；沒選是即興 */
+  storyId?: string;
+  day: Day;
+  startedAt: string;
+  limitSec: number;
+  usedSec: number;
+  /** 自己勾的：STAR 哪幾段有講到、有沒有講「我」做了什麼 */
+  covered: BehavioralPoint[];
+  /** 1 講得很順、2 有卡住、3 講不出來 */
+  clarity?: Clarity;
+  transcript?: string;
+  feedback?: BehavioralFeedback;
+  /** 錄音只留在這台裝置，不會同步 */
+  audio?: Blob;
+}
+
 /** 微複習的一次作答；卡片的複習排程由這些紀錄推算 */
 export interface CardReviewRecord {
   id?: number;
@@ -184,6 +206,7 @@ export class CoachDB extends Dexie {
   cardReviews!: EntityTable<CardReviewRecord, 'id'>;
   boards!: EntityTable<BoardRecord, 'id'>;
   stories!: EntityTable<StoryRecord, 'id'>;
+  rehearsals!: EntityTable<RehearsalRecord, 'id'>;
 
   constructor(name = 'leetcode-coach') {
     super(name);
@@ -236,6 +259,10 @@ export class CoachDB extends Dexie {
     this.version(6).stores({
       stories: 'id',
     });
+    // 第 7 版：行為面試的練習紀錄
+    this.version(7).stores({
+      rehearsals: '++id, day, &uid',
+    });
   }
 
   /** 會同步的資料表，依集合名稱查 */
@@ -257,6 +284,7 @@ export class CoachDB extends Dexie {
       this.cardReviews,
       this.boards,
       this.stories,
+      this.rehearsals,
     ];
   }
 }

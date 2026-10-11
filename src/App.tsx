@@ -50,6 +50,10 @@ const router = createHashRouter([
         lazy: async () => ({ Component: (await import('./pages/StoriesPage')).StoriesPage }),
       },
       {
+        path: 'stories/practice',
+        lazy: async () => ({ Component: (await import('./pages/RehearsePage')).RehearsePage }),
+      },
+      {
         path: 'stories/:id',
         lazy: async () => ({ Component: (await import('./pages/StoriesPage')).StoryPage }),
       },

@@ -20,7 +20,7 @@ import {
 } from '../lib/stats';
 import { useCloud } from '../store/cloud';
 import type { AttemptMode } from '../store/db';
-import { useAttempts, useCardReviews, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
+import { useAttempts, useCardReviews, useCatalog, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
 
 const BANNER_KEY = 'coach:signin-banner-dismissed';
 
@@ -76,6 +76,7 @@ export function TodayPage() {
   const { progress, loaded } = useProgressMap();
   const attempts = useAttempts();
   const cardReviews = useCardReviews();
+  const rehearsals = useRehearsals();
   const [recording, setRecording] = useState<{ problem: Problem; mode: AttemptMode } | null>(null);
   const [quickRecord, setQuickRecord] = useState(false);
   // 「再來一題」多加的題數，只算當天
@@ -96,7 +97,7 @@ export function TodayPage() {
   const practiced = practiceAttempts(attempts ?? []);
   const todayAttempts = practiced.filter((a) => a.day === day);
   // 做過微複習的日子也算連續天數
-  const streak = practiceStreak(streakDays(practiced, cardReviews ?? []), day);
+  const streak = practiceStreak(streakDays(practiced, cardReviews ?? [], rehearsals ?? []), day);
   const cardsToday = (cardReviews ?? []).filter((r) => r.day === day).length;
   const weekStart = startOfWeek(day);
   const thisWeek = practiced.filter((a) => a.day >= weekStart).length;

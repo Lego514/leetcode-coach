@@ -45,3 +45,17 @@ export function storyLength(parts: StoryParts): StoryLength {
 export function needsMoreAction(length: StoryLength): boolean {
   return length.words >= 60 && length.actionShare < 0.4;
 }
+
+const FIRST_PERSON = /\b(i|i'm|i’m|i've|i’ve|i'd|i’d|i'll|i’ll|me|my|myself)\b/gi;
+const PLURAL = /\b(we|we're|we’re|we've|we’ve|we'd|we’d|we'll|we’ll|our|ours|ourselves)\b/gi;
+
+/** 回答裡講「我」和講「我們」各幾次；面試官想聽的是你自己做了什麼 */
+export function pronounCounts(text: string): { i: number; we: number } {
+  return { i: text.match(FIRST_PERSON)?.length ?? 0, we: text.match(PLURAL)?.length ?? 0 };
+}
+
+/** 從題目裡隨機抽一題，盡量不要跟上一題一樣 */
+export function drawQuestion<T extends { id: string }>(questions: readonly T[], previous?: string, random = Math.random): T | undefined {
+  const pool = questions.length > 1 ? questions.filter((q) => q.id !== previous) : questions;
+  return pool[Math.floor(random() * pool.length)];
+}

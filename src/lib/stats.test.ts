@@ -26,6 +26,10 @@ describe('practiceStreak', () => {
     expect(practiceStreak(streakDays(practiced, cards), '2026-09-16')).toBe(3);
     expect(practiceStreak(streakDays(practiced, []), '2026-09-16')).toBe(1);
   });
+
+  it('counts days with only behavioral practice', () => {
+    expect(practiceStreak(streakDays([{ day: '2026-09-16' }], [], [{ day: '2026-09-15' }]), '2026-09-16')).toBe(2);
+  });
 });
 
 describe('longestStreak', () => {

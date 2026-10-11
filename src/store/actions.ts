@@ -14,6 +14,7 @@ import {
   type NoteRecord,
   type PatternNoteRecord,
   type ProgressRecord,
+  type RehearsalRecord,
   type SettingsRecord,
   type StoryRecord,
 } from './db';
@@ -166,6 +167,23 @@ export async function deleteStory(id: string): Promise<void> {
   await db.transaction('rw', db.stories, db.outbox, async () => {
     await db.stories.delete(id);
     await track(db, 'stories', id, true);
+  });
+}
+
+/** 存一次行為面試的練習；回傳它的 uid */
+export async function saveRehearsal(record: Omit<RehearsalRecord, 'id' | 'uid'>): Promise<string> {
+  const uid = crypto.randomUUID();
+  await db.transaction('rw', db.rehearsals, db.outbox, async () => {
+    await db.rehearsals.add({ ...record, uid });
+    await track(db, 'rehearsals', uid);
+  });
+  return uid;
+}
+
+export async function deleteRehearsal(uid: string): Promise<void> {
+  await db.transaction('rw', db.rehearsals, db.outbox, async () => {
+    await db.rehearsals.where('uid').equals(uid).delete();
+    await track(db, 'rehearsals', uid, true);
   });
 }
 

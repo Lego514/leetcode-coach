@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import {
   ATTEMPT_MODES,
+  BEHAVIORAL_POINTS,
   BEHAVIORAL_THEMES,
   BOARD_COLORS,
   BOARD_MAX_BYTES,
@@ -64,6 +65,31 @@ export const explanationFeedbackSchema = z.object({
   improvedScript: text(4000),
 });
 export type ExplanationFeedback = z.infer<typeof explanationFeedbackSchema>;
+
+/** AI 對一次行為面試回答的回饋；分數 0 沒講到、1 不完整、2 清楚 */
+export const behavioralFeedbackSchema = z.object({
+  summary: text(1000),
+  points: z
+    .array(
+      z.object({
+        id: z.enum(BEHAVIORAL_POINTS),
+        score: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        comment: text(600),
+      }),
+    )
+    .max(BEHAVIORAL_POINTS.length),
+  strengths: z.array(text(300)).max(5),
+  improvements: z
+    .array(
+      z.object({
+        quote: text(300),
+        suggestion: text(600),
+      }),
+    )
+    .max(6),
+  improvedAnswer: text(4000),
+});
+export type BehavioralFeedback = z.infer<typeof behavioralFeedbackSchema>;
 
 export const mockDataSchema = z.object({
   problemId: z.number().int().positive(),
@@ -339,6 +365,20 @@ export const storyDataSchema = z.object({
   updatedAt: timestamp,
 });
 
+/** 練習講一題行為面試：講了多久、逐字稿、自己勾的 STAR 檢查和 AI 回饋；錄音只留在本機 */
+export const rehearsalDataSchema = z.object({
+  questionId: z.string().regex(/^[a-z]+(?:-[a-z]+)+$/).max(60),
+  storyId: z.uuid().optional(),
+  day,
+  startedAt: timestamp,
+  limitSec: z.number().int().min(0).max(3600),
+  usedSec: z.number().int().min(0).max(3600),
+  covered: z.array(z.enum(BEHAVIORAL_POINTS)).max(BEHAVIORAL_POINTS.length),
+  clarity: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+  transcript: text(20000).optional(),
+  feedback: behavioralFeedbackSchema.optional(),
+});
+
 const uuidKey = z.uuid();
 const problemKey = z.string().regex(/^[1-9]\d{0,6}$/);
 
@@ -346,6 +386,7 @@ const problemKey = z.string().regex(/^[1-9]\d{0,6}$/);
 export const COLLECTION_SCHEMAS = {
   attempts: { key: uuidKey, data: attemptDataSchema },
   stories: { key: uuidKey, data: storyDataSchema },
+  rehearsals: { key: uuidKey, data: rehearsalDataSchema },
   mocks: { key: uuidKey, data: mockDataSchema },
   notes: { key: problemKey, data: noteDataSchema },
   meta: { key: problemKey, data: metaDataSchema },
@@ -479,6 +520,31 @@ export const feedbackRequestSchema = z.object({
   language: z.enum(LOCALE_IDS),
 });
 export type FeedbackRequest = z.infer<typeof feedbackRequestSchema>;
+
+export const behavioralFeedbackRequestSchema = z.object({
+  /** 面試官問的英文題目 */
+  question: z.string().trim().min(1).max(300),
+  /** 事先寫好的 STAR 筆記，有選故事才有 */
+  story: z
+    .object({
+      title: z.string().max(120),
+      situation: z.string().max(3000),
+      task: z.string().max(3000),
+      action: z.string().max(5000),
+      result: z.string().max(3000),
+    })
+    .optional(),
+  transcript: z.string().trim().min(20).max(20_000),
+  seconds: z.number().int().min(0).max(24 * 3600),
+  language: z.enum(LOCALE_IDS),
+});
+export type BehavioralFeedbackRequest = z.infer<typeof behavioralFeedbackRequestSchema>;
+
+export interface BehavioralFeedbackResponse {
+  feedback: BehavioralFeedback;
+  usedToday: number;
+  dailyLimit: number;
+}
 
 export interface AiStatus {
   available: boolean;

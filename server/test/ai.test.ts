@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { AiStatus, ExplanationFeedback, FeedbackRequest, FeedbackResponse } from '../../shared/protocol';
-import { buildUserMessage, FeedbackError, normalizeFeedback, type FeedbackGenerator } from '../src/ai/feedback';
+import type { AiStatus, BehavioralFeedback, BehavioralFeedbackRequest, BehavioralFeedbackResponse, ExplanationFeedback, FeedbackRequest, FeedbackResponse } from '../../shared/protocol';
+import { buildBehavioralMessage, buildUserMessage, FeedbackError, normalizeBehavioralFeedback, normalizeFeedback, type BehavioralFeedbackGenerator, type FeedbackGenerator } from '../src/ai/feedback';
 import { aiUsage } from '../src/db/schema';
 import { startTestServer, TestClient, type TestServer } from './helpers';
 
@@ -209,5 +209,73 @@ describe('AI allowlist', () => {
   it('lets every account in with *', async () => {
     const client = await withAllowlist('*', 'anyone@example.com');
     expect((await client.request('POST', '/api/ai/explanation-feedback', request)).status).toBe(200);
+  });
+});
+
+describe('behavioral feedback API', () => {
+  const behavioral: BehavioralFeedbackRequest = {
+    question: 'Tell me about a time you failed.',
+    story: { title: 'Pipeline fix', situation: 'Nightly jobs failed.', task: 'I owned the fix.', action: 'I added retries.', result: 'Zero failures.' },
+    transcript: 'We had nightly jobs failing and I added retries so they stopped.',
+    seconds: 80,
+    language: 'en',
+  };
+  const answer: BehavioralFeedback = {
+    summary: 'Specific, but the result needs a number.',
+    points: [
+      { id: 'situation', score: 2, comment: 'Clear.' },
+      { id: 'task', score: 1, comment: 'Say what you owned.' },
+      { id: 'action', score: 2, comment: 'Concrete steps.' },
+      { id: 'result', score: 1, comment: 'Add a number.' },
+      { id: 'ownership', score: 2, comment: 'Mostly I.' },
+    ],
+    strengths: ['Concrete fix'],
+    improvements: [{ quote: 'so they stopped', suggestion: 'Say failures dropped from 8 a month to 0.' }],
+    improvedAnswer: 'During my internship, our nightly jobs failed about twice a week...',
+  };
+
+  it('returns STAR feedback and shares the daily limit with explanation feedback', async () => {
+    const calls: BehavioralFeedbackRequest[] = [];
+    const generateBehavioral: BehavioralFeedbackGenerator = async (input) => {
+      calls.push(input);
+      return { feedback: answer, usage: { inputTokens: 100, outputTokens: 50 } };
+    };
+    server = await startTestServer({
+      ai: { allowedEmails: '*', dailyLimit: 2, generate: async () => ({ feedback, usage: { inputTokens: 1, outputTokens: 1 } }), generateBehavioral },
+    });
+    const client = new TestClient(server.app);
+    await client.register('star@example.com');
+
+    const res = await client.request('POST', '/api/ai/behavioral-feedback', behavioral);
+    expect(res.status).toBe(200);
+    expect((await res.json()) as BehavioralFeedbackResponse).toEqual({ feedback: answer, usedToday: 1, dailyLimit: 2 });
+    expect(calls).toEqual([behavioral]);
+    expect((await client.request('POST', '/api/ai/explanation-feedback', request)).status).toBe(200);
+    const over = await client.request('POST', '/api/ai/behavioral-feedback', behavioral);
+    expect(over.status).toBe(429);
+    expect((await over.json()).error.code).toBe('ai_quota_exceeded');
+    // 太短的逐字稿在送出前就擋下
+    expect((await client.request('POST', '/api/ai/behavioral-feedback', { ...behavioral, transcript: 'too short' })).status).toBe(400);
+  });
+
+  it('is off when the server only has explanation feedback', async () => {
+    const client = await signedIn({ dailyLimit: 5, generate: async () => ({ feedback, usage: { inputTokens: 0, outputTokens: 0 } }) });
+    const res = await client.request('POST', '/api/ai/behavioral-feedback', behavioral);
+    expect(res.status).toBe(503);
+    expect((await res.json()).error.code).toBe('ai_unavailable');
+  });
+
+  it('puts the notes and transcript in tags, and keeps the five points in order', () => {
+    const message = buildBehavioralMessage(behavioral);
+    expect(message).toContain('Question: Tell me about a time you failed.');
+    expect(message).toContain('<notes>\nTitle: Pipeline fix');
+    expect(message).toContain('<transcript>\nWe had nightly jobs failing');
+    expect(buildBehavioralMessage({ ...behavioral, story: undefined })).not.toContain('<notes>');
+    const messy = normalizeBehavioralFeedback({
+      ...answer,
+      points: [...answer.points.slice().reverse(), { id: 'action', score: 0, comment: 'dup' }, { id: 'extra', score: 2, comment: 'x' }] as unknown[],
+    });
+    expect(messy.points.map((p) => p.id)).toEqual(['situation', 'task', 'action', 'result', 'ownership']);
+    expect(messy.points[2].comment).toBe('Concrete steps.');
   });
 });
