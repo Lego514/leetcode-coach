@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { ProblemRow } from '../components/ProblemRow';
 import { QuickRecordDialog } from '../components/QuickRecordDialog';
 import { RecordDialog } from '../components/RecordDialog';
+import { SprintSummary } from '../components/SprintSummary';
 import { PageHead, Sheet } from '../components/ui';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
@@ -19,6 +20,7 @@ import {
   streakDays,
 } from '../lib/stats';
 import { useCloud } from '../store/cloud';
+import { useSprint } from '../store/sprint';
 import type { AttemptMode } from '../store/db';
 import { useAttempts, useCardReviews, useCatalog, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
 
@@ -77,6 +79,9 @@ export function TodayPage() {
   const attempts = useAttempts();
   const cardReviews = useCardReviews();
   const rehearsals = useRehearsals();
+  const sprint = useSprint();
+  /** 衝刺中今天的計畫；面試當天和之後沒有 */
+  const sprintDay = sprint && sprint.daysLeft > 0 ? sprint.plan.days[0] : null;
   const [recording, setRecording] = useState<{ problem: Problem; mode: AttemptMode } | null>(null);
   const [quickRecord, setQuickRecord] = useState(false);
   // 「再來一題」多加的題數，只算當天
@@ -85,13 +90,21 @@ export function TodayPage() {
 
   const listName = t.lists.labels[settings.activeList];
   const listProblems = useMemo(() => problemsInList(catalog, settings.activeList), [catalog, settings.activeList]);
-  const due = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
+  const dueNow = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
+  // 衝刺時，面試那天會忘記的題目提前到最後幾天複習
+  const pulled = (sprintDay?.pulled ?? []).filter((p) => !dueNow.some((d) => d.id === p.id));
+  const due = pulled.length > 0 ? [...dueNow, ...pulled] : dueNow;
 
   // 不管是從今天頁、題庫還是「記錄其他題目」開始的新題，都算進每天的目標
   const startedToday = newProblemsStartedOn(attempts ?? [], day);
   const newRemaining = Math.max(0, settings.dailyNew + extraToday - startedToday);
-  const newProblems = nextNewProblems(listProblems, (id) => progress.has(id), newRemaining);
+  // 衝刺時照衝刺的順序（公司題、還沒碰過的模式優先），數量照每天的時間
+  const newProblems =
+    sprint && sprintDay
+      ? sprint.plan.queue.slice(0, sprintDay.newProblems.length + extraToday).map((pick) => pick.problem)
+      : nextNewProblems(listProblems, (id) => progress.has(id), newRemaining);
   const untouched = listProblems.filter((p) => !progress.has(p.id)).length;
+  const moreAvailable = sprint && sprintDay ? sprint.plan.queue.length > newProblems.length : untouched > newProblems.length;
   const beyondGoal = Math.max(0, startedToday - settings.dailyNew);
 
   const practiced = practiceAttempts(attempts ?? []);
@@ -119,7 +132,8 @@ export function TodayPage() {
   return (
     <div className="page">
       <PageHead title={t.today.title} lede={t.today.lede(fmt.fullDay(day), listName)}>
-        {loaded && (
+        {loaded && sprint && <SprintSummary state={sprint} day={day} />}
+        {loaded && !sprint && (
           <PlanSummary
             day={day}
             listName={listName}
@@ -163,6 +177,7 @@ export function TodayPage() {
           title={t.today.dueTitle}
           count={due.length}
           id="due"
+          note={pulled.length > 0 ? t.today.sprint.pulledNote(pulled.length) : undefined}
           actions={
             due.length > 0 ? (
               <Link className="btn btn-primary btn-small" to="/review">
@@ -189,14 +204,16 @@ export function TodayPage() {
           count={newProblems.length}
           id="new"
           note={
-            beyondGoal > 0
-              ? t.today.extraNote(beyondGoal)
-              : startedToday > 0
-                ? t.today.startedToday(startedToday)
-                : t.today.roadmapOrder(listName)
+            sprintDay
+              ? t.today.sprint.newNote
+              : beyondGoal > 0
+                ? t.today.extraNote(beyondGoal)
+                : startedToday > 0
+                  ? t.today.startedToday(startedToday)
+                  : t.today.roadmapOrder(listName)
           }
           actions={
-            newProblems.length > 0 && untouched > newProblems.length ? (
+            newProblems.length > 0 && moreAvailable ? (
               <button className="btn btn-small btn-quiet" onClick={oneMore}>
                 {t.today.oneMore}
               </button>
@@ -213,9 +230,17 @@ export function TodayPage() {
             </ul>
           ) : (
             <div className="sheet-empty">
-              <p>{untouched === 0 ? t.today.listFinished(listName) : t.today.newDone}</p>
+              <p>
+                {sprintDay?.phase === 'review'
+                  ? t.today.sprint.reviewOnly
+                  : sprintDay && sprintDay.newProblems.length === 0 && startedToday === 0
+                    ? t.today.sprint.noTime
+                    : untouched === 0 && !moreAvailable
+                      ? t.today.listFinished(listName)
+                      : t.today.newDone}
+              </p>
               <div className="btn-row" style={{ marginTop: 12 }}>
-                {untouched > 0 && (
+                {moreAvailable && (
                   <button className="btn btn-primary" onClick={oneMore}>
                     {t.today.oneMore}
                   </button>

@@ -1084,6 +1084,184 @@ kbd,
   color: var(--ink-2);
 }
 
+/* 面試衝刺：今天頁最上面的倒數 */
+.sprint-summary {
+  margin-top: 14px;
+}
+
+.sprint-countdown {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sprint-summary .today-plan {
+  margin-top: 4px;
+}
+
+.sprint-summary .btn-row {
+  margin-top: 12px;
+}
+
+.sprint-todos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sprint-todos li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sprint-todo-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 4px;
+  color: var(--on-pen);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sprint-todos li[data-done] .sprint-todo-check {
+  border-color: var(--good);
+  background: var(--good);
+}
+
+.sprint-todos li[data-done] a {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+/* 衝刺頁 */
+.sprint-form-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sprint-phase {
+  margin: 12px 0 0;
+}
+
+.sprint-days {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  list-style: none;
+}
+
+.sprint-day {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) minmax(80px, 24%) 92px;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+
+.sprint-day[aria-current='date'] {
+  background: var(--pen-soft);
+}
+
+.sprint-day-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sprint-day[data-phase='review'] .sprint-day-date {
+  color: var(--medium);
+}
+
+.sprint-day-tasks {
+  color: var(--ink-2);
+}
+
+.sprint-day-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--sheet-2);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  overflow: hidden;
+}
+
+.sprint-day-bar span {
+  height: 100%;
+}
+
+.sprint-bar-new {
+  background: var(--pen);
+}
+
+.sprint-bar-review {
+  background: var(--level-2);
+}
+
+.sprint-bar-other {
+  background: var(--marker);
+}
+
+.sprint-day-minutes {
+  color: var(--ink-2);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sprint-day-minutes[data-over] {
+  color: var(--medium);
+  font-weight: 600;
+}
+
+.sprint-picks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  list-style: none;
+}
+
+.sprint-picks li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 560px) {
+  .sprint-form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 手機上日期和時間一行，要做的事和時間條一行 */
+  .sprint-day {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+  }
+
+  .sprint-day-tasks {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .sprint-day-bar {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+}
+
 /* 清單完成度的進度條，和下面的數字卡一樣寬 */
 .plan-progress {
   display: flex;
