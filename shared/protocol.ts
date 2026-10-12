@@ -144,6 +144,8 @@ export const mockDataSchema = z.object({
   feedback: explanationFeedbackSchema.optional(),
   /** 講完之後面試官的追問和回答 */
   followUp: followUpRecordSchema.optional(),
+  /** 自己貼回來的 ChatGPT 或 Claude 回覆 */
+  chatReply: text(20000).optional(),
 });
 
 export const noteDataSchema = z.object({
@@ -425,6 +427,8 @@ export const rehearsalDataSchema = z.object({
   clarity: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
   transcript: text(20000).optional(),
   feedback: behavioralFeedbackSchema.optional(),
+  /** 自己貼回來的 ChatGPT 或 Claude 回覆 */
+  chatReply: text(20000).optional(),
 });
 
 const uuidKey = z.uuid();

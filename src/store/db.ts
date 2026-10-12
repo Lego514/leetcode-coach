@@ -97,6 +97,8 @@ export interface MockRecord {
   feedback?: ExplanationFeedback;
   /** 講完之後面試官的追問、我的回答和評分 */
   followUp?: FollowUpRecord;
+  /** 複製提示詞到 ChatGPT 或 Claude 之後，自己貼回來的回覆 */
+  chatReply?: string;
   /** 錄音只留在這台裝置，不會同步 */
   audio?: Blob;
 }
@@ -119,6 +121,8 @@ export interface RehearsalRecord {
   clarity?: Clarity;
   transcript?: string;
   feedback?: BehavioralFeedback;
+  /** 自己貼回來的 ChatGPT 或 Claude 回覆 */
+  chatReply?: string;
   /** 錄音只留在這台裝置，不會同步 */
   audio?: Blob;
 }

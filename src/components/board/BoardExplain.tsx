@@ -142,6 +142,7 @@ export function ExplainReview({ result, steps, problem, onAgain, onClose }: Expl
   const [transcript, setTranscript] = useState(result.transcript ?? '');
   const [feedback, setFeedback] = useState<ExplanationFeedback | null>(null);
   const [followUp, setFollowUp] = useState<FollowUpRecord | null>(null);
+  const [chatReply, setChatReply] = useState('');
   const [checks, setChecks] = useState<ReadonlySet<ExplainCheck>>(() => new Set());
   const [clarity, setClarity] = useState<Clarity | null>(null);
   const [saved, setSaved] = useState(false);
@@ -177,6 +178,7 @@ export function ExplainReview({ result, steps, problem, onAgain, onClose }: Expl
     if (transcript.trim()) record.transcript = transcript.trim();
     if (feedback) record.feedback = feedback;
     if (followUp?.items.length) record.followUp = followUp;
+    if (chatReply.trim()) record.chatReply = chatReply.trim();
     await saveMock(record);
     toast(s.saved);
   }
@@ -235,6 +237,8 @@ export function ExplainReview({ result, steps, problem, onAgain, onClose }: Expl
               currentScript={note?.explanation ?? ''}
               followUp={followUp}
               onFollowUp={setFollowUp}
+              chatReply={chatReply}
+              onChatReply={setChatReply}
             />
           )}
 

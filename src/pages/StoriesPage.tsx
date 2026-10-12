@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { SaveStatus, useAutosave } from '../components/autosave';
+import { ChatReply } from '../components/ChatPromptPanel';
 import { useToast } from '../components/toast';
 import { Dialog, PageHead, Sheet } from '../components/ui';
 import { BEHAVIORAL_QUESTIONS, BEHAVIORAL_THEMES, STAR_PARTS, STAR_PHRASES, type BehavioralTheme, type StarPart } from '../data/behavioral';
@@ -55,6 +56,7 @@ export function StoriesPage() {
                       {t.rehearse.historyLine(fmt.day(r.day), formatDuration(r.usedSec), story ? story.title || s.untitled : t.rehearse.noStory)}
                       {total !== undefined && ` · ${t.mock.aiTotal(total, r.feedback!.points.length * 2)}`}
                     </span>
+                    {r.chatReply && <ChatReply text={r.chatReply} />}
                   </li>
                 );
               })}
