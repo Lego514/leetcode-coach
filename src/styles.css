@@ -2407,6 +2407,12 @@ audio {
 }
 
 /* 文字裡的按鈕，看起來像連結 */
+.flash-note {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
 .link-button {
   padding: 0;
   border: 0;

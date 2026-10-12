@@ -849,6 +849,10 @@ const zhTW = {
     missedTitle: '這回合答錯的卡',
     missedRetried: '都已經重考答對了，明天會再複習一次。',
     emptyTitle: '這個範圍還沒有卡片',
+    allDoneTitle: '這個範圍今天的卡都做過了',
+    allDoneBody: '今天答過的卡不會馬上重複出現。明天再來，或把範圍換成「全部」。',
+    shortRound: (n: number) => `這個範圍今天只剩 ${n} 張卡可以出。`,
+    useAll: '換成全部',
     emptyBody: '題目卡只會出你做過的題目。先記錄幾題，或換一個範圍。',
     scopeLabel: '範圍',
     scopes: {

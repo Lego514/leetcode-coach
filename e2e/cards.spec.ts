@@ -117,3 +117,33 @@ test('counts down a rest between sets', async ({ page }) => {
   await page.getByRole('alert').getByRole('button', { name: 'Close' }).click();
   await expect(page.getByRole('alert')).toBeHidden();
 });
+
+test('does not repeat cards answered today, and offers everything when a topic runs out', async ({ page }) => {
+  // 做過一題堆疊的題目：這個模式只有三張卡
+  await page.goto('/');
+  await page.getByRole('region', { name: /^Done today/ }).getByRole('button', { name: 'Record another problem' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Record another problem' });
+  await dialog.getByLabel('Problem number, title, or LeetCode URL').fill('20');
+  await dialog.getByRole('button', { name: 'Find problem' }).click();
+  await dialog.getByRole('button', { name: /Solved alone/ }).click();
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toBeHidden();
+
+  await page.goto('/#/cards');
+  await page.getByLabel('Topic').selectOption({ label: 'Stack' });
+  await expect(page.getByText('Card 1 of 3')).toBeVisible();
+  await expect(page.getByText('Only 3 cards in this topic are left for today.')).toBeVisible();
+
+  // 答錯的卡今天還會再出；全部答對之後，這個範圍今天就沒有卡了
+  const known = new Map<string, string>();
+  const allDone = page.getByRole('heading', { name: 'You’ve done every card in this topic today' });
+  for (let round = 0; round < 4 && !(await allDone.isVisible()); round += 1) {
+    await finishRound(page, known);
+    await page.getByRole('button', { name: 'Another round' }).click();
+    await expect(page.getByText(/^Card 1 of \d$/).or(allDone)).toBeVisible();
+  }
+  await expect(allDone).toBeVisible();
+  await page.getByRole('button', { name: 'Switch to Everything' }).click();
+  await expect(page.getByLabel('Topic')).toHaveValue('all');
+  await expect(page.getByText('Card 1 of 5')).toBeVisible();
+});

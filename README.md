@@ -227,7 +227,7 @@ Known limitation: conflicts are decided by each device's clock.
 - Ease stays between 1.3 and 3.0, and no interval is longer than 120 days.
 - Intervals of 30 days or more count as "mastered".
 - Problems marked as solved before are spread so that at most five come due per day. The extra days are stored on the attempt (`delayDays`), so every device replays the same date.
-- Flashcards use separate Leitner boxes (1, 3, 7, 14, then 30 days). A wrong answer sends a card back to box 0, so it returns in a later round the same day. Flashcards never move a problem's review date: recognizing a pattern is not the same as solving the problem.
+- Flashcards use separate Leitner boxes (1, 3, 7, 14, then 30 days). A wrong answer sends a card back to box 0, so it returns in a later round the same day. Flashcards never move a problem's review date: recognizing a pattern is not the same as solving the problem. Cards answered today aren't used to pad a round, so a small topic gives a shorter round (or says it's done for today and offers Everything) instead of repeating the same cards. In Everything, at most 3 of the 5 cards are about problems, leaving room for pattern clues and Python tips.
 
 ## Getting started
 
@@ -323,6 +323,7 @@ Notes:
 - 可以只練某個範圍：做過的題目、看線索、Python 小知識，或某一個模式。
 - 上方有組間休息計時器，時間到會響、會跳出提醒；倒數時會請瀏覽器讓螢幕保持亮著。
 - 做微複習的日子也算進連續天數。
+- 今天答過的卡不會拿來補滿一回合：範圍太小時這一回合就少幾張，做完了會提示換成「全部」。範圍是「全部」時，5 張裡最多 3 張是題目卡，其他留給模式線索和 Python 小知識，做過的題目少時也不會一直繞著那幾題。
 
 **白板**是自己從頭寫的，沒有用繪圖套件：
 - 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、遞迴樹、DP 表、區間、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
