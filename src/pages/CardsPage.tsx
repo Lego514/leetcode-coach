@@ -19,6 +19,8 @@ import {
   dealCard,
   dealRound,
   filterDeck,
+  MAX_PROBLEM_CARDS,
+  ROUND_SIZE,
   formatBigO,
   keyInsight,
   splitComplexityKey,
@@ -75,6 +77,7 @@ export function CardsPage() {
           settings={<RoundSettings scope={scope} onScope={changeScope} timer={timer} />}
           timerButton={<TimerButton timer={timer} />}
           onAgain={() => setRound((n) => n + 1)}
+          onScopeAll={scope === 'all' ? undefined : () => changeScope('all')}
         />
       ) : (
         <p aria-busy="true">{t.common.loading}</p>
@@ -93,6 +96,8 @@ interface RoundProps {
   settings: ReactNode;
   timerButton: ReactNode;
   onAgain: () => void;
+  /** 範圍不是「全部」時，卡片不夠可以一鍵換成全部 */
+  onScopeAll?: () => void;
 }
 
 interface QueueItem {
@@ -102,12 +107,12 @@ interface QueueItem {
 }
 
 /** 一回合：開始時發好牌，之後資料變動也不重發 */
-function Round({ catalog, progress, reviews, attempts, scope, settings, timerButton, onAgain }: RoundProps) {
+function Round({ catalog, progress, reviews, attempts, scope, settings, timerButton, onAgain, onScopeAll }: RoundProps) {
   const rehearsals = useRehearsals();
   const { t, locale } = useI18n();
   const day = useToday();
   const toast = useToast();
-  const [{ cards, context }] = useState(() => {
+  const [{ cards, context, deckSize }] = useState(() => {
     // 只出做過的題目，沒做過的會被參考講法劇透
     const attempted = catalog.problems.filter((p) => progress.has(p.id));
     const deck = buildDeck({ problems: attempted, explanations: EXPLANATIONS_EN, signalCounts: SIGNAL_COUNTS, tipIds: TIP_IDS });
@@ -116,9 +121,13 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
       explanations: EXPLANATIONS_EN,
       tipOptionCounts: TIP_OPTION_COUNTS,
     };
+    const scoped = filterDeck(deck, scope, catalog.byId);
+    // 全部的範圍裡，題目卡最多佔一半多一點，其他留給模式線索和小知識
+    const options = scope === 'all' ? { maxProblemCards: MAX_PROBLEM_CARDS } : {};
     return {
-      cards: dealRound(filterDeck(deck, scope, catalog.byId), cardStates(reviews), day, dealContext),
+      cards: dealRound(scoped, cardStates(reviews), day, dealContext, Math.random, options),
       context: dealContext,
+      deckSize: scoped.length,
     };
   });
   // 答錯的選擇題會排到最後重考，答對才算過關
@@ -231,9 +240,16 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
         {settings}
         <section className="flash-card flash-done" aria-labelledby="flash-empty-title">
           <h2 className="flash-question" id="flash-empty-title">
-            {t.cards.emptyTitle}
+            {deckSize > 0 ? t.cards.allDoneTitle : t.cards.emptyTitle}
           </h2>
-          <p>{t.cards.emptyBody}</p>
+          <p>{deckSize > 0 ? t.cards.allDoneBody : t.cards.emptyBody}</p>
+          {onScopeAll && (
+            <div className="btn-row" style={{ marginTop: 12 }}>
+              <button type="button" className="btn btn-primary" onClick={onScopeAll}>
+                {t.cards.useAll}
+              </button>
+            </div>
+          )}
         </section>
       </div>
     );
@@ -288,6 +304,14 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
     <div className="flash">
       {topBar(inRetry ? t.cards.retryLeft(queue.length - index) : t.cards.progress(index + 1, cards.length))}
       {index === 0 && !answered && settings}
+      {index === 0 && !answered && cards.length < ROUND_SIZE && onScopeAll && (
+        <p className="flash-note">
+          {t.cards.shortRound(cards.length)}{' '}
+          <button type="button" className="link-button" onClick={onScopeAll}>
+            {t.cards.useAll}
+          </button>
+        </p>
+      )}
       <ProgressDots total={cards.length} index={inRetry ? -1 : index} results={answers.slice(0, cards.length)} />
 
       <section className="flash-card" aria-labelledby="flash-question">

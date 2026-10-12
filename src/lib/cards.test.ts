@@ -162,10 +162,46 @@ describe('picking a round', () => {
     }
   });
 
-  it('still fills a round when every card has been seen', () => {
+  it('still fills a round with cards seen on earlier days that are not due yet', () => {
     const small: CardRef[] = deck.filter((c) => c.kind === 'tip').slice(0, 3);
-    const states = cardStates(small.map((c) => review(c.id, '2026-10-05', 'good')));
+    const states = cardStates(small.map((c) => review(c.id, '2026-10-04', 'good')));
     expect(pickRound(small, states, '2026-10-05', seeded(1))).toHaveLength(3);
+  });
+
+  it('does not bring back cards answered today just to fill a round', () => {
+    const small: CardRef[] = deck.filter((c) => c.kind === 'tip').slice(0, 4);
+    // 兩張今天答對、一張昨天答對（明天才到期）、一張今天答錯（今天還要再出）
+    const states = cardStates([
+      review(small[0].id, '2026-10-05', 'good'),
+      review(small[1].id, '2026-10-05', 'good'),
+      review(small[2].id, '2026-10-04', 'good'),
+      review(small[3].id, '2026-10-05', 'again'),
+    ]);
+    const round = pickRound(small, states, '2026-10-05', seeded(1)).map((c) => c.id);
+    expect(round.sort()).toEqual([small[2].id, small[3].id].sort());
+    // 全部今天都答對過：這一回合沒有卡
+    const allToday = cardStates(small.map((c) => review(c.id, '2026-10-05', 'good')));
+    expect(pickRound(small, allToday, '2026-10-05', seeded(1))).toEqual([]);
+  });
+
+  it('keeps problem cards to a cap when other kinds of cards are available', () => {
+    const problemKinds = new Set(['pattern', 'insight', 'complexity', 'explain']);
+    for (let seed = 1; seed < 30; seed += 1) {
+      const round = pickRound(deck, new Map(), '2026-10-05', seeded(seed), { maxProblemCards: 3 });
+      expect(round).toHaveLength(5);
+      expect(round.filter((c) => problemKinds.has(c.kind)).length).toBeLessThanOrEqual(3);
+    }
+    // 到期的都是題目卡也一樣
+    const problemCards = deck.filter((c) => problemKinds.has(c.kind)).slice(0, 12);
+    const states = cardStates(problemCards.map((c, i) => review(c.id, '2026-10-01', 'good', `1${i % 10}:00`)));
+    const round = pickRound(deck, states, '2026-10-05', seeded(2), { maxProblemCards: 3 });
+    expect(round.filter((c) => problemKinds.has(c.kind)).length).toBe(3);
+  });
+
+  it('goes over the cap only when there is nothing else to deal', () => {
+    const onlyProblems = deck.filter((c) => c.kind === 'insight' || c.kind === 'pattern');
+    const round = pickRound(onlyProblems, new Map(), '2026-10-05', seeded(1), { maxProblemCards: 3 });
+    expect(round).toHaveLength(5);
   });
 });
 

@@ -11,6 +11,9 @@ export type { CardResult };
 
 export const ROUND_SIZE = 5;
 
+/** 範圍是「全部」時，一回合最多幾張題目卡；其餘留給模式線索和 Python 小知識，做過的題目少時才不會一直繞著那幾題 */
+export const MAX_PROBLEM_CARDS = 3;
+
 /** 每一盒的間隔天數；答錯回到第 0 盒，當天稍後的回合會再出現 */
 export const BOX_INTERVALS = [0, 1, 3, 7, 14, 30] as const;
 
@@ -25,8 +28,9 @@ export type CardRef =
 export interface CardState {
   box: number;
   due: Day;
-  /** 最後一次作答的 ISO 時間 */
+  /** 最後一次作答的 ISO 時間和日期 */
   lastAt: string;
+  lastDay: Day;
   reviews: number;
 }
 
@@ -59,6 +63,7 @@ export function cardStates(reviews: readonly ReviewLike[]): Map<string, CardStat
       box,
       due: addDays(review.day, BOX_INTERVALS[box]),
       lastAt: review.at,
+      lastDay: review.day,
       reviews: (prev?.reviews ?? 0) + 1,
     });
   }
@@ -226,16 +231,23 @@ function interleaveByKind(cards: readonly CardRef[], random: Random): CardRef[] 
   return result;
 }
 
+export interface RoundOptions {
+  size?: number;
+  /** 一回合最多幾張題目卡；其他種類的卡不夠時才放寬 */
+  maxProblemCards?: number;
+}
+
 /**
  * 挑一回合的卡片：先出到期的卡（最早到期、最久沒看的優先），
- * 有新卡時至少留一個位置給新卡；都不夠時拿還沒到期、最快到期的卡補滿。
+ * 有新卡時至少留一個位置給新卡；都不夠時拿還沒到期、最快到期的卡補滿，
+ * 但今天已經答過的卡不拿來補，寧可這一回合少幾張。
  */
 export function pickRound(
   deck: readonly CardRef[],
   states: ReadonlyMap<string, CardState>,
   today: Day,
   random: Random = Math.random,
-  size = ROUND_SIZE,
+  { size = ROUND_SIZE, maxProblemCards = size }: RoundOptions = {},
 ): CardRef[] {
   const byDue = (a: CardRef, b: CardRef) => {
     const sa = states.get(a.id)!;
@@ -244,7 +256,7 @@ export function pickRound(
   };
   const seen = deck.filter((c) => states.has(c.id));
   const due = seen.filter((c) => states.get(c.id)!.due <= today).sort(byDue);
-  const later = seen.filter((c) => states.get(c.id)!.due > today).sort(byDue);
+  const later = seen.filter((c) => states.get(c.id)!.due > today && states.get(c.id)!.lastDay !== today).sort(byDue);
   const fresh = interleaveByKind(
     deck.filter((c) => !states.has(c.id)),
     random,
@@ -252,10 +264,12 @@ export function pickRound(
 
   const chosen: CardRef[] = [];
   const topics = new Set<string>();
-  const take = (pool: readonly CardRef[], limit: number, sameTopicOk = false) => {
+  const problemCards = () => chosen.filter((c) => PROBLEM_KINDS.has(c.kind)).length;
+  const take = (pool: readonly CardRef[], limit: number, { sameTopicOk = false, capped = true } = {}) => {
     for (const card of pool) {
       if (chosen.length >= limit) return;
       if (chosen.includes(card) || (!sameTopicOk && topics.has(topicOf(card)))) continue;
+      if (capped && PROBLEM_KINDS.has(card.kind) && problemCards() >= maxProblemCards) continue;
       chosen.push(card);
       topics.add(topicOf(card));
     }
@@ -265,8 +279,10 @@ export function pickRound(
   take(fresh, size);
   take(due, size);
   take(later, size);
+  // 其他種類的卡不夠時，題目卡可以超過上限
+  take([...due, ...fresh, ...later], size, { capped: false });
   // 範圍很小（例如只做過一題的模式）時，才允許同一題出兩張卡
-  take([...due, ...fresh, ...later], size, true);
+  take([...due, ...fresh, ...later], size, { sameTopicOk: true, capped: false });
   return shuffle(chosen, random);
 }
 
@@ -425,8 +441,9 @@ export function dealRound(
   today: Day,
   context: DealContext,
   random: Random = Math.random,
+  options: RoundOptions = {},
 ): DealtCard[] {
-  return pickRound(deck, states, today, random).flatMap((ref) => dealCard(ref, context, random) ?? []);
+  return pickRound(deck, states, today, random, options).flatMap((ref) => dealCard(ref, context, random) ?? []);
 }
 
 /** 今天複習了幾張卡（同一張卡答兩次算兩次） */
