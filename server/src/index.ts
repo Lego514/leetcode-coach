@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { serve } from '@hono/node-server';
-import { createClaudeBehavioralFeedback, createClaudeFeedback } from './ai/feedback';
+import { createClaudeBehavioralFeedback, createClaudeFeedback, createClaudeFollowUp } from './ai/feedback';
 import { createApp } from './app';
 import { createBrevoMailer } from './mail/brevo';
 import { openDatabase } from './db/client';
@@ -33,6 +33,7 @@ const app = createApp({
     ? {
         generate: createClaudeFeedback(env.anthropicApiKey, (message, error) => console.error(message, error)),
         generateBehavioral: createClaudeBehavioralFeedback(env.anthropicApiKey, (message, error) => console.error(message, error)),
+        followUp: createClaudeFollowUp(env.anthropicApiKey, (message, error) => console.error(message, error)),
         dailyLimit: env.aiDailyLimit,
         allowedEmails: env.aiAllowedEmails,
       }

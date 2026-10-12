@@ -1,6 +1,30 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { AiStatus, BehavioralFeedback, BehavioralFeedbackRequest, BehavioralFeedbackResponse, ExplanationFeedback, FeedbackRequest, FeedbackResponse } from '../../shared/protocol';
-import { buildBehavioralMessage, buildUserMessage, FeedbackError, normalizeBehavioralFeedback, normalizeFeedback, type BehavioralFeedbackGenerator, type FeedbackGenerator } from '../src/ai/feedback';
+import type {
+  AiStatus,
+  BehavioralFeedback,
+  BehavioralFeedbackRequest,
+  BehavioralFeedbackResponse,
+  ExplanationFeedback,
+  FeedbackRequest,
+  FeedbackResponse,
+  FollowUpGrade,
+  FollowUpGradeResponse,
+  FollowUpQuestion,
+  FollowUpQuestionsResponse,
+} from '../../shared/protocol';
+import {
+  buildBehavioralMessage,
+  buildGradeMessage,
+  buildUserMessage,
+  FeedbackError,
+  normalizeBehavioralFeedback,
+  normalizeFeedback,
+  normalizeFollowUpQuestions,
+  normalizeGrade,
+  type BehavioralFeedbackGenerator,
+  type FeedbackGenerator,
+  type FollowUpGenerator,
+} from '../src/ai/feedback';
 import { aiUsage } from '../src/db/schema';
 import { startTestServer, TestClient, type TestServer } from './helpers';
 
@@ -277,5 +301,86 @@ describe('behavioral feedback API', () => {
     });
     expect(messy.points.map((p) => p.id)).toEqual(['situation', 'task', 'action', 'result', 'ownership']);
     expect(messy.points[2].comment).toBe('Concrete steps.');
+  });
+});
+
+describe('follow-up questions API', () => {
+  const questions: FollowUpQuestion[] = [
+    { kind: 'edge', question: 'What if the same number appears twice?', intent: '確認有沒有想到重複值。' },
+    { kind: 'optimize', question: 'Could you do it without extra memory?', intent: '看能不能講出取捨。' },
+  ];
+  const grade: FollowUpGrade = {
+    summary: '回答直接，但第二題沒講出取捨。',
+    answers: [
+      { score: 2, comment: '正確。', betterAnswer: 'I check the map before inserting, so a duplicate pairs with the earlier index.' },
+      { score: 1, comment: '要提到排序後雙指標。', betterAnswer: 'If I sort first I can use two pointers with O(1) extra space, but I lose the original indices.' },
+    ],
+  };
+
+  function followUp(calls: unknown[]): FollowUpGenerator {
+    return {
+      ask: async (input) => {
+        calls.push(input);
+        return { feedback: questions, usage: { inputTokens: 10, outputTokens: 5 } };
+      },
+      grade: async (input) => {
+        calls.push(input);
+        return { feedback: grade, usage: { inputTokens: 20, outputTokens: 10 } };
+      },
+    };
+  }
+
+  it('asks follow-up questions, grades the answers, and counts each call against the daily limit', async () => {
+    const calls: unknown[] = [];
+    server = await startTestServer({
+      ai: { allowedEmails: '*', dailyLimit: 2, generate: async () => ({ feedback, usage: { inputTokens: 1, outputTokens: 1 } }), followUp: followUp(calls) },
+    });
+    const client = new TestClient(server.app);
+    await client.register('probe@example.com');
+
+    const asked = await client.request('POST', '/api/ai/follow-up-questions', request);
+    expect(asked.status).toBe(200);
+    expect((await asked.json()) as FollowUpQuestionsResponse).toEqual({ questions, usedToday: 1, dailyLimit: 2 });
+
+    const answers = [
+      { question: questions[0].question, answer: 'I check the map before I insert.' },
+      { question: questions[1].question, answer: '' },
+    ];
+    const graded = await client.request('POST', '/api/ai/follow-up-grade', { ...request, answers });
+    expect(graded.status).toBe(200);
+    expect((await graded.json()) as FollowUpGradeResponse).toEqual({ grade, usedToday: 2, dailyLimit: 2 });
+    expect(calls).toEqual([request, { ...request, answers }]);
+
+    const over = await client.request('POST', '/api/ai/follow-up-questions', request);
+    expect(over.status).toBe(429);
+    // 沒有回答或超過三題就擋下
+    expect((await client.request('POST', '/api/ai/follow-up-grade', { ...request, answers: [] })).status).toBe(400);
+  });
+
+  it('is off when the server has no follow-up generator', async () => {
+    const client = await signedIn({ dailyLimit: 5, generate: async () => ({ feedback, usage: { inputTokens: 0, outputTokens: 0 } }) });
+    const res = await client.request('POST', '/api/ai/follow-up-questions', request);
+    expect(res.status).toBe(503);
+    expect((await res.json()).error.code).toBe('ai_unavailable');
+  });
+
+  it('keeps at most three known questions, and gives every answer a grade in order', () => {
+    const cleaned = normalizeFollowUpQuestions({
+      questions: [
+        { kind: 'nonsense', question: 'Skip me', intent: '' },
+        ...questions,
+        { kind: 'complexity', question: '  Why is it O(n)?  ', intent: 'x' },
+        { kind: 'edge', question: 'A fourth one', intent: 'x' },
+      ],
+    });
+    expect(cleaned.map((q) => q.question)).toEqual([questions[0].question, questions[1].question, 'Why is it O(n)?']);
+    expect(() => normalizeFollowUpQuestions({ questions: [] })).toThrow();
+
+    const short = normalizeGrade({ summary: 'ok', answers: [{ score: 2, comment: 'good', betterAnswer: 'x' }, { score: 7 }] }, 3);
+    expect(short.answers.map((a) => a.score)).toEqual([2, 0, 0]);
+
+    const message = buildGradeMessage({ ...request, answers: [{ question: 'Why?', answer: 'Because.' }] });
+    expect(message).toContain('<transcript>\nI use a hash map');
+    expect(message).toContain('Follow-up 1: Why?\n<answer>\nBecause.\n</answer>');
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { ExplanationFeedback } from '../../../shared/protocol';
+import type { ExplanationFeedback, FollowUpRecord } from '../../../shared/protocol';
 import { CLARITY_OPTIONS, EXPLAIN_CHECKS, EXPLAIN_SECONDS, type ExplainCheck } from '../../data/interview';
 import type { Problem } from '../../data/problems';
 import { useI18n } from '../../i18n';
@@ -141,6 +141,7 @@ export function ExplainReview({ result, steps, problem, onAgain, onClose }: Expl
   const note = useNote(problem?.id ?? 0);
   const [transcript, setTranscript] = useState(result.transcript ?? '');
   const [feedback, setFeedback] = useState<ExplanationFeedback | null>(null);
+  const [followUp, setFollowUp] = useState<FollowUpRecord | null>(null);
   const [checks, setChecks] = useState<ReadonlySet<ExplainCheck>>(() => new Set());
   const [clarity, setClarity] = useState<Clarity | null>(null);
   const [saved, setSaved] = useState(false);
@@ -175,6 +176,7 @@ export function ExplainReview({ result, steps, problem, onAgain, onClose }: Expl
     if (result.audio) record.audio = result.audio;
     if (transcript.trim()) record.transcript = transcript.trim();
     if (feedback) record.feedback = feedback;
+    if (followUp?.items.length) record.followUp = followUp;
     await saveMock(record);
     toast(s.saved);
   }
@@ -231,6 +233,8 @@ export function ExplainReview({ result, steps, problem, onAgain, onClose }: Expl
               onChange={setTranscript}
               usedSec={result.usedSec}
               currentScript={note?.explanation ?? ''}
+              followUp={followUp}
+              onFollowUp={setFollowUp}
             />
           )}
 

@@ -128,6 +128,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - A two-minute explanation drill.
   - An optional live English transcript (Web Speech API). Afterwards you can fix it, see your word count, speaking pace, and filler words, and save it as the problem's explanation script.
   - **AI feedback (Claude)** on the transcript: a 0–2 score for each of the five explanation points with comments, strengths, concrete rewrites of unclear phrases, and a model answer you can save as your script. Requires an account; the server holds the API key and enforces a daily limit per user. In the live app it is on for allow-listed accounts only (`AI_ALLOWED_EMAILS`), so a public sign-up can't run up the API bill.
+  - **Interviewer follow-ups (Claude)**: after you explain, Claude plays the interviewer and asks two or three follow-up questions aimed at what your explanation left vague or got wrong (edge cases, can you do better, why that complexity, another approach). The browser reads each question aloud, and you answer by speaking (a live English transcript) or typing. Then each answer gets a 0–2 score, a comment, and a stronger spoken answer. The questions and answers are saved with the drill. Asking and grading each count as one request toward the daily limit.
 - **Progress**: a year-long activity heatmap like LeetCode's (darker squares mean more problems that day; flashcard-only days show the lightest shade) with active days and the longest streak, a per-pattern mastery grid, a weekly practice chart, and a breakdown by difficulty.
 - **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, settings, flashcard answers, whiteboards, and behavioral stories between devices. Everything keeps working offline and without an account. Sign-in has its own page, linked from the sidebar, the More tab, and a dismissible banner on Today on phones. Passwords can be reset by email, and the password fields have a show/hide toggle.
 - **Bug reports and suggestions**: a "Report a problem" page, a Report button on every flashcard once it's answered, and a link on the error screen. Reports work without an account; the form shows exactly what gets attached (page, card, version, browser). Signed-in users can follow the status of their own reports, and admin accounts (`ADMIN_EMAILS`) get an inbox to mark them resolved.
@@ -350,6 +351,8 @@ Notes:
 題庫的「標記以前刷過的題」會把一大批題目分散到之後幾天，每天最多 5 題到期，不會全擠在同一天。
 
 模擬面試可以開啟英文逐字稿（瀏覽器的語音辨識，Chrome 會把聲音送到 Google 轉成文字）。結束後可以修正內容、看字數、語速和贅詞，再一鍵存成這題的講解稿。登入後還可以按「取得 AI 回饋」，由 Claude 依五個重點評分、指出講不清楚的句子並給參考講法（逐字稿會送到 Anthropic；伺服器要設定 `ANTHROPIC_API_KEY` 和允許名單 `AI_ALLOWED_EMAILS`，每人每天預設 20 次，一次約 1～3 元台幣）。線上版本只對允許名單裡的帳號開放，避免公開註冊的帳號大量使用、產生 API 費用。
+
+**面試官追問**：講完之後可以請 Claude 扮演面試官追問兩三題，優先問你講得模糊、跳過或講錯的地方（邊界情況、能不能更好、為什麼是這個複雜度、換個做法）。瀏覽器會把問題念出來，你可以開口用英文回答（即時逐字稿），也可以打字；回答完每題都會有 0–2 分、評語和更好的英文答法，追問和回答會跟這次練習一起存起來。出題和評分各算 1 次額度。
 
 不登入也能完整使用，資料存在瀏覽器裡。忘記密碼可以用 email 重設（伺服器要設定 Brevo 的 `BREVO_API_KEY` 和 `MAIL_FROM`，免費方案每天約 300 封）。在「帳號」頁註冊或登入後（桌面版側邊欄、手機的「更多」和今天頁都有入口），練習紀錄、筆記、設定、微複習紀錄和白板會自動同步到雲端，換電腦或換瀏覽器都能接著用；離線時照常記錄，恢復連線後再上傳。錄音只會留在原本的裝置上。
 

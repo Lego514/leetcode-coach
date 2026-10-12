@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import type { ExplanationFeedback } from '../../shared/protocol';
+import type { ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { transcriptStats } from '../lib/transcript';
 import { saveNote } from '../store/actions';
 import { AiFeedbackPanel } from './AiFeedbackPanel';
+import { FollowUpPanel } from './FollowUpPanel';
 import { useToast } from './toast';
 import { Dialog, Sheet } from './ui';
 
@@ -20,9 +21,12 @@ interface TranscriptReviewProps {
   onChange: (value: string) => void;
   usedSec: number;
   currentScript: string;
+  /** 面試官追問；有題目時才有 */
+  followUp?: FollowUpRecord | null;
+  onFollowUp?: (value: FollowUpRecord) => void;
 }
 
-export function TranscriptReview({ problem, feedback, onFeedback, value, onChange, usedSec, currentScript }: TranscriptReviewProps) {
+export function TranscriptReview({ problem, feedback, onFeedback, value, onChange, usedSec, currentScript, followUp, onFollowUp }: TranscriptReviewProps) {
   const { t } = useI18n();
   const toast = useToast();
   // 等待確認要存成講解稿的文字：逐字稿本身或 AI 的參考講法
@@ -85,6 +89,7 @@ export function TranscriptReview({ problem, feedback, onFeedback, value, onChang
               onFeedback={onFeedback}
               onUseScript={requestSave}
             />
+            {onFollowUp && <FollowUpPanel problem={problem} transcript={value} usedSec={usedSec} value={followUp ?? null} onChange={onFollowUp} />}
           </>
         )}
       </div>
