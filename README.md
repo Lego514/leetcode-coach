@@ -128,6 +128,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - A two-minute explanation drill.
   - An optional live English transcript (Web Speech API). Afterwards you can fix it, see your word count, speaking pace, and filler words, and save it as the problem's explanation script.
   - **AI feedback (Claude)** on the transcript: a 0–2 score for each of the five explanation points with comments, strengths, concrete rewrites of unclear phrases, and a model answer you can save as your script. Requires an account; the server holds the API key and enforces a daily limit per user. In the live app it is on for allow-listed accounts only (`AI_ALLOWED_EMAILS`), so a public sign-up can't run up the API bill.
+  - **Use your own ChatGPT or Claude**: no account or AI requests needed. Copy a ready-made prompt (feedback on the explanation, or an interviewer who asks follow-ups one at a time and then grades them) and paste it into a new chat. The scoring points are the same ones the built-in AI feedback uses, shared from `shared/prompts.ts`. Paste the reply back and it's saved with the session. Behavioral practice has the same option.
   - **Interviewer follow-ups (Claude)**: after you explain, Claude plays the interviewer and asks two or three follow-up questions aimed at what your explanation left vague or got wrong (edge cases, can you do better, why that complexity, another approach). The browser reads each question aloud, and you answer by speaking (a live English transcript) or typing. Then each answer gets a 0–2 score, a comment, and a stronger spoken answer. The questions and answers are saved with the drill. Asking and grading each count as one request toward the daily limit.
 - **Progress**: a year-long activity heatmap like LeetCode's (darker squares mean more problems that day; flashcard-only days show the lightest shade) with active days and the longest streak, a per-pattern mastery grid, a weekly practice chart, and a breakdown by difficulty.
 - **Accounts and offline-first sync**: sign up with email and password to sync attempts, notes, settings, flashcard answers, whiteboards, and behavioral stories between devices. Everything keeps working offline and without an account. Sign-in has its own page, linked from the sidebar, the More tab, and a dismissible banner on Today on phones. Passwords can be reset by email, and the password fields have a show/hide toggle.
@@ -351,6 +352,8 @@ Notes:
 題庫的「標記以前刷過的題」會把一大批題目分散到之後幾天，每天最多 5 題到期，不會全擠在同一天。
 
 模擬面試可以開啟英文逐字稿（瀏覽器的語音辨識，Chrome 會把聲音送到 Google 轉成文字）。結束後可以修正內容、看字數、語速和贅詞，再一鍵存成這題的講解稿。登入後還可以按「取得 AI 回饋」，由 Claude 依五個重點評分、指出講不清楚的句子並給參考講法（逐字稿會送到 Anthropic；伺服器要設定 `ANTHROPIC_API_KEY` 和允許名單 `AI_ALLOWED_EMAILS`，每人每天預設 20 次，一次約 1～3 元台幣）。線上版本只對允許名單裡的帳號開放，避免公開註冊的帳號大量使用、產生 API 費用。
+
+**用自己的 ChatGPT 或 Claude**：不用登入、不用額度。複製現成的提示詞（講解回饋，或是一次問一題、問完再評分的面試官追問），貼到新的對話就能用，評分標準跟內建的 AI 回饋是同一份（`shared/prompts.ts`）。回覆可以貼回來，跟這次練習一起存。行為面試的開口練習也有。
 
 **面試官追問**：講完之後可以請 Claude 扮演面試官追問兩三題，優先問你講得模糊、跳過或講錯的地方（邊界情況、能不能更好、為什麼是這個複雜度、換個做法）。瀏覽器會把問題念出來，你可以開口用英文回答（即時逐字稿），也可以打字；回答完每題都會有 0–2 分、評語和更好的英文答法，追問和回答會跟這次練習一起存起來。出題和評分各算 1 次額度。
 

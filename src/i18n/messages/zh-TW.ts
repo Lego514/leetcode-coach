@@ -1425,6 +1425,23 @@ const zhTW = {
     deleted: '故事已刪除',
   },
 
+  chatPrompt: {
+    title: '用自己的 ChatGPT 或 Claude',
+    intro: '不用登入、不用額度：複製提示詞，貼到 ChatGPT 或 Claude 的新對話，評分標準跟上面的 AI 回饋一樣。逐字稿會送到你貼上的那個服務。',
+    copy: (label: string) => `複製提示詞：${label}`,
+    feedbackPrompt: '回饋',
+    followUpPrompt: '面試官追問',
+    copied: '已複製，貼到 ChatGPT 或 Claude 的新對話裡',
+    copyFailed: '這個瀏覽器不讓網頁寫入剪貼簿，請自己全選下面的文字複製。',
+    manualLabel: '提示詞',
+    needsText: '先有逐字稿才能複製。',
+    openChatGpt: '開啟 ChatGPT',
+    openClaude: '開啟 Claude',
+    replyLabel: '貼上回覆（選填，會跟這次練習一起存）',
+    replyPlaceholder: '把 ChatGPT 或 Claude 的回答貼在這裡',
+    showReply: '看我貼上的 AI 回覆',
+  },
+
   followUp: {
     title: '面試官追問',
     intro: '講完之後，Claude 扮演面試官追問兩三題（例如邊界情況、能不能更好、為什麼是這個複雜度），你一題一題用英文回答，最後再評分並給更好的答法。出題和評分各用 1 次額度，逐字稿和你的回答會送到 Anthropic 處理。',

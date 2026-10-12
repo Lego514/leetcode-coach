@@ -1450,6 +1450,23 @@ const en: Messages = {
     deleted: 'Story deleted',
   },
 
+  chatPrompt: {
+    title: 'Use your own ChatGPT or Claude',
+    intro: 'No account or AI requests needed: copy a prompt and paste it into a new ChatGPT or Claude chat. It scores you on the same points as the AI feedback above. Your transcript goes to whichever service you paste it into.',
+    copy: (label) => `Copy prompt: ${label}`,
+    feedbackPrompt: 'feedback',
+    followUpPrompt: 'interviewer follow-ups',
+    copied: 'Copied. Paste it into a new ChatGPT or Claude chat',
+    copyFailed: 'This browser doesn’t let pages write to the clipboard. Select the text below and copy it yourself.',
+    manualLabel: 'Prompt',
+    needsText: 'You need a transcript before you can copy a prompt.',
+    openChatGpt: 'Open ChatGPT',
+    openClaude: 'Open Claude',
+    replyLabel: 'Paste the reply (optional, saved with this session)',
+    replyPlaceholder: 'Paste ChatGPT’s or Claude’s answer here',
+    showReply: 'Show the AI reply I pasted',
+  },
+
   followUp: {
     title: 'Interviewer follow-ups',
     intro: 'After you explain, Claude plays the interviewer and asks two or three follow-up questions, such as an edge case, whether you can do better, or why the complexity is what you said. Answer each one out loud in English, then get a score and a stronger answer for each. Asking and grading each use 1 request. The transcript and your answers are sent to Anthropic for processing.',

@@ -4789,6 +4789,15 @@ textarea.board-text-input {
   color: var(--danger);
 }
 
+/* 複製提示詞、貼回來的回覆 */
+.chat-reply-text {
+  white-space: pre-wrap;
+}
+
+.chat-prompt-manual {
+  font-size: 13px;
+}
+
 /* 面試官追問 */
 .follow-up-head {
   display: flex;

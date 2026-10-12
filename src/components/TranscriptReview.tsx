@@ -4,7 +4,10 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { transcriptStats } from '../lib/transcript';
 import { saveNote } from '../store/actions';
+import { getPattern } from '../data/patterns';
+import { explanationChatPrompt, followUpChatPrompt } from '../lib/chatPrompts';
 import { AiFeedbackPanel } from './AiFeedbackPanel';
+import { ChatPromptPanel } from './ChatPromptPanel';
 import { FollowUpPanel } from './FollowUpPanel';
 import { useToast } from './toast';
 import { Dialog, Sheet } from './ui';
@@ -24,15 +27,44 @@ interface TranscriptReviewProps {
   /** 面試官追問；有題目時才有 */
   followUp?: FollowUpRecord | null;
   onFollowUp?: (value: FollowUpRecord) => void;
+  /** 貼回來的 ChatGPT 或 Claude 回覆；有題目時才有 */
+  chatReply?: string;
+  onChatReply?: (reply: string) => void;
 }
 
-export function TranscriptReview({ problem, feedback, onFeedback, value, onChange, usedSec, currentScript, followUp, onFollowUp }: TranscriptReviewProps) {
-  const { t } = useI18n();
+export function TranscriptReview({
+  problem,
+  feedback,
+  onFeedback,
+  value,
+  onChange,
+  usedSec,
+  currentScript,
+  followUp,
+  onFollowUp,
+  chatReply,
+  onChatReply,
+}: TranscriptReviewProps) {
+  const { t, locale } = useI18n();
   const toast = useToast();
   // 等待確認要存成講解稿的文字：逐字稿本身或 AI 的參考講法
   const [pendingScript, setPendingScript] = useState<string | null>(null);
   const text = value.trim();
   const stats = useMemo(() => transcriptStats(text, usedSec), [text, usedSec]);
+
+  // 貼到 ChatGPT 或 Claude 的提示詞：按下複製時才組，用的是當下修正過的逐字稿
+  const chatRequest = (p: Problem) => ({
+    problem: { id: p.id, title: p.title, difficulty: p.difficulty, pattern: getPattern(p.pattern, 'en').name },
+    transcript: text,
+    seconds: usedSec,
+    language: locale,
+  });
+  const chatPrompts = problem
+    ? [
+        { key: 'feedback', label: t.chatPrompt.feedbackPrompt, build: () => explanationChatPrompt(chatRequest(problem)) },
+        { key: 'follow-up', label: t.chatPrompt.followUpPrompt, build: () => followUpChatPrompt(chatRequest(problem)) },
+      ]
+    : [];
 
   async function saveScript(script: string) {
     setPendingScript(null);
@@ -90,6 +122,14 @@ export function TranscriptReview({ problem, feedback, onFeedback, value, onChang
               onUseScript={requestSave}
             />
             {onFollowUp && <FollowUpPanel problem={problem} transcript={value} usedSec={usedSec} value={followUp ?? null} onChange={onFollowUp} />}
+            {onChatReply && (
+              <ChatPromptPanel
+                disabled={!text}
+                reply={chatReply ?? ''}
+                onReply={onChatReply}
+                prompts={chatPrompts}
+              />
+            )}
           </>
         )}
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import type { ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
 import { FeedbackView } from '../components/AiFeedbackPanel';
+import { ChatReply } from '../components/ChatPromptPanel';
 import { FollowUpResult } from '../components/FollowUpPanel';
 import { BlobAudio } from '../components/BlobAudio';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
@@ -624,6 +625,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   const [transcript, setTranscript] = useState(result.transcript ?? '');
   const [feedback, setFeedback] = useState<ExplanationFeedback | null>(null);
   const [followUp, setFollowUp] = useState<FollowUpRecord | null>(null);
+  const [chatReply, setChatReply] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const canSave = isFull ? rating !== null : clarity !== null;
@@ -649,6 +651,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
     if (transcript.trim()) record.transcript = transcript.trim();
     if (feedback) record.feedback = feedback;
     if (followUp?.items.length) record.followUp = followUp;
+    if (chatReply.trim()) record.chatReply = chatReply.trim();
     await saveMock(record);
     if (isFull && rating) {
       await recordAttempt(problem.id, rating, {
@@ -705,6 +708,8 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
               currentScript={note?.explanation ?? ''}
               followUp={followUp}
               onFollowUp={setFollowUp}
+              chatReply={chatReply}
+              onChatReply={setChatReply}
             />
           )}
 
@@ -891,6 +896,7 @@ function MockHistory() {
                     </div>
                   </details>
                 )}
+                {m.chatReply && <ChatReply text={m.chatReply} />}
                 {m.audio && <MockAudio blob={m.audio} />}
               </li>
             );

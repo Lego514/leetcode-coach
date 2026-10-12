@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router';
 import { BEHAVIORAL_POINTS, type BehavioralPoint } from '../../shared/constants';
 import type { BehavioralFeedback } from '../../shared/protocol';
 import { BehavioralFeedbackPanel } from '../components/BehavioralFeedback';
+import { ChatPromptPanel } from '../components/ChatPromptPanel';
 import { BlobAudio } from '../components/BlobAudio';
 import { useToast } from '../components/toast';
 import { PageHead, Sheet } from '../components/ui';
 import { BEHAVIORAL_QUESTIONS, BEHAVIORAL_THEMES, STAR_PARTS, type BehavioralQuestion, type BehavioralTheme } from '../data/behavioral';
 import { useI18n } from '../i18n';
+import { behavioralChatPrompt } from '../lib/chatPrompts';
 import { formatDuration, toDay } from '../lib/dates';
 import { useRecorder, useStopwatch } from '../lib/session';
 import { speechSupported, useSpeechTranscript } from '../lib/speech';
@@ -277,7 +279,7 @@ function RehearseSession({ setup, onFinish }: { setup: Setup; onFinish: (spoken:
 }
 
 function RehearseReview({ setup, spoken, onAgain }: { setup: Setup; spoken: Spoken; onAgain: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const r = t.rehearse;
   const navigate = useNavigate();
   const toast = useToast();
@@ -285,6 +287,7 @@ function RehearseReview({ setup, spoken, onAgain }: { setup: Setup; spoken: Spok
   const [covered, setCovered] = useState<BehavioralPoint[]>([]);
   const [clarity, setClarity] = useState<Clarity | null>(null);
   const [feedback, setFeedback] = useState<BehavioralFeedback | null>(null);
+  const [chatReply, setChatReply] = useState('');
   const [saving, setSaving] = useState(false);
   const text = transcript.trim();
   const stats = useMemo(() => transcriptStats(text, spoken.usedSec), [text, spoken.usedSec]);
@@ -306,6 +309,7 @@ function RehearseReview({ setup, spoken, onAgain }: { setup: Setup; spoken: Spok
       ...(clarity ? { clarity } : {}),
       ...(text ? { transcript: text } : {}),
       ...(feedback ? { feedback } : {}),
+      ...(chatReply.trim() ? { chatReply: chatReply.trim() } : {}),
       ...(spoken.audio ? { audio: spoken.audio } : {}),
     });
     toast(r.saved);
@@ -313,6 +317,12 @@ function RehearseReview({ setup, spoken, onAgain }: { setup: Setup; spoken: Spok
   }
 
   const story = setup.story;
+  const request = {
+    question: setup.question.en,
+    ...(story ? { story: { title: story.title, situation: story.situation, task: story.task, action: story.action, result: story.result } } : {}),
+    transcript: text,
+    seconds: spoken.usedSec,
+  };
   return (
     <div className="page">
       <PageHead title={r.reviewTitle} lede={r.reviewLede(formatDuration(spoken.usedSec))}>
@@ -358,17 +368,12 @@ function RehearseReview({ setup, spoken, onAgain }: { setup: Setup; spoken: Spok
                 </li>
               </ul>
             )}
-            <BehavioralFeedbackPanel
-              request={{
-                question: setup.question.en,
-                ...(story
-                  ? { story: { title: story.title, situation: story.situation, task: story.task, action: story.action, result: story.result } }
-                  : {}),
-                transcript: text,
-                seconds: spoken.usedSec,
-              }}
-              feedback={feedback}
-              onFeedback={setFeedback}
+            <BehavioralFeedbackPanel request={request} feedback={feedback} onFeedback={setFeedback} />
+            <ChatPromptPanel
+              disabled={!text}
+              reply={chatReply}
+              onReply={setChatReply}
+              prompts={[{ key: 'behavioral', label: t.chatPrompt.feedbackPrompt, build: () => behavioralChatPrompt({ ...request, language: locale }) }]}
             />
           </div>
         </Sheet>
