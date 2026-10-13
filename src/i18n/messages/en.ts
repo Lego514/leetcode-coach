@@ -1454,6 +1454,54 @@ const en: Messages = {
     deleted: 'Story deleted',
   },
 
+  stuck: {
+    label: 'Where did you get stuck? (optional, pick any)',
+    title: 'Where you get stuck',
+    note: (days, n) => `Last ${days} days, ${count(n, 'session')} with a reason marked`,
+    empty: 'Mark where you got stuck when you record a problem, and this shows where you get stuck most and in which patterns.',
+    count: (n) => count(n, 'time'),
+    mostIn: (patterns) => `Most often in: ${patterns}`,
+    joiner: ', ',
+    reasons: {
+      pattern: {
+        name: 'Didn’t see the pattern',
+        hint: 'Didn’t know which approach to use',
+        tip: 'Do the pattern clue flashcards to practice spotting which pattern a problem needs.',
+        action: 'Do flashcards',
+      },
+      optimize: {
+        name: 'Couldn’t optimize',
+        hint: 'Only had the brute force',
+        tip: 'State the brute force, then ask what’s slow, what’s repeated, and what to keep. The pattern cards list the usual optimizations.',
+        action: 'Open pattern cards',
+      },
+      implement: {
+        name: 'Couldn’t code it',
+        hint: 'Knew the approach but couldn’t write it',
+        tip: 'Get the Python template for this pattern into your fingers: write the skeleton first, then the details.',
+        action: 'Open pattern cards',
+      },
+      edge: {
+        name: 'Missed an edge case',
+        hint: 'Empty, one element, duplicates, negatives…',
+        tip: 'List edge cases before coding: empty, one element, duplicates, negatives, the largest input. The mock interview’s examples step reminds you.',
+        action: 'Mock interview',
+      },
+      bug: {
+        name: 'Had a bug',
+        hint: 'Spent too long debugging',
+        tip: 'Trace a small example line by line before submitting. The whiteboard’s code tracing is good practice.',
+        action: 'Open the whiteboard',
+      },
+      time: {
+        name: 'Ran out of time',
+        hint: 'Went over the target time',
+        tip: 'Time yourself in a mock interview and see which step takes longest.',
+        action: 'Mock interview',
+      },
+    },
+  },
+
   chatPrompt: {
     title: 'Use your own ChatGPT or Claude',
     intro: 'No account or AI requests needed: copy a prompt and paste it into a new ChatGPT or Claude chat. It scores you on the same points as the AI feedback above. Your transcript goes to whichever service you paste it into.',

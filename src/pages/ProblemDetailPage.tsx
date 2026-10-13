@@ -395,6 +395,11 @@ function History({ problemId }: { problemId: number }) {
                 <span>
                   {t.ratings[a.rating].label}
                   <span className="history-when">{t.detail.historyDetail(t.modes[a.mode], a.minutes, a.hints, a.sawSolution)}</span>
+                  {a.stuck?.map((reason) => (
+                    <span key={reason} className="chip">
+                      {t.stuck.reasons[reason].name}
+                    </span>
+                  ))}
                 </span>
                 <span className="history-when history-date">{fmt.day(a.day)}</span>
               </li>

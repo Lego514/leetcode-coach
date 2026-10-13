@@ -7,6 +7,8 @@ import { recordAttempt, saveNote } from '../store/actions';
 import type { AttemptMode, ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
 import { useNote, useProgress, useSettings, useToday } from '../store/queries';
+import type { StuckReason } from '../../shared/constants';
+import { StuckPicker } from './StuckPicker';
 import { useToast } from './toast';
 import { Dialog } from './ui';
 
@@ -69,6 +71,7 @@ export function RecordForm({
   const [rating, setRating] = useState<Rating | null>(initialRating ?? null);
   const [minutes, setMinutes] = useState(initialMinutes ? String(initialMinutes) : '');
   const [idea, setIdea] = useState<string | null>(null);
+  const [stuck, setStuck] = useState<StuckReason[]>([]);
   const [saving, setSaving] = useState(false);
 
   const currentIdea = idea ?? note?.idea ?? '';
@@ -83,6 +86,7 @@ export function RecordForm({
         minutes: Number(minutes) || undefined,
         hints,
         sawSolution,
+        stuck,
       });
       if (idea !== null && idea !== (note?.idea ?? '')) {
         await saveNote(problem.id, { idea: idea.trim() });
@@ -118,6 +122,8 @@ export function RecordForm({
           })}
         </div>
       </fieldset>
+
+      <StuckPicker value={stuck} onChange={setStuck} />
 
       <div className="form-grid">
         <label className="field">

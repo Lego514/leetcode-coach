@@ -1,3 +1,4 @@
+import type { StuckReason } from '../../shared/constants';
 import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { toDay, type Day } from '../lib/dates';
@@ -30,6 +31,8 @@ export interface RecordAttemptOptions {
   sawSolution?: boolean;
   /** 到期日往後挪幾天，只有批次標記會用到 */
   delayDays?: number;
+  /** 卡在哪 */
+  stuck?: readonly StuckReason[];
   day?: Day;
   at?: Date;
 }
@@ -37,7 +40,7 @@ export interface RecordAttemptOptions {
 export async function recordAttempt(
   problemId: number,
   rating: Rating,
-  { mode = 'practice', minutes, hints, sawSolution, delayDays, day, at = new Date() }: RecordAttemptOptions = {},
+  { mode = 'practice', minutes, hints, sawSolution, delayDays, stuck, day, at = new Date() }: RecordAttemptOptions = {},
 ): Promise<ProgressRecord> {
   const attemptDay = day ?? toDay(at);
   return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
@@ -64,6 +67,7 @@ export async function recordAttempt(
       ...(hints && hints > 0 ? { hints } : {}),
       ...(sawSolution ? { sawSolution } : {}),
       ...(delayDays && delayDays > 0 ? { delayDays } : {}),
+      ...(stuck && stuck.length > 0 ? { stuck: [...stuck] } : {}),
     });
     await track(db, 'attempts', uid);
     return record;
