@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import type { ExplainReviewProps, ExplainSessionProps } from 'dsa-whiteboard';
 import type { ExplanationFeedback, FollowUpRecord } from '../../../shared/protocol';
 import { CLARITY_OPTIONS, EXPLAIN_CHECKS, EXPLAIN_SECONDS, type ExplainCheck } from '../../data/interview';
 import type { Problem } from '../../data/problems';
 import { useI18n } from '../../i18n';
 import { formatDuration, today } from '../../lib/dates';
-import type { BoardStep } from '../../lib/board/model';
 import { useRecorder, useStopwatch } from '../../lib/session';
 import { speechSupported, useSpeechTranscript } from '../../lib/speech';
 import { saveMock } from '../../store/actions';
@@ -35,16 +35,11 @@ export function addStepTime(secs: readonly number[], index: number, ms: number):
   return next;
 }
 
-interface ExplainSessionProps {
-  index: number;
-  stepCount: number;
-  /** 讓白板的 Esc 也能結束講解 */
-  finishRef: RefObject<(() => void) | null>;
-  onFinish: (result: ExplainResult) => void;
-}
+/** 題目的白板才有題目：講完可以存成講解練習、請 AI 回饋 */
+export const ExplainProblemContext = createContext<Problem | undefined>(undefined);
 
 /** 講解時播放列下方：計時、錄音中、即時逐字稿、講完了 */
-export function ExplainSession({ index, stepCount, finishRef, onFinish }: ExplainSessionProps) {
+export function ExplainSession({ index, stepCount, finishRef, onFinish }: ExplainSessionProps<ExplainResult>) {
   const { t } = useI18n();
   const s = t.board.explain;
   const { elapsedSec, start, pause } = useStopwatch();
@@ -124,17 +119,10 @@ export function ExplainSession({ index, stepCount, finishRef, onFinish }: Explai
   );
 }
 
-interface ExplainReviewProps {
-  result: ExplainResult;
-  steps: readonly BoardStep[];
-  /** 自由白板沒有題目，就不能存紀錄、請 AI 回饋 */
-  problem?: Problem;
-  onAgain: () => void;
-  onClose: () => void;
-}
-
 /** 講完之後：每一步講了多久、錄音、逐字稿；題目的白板還可以自評、存起來 */
-export function ExplainReview({ result, steps, problem, onAgain, onClose }: ExplainReviewProps) {
+export function ExplainReview({ result, steps, onAgain, onClose }: ExplainReviewProps<ExplainResult>) {
+  // 自由白板沒有題目，就不能存紀錄、請 AI 回饋
+  const problem = useContext(ExplainProblemContext);
   const { t } = useI18n();
   const s = t.board.explain;
   const toast = useToast();

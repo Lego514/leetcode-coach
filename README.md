@@ -49,70 +49,11 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   - Practice everything, only problems you've done, only clues, only Python tips, or one pattern.
   - A **rest timer** (60–180 seconds) counts down between sets. When it ends it beeps, vibrates where supported, and shows an alert, and it asks the browser to keep the screen on while it runs.
   - Answers save one at a time, sync like attempts, and count toward the streak.
-- **Whiteboard, built from scratch**: drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, recursion trees, DP tables, intervals, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand.
-  - **Range frames** box the cells between two pointers on the same array and follow them as they move, for sliding windows: select the two pointers and choose "Frame between pointers".
-  - **Templates** set up a common scene in one click, with the pointers already named: two pointers, sliding window, reversing a linked list, tree DFS, grid BFS, and backtracking (the subsets decision tree with `path` and a `cur` pointer). The whole group is placed in free space and selected so it can be dragged at once.
-  - The palette is grouped by how often problems use each element, with line icons. Text switches to a heading from the selection bar.
-  - **Pointers** snap to array cells, step with the arrow keys, and are colored by name (i, j, k, l).
-  - **Single cells** can be selected one at a time to highlight them, put a pointer on them, insert next to them, or delete them. Pointers and highlights follow their values when cells move. A dashed "+" adds cells, rows, and columns.
-  - **Linked lists** are one element:
-    - Each link between two nodes cycles between forward, reversed, and cut with a click, so reversing a list can be traced link by link.
-    - The tail can point back to any node to show a cycle.
-    - Pointers such as prev, curr, and next snap under nodes.
-  - **Binary trees** lay themselves out in order, so a binary search tree reads sorted from left to right.
-    - Pick a node to add a left or right child from a dashed slot, color it, or delete its subtree.
-    - Pointers sit above nodes and move to a child or the parent with the arrow keys.
-    - Up to six levels.
-  - **Graphs** lay their nodes out on a circle.
-    - Directed graphs get arrowheads, and opposite edges between the same two nodes curve apart.
-    - Edges can carry weights and be marked as visited.
-    - Pick a node to connect it to another, color it, add a pointer, or delete it. Pick an edge to mark it, weigh it, or delete it.
-    - Up to 20 nodes and 60 edges.
-  - **Heaps** draw the same values as a tree and as an array with indices, or either one alone.
-    - Push and Pop sift values into place by the heap rules; "Record each step for playback" saves every swap as a step, captioned like `swap 0 ↔ 2`.
-    - Switch between a min-heap and a max-heap. Nodes that break the order turn red, and Heapify fixes them all at once.
-    - Values compare as numbers when they are numbers. Up to 31 values (five levels).
-  - **Recursion trees** draw one node per call, laid out top-down so each caller sits over its calls, for backtracking, memoized DP, and tries.
-    - Pick a call to add a child call, write its return value or the choice on the edge above it, or prune the branch (drawn dashed and faded).
-    - "Color repeated calls" gives calls with the same label the same color, which shows what memoization would save.
-    - A pointer steps through the calls in DFS order with ← →, and back to the caller with ↑, so a trace can be recorded step by step.
-    - Up to 63 calls and eight levels.
-  - **DP tables** fill one cell at a time, 1D (`dp[i]`) or 2D (`dp[i][j]`), with the strings or numbers from the problem written beside the rows and columns.
-    - Choose what each cell depends on (`dp[i-1], dp[i-2]`, every earlier `dp[j]`, `dp[i-k]` for coins, up/left/diagonal, or `dp[i+1][j-1]` filled from the bottom row for palindromes). The cell being filled then shows arrows from those cells, as arcs under a 1D table.
-    - Type the value in the selection bar and press Enter to move to the next empty cell. With "Record each filled cell" on, every cell becomes a playback step captioned like `dp[2][3] = 2`, so the whole fill order can be replayed.
-    - Up to 26 rows and 30 columns.
-  - **Intervals** sit on one number line with round ticks, one row per interval, so overlaps line up, for Merge Intervals, Insert Interval, Meeting Rooms, and the like.
-    - "Sort by start" is the first step of merging. Pick an interval to change its start or end, merge it with the next row when they overlap (touching ends count), mark it removed (dashed), or color it.
-    - The sweep line stops at each start and end point and shows how many intervals are in progress there, counting starts but not ends, so its peak is the answer to Meeting Rooms II.
-    - Up to 30 intervals.
-  - **Code boxes** look and type like LeetCode's editor: a `Python3` header, line numbers, and Python colors in VS Code's light and dark themes, with no wrapping and the box sized to the code. New boxes start from a `class Solution:` template.
-    - While editing, the colors stay on screen: a transparent text box sits exactly over the highlighted code. Tab and Shift+Tab indent and outdent, Enter keeps the indentation (one more level after a colon), and Backspace in the indentation removes a level.
-  - **Code tracing** turns a code box into a dry run, the Test step of an interview.
-    - "Trace line by line" highlights the line running. Move with ↑ ↓ or by clicking a line; blank lines are skipped.
-    - With "Record each line" on, every move first saves the board as a step with the line that just ran highlighted. Update the variables and arrays beside it as you go, and playback replays the whole run, with room for a one-line note per step.
-  - **Build from text**: arrays, stacks, queues, heaps, sets, dicts, 2D arrays, linked lists, trees, graphs, recursion trees, DP tables, and intervals can all be filled by pasting a problem's example instead of typing cell by cell:
-    - `nums = [2,7,11,15], target = 9` takes the first value and renames the element `nums`
-    - `"abcabcbb"` splits into characters
-    - `{'a': 1}` or JSON for dicts, and `[[1,0],[0,1]]` for grids
-    - `1->2->3` and `head = [...]` for linked lists, and LeetCode's level order `[3,9,20,null,null,15,7]` for trees
-    - `n = 5, edges = [[0,1],[0,2]]` (with optional weights) or an adjacency list (0- or 1-based) for graphs
-    - an indented outline for recursion trees, one call per line, such as `f(3) => 2` with `n-1 | f(2)` underneath (`|` puts a label on the edge, `=>` adds a return value); the output of the `tree` command also works
-    - the problem's own input for DP tables: `text1 = "abcde", text2 = "ace"` makes a 6×4 table with the letters beside it, `m = 3, n = 7` a 3×7 grid, `n = 5` six cells, `coins = [1,2,5], amount = 11` twelve cells that look back 1, 2, and 5, and `s = "226"` or `nums = [...]` a row labeled with the characters or numbers
-    - `intervals = [[1,3],[2,6]]` for intervals; a `newInterval = [4,8]` is added in yellow, and an employee `schedule` gets one color per person
-  - **Other tools**:
-    - rectangle and ellipse frames, which draw on top but stay click-through except their outline
-    - arrows and plain lines (for undirected edges) that follow the elements they connect
-    - a pen, an eraser, and five colors
-    - undo/redo and clear canvas
-  - **Box selection**: drag across empty space to select everything inside, then move, duplicate, delete, or recolor it together. Copies keep pointers on their copied arrays and rewire arrows to the copied elements.
-  - **Step playback**: "Record step" saves a snapshot of the board with an optional one-line note (writing it in English doubles as explanation practice). Playback steps through the snapshots with the arrow keys or plays them automatically; elements slide from one step to the next. You can continue editing from any step.
-  - **Explain mode**: walk through your steps out loud in English. The current step's note shows as a prompt while a timer, audio recording, and live transcript run. Afterwards you see how long you spent on each step (the slow one is usually the part you can't explain smoothly yet), play back the audio, and fix the transcript. On a problem's whiteboard you can also tick which of the five points you covered, get AI feedback, save the transcript as the problem's script, and save the run as an explanation drill, marked "Whiteboard" in the mock interview history.
-  - **Export image**: the board, or the step being played, is redrawn from its data as an SVG and saved as a 2× PNG.
-  - When the selection bar would cover what you just picked (or the DP cell being filled), the board moves just enough to show it. It waits until you let go, so it never moves during a drag. On phones the bar is a single row that scrolls sideways instead of stacking into several rows.
-  - Mouse, trackpad, keyboard, and touch all work. Pan with the scroll wheel, Space + drag, the hand tool, or two fingers; zoom with Ctrl + scroll or a pinch.
+- **Whiteboard**: [DSA Whiteboard](https://github.com/Lego514/dsa-whiteboard), which I built from scratch for this app and later split into its own open-source package ([try it standalone](https://lego514.github.io/dsa-whiteboard/)). Drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, recursion trees, DP tables, intervals, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand. It has templates for common patterns, Build from text (paste a problem's example), range frames for sliding windows, a LeetCode-style code box with line-by-line tracing, step-by-step playback, and PNG export. See its README for the full list.
+  - **Explain mode** (this app only): walk through your steps out loud in English. The current step's note shows as a prompt while a timer, audio recording, and live transcript run. Afterwards you see how long you spent on each step (the slow one is usually the part you can't explain smoothly yet), play back the audio, and fix the transcript. On a problem's whiteboard you can also tick which of the five points you covered, get AI feedback, save the transcript as the problem's script, and save the run as an explanation drill, marked "Whiteboard" in the mock interview history.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - On the practice page the board opens on top, so the timer keeps running.
-  - No whiteboard library is used: the editor is about 141 KB (42 KB gzipped) and loads the first time a board opens.
+  - The app installs the package from GitHub at a release tag and plugs in its own storage, sync status, toasts, and explain mode. The server validates boards with the package's zod schema before storing them.
 - **Behavioral interviews**: a STAR story bank for the non-coding round.
   - Write each story as Situation, Task, Action, and Result, and tag what it can answer: conflict, failure, leadership, deadlines, ambiguity, influence, learning, proudest work, feedback, or teamwork. Stories autosave and sync like notes.
   - The editor offers English opening phrases for each part (click one to add it), estimates how long the story takes to say at about 140 words a minute (1½–2½ minutes is the target), and points out when Action, what you did, is less than 40% of it.
@@ -148,7 +89,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 | Local storage | IndexedDB via Dexie 4, reactive reads with `useLiveQuery` |
 | API | Node 24, Hono, zod validation shared with the client |
 | Database | PostgreSQL through Drizzle ORM; embedded PGlite for local development and tests |
-| Whiteboard | A custom editor with no drawing library: elements are HTML positioned in a CSS-transformed world, with arrows and ink in an SVG layer; pointer events with capture and two-finger pinch; all geometry and editing logic are pure functions with unit tests |
+| Whiteboard | [dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard), my own package in a separate repo: a custom editor with no drawing library (HTML elements in a CSS-transformed world, arrows and ink in SVG, pointer capture and pinch), with all geometry and editing logic as unit-tested pure functions |
 | Quality | Vitest (unit, API, and two-device sync tests), Playwright end-to-end tests against the production build and a real PostgreSQL on Chromium and iPhone WebKit, ESLint, GitHub Actions CI |
 | AI | Claude Opus 5 through the Anthropic TypeScript SDK, JSON-schema structured output, server-side refusal fallback, per-user daily quota stored in PostgreSQL |
 | Hosting | Render (one Node service for the API and the web app), Neon PostgreSQL |
@@ -160,10 +101,6 @@ src/                 Web app
   data/                Static content: problems, lists, patterns, hints, interview steps
   lib/                 Pure logic: scheduler, dates, stats, catalog, practice session
     cards.ts             Flashcards: deck, Leitner boxes, picking and dealing a round
-    board/model.ts       Whiteboard: layout, pointer snapping, cell edits, arrows, selection, steps, undo history
-    board/exportSvg.ts   Whiteboard: redraw a board as SVG for PNG export
-    board/structures.ts  Whiteboard: build linked lists and trees from text (LeetCode level order)
-    board/templates.ts   Whiteboard: one-click scenes for common patterns
   store/               Data layer
     db.ts                Dexie schema (v2: sync ids, outbox, sync state; v3: flashcard answers; v4: whiteboards)
     actions.ts           Every local write; each one also records a change in the outbox
@@ -173,7 +110,7 @@ src/                 Web app
     sync.ts              Sync engine (push outbox, pull changes, apply)
     cloud.ts             Account state and automatic sync scheduling
   i18n/                Locale detection, typed dictionaries (zh-TW, en), date formatting
-  components/, pages/  UI (components/board/ is the whiteboard editor)
+  components/, pages/  UI (components/board/ wires the dsa-whiteboard package to storage, sync, and explain mode)
 shared/              Code used by both sides: ids and the zod request/response schemas
 server/              API
   src/app.ts           Hono app: security middleware, routes, static files
@@ -288,7 +225,7 @@ Notes:
 
 ## Roadmap
 
-- **Whiteboard**: a minimap for large boards, and flashcards that show a recorded step and ask what happens next.
+- **Whiteboard**: flashcards that show a recorded step and ask what happens next. Whiteboard features themselves are tracked in [dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard).
 - **More AI assistance (Claude API)**: hints that react to your own code, code review, and an AI interviewer that asks follow-ups. These would run through the API so the key never reaches the browser.
 - **Behavioral prep**: a STAR story bank, system design notes, and a job application tracker.
 - **Signing in with GitHub.**
@@ -325,28 +262,9 @@ Notes:
 - 做微複習的日子也算進連續天數。
 - 今天答過的卡不會拿來補滿一回合：範圍太小時這一回合就少幾張，做完了會提示換成「全部」。範圍是「全部」時，5 張裡最多 3 張是題目卡，其他留給模式線索和 Python 小知識，做過的題目少時也不會一直繞著那幾題。
 
-**白板**是自己從頭寫的，沒有用繪圖套件：
-- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、遞迴樹、DP 表、區間、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。
-- 指標會吸附在陣列格子上，用方向鍵移動，依名字自動上色。
-- **鏈結串列**是一整條：點兩個節點之間的箭頭可以在往後、反過來、斷開之間切換，反轉串列可以一段一段翻；尾巴可以接回任一個節點（有環）；prev、curr、next 指標吸附在節點下面。
-- **二元樹**自動依中序排版（二元搜尋樹由左到右剛好排好序）：點一個節點可以從虛線位置加左右子節點、上底色、刪掉子樹；指標放在節點上方，用方向鍵走到子節點或父節點；最多 6 層。
-- **範圍框**：選取同一個陣列上的兩個指標，按「框住兩個指標之間」，框會跟著指標移動，適合滑動視窗。
-- 元件庫最上面有**模板**，點一下就擺好一整套常見的場景，指標名字也取好：雙指標、滑動視窗、反轉鏈結串列、樹的 DFS、網格 BFS、回溯（子集合的遞迴樹，加上 path 和 cur 指標）。整組會一起選取，可以直接拖動。
-- **圖**：節點自動排成一圈，有向圖有箭頭，兩個方向都有的邊會彎開；邊可以寫權重、標記走過。點一個節點可以連到別的節點、上色、加指標或刪除；最多 20 個節點、60 條邊。
-- **堆積**：同一份資料同時畫成樹和陣列（標上索引），也可以只看其中一個。Push、Pop 會照堆積的規則往上或往下換；勾「每一步記成逐步播放」，每次交換都會存成一步，可以播放。可以切換最小堆和最大堆，順序不對的節點會變紅，按 Heapify 一次修好；最多 31 個值。
-- **遞迴樹**：一個節點是一次呼叫，由上往下排，呼叫者在它呼叫的那些節點正上方；適合回溯、備忘錄 DP 和字典樹。點一個呼叫可以加子呼叫、寫回傳值或上面那條邊的字（這一步選了什麼），也可以剪掉這枝（畫成虛線、淡色）。「標出重複的呼叫」會把字一樣的呼叫標同一個顏色，看出備忘錄能省掉什麼。吸附在上面的指標用 ← → 照 DFS 的順序走、↑ 回到呼叫者，可以一步一步記下來播放。最多 63 個呼叫、8 層。
-- **DP 表**：一格一格填，一維（`dp[i]`）或二維（`dp[i][j]`），列和欄旁邊可以標題目給的字串或數字。選好每一格從哪幾格算來（`dp[i-1], dp[i-2]`、前面所有的 `dp[j]`、硬幣的 `dp[i-k]`、上／左／左上，或回文從最後一列往上填的 `dp[i+1][j-1]`），正在填的那一格就會用箭頭標出來（一維畫成格子下面的弧線）。在選取列輸入值、按 Enter 就跳到下一個還沒填的格子；勾「每填一格記成一步」，每一格都會存成一步（說明寫 `dp[2][3] = 2`），可以回放整張表怎麼填出來。最多 26 列、30 欄。
-- **區間**：每個區間一列，畫在同一條有刻度的數線上，重疊的會對齊，適合合併區間、插入區間、會議室這類題目。「依起點排序」是合併的第一步；點一個區間可以改起點終點、和下一列合併（端點碰到也算重疊）、標成移除（虛線）或上色。掃描線停在每個起點和終點，顯示那時有幾個區間正在進行（起點算、終點不算），最大值就是會議室 II 的答案。最多 30 個區間。
-- **程式碼框**跟 LeetCode 的編輯器一樣：上面一條 `Python3` 標題列、左邊行號、Python 上色（淺色、深色主題的顏色跟 VS Code 一樣），不換行，框跟著程式碼的大小變；新的程式碼框從 `class Solution:` 範本開始。編輯時顏色一直都在：一個透明的輸入框剛好疊在上色的程式碼上。Tab、Shift+Tab 縮排，Enter 沿用上一行的縮排（冒號結尾再多縮一層），在縮排裡按 Backspace 一次退一層。
-- **程式碼逐行追蹤**：把程式碼框變成一次 dry run（面試的 Test 那一步）。按「逐行追蹤」會標出正在執行的那一行；用 ↑ ↓ 或點一行移動，空白行會跳過。勾「每走一行記成一步」，每次移動前都會先把畫面存成一步、標著剛執行完的那一行；旁邊的變數和陣列跟著改，播放時就能完整回放，每一步還能寫一句說明。
-- **用文字建立**：陣列、堆疊、佇列、堆積、集合、字典、二維陣列、鏈結串列、樹、圖、遞迴樹、DP 表和區間都可以直接貼題目的範例，不用一格一格輸入。例如 `nums = [2,7,11,15], target = 9`（取第一個值，名稱也改成 nums）、`"abcabcbb"`（拆成一個一個字元）、`{'a': 1}`、`[[1,0],[0,1]]`、`1->2->3`、`[3,9,20,null,null,15,7]`、`n = 5, edges = [[0,1],[0,2]]`（可以有權重）或鄰接串列；遞迴樹是一行一個呼叫、用縮排表示誰呼叫誰（`|` 前面寫在邊上，`=>` 後面是回傳值），`tree` 指令的輸出也讀得懂；DP 表直接讀題目的輸入，例如 `text1 = "abcde", text2 = "ace"`（6×4，旁邊標字母）、`m = 3, n = 7`、`n = 5`、`coins = [1,2,5], amount = 11`（往回看 1、2、5 格）、`s = "226"` 或 `nums = [...]`；區間貼 `intervals = [[1,3],[2,6]]`，再給 `newInterval = [4,8]` 會標成黃色，員工的 `schedule` 每個人一個顏色。
-- 點一格可以上底色、在那格加指標、插入或刪除格子。
-- 還有矩形框、圓形框、箭頭連線、直線（無向圖的邊）、畫筆、橡皮擦、復原、清空。
-- 在空白處拖曳可以框選，框住的東西可以一起移動、複製、刪除或換色。
-- 選取列會擋住剛選到的東西（或 DP 表正在填的那一格）時，畫面自動挪開剛好露出來；按著拖曳時不會動。手機上選取列只排一列，放不下就左右滑，不會疊成好幾列擋住畫面。
-- **逐步播放**：按「記一步」把目前的畫面存成一步，可以寫一句說明（用英文寫就是在練講解）；播放時一步一步看，指標會滑到下一格，也可以從任何一步繼續編輯。
-- **講解模式**：照著記好的步驟用英文講出來。這一步的說明會當作提詞，同時計時、錄音、顯示即時逐字稿。講完看每一步講了多久（特別久的那步通常就是還講不順的地方）、聽錄音、修正逐字稿；在題目的白板上還可以勾有講到哪幾個重點、拿 AI 回饋、把逐字稿存成講解稿，並存成一筆講解練習，在模擬面試的紀錄裡標成「白板」。
-- 可以把白板（或播放中的那一步）匯出成圖片。
+**白板**是我為這個 App 從頭寫的，後來拆成獨立的開源專案 [DSA Whiteboard](https://github.com/Lego514/dsa-whiteboard)（[直接試用](https://lego514.github.io/dsa-whiteboard/)）：
+- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、遞迴樹、DP 表、區間、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。有常見模式的模板、貼上題目範例就能建立、滑動視窗的範圍框、LeetCode 風格的程式碼框和逐行追蹤、逐步播放、匯出圖片。完整功能請看那邊的 README。
+- **講解模式**（只有這個 App 有）：照著記好的步驟用英文講出來。這一步的說明會當作提詞，同時計時、錄音、顯示即時逐字稿。講完看每一步講了多久（特別久的那步通常就是還講不順的地方）、聽錄音、修正逐字稿；在題目的白板上還可以勾有講到哪幾個重點、拿 AI 回饋、把逐字稿存成講解稿，並存成一筆講解練習，在模擬面試的紀錄裡標成「白板」。
 - 每一題有自己的白板，另外有一張自由白板；在「我的白板」可以看到全部。白板存在這台裝置，登入後會同步到雲端。
 - 練習頁打開白板時，計時不會中斷。
 

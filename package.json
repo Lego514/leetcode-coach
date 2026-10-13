@@ -25,6 +25,7 @@
     "@fontsource-variable/schibsted-grotesk": "^5.3.0",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
+    "dsa-whiteboard": "github:Lego514/dsa-whiteboard#v0.1.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0"
