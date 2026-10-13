@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { problemsInList } from '../lib/catalog';
-import { diffDays } from '../lib/dates';
+import { addDays, diffDays } from '../lib/dates';
 import { planSprint, type SprintPlan, type SprintSettings } from '../lib/sprint';
 import { problemsStartedOn } from '../lib/stats';
+import { STUCK_SPRINT_DAYS, stuckPatterns } from '../lib/stuck';
 import { retentionOf } from './progress';
 import { useAttempts, useCatalog, useMetaMap, useProgressMap, useSettings, useToday } from './queries';
 
@@ -36,6 +37,7 @@ export function useSprint(): SprintState | null {
       companiesOf: (id) => meta.get(id)?.companies ?? [],
       startedToday,
       retention,
+      stuckPatterns: stuckPatterns(attempts, (id) => catalog.byId.get(id), addDays(day, -STUCK_SPRINT_DAYS)),
     });
     return { sprint, daysLeft: diffDays(day, sprint.date), plan };
   }, [sprint, loaded, attempts, day, catalog, activeList, progress, meta, retention]);

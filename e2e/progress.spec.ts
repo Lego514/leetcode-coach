@@ -21,3 +21,35 @@ test('shows a year of practice as a heatmap', async ({ page, isMobile }) => {
     expect(atEnd).toBe(true);
   }
 });
+
+test('records where I got stuck and shows what I get stuck on most', async ({ page }) => {
+  await page.goto('/#/progress');
+  await expect(page.getByRole('region', { name: 'Where you get stuck' })).toContainText('Mark where you got stuck');
+
+  // 兩題都卡在優化，其中一題也漏了邊界情況
+  for (const [id, reasons] of [
+    [70, ['Couldn’t optimize', 'Missed an edge case']],
+    [746, ['Couldn’t optimize']],
+  ] as const) {
+    await page.goto(`/#/problems/${id}`);
+    await page.getByRole('button', { name: 'Record without timer' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Record this attempt' });
+    await dialog.getByRole('button', { name: /Needed a hint/ }).click();
+    for (const reason of reasons) await dialog.getByRole('button', { name: reason, exact: true }).click();
+    await expect(dialog.getByRole('button', { name: reasons[0], exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(dialog).toBeHidden();
+  }
+  await expect(page.getByRole('region', { name: /^History/ })).toContainText('Couldn’t optimize');
+
+  await page.goto('/#/progress');
+  const stuck = page.getByRole('region', { name: 'Where you get stuck' });
+  await expect(stuck).toContainText('Last 90 days, 2 sessions with a reason marked');
+  const rows = stuck.getByRole('listitem');
+  await expect(rows.nth(0)).toContainText('Couldn’t optimize');
+  await expect(rows.nth(0)).toContainText('2 times');
+  await expect(rows.nth(0)).toContainText('Most often in: 1-D Dynamic Programming');
+  await expect(rows.nth(1)).toContainText('Missed an edge case');
+  await rows.nth(0).getByRole('link', { name: 'Open pattern cards' }).click();
+  await expect(page).toHaveURL(/#\/patterns$/);
+});

@@ -60,6 +60,21 @@ describe('rankNewProblems', () => {
   });
 });
 
+describe('stuck patterns in the sprint', () => {
+  it('adds two more problems from a pattern I keep getting stuck in, even when its mastery is fine', () => {
+    // 做過一題陣列、自己解出來好幾次，熟練度不低
+    let state = schedule(undefined, 'solo', '2026-06-01');
+    for (let i = 0; i < 4; i += 1) state = schedule(state, 'solo', state.due);
+    const progress = new Map([[217, state]]);
+    const plain = rankNewProblems(input({ progress }));
+    expect(plain.filter((p) => p.reason === 'weakPattern')).toEqual([]);
+    const stuck = rankNewProblems(input({ progress, stuckPatterns: new Set(['arrays'] as const) }));
+    const weak = stuck.filter((p) => p.reason === 'weakPattern');
+    expect(weak).toHaveLength(2);
+    expect(weak.every((p) => p.problem.pattern === 'arrays')).toBe(true);
+  });
+});
+
 describe('planSprint', () => {
   it('plans every day until the day before the interview, and the last days are review only', () => {
     const plan = planSprint(input());

@@ -85,6 +85,8 @@ export interface SprintInput {
   /** 今天已經開始的新題，用掉今天的時間 */
   startedToday?: readonly Problem[];
   retention?: number;
+  /** 最近常卡住的模式，跟熟練度低的模式一樣多排兩題 */
+  stuckPatterns?: ReadonlySet<PatternId>;
 }
 
 const sameCompany = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -104,9 +106,11 @@ export const mockOn = (daysBefore: number) => daysBefore % 7 === 2;
 /** 行為面試練習：面試前一天，再往前每 3 天一次（一週兩次多） */
 export const storyOn = (daysBefore: number) => daysBefore % 3 === 1;
 
-/** 新題的優先順序：公司題 → 每個還沒碰過的模式一題 → 弱的模式多兩題 → 清單的其他題 */
-export function rankNewProblems(input: Pick<SprintInput, 'sprint' | 'list' | 'all' | 'progress' | 'companiesOf'>): SprintPick[] {
-  const { sprint, list, all, progress, companiesOf } = input;
+/** 新題的優先順序：公司題 → 每個還沒碰過的模式一題 → 弱的模式（熟練度低或最近常卡住）多兩題 → 清單的其他題 */
+export function rankNewProblems(
+  input: Pick<SprintInput, 'sprint' | 'list' | 'all' | 'progress' | 'companiesOf' | 'stuckPatterns'>,
+): SprintPick[] {
+  const { sprint, list, all, progress, companiesOf, stuckPatterns } = input;
   const picks: SprintPick[] = [];
   const taken = new Set<number>();
   const take = (problem: Problem, reason: SprintReason) => {
@@ -131,10 +135,15 @@ export function rankNewProblems(input: Pick<SprintInput, 'sprint' | 'list' | 'al
     if (first) take(first, 'newPattern');
   }
 
+  // 熟練度低的模式，加上最近常卡住的模式；常卡住的排前面，再依熟練度
   const weak = [...byPattern.entries()]
-    .map(([pattern, scores]) => ({ pattern, mastery: scores.reduce((a, b) => a + b, 0) / scores.length }))
-    .filter((w) => w.mastery < WEAK_MASTERY)
-    .sort((a, b) => a.mastery - b.mastery);
+    .map(([pattern, scores]) => ({
+      pattern,
+      mastery: scores.reduce((a, b) => a + b, 0) / scores.length,
+      stuck: stuckPatterns?.has(pattern) ?? false,
+    }))
+    .filter((w) => w.mastery < WEAK_MASTERY || w.stuck)
+    .sort((a, b) => Number(b.stuck) - Number(a.stuck) || a.mastery - b.mastery);
   for (const { pattern } of weak) {
     let added = 0;
     for (const p of list) {

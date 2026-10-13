@@ -61,6 +61,10 @@ export const BEHAVIORAL_THEMES = [
 export type BehavioralTheme = (typeof BEHAVIORAL_THEMES)[number];
 
 /** 行為面試回答的五個評分重點：STAR 四段，再加上講的是「我」做了什麼 */
+/** 做完一題時勾的「卡在哪」：沒看出模式、想不到優化、知道做法但寫不出來、漏了邊界情況、有 bug、時間不夠 */
+export const STUCK_REASONS = ['pattern', 'optimize', 'implement', 'edge', 'bug', 'time'] as const;
+export type StuckReason = (typeof STUCK_REASONS)[number];
+
 /** 面試官追問的類型：邊界情況、複雜度、能不能更好、換個做法、正確性、實作細節 */
 export const FOLLOW_UP_KINDS = ['edge', 'complexity', 'optimize', 'alternative', 'correctness', 'implementation'] as const;
 export type FollowUpKind = (typeof FOLLOW_UP_KINDS)[number];

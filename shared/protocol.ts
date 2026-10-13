@@ -18,6 +18,7 @@ import {
   PASSWORD_MIN_LENGTH,
   PATTERN_IDS,
   RATING_IDS,
+  STUCK_REASONS,
   REPORT_KINDS,
   REPORT_MAX_LENGTH,
   STEP_NOTE_KEYS,
@@ -40,6 +41,8 @@ export const attemptDataSchema = z.object({
   hints: z.number().int().min(0).max(10).optional(),
   sawSolution: z.boolean().optional(),
   delayDays: z.number().int().min(1).max(365).optional(),
+  /** 卡在哪；沒勾就沒有 */
+  stuck: z.array(z.enum(STUCK_REASONS)).max(STUCK_REASONS.length).optional(),
 });
 
 /** AI 對一次講解的回饋；分數 0 沒講到、1 講得不完整、2 講清楚 */

@@ -1429,6 +1429,54 @@ const zhTW = {
     deleted: '故事已刪除',
   },
 
+  stuck: {
+    label: '卡在哪？（可複選，選填）',
+    title: '最常卡在哪',
+    note: (days: number, n: number) => `最近 ${days} 天，有 ${n} 次練習勾了卡住的原因`,
+    empty: '做完題目時勾「卡在哪」，這裡會統計你最常卡住的地方，以及在哪些模式卡住。',
+    count: (n: number) => `${n} 次`,
+    mostIn: (patterns: string) => `最常在：${patterns}`,
+    joiner: '、',
+    reasons: {
+      pattern: {
+        name: '沒看出模式',
+        hint: '不知道這題該用什麼做法',
+        tip: '多做微複習的模式線索，練習從題目的特徵認出該用哪個模式。',
+        action: '做微複習',
+      },
+      optimize: {
+        name: '想不到優化',
+        hint: '只想得到暴力解',
+        tip: '先講暴力解，再問自己：笨在哪、哪裡重複算、要留下什麼。模板卡有每個模式常見的優化。',
+        action: '看模板卡',
+      },
+      implement: {
+        name: '寫不出來',
+        hint: '知道做法，但程式寫不出來',
+        tip: '把這個模式的 Python 模板練熟，先寫出骨架再補細節。',
+        action: '看模板卡',
+      },
+      edge: {
+        name: '漏了邊界情況',
+        hint: '空的、一個元素、重複值、負數……',
+        tip: '動手前先列邊界：空的、一個元素、重複值、負數、最大值。模擬面試的「舉例與邊界」步驟會提醒你。',
+        action: '模擬面試',
+      },
+      bug: {
+        name: '有 bug',
+        hint: '除錯花了太久',
+        tip: '寫完先拿小例子逐行追一遍再送出。白板的程式碼追蹤可以用來練習。',
+        action: '開白板',
+      },
+      time: {
+        name: '時間不夠',
+        hint: '超過目標時間',
+        tip: '用模擬面試計時，看看是哪一步花最久。',
+        action: '模擬面試',
+      },
+    },
+  },
+
   chatPrompt: {
     title: '用自己的 ChatGPT 或 Claude',
     intro: '不用登入、不用額度：複製提示詞，貼到 ChatGPT 或 Claude 的新對話，評分標準跟上面的 AI 回饋一樣。逐字稿會送到你貼上的那個服務。',

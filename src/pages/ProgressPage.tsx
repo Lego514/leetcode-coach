@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ActivityHeatmap, WeeklyChart } from '../components/charts';
+import { StuckSummary } from '../components/StuckSummary';
 import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
 import { CLARITY_OPTIONS } from '../data/interview';
 import { getPattern } from '../data/patterns';
@@ -19,6 +20,7 @@ import {
   summarizePatterns,
   weeklyCounts,
 } from '../lib/stats';
+import { STUCK_WINDOW_DAYS, summarizeStuck } from '../lib/stuck';
 import { useAttempts, useCardReviews, useCatalog, useMocks, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
 
 /** 熱度圖顯示一整年（含本週共 53 週） */
@@ -60,6 +62,12 @@ export function ProgressPage() {
   const weakest = patterns
     .filter((p) => p.started >= 2)
     .sort((a, b) => a.startedMastery - b.startedMastery)[0];
+
+  // 最近常卡在哪；不分清單，所有做過的題目都算
+  const stuck = useMemo(
+    () => summarizeStuck(attempts ?? [], (id) => catalog.byId.get(id), addDays(day, -STUCK_WINDOW_DAYS)),
+    [attempts, catalog, day],
+  );
 
   const fullMocks = (mocks ?? []).filter((m) => m.kind === 'full');
   const explainMocks = (mocks ?? []).filter((m) => m.kind === 'explain');
@@ -172,6 +180,8 @@ export function ProgressPage() {
             )}
           </div>
         </Sheet>
+
+        <StuckSummary attempts={stuck.attempts} reasons={stuck.reasons} days={STUCK_WINDOW_DAYS} />
 
         <div className="split split-even">
           <Sheet title={t.progress.weeklyTitle} id="weekly" note={t.progress.weeklyNote}>

@@ -4795,6 +4795,80 @@ textarea.board-text-input {
   color: var(--danger);
 }
 
+/* 卡住原因 */
+.stuck-picker {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.stuck-picker legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.stuck-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  list-style: none;
+}
+
+.stuck-list .sheet-note,
+.stuck-tip {
+  margin: 4px 0 0;
+}
+
+.stuck-tip {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.stuck-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 64px;
+  gap: 12px;
+  align-items: center;
+}
+
+.stuck-name {
+  font-weight: 600;
+}
+
+.stuck-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--sheet-2);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  overflow: hidden;
+}
+
+.stuck-bar span {
+  display: block;
+  height: 100%;
+  background: var(--medium);
+}
+
+.stuck-count {
+  color: var(--ink-2);
+  text-align: right;
+}
+
+.history .chip {
+  margin-left: 6px;
+}
+
+@media (max-width: 560px) {
+  .stuck-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .stuck-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
 /* 複製提示詞、貼回來的回覆 */
 .chat-reply-text {
   white-space: pre-wrap;
