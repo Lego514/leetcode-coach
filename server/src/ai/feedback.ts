@@ -17,7 +17,7 @@ import { BEHAVIORAL_RUBRIC, buildBehavioralMessage, buildUserMessage, EXPLAIN_RU
 
 export { buildBehavioralMessage, buildUserMessage };
 
-export const FEEDBACK_MODEL = 'claude-opus-5';
+export const FEEDBACK_MODEL = 'claude-opus-5-5';
 
 export interface Usage {
   inputTokens: number;
@@ -158,7 +158,8 @@ async function askClaude<T>(
       // Claude 婉拒時由伺服器自動改用建議的備援模型重試
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      output_config: { format: { type: 'json_schema', schema } },
+      // Opus 5.5 一定會思考，預設的思考深度是 medium；評分要抓出錯的複雜度和做法，用 high，跟原本 Opus 5 的預設一樣
+      output_config: { effort: 'high', format: { type: 'json_schema', schema } },
       system,
       messages: [{ role: 'user', content: message }],
     });
