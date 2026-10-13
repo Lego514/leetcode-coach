@@ -92,17 +92,6 @@ export const COLLECTIONS = [
 ] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 
-/** 一張白板最多約 400 KB，一次同步的請求才不會太大 */
-export const BOARD_MAX_BYTES = 400_000;
-
-/** 白板的筆跡與箭頭顏色；畫面上對應到各自的 CSS 變數 */
-export const BOARD_COLORS = ['ink', 'red', 'blue', 'green', 'orange'] as const;
-export type BoardColor = (typeof BOARD_COLORS)[number];
-
-/** 白板陣列格子可以上的底色，追蹤時標出看過的、視窗裡的格子 */
-export const CELL_COLORS = ['yellow', 'green', 'blue', 'red', 'purple', 'gray'] as const;
-export type CellColor = (typeof CELL_COLORS)[number];
-
 /**
  * 解題步驟每一步寫的一句話，存在題目筆記的 steps 裡。
  * 舉例拆成例子和邊界情況，優化拆成三個問題：笨在哪、哪裡重複算、要留下什麼。

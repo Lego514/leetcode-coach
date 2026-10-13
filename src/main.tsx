@@ -7,6 +7,7 @@ import { applyLocaleToDocument } from './i18n';
 import { applyTheme } from './lib/theme';
 import { initPwaUpdates } from './pwa';
 import { initCloud } from './store/cloud';
+import 'dsa-whiteboard/board.css';
 import './styles.css';
 
 applyTheme();
