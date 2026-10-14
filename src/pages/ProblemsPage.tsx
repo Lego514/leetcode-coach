@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { AddProblemForm } from '../components/AddProblemForm';
 import { ProblemRow } from '../components/ProblemRow';
@@ -45,16 +45,19 @@ export function ProblemsPage() {
   const company = params.get('company') ?? 'any';
   const query = params.get('q') ?? '';
 
+  // 連續改兩個篩選（例如選了難度馬上打字搜尋）時，第二次要接在第一次後面；
+  // React Router 的 prev 還是網址更新前的值，所以自己記著最新的
+  const latestParams = useRef(params);
+  useEffect(() => {
+    latestParams.current = params;
+  }, [params]);
+
   function setParam(key: string, value: string, fallback: string) {
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (value === fallback) next.delete(key);
-        else next.set(key, value);
-        return next;
-      },
-      { replace: true },
-    );
+    const next = new URLSearchParams(latestParams.current);
+    if (value === fallback) next.delete(key);
+    else next.set(key, value);
+    latestParams.current = next;
+    setParams(next, { replace: true });
   }
 
   const filtered = useMemo(() => {

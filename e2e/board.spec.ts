@@ -586,6 +586,8 @@ test('traces a recursion tree: returns, pruning, child calls, and a pointer walk
   await expect(pointer).toHaveAccessibleName('Pointer i at node f(3)');
 
   // 用縮排的文字整個換掉；指標還指得到就留著
+  // 前面選了最下面的呼叫，畫面往上挪過；先顯示全部，再點名稱選整棵樹
+  await page.getByRole('button', { name: 'Show everything (0)' }).click();
   await tree.locator('.board-label').click();
   await selbar.getByRole('button', { name: 'Build from text' }).click();
   await selbar.getByRole('textbox', { name: 'Build from text' }).fill('f(2) => 1\n  f(1) => 1\n  f(0) => 0');
