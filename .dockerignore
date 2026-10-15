@@ -1,0 +1,17 @@
+# 映像裡自己安裝、自己建置，不帶本機的結果
+node_modules
+server/node_modules
+dist
+dev-dist
+server/dist
+server/.data
+coverage
+test-results
+playwright-report
+.git
+.github
+.claude
+# 秘密不進映像；.env.production 是公開設定，建前端要用
+.env
+.env.*
+!.env.production
