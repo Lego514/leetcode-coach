@@ -450,3 +450,13 @@ export function dealRound(
 export function reviewsOn(reviews: readonly { day: Day }[], day: Day): number {
   return reviews.filter((r) => r.day === day).length;
 }
+
+/**
+ * 模式頁的訊號寫成「線索 → 做法」；做法常常就是答案（→ BFS、→ 兩個堆積），
+ * 所以卡片只出線索，做法等答完再看。
+ */
+export function splitSignal(text: string): { clue: string; technique?: string } {
+  const i = text.indexOf('→');
+  if (i < 0) return { clue: text.trim() };
+  return { clue: text.slice(0, i).trim(), technique: text.slice(i + 1).trim() };
+}

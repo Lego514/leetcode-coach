@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cardReviewDataSchema } from '../../shared/protocol';
 import { EXPLANATIONS_EN } from '../data/explanations';
-import { getPatterns, PATTERN_ORDER } from '../data/patterns';
+import { getPatterns, PATTERN_ORDER, type PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS } from '../data/problems';
 import { PYTHON_TIPS } from '../data/tips';
 import {
@@ -18,6 +18,7 @@ import {
   parseComplexity,
   pickRound,
   splitComplexityKey,
+  splitSignal,
   type CardRef,
   type DealContext,
 } from './cards';
@@ -324,5 +325,47 @@ describe('pattern signals', () => {
     for (const id of PATTERN_ORDER) {
       expect(en.find((p) => p.id === id)!.signals.length, id).toBe(zh.find((p) => p.id === id)!.signals.length);
     }
+  });
+});
+
+describe('signal clues', () => {
+  // 每個模式名字裡的關鍵字：線索裡出現這些字，等於直接說出答案
+  const GIVEAWAYS: Record<PatternId, string[]> = {
+    arrays: ['hash', '雜湊'],
+    'two-pointers': ['pointer', '指標'],
+    'sliding-window': ['window', '視窗'],
+    stack: ['stack', '堆疊'],
+    'binary-search': ['binary search', '二分'],
+    'linked-list': ['linked', '鏈結'],
+    trees: ['tree', 'bst', '樹'],
+    tries: ['trie', '字典樹'],
+    heap: ['heap', '堆積'],
+    backtracking: ['backtrack', '回溯'],
+    graphs: ['graph', '圖'],
+    'adv-graphs': ['graph', '圖'],
+    'dp-1d': ['dynamic programming', 'dp', '動態規劃'],
+    'dp-2d': ['dynamic programming', 'dp', '動態規劃'],
+    greedy: ['greedy', '貪心'],
+    intervals: ['interval', '區間'],
+    math: ['math', 'geometry', '數學', '幾何'],
+    bits: ['bit', '位元'],
+  };
+
+  it('splits a signal into the clue and the technique after the arrow', () => {
+    expect(splitSignal('Median of a data stream → two heaps')).toEqual({ clue: 'Median of a data stream', technique: 'two heaps' });
+    expect(splitSignal('O(log n) is required')).toEqual({ clue: 'O(log n) is required' });
+  });
+
+  it('never gives away the answer in the clue a card shows', () => {
+    const leaks: string[] = [];
+    for (const locale of ['en', 'zh-TW'] as const) {
+      for (const pattern of getPatterns(locale)) {
+        for (const signal of pattern.signals) {
+          const clue = splitSignal(signal).clue.toLowerCase();
+          if (GIVEAWAYS[pattern.id].some((word) => clue.includes(word))) leaks.push(`${locale} ${pattern.id}: ${signal}`);
+        }
+      }
+    }
+    expect(leaks).toEqual([]);
   });
 });
