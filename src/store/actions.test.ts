@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   addCustomProblem,
   createStory,
+  deleteAttempt,
   deleteCustomProblem,
   deleteMock,
   deleteRehearsal,
@@ -16,6 +17,7 @@ import {
   saveRehearsal,
   saveStory,
   setCompanies,
+  updateAttempt,
   updateSettings,
   ValidationError,
 } from './actions';
@@ -87,6 +89,39 @@ describe('recordAttempt', () => {
     const byProblem = new Map((await db.attempts.toArray()).map((a) => [a.problemId, a]));
     expect(byProblem.get(1)?.stuck).toEqual(['optimize', 'edge']);
     expect(byProblem.get(2)).not.toHaveProperty('stuck');
+  });
+
+  it('edits a record: replaces the result, time, and where I got stuck, and reschedules from all records', async () => {
+    await recordAttempt(1, 'solo', { day: '2026-09-10' });
+    await recordAttempt(1, 'solo', { day: '2026-09-16', minutes: 20, stuck: ['edge'], hints: 1 });
+    const solo = await db.progress.get(1);
+    const latest = (await db.attempts.toArray()).find((a) => a.day === '2026-09-16')!;
+    await db.outbox.clear();
+
+    const edited = await updateAttempt(latest.uid, { rating: 'solution' }, new Date('2026-09-16T20:00:00Z'));
+    const after = await db.attempts.where('uid').equals(latest.uid).first();
+    expect(after).toMatchObject({ rating: 'solution', hints: 1, day: '2026-09-16', editedAt: '2026-09-16T20:00:00.000Z' });
+    expect(after).not.toHaveProperty('minutes');
+    expect(after).not.toHaveProperty('stuck');
+    // 看了解答，複習提早
+    expect(edited?.lastRating).toBe('solution');
+    expect(edited!.due < solo!.due).toBe(true);
+    expect(edited?.attempts).toBe(2);
+    expect(await outbox()).toEqual(['attempts:put']);
+    expect(toSyncData('attempts', after!)).toHaveProperty('editedAt');
+  });
+
+  it('deletes a record and falls back to the remaining ones, or to not started', async () => {
+    await recordAttempt(1, 'hint', { day: '2026-09-10' });
+    await recordAttempt(1, 'solution', { day: '2026-09-16' });
+    const [first, second] = (await db.attempts.orderBy('day').toArray()).map((a) => a.uid);
+    await db.outbox.clear();
+    await deleteAttempt(second);
+    expect((await db.progress.get(1))?.lastRating).toBe('hint');
+    expect((await db.progress.get(1))?.attempts).toBe(1);
+    await deleteAttempt(first);
+    expect(await db.progress.get(1)).toBeUndefined();
+    expect(await outbox()).toEqual(['attempts:del', 'attempts:del']);
   });
 
   it('resets progress but keeps notes, and records deletions', async () => {

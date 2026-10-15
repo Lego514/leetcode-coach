@@ -230,7 +230,7 @@ export function knownUpdatedAt(collection: Collection, record: LocalRecord): num
   };
   switch (collection) {
     case 'attempts':
-      return parse((record as AttemptRecord).at);
+      return parse((record as AttemptRecord).editedAt ?? (record as AttemptRecord).at);
     case 'mocks':
     case 'rehearsals':
       return parse((record as MockRecord | RehearsalRecord).startedAt);

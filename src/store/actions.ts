@@ -10,6 +10,7 @@ import {
   db,
   DEFAULT_SETTINGS,
   type AttemptMode,
+  type AttemptRecord,
   type CardReviewRecord,
   type MockRecord,
   type NoteRecord,
@@ -20,7 +21,7 @@ import {
   type StoryRecord,
 } from './db';
 import { retentionOf } from './progress';
-import { rebuildAllProgress, track } from './tracking';
+import { rebuildAllProgress, rebuildProgress, track } from './tracking';
 
 // 所有寫入都集中在這裡。每次修改都會記進待上傳清單，登入後由同步程式上傳。
 
@@ -109,6 +110,46 @@ export async function markSolvedBefore(problemIds: readonly number[], rating: Ra
     }
     dues.sort();
     return { marked: fresh.length, firstDue: dues[0], lastDue: dues[dues.length - 1] };
+  });
+}
+
+export interface AttemptEdit {
+  rating: Rating;
+  minutes?: number;
+  stuck?: readonly StuckReason[];
+}
+
+/**
+ * 改一筆練習紀錄（今天頁的「編輯」）：結果、花的時間、卡在哪。
+ * 這題的複習排程照全部紀錄重算；回傳重算後的排程。
+ */
+export async function updateAttempt(uid: string, edit: AttemptEdit, at = new Date()): Promise<ProgressRecord | undefined> {
+  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
+    const attempt = await db.attempts.where('uid').equals(uid).first();
+    if (!attempt) return undefined;
+    // 時間和卡在哪整個換掉：清空的就拿掉，不留舊的
+    const record: AttemptRecord = { ...attempt, rating: edit.rating, editedAt: at.toISOString() };
+    delete record.minutes;
+    delete record.stuck;
+    Object.assign(record, {
+      ...(edit.minutes && edit.minutes > 0 ? { minutes: edit.minutes } : {}),
+      ...(edit.stuck && edit.stuck.length > 0 ? { stuck: [...edit.stuck] } : {}),
+    });
+    await db.attempts.put(record);
+    await track(db, 'attempts', uid, false, at.getTime());
+    await rebuildProgress(db, [attempt.problemId]);
+    return db.progress.get(attempt.problemId);
+  });
+}
+
+/** 刪掉一筆記錯的練習紀錄；這題沒有其他紀錄時就回到還沒做過 */
+export async function deleteAttempt(uid: string, at = new Date()): Promise<void> {
+  await db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
+    const attempt = await db.attempts.where('uid').equals(uid).first();
+    if (!attempt) return;
+    await db.attempts.where('uid').equals(uid).delete();
+    await track(db, 'attempts', uid, true, at.getTime());
+    await rebuildProgress(db, [attempt.problemId]);
   });
 }
 

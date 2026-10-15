@@ -38,6 +38,8 @@ export interface AttemptRecord {
   delayDays?: number;
   /** 卡在哪；沒勾就沒有 */
   stuck?: StuckReason[];
+  /** 事後改過的時間（ISO）；同步時用來判斷哪一版比較新 */
+  editedAt?: string;
 }
 
 export interface NoteRecord {

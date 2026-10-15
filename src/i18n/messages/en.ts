@@ -135,6 +135,17 @@ const en: Messages = {
     nextReview: (day) => `Next review ${day}`,
   },
 
+  editAttempt: {
+    action: 'Edit',
+    actionLabel: (title) => `Edit today’s record for ${title}`,
+    title: 'Edit this record',
+    delete: 'Delete this record',
+    deleteConfirm: 'Delete it? The review schedule is recalculated from this problem’s other records.',
+    deleteYes: 'Delete',
+    deleted: 'Record deleted',
+    saved: (day, relative) => `Updated. Next review: ${day}, ${relative}`,
+  },
+
   record: {
     title: 'Record this attempt',
     question: 'How did it go?',
@@ -373,7 +384,6 @@ const en: Messages = {
     openProblems: 'Open Problems',
     doneTitle: 'Done today',
     doneEmpty: 'Nothing recorded yet. “Start” times you and offers hints; if you already solved it on LeetCode, use “Record”.',
-    doneItem: (rating) => ` (${rating})`,
     streak: (n) => `<b>${n}</b>-day streak`,
     thisWeek: (n) => `<b>${n}</b> ${n === 1 ? 'session' : 'sessions'} this week`,
     planAllDone: (list) => `You’ve done every problem in ${list}. From here on it’s mostly review.`,
