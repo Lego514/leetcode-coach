@@ -95,6 +95,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 | Quality | Vitest (unit, API, and two-device sync tests), Playwright end-to-end tests against the production build and a real PostgreSQL on Chromium and iPhone WebKit, ESLint, GitHub Actions CI |
 | AI | Claude Opus 5.5 through the Anthropic TypeScript SDK, JSON-schema structured output, server-side refusal fallback, per-user daily quota stored in PostgreSQL |
 | Hosting | Render (one Node service for the API and the web app), Neon PostgreSQL |
+| Monitoring | Sentry for the React app and the Hono API: errors only (no tracing), loaded only when a DSN is set, with account info, cookies, headers, request bodies, query strings, AI inputs and outputs, and local variables kept out; source maps are uploaded at build time and not published |
 | Containers | Multi-stage Dockerfile (build, then a slim runtime that runs as a non-root user with a health check) and Docker Compose with PostgreSQL; CI builds the image, starts it with Compose, and runs end-to-end tests against the container |
 
 ## Architecture
@@ -223,8 +224,9 @@ Notes:
 - Render provides `RENDER_EXTERNAL_URL`, which the API uses as its allowed origin. With a custom domain, or on another host, set `APP_ORIGINS` (comma-separated).
 - On the free plan the service sleeps after 15 minutes without traffic, so the first request after that takes about a minute.
 - Idle database connections close after 60 seconds so Neon can suspend, and the health check doesn't touch the database.
-- Settings: `DATABASE_URL` (required), `APP_ORIGINS`, `PORT`, `TRUST_PROXY` (default on in production), `STATIC_DIR`, `ANTHROPIC_API_KEY` (optional; AI feedback is off without it), `AI_DAILY_LIMIT` (default 20 per user per day), `AI_ALLOWED_EMAILS` (comma-separated accounts that may use AI feedback; empty means nobody, `*` means everyone), `BREVO_API_KEY` / `MAIL_FROM` / `MAIL_FROM_NAME` / `APP_URL` (optional; password reset email), `ADMIN_EMAILS` (comma-separated accounts that can open the report inbox).
+- Settings: `DATABASE_URL` (required), `APP_ORIGINS`, `PORT`, `TRUST_PROXY` (default on in production), `STATIC_DIR`, `ANTHROPIC_API_KEY` (optional; AI feedback is off without it), `AI_DAILY_LIMIT` (default 20 per user per day), `AI_ALLOWED_EMAILS` (comma-separated accounts that may use AI feedback; empty means nobody, `*` means everyone), `BREVO_API_KEY` / `MAIL_FROM` / `MAIL_FROM_NAME` / `APP_URL` (optional; password reset email), `ADMIN_EMAILS` (comma-separated accounts that can open the report inbox), `SENTRY_DSN` / `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` (optional; error monitoring).
 - **Password reset email** uses [Brevo](https://www.brevo.com), whose free tier covers roughly 300 emails a day. Create an API key, verify the sender address, then set `BREVO_API_KEY` and `MAIL_FROM` (the verified address). `APP_URL` defaults to the first allowed origin and is only needed when the link should point somewhere else.
+- **Error monitoring** uses [Sentry](https://sentry.io) (the free plan covers 5,000 errors a month). Create a project for React, copy its DSN, and set it as `SENTRY_DSN`; the same DSN is used for the web app (built in) and the API. To get readable stack traces in the web app, also set `SENTRY_AUTH_TOKEN` (an organization token that can upload source maps), `SENTRY_ORG`, and `SENTRY_PROJECT`; the build then uploads source maps and deletes them, so they are never served. Without `SENTRY_DSN`, Sentry isn't loaded at all.
 - **AI feedback** needs an API key from the [Claude Console](https://platform.claude.com). Add it as `ANTHROPIC_API_KEY` on Render (or in `server/.env` locally), and list the accounts allowed to use it in `AI_ALLOWED_EMAILS`. The list is empty by default, so sharing the app never lets other people spend your credits by accident. Each request costs roughly US$0.02–0.07 with Claude Opus 5.5, so 20 drills a month is about US$1–2. Setting a monthly spend limit in the Console is a good safety net.
 
 ## Data and privacy
@@ -302,6 +304,8 @@ Notes:
 遇到 bug、內容有錯或有想要的功能，可以到「回報問題」頁送出；微複習每張卡答完後也有「回報」按鈕。不登入也能送，表單會列出一起送出的資訊（頁面、卡片、版本、瀏覽器）。登入後可以看自己回報的處理進度；伺服器設定 `ADMIN_EMAILS` 列出的帳號會有收件匣，可以把回報標成已處理。
 
 本機開發執行 `npm run dev`，會同時啟動網頁（http://localhost:5173）和後端（內建 PGlite 資料庫，不需要另外安裝）。`npm run test:e2e` 會先建置，再用 Playwright 跑端對端測試。
+
+**錯誤追蹤**用 Sentry：在 Render 設定 `SENTRY_DSN`，網頁和後端出錯時就會自動回報，不用等使用者按「回報問題」。只送錯誤本身，帳號、cookie、請求內容（筆記、逐字稿、密碼）、網址參數和 AI 的輸入輸出都不送。再設定 `SENTRY_AUTH_TOKEN`、`SENTRY_ORG`、`SENTRY_PROJECT` 的話，建置時會上傳 source map，錯誤會指到原本的 TypeScript；source map 上傳完就刪掉，不會公開。沒設定 `SENTRY_DSN` 就完全不載入 Sentry。
 
 有裝 Docker 的話，`docker compose up --build` 會把正式版的網頁、後端和 PostgreSQL 一起跑起來，打開 http://localhost:8080 就能用，不用裝 Node 或資料庫。映像分兩段建置，最後只留執行需要的檔案，用一般使用者（不是 root）執行，並且有健康檢查。CI 每次都會建映像、用 Compose 跑起來，再對容器跑端對端測試。
 

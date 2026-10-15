@@ -29,6 +29,10 @@ export interface Env {
   appUrl?: string;
   /** 可以在 app 裡看所有回報的帳號 email */
   adminEmails: string[];
+  /** 錯誤追蹤（Sentry）；沒設定就不啟用 */
+  sentryDsn?: string;
+  /** 這一版的 commit（Render 會提供），讓錯誤對到版本 */
+  release?: string;
 }
 
 export class EnvError extends Error {}
@@ -76,6 +80,8 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
     aiDailyLimit,
     aiAllowedEmails: parseAllowedEmails(source.AI_ALLOWED_EMAILS),
     adminEmails,
+    sentryDsn: source.SENTRY_DSN?.trim() || undefined,
+    release: source.RENDER_GIT_COMMIT?.trim().slice(0, 7) || undefined,
   };
 }
 
