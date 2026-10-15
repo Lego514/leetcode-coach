@@ -839,6 +839,7 @@ const zhTW = {
     complexityQuestion: '時間和空間複雜度是多少？',
     complexityOption: (time: string, space: string) => `時間 ${time}，空間 ${space}`,
     signalQuestion: '看到這個線索，先想到哪個模式？',
+    signalTechnique: (technique: string) => `做法：${technique}。`,
     tipQuestion: '這段程式會印出什麼？',
     explainPrompt: '先用英文講一遍：關鍵觀察、資料結構、例子、複雜度、邊界情況。講完再翻面對照。',
     reveal: '翻面看參考講法',

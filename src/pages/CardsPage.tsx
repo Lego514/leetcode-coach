@@ -24,6 +24,7 @@ import {
   formatBigO,
   keyInsight,
   splitComplexityKey,
+  splitSignal,
   type CardResult,
   type CardScope,
   type DealContext,
@@ -335,7 +336,7 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
         <h2 className="flash-question" id="flash-question" tabIndex={-1} ref={headingRef}>
           {questionOf(card, t, lang)}
         </h2>
-        {ref.kind === 'signal' && <p className="flash-clue">{signalText(ref.patternId, ref.index, locale)}</p>}
+        {ref.kind === 'signal' && <p className="flash-clue">{splitSignal(signalText(ref.patternId, ref.index, locale)).clue}</p>}
         {tip?.code && <pre className="code-block flash-code">{tip.code}</pre>}
         {ref.kind === 'explain' && revealed && explanation && (
           <p className="prose-block flash-reference" lang="en">
@@ -498,15 +499,22 @@ function optionLabel(card: DealtCard, key: string, t: Messages, locale: Locale):
 
 /** 答完之後多看一句：模式的重點、參考講法的下一句或複雜度的原因、小知識的說明 */
 function FeedbackDetail({ card, lang, locale }: { card: DealtCard; lang: Lang; locale: Locale }) {
+  const { t } = useI18n();
   const { ref } = card;
   let text: string | undefined;
   let textLang: string | undefined;
   switch (ref.kind) {
     case 'pattern':
-    case 'signal':
       // 正解就是模式 id
       text = getPattern(card.options[card.answer] as PatternId, locale).summary;
       break;
+    case 'signal': {
+      // 線索後面的做法（→ 兩個堆積）答完才給看
+      const { technique } = splitSignal(signalText(ref.patternId, ref.index, locale));
+      const summary = getPattern(ref.patternId, locale).summary;
+      text = technique ? `${t.cards.signalTechnique(technique)} ${summary}` : summary;
+      break;
+    }
     case 'insight':
     case 'complexity':
       text = EXPLANATIONS_EN[ref.problemId]?.split('\n')[ref.kind === 'insight' ? 1 : 3];

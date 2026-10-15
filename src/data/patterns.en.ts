@@ -87,8 +87,8 @@ def remove_value(nums, val):
     summary: 'Grow the right edge one step at a time, move the left edge when the window becomes invalid, and keep the window’s state up to date.',
     signals: [
       'Contiguous subarrays or substrings',
-      'The “longest” or “shortest” window that meets a condition',
-      'Statistics over a fixed window of size k',
+      'The “longest” or “shortest” stretch that meets a condition',
+      'A statistic over every run of k consecutive elements (average, maximum, letter counts)',
     ],
     pitfalls: [
       'For the longest window, update the answer after shrinking; for the shortest, update it inside the shrinking loop',
@@ -241,7 +241,7 @@ def merge(a, b):
     signals: [
       'Depth, diameter, path sums, or balance checks → post-order DFS',
       'Level-by-level processing or right-side views → BFS',
-      'k-th smallest in a BST or BST validation → in-order traversal or bounds',
+      'Checking that left < root < right, or finding the k-th smallest in that order → in-order traversal or bounds',
     ],
     pitfalls: [
       'What the recursive function returns and what you track globally are two different things',
@@ -418,7 +418,7 @@ def permutations(nums):
     summary: 'Use BFS or DFS for grids and relationship graphs, topological sort for dependencies, and Union-Find for connectivity.',
     signals: [
       'Islands, regions, or spreading on a grid',
-      'Fewest steps in an unweighted graph → BFS',
+      'Fewest steps when every move costs the same → BFS',
       'Course prerequisites or cycle detection → topological sort',
       'Merging sets dynamically → Union-Find',
     ],
@@ -579,7 +579,7 @@ def coin_change(coins, amount):
     signals: [
       'Comparing two strings (LCS, edit distance)',
       'Number of paths or minimum cost on a grid',
-      'The best way to merge intervals (Burst Balloons)',
+      'The best order to combine or burst neighbors (Burst Balloons)',
     ],
     pitfalls: [
       'Add an extra row and column for the empty string to simplify the boundaries',
@@ -641,7 +641,7 @@ def can_jump(nums):
     name: 'Intervals',
     summary: 'Sort first: by start to merge, by end to keep the most non-overlapping intervals, and use a min-heap to count concurrent ones.',
     signals: [
-      'Merging or inserting intervals',
+      'Merging overlapping time ranges, or inserting a new one',
       'Meeting rooms and schedule conflicts',
       'The fewest removals needed to eliminate overlaps',
     ],
@@ -722,7 +722,7 @@ def my_pow(x, n):
     summary: 'XOR cancels out pairs, and x & (x - 1) clears the lowest set bit.',
     signals: [
       'Finding the number that appears only once',
-      'Counting the 1 bits in a number',
+      'Counting the 1s in a number’s binary form',
       'Adding without + or -',
     ],
     pitfalls: [

@@ -860,6 +860,7 @@ const en: Messages = {
     complexityQuestion: 'What are the time and space complexities?',
     complexityOption: (time, space) => `${time} time, ${space} space`,
     signalQuestion: 'Which pattern does this clue point to?',
+    signalTechnique: (technique) => `Technique: ${technique}.`,
     tipQuestion: 'What does this print?',
     explainPrompt: 'Say it out loud first: key insight, data structure, example, complexity, edge case. Then flip the card to compare.',
     reveal: 'Show the reference',
