@@ -36,5 +36,15 @@ services:
       # 忘記密碼的重設信；留空就停用
       - key: BREVO_API_KEY
         sync: false
+      # 錯誤追蹤（Sentry）；留空就停用。DSN 前後端共用
+      - key: SENTRY_DSN
+        sync: false
+      # 選用：建置時上傳 source map 給 Sentry，錯誤會指到原本的 TypeScript
+      - key: SENTRY_AUTH_TOKEN
+        sync: false
+      - key: SENTRY_ORG
+        sync: false
+      - key: SENTRY_PROJECT
+        sync: false
       - key: MAIL_FROM
         sync: false

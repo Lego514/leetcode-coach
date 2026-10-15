@@ -7,11 +7,18 @@ import { createBrevoMailer } from './mail/brevo';
 import { openDatabase } from './db/client';
 import { migrate } from './db/migrate';
 import { loadEnv } from './env';
+import { flushMonitoring, initMonitoring } from './monitoring';
 
 // src/index.ts 與建置後的 dist/index.js 都在 server/ 底下一層
 const serverRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 
 const env = loadEnv(process.env, serverRoot);
+const reportError = initMonitoring(env.sentryDsn, env.release);
+/** 寫進 log；有錯誤物件時也送到錯誤追蹤 */
+const logError = (message: string, error?: unknown) => {
+  console.error(message, error);
+  if (error !== undefined) reportError?.(error, message);
+};
 const database = await openDatabase(env.databaseUrl);
 await migrate(database.db, path.join(serverRoot, 'migrations'), (m) => console.log(m));
 
@@ -22,6 +29,7 @@ const app = createApp({
   trustProxy: env.trustProxy,
   staticDir: env.staticDir,
   adminEmails: env.adminEmails,
+  log: logError,
   mail:
     env.brevoApiKey && env.mailFrom && env.appUrl
       ? {
@@ -31,9 +39,9 @@ const app = createApp({
       : undefined,
   ai: env.anthropicApiKey
     ? {
-        generate: createClaudeFeedback(env.anthropicApiKey, (message, error) => console.error(message, error)),
-        generateBehavioral: createClaudeBehavioralFeedback(env.anthropicApiKey, (message, error) => console.error(message, error)),
-        followUp: createClaudeFollowUp(env.anthropicApiKey, (message, error) => console.error(message, error)),
+        generate: createClaudeFeedback(env.anthropicApiKey, logError),
+        generateBehavioral: createClaudeBehavioralFeedback(env.anthropicApiKey, logError),
+        followUp: createClaudeFollowUp(env.anthropicApiKey, logError),
         dailyLimit: env.aiDailyLimit,
         allowedEmails: env.aiAllowedEmails,
       }
@@ -44,6 +52,7 @@ const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
   const storage = database.kind === 'pglite' ? `PGlite（${env.databaseUrl.slice('pglite:'.length)}）` : 'PostgreSQL';
   console.log(`API listening on http://localhost:${info.port}，資料庫：${storage}`);
   if (env.staticDir) console.log(`Serving web app from ${env.staticDir}`);
+  console.log(reportError ? 'Error monitoring on (Sentry)' : 'Error monitoring off (SENTRY_DSN not set)');
   if (!env.anthropicApiKey) console.log('AI feedback off (ANTHROPIC_API_KEY not set)');
   else if (env.aiAllowedEmails === '*') console.log(`AI feedback on for every account, ${env.aiDailyLimit} per user per day`);
   else if (env.aiAllowedEmails.length === 0) console.log('AI feedback on, but AI_ALLOWED_EMAILS is empty, so no account can use it');
@@ -77,6 +86,7 @@ async function shutdown(signal: string) {
   console.log(`Received ${signal}, shutting down`);
   server.close();
   await database.close();
+  await flushMonitoring();
   process.exit(0);
 }
 

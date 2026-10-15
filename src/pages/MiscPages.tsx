@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
 import { syncStatusText } from '../components/AccountSection';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { PageHead } from '../components/ui';
 import { useI18n } from '../i18n';
+import { reportError } from '../lib/monitoring';
 import { useCloud } from '../store/cloud';
 import { stashError } from '../store/reports';
 
@@ -102,6 +104,10 @@ export function NotFoundPage() {
 export function ErrorPage() {
   const { t } = useI18n();
   const error = useRouteError();
+  // 找不到頁面不算錯誤；其他的（畫面當掉）回報給錯誤追蹤
+  useEffect(() => {
+    if (!isRouteErrorResponse(error)) reportError(error);
+  }, [error]);
   const message = isRouteErrorResponse(error)
     ? `${error.status} ${error.statusText}`
     : error instanceof Error
