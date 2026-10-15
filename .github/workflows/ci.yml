@@ -63,3 +63,35 @@ jobs:
             playwright-report
             test-results
           retention-days: 7
+
+  # 用 Docker 建映像，跟 PostgreSQL 一起跑起來，再對容器跑幾個端對端測試：
+  # 確認映像裡的網頁、API、migration 和資料庫連線都正常
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and start the app with PostgreSQL
+        run: docker compose up --build --detach --wait --wait-timeout 180
+      - name: Check the API and the web app
+        run: |
+          curl --fail --silent --show-error http://localhost:8080/api/health
+          curl --fail --silent --show-error http://localhost:8080/ | grep -q '<div id="root">'
+          docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep app
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - name: End-to-end tests against the container
+        run: npx playwright test --project=chromium e2e/sync.spec.ts e2e/today.spec.ts e2e/board.spec.ts e2e/board-share.spec.ts
+        env:
+          E2E_BASE_URL: http://localhost:8080
+      - name: Show the container logs
+        if: failure()
+        run: docker compose logs

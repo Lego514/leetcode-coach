@@ -95,6 +95,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 | Quality | Vitest (unit, API, and two-device sync tests), Playwright end-to-end tests against the production build and a real PostgreSQL on Chromium and iPhone WebKit, ESLint, GitHub Actions CI |
 | AI | Claude Opus 5.5 through the Anthropic TypeScript SDK, JSON-schema structured output, server-side refusal fallback, per-user daily quota stored in PostgreSQL |
 | Hosting | Render (one Node service for the API and the web app), Neon PostgreSQL |
+| Containers | Multi-stage Dockerfile (build, then a slim runtime that runs as a non-root user with a health check) and Docker Compose with PostgreSQL; CI builds the image, starts it with Compose, and runs end-to-end tests against the container |
 
 ## Architecture
 
@@ -188,6 +189,21 @@ npm start            # run the built API (and the web app when NODE_ENV=producti
 - The web app still works as a static site without the API: sign-in shows as unavailable and data stays in the browser.
 - To regenerate the PWA icons, run `node scripts/generate-icons.mjs`.
 - The Playwright tests start the built server on port 4310 with an in-memory PGlite database. Set `E2E_DATABASE_URL` to run them against PostgreSQL, as CI does. The first time, run `npx playwright install chromium`.
+
+### Run it with Docker
+
+Docker runs the whole system — the production build of the web app and API, plus PostgreSQL — without installing Node or a database:
+
+```bash
+docker compose up --build    # then open http://localhost:8080
+docker compose down          # stop; add -v to also delete the database volume
+```
+
+- The image is built in two stages. The first installs everything and builds both parts. The second keeps only what runs: production dependencies, the bundled API, migrations, and the built web app. It runs as the unprivileged `node` user and has a health check on `/api/health`.
+- Migrations run when the container starts, the same as on Render.
+- Optional settings such as `ANTHROPIC_API_KEY`, `AI_ALLOWED_EMAILS`, `ADMIN_EMAILS`, `BREVO_API_KEY`, and `MAIL_FROM` are passed through from your shell or a `.env` file next to `compose.yaml`. Without them, those features stay off.
+- To run the image on another host, set `DATABASE_URL` and `APP_ORIGINS` (the URL people open), and publish port 8080.
+- The `docker` job in CI builds the image, starts it with PostgreSQL through Compose, waits for the health checks, and runs a set of Playwright tests against the container. Set `E2E_BASE_URL` to point Playwright at any running server the same way.
 
 ## Deploying
 
@@ -286,6 +302,8 @@ Notes:
 遇到 bug、內容有錯或有想要的功能，可以到「回報問題」頁送出；微複習每張卡答完後也有「回報」按鈕。不登入也能送，表單會列出一起送出的資訊（頁面、卡片、版本、瀏覽器）。登入後可以看自己回報的處理進度；伺服器設定 `ADMIN_EMAILS` 列出的帳號會有收件匣，可以把回報標成已處理。
 
 本機開發執行 `npm run dev`，會同時啟動網頁（http://localhost:5173）和後端（內建 PGlite 資料庫，不需要另外安裝）。`npm run test:e2e` 會先建置，再用 Playwright 跑端對端測試。
+
+有裝 Docker 的話，`docker compose up --build` 會把正式版的網頁、後端和 PostgreSQL 一起跑起來，打開 http://localhost:8080 就能用，不用裝 Node 或資料庫。映像分兩段建置，最後只留執行需要的檔案，用一般使用者（不是 root）執行，並且有健康檢查。CI 每次都會建映像、用 Compose 跑起來，再對容器跑端對端測試。
 
 部署到 Render＋Neon 的步驟：
 

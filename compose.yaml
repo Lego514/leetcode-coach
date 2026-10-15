@@ -1,0 +1,38 @@
+# 本機一行跑起整個系統：docker compose up --build，然後打開 http://localhost:8080
+# 資料存在 PostgreSQL 的 volume 裡，docker compose down -v 才會清掉。
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: coach
+      POSTGRES_PASSWORD: coach
+      POSTGRES_DB: coach
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U coach']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - '8080:8080'
+    environment:
+      DATABASE_URL: postgres://coach:coach@db:5432/coach
+      APP_ORIGINS: http://localhost:8080
+      # 沒有反向代理，直接用連線的 IP
+      TRUST_PROXY: '0'
+      # 選用：從外面的環境變數或 .env 帶進來，沒設就停用對應功能
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_ALLOWED_EMAILS: ${AI_ALLOWED_EMAILS:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

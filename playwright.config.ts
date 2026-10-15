@@ -3,8 +3,10 @@ import { defineConfig, devices } from '@playwright/test';
 // 端對端測試跑的是正式環境的建置：同一個 Node 服務提供網頁與 API。
 // 先執行 npm run build:all（npm run test:e2e 會自動建置）。
 // 預設用記憶體裡的 PGlite；設定 E2E_DATABASE_URL 就改連真正的 PostgreSQL（CI 就是這樣跑的）。
+// 設定 E2E_BASE_URL 就測已經在跑的服務（CI 用這個測 Docker 容器），不自己啟動伺服器。
 const PORT = 4310;
-const baseURL = `http://localhost:${PORT}`;
+const external = process.env.E2E_BASE_URL;
+const baseURL = external ?? `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
@@ -27,19 +29,21 @@ export default defineConfig({
     // 不接受 Secure cookie（正式站是 HTTPS，不受影響）；或是用到只在桌面版側邊欄的按鈕。
     { name: 'iphone', use: { ...devices['iPhone 13'] }, grepInvert: /@desktop/ },
   ],
-  webServer: {
-    command: 'npm start',
-    url: `${baseURL}/api/health`,
-    // 每次都用新的伺服器，記憶體資料庫和登入次數限制才會重設
-    reuseExistingServer: false,
-    timeout: 60_000,
-    env: {
-      NODE_ENV: 'production',
-      PORT: String(PORT),
-      APP_ORIGINS: baseURL,
-      DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'pglite:memory',
-      // e2e/feedback.spec.ts 用這個帳號看收件匣
-      ADMIN_EMAILS: 'admin@e2e.test',
-    },
-  },
+  webServer: external
+    ? undefined
+    : {
+        command: 'npm start',
+        url: `${baseURL}/api/health`,
+        // 每次都用新的伺服器，記憶體資料庫和登入次數限制才會重設
+        reuseExistingServer: false,
+        timeout: 60_000,
+        env: {
+          NODE_ENV: 'production',
+          PORT: String(PORT),
+          APP_ORIGINS: baseURL,
+          DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'pglite:memory',
+          // e2e/feedback.spec.ts 用這個帳號看收件匣
+          ADMIN_EMAILS: 'admin@e2e.test',
+        },
+      },
 });
