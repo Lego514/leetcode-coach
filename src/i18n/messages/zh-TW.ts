@@ -127,6 +127,17 @@ const zhTW = {
     nextReview: (day: string) => `下次複習 ${day}`,
   },
 
+  editAttempt: {
+    action: '編輯',
+    actionLabel: (title: string) => `編輯「${title}」今天的紀錄`,
+    title: '編輯這次的紀錄',
+    delete: '刪除這筆紀錄',
+    deleteConfirm: '確定要刪除嗎？複習排程會照這題剩下的紀錄重算。',
+    deleteYes: '刪除',
+    deleted: '已刪除這筆紀錄',
+    saved: (day: string, relative: string) => `已更新。下次複習：${day}，${relative}`,
+  },
+
   record: {
     title: '記錄這次練習',
     question: '這次做得怎麼樣？',
@@ -367,7 +378,6 @@ const zhTW = {
     openProblems: '打開題庫',
     doneTitle: '今天做過的',
     doneEmpty: '還沒有紀錄。按「開始」會計時並提供提示；已經在 LeetCode 寫完的話，直接按「記錄」。',
-    doneItem: (rating: string) => `（${rating}）`,
     streak: (n: number) => `連續練習 <b>${n}</b> 天`,
     thisWeek: (n: number) => `本週練習 <b>${n}</b> 次`,
     planAllDone: (list: string) => `${list} 的每一題都做過了，接下來以複習為主。`,

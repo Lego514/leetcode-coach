@@ -41,6 +41,8 @@ export const attemptDataSchema = z.object({
   delayDays: z.number().int().min(1).max(365).optional(),
   /** 卡在哪；沒勾就沒有 */
   stuck: z.array(z.enum(STUCK_REASONS)).max(STUCK_REASONS.length).optional(),
+  /** 事後改過的時間（ISO）；同步時用來判斷哪一版比較新 */
+  editedAt: timestamp.optional(),
 });
 
 /** AI 對一次講解的回饋；分數 0 沒講到、1 講得不完整、2 講清楚 */

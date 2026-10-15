@@ -107,3 +107,34 @@ test('shows the plan as numbers and what a target date needs', async ({ page }) 
   await page.getByRole('link', { name: 'Raise the daily goal' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
 });
+
+test('edits or deletes a record from today', async ({ page }) => {
+  await page.goto('/');
+  await doneList(page).getByRole('button', { name: 'Record another problem' }).click();
+  const record = page.getByRole('dialog', { name: 'Record another problem' });
+  await record.getByLabel('Problem number, title, or LeetCode URL').fill('1');
+  await record.getByRole('button', { name: 'Find problem' }).click();
+  await record.getByRole('button', { name: /Solved alone/ }).click();
+  await record.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(record).toBeHidden();
+  await expect(doneList(page)).toContainText('Last time: Solved alone');
+
+  // 選錯了：改成看了解答，複習排程跟著重算
+  await doneList(page).getByRole('button', { name: 'Edit today’s record for Two Sum' }).click();
+  const edit = page.getByRole('dialog', { name: 'Edit this record' });
+  await expect(edit.getByRole('button', { name: /Solved alone/ })).toHaveAttribute('aria-pressed', 'true');
+  await edit.getByRole('button', { name: /Read the solution/ }).click();
+  await edit.getByLabel('Minutes spent (optional)').fill('25');
+  await edit.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(edit).toBeHidden();
+  await expect(page.getByText(/^Updated\. Next review/)).toBeVisible();
+  await expect(doneList(page)).toContainText('Last time: Read the solution');
+
+  // 記錯題目：刪掉，這題回到還沒做過
+  await doneList(page).getByRole('button', { name: 'Edit today’s record for Two Sum' }).click();
+  await expect(edit.getByLabel('Minutes spent (optional)')).toHaveValue('25');
+  await edit.getByRole('button', { name: 'Delete this record' }).click();
+  await edit.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(edit).toBeHidden();
+  await expect(doneList(page)).toContainText('Nothing recorded yet');
+});

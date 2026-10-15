@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { EditAttemptDialog } from '../components/EditAttemptDialog';
 import { ProblemRow } from '../components/ProblemRow';
 import { QuickRecordDialog } from '../components/QuickRecordDialog';
 import { RecordDialog } from '../components/RecordDialog';
@@ -21,7 +22,7 @@ import {
 } from '../lib/stats';
 import { useCloud } from '../store/cloud';
 import { useSprint } from '../store/sprint';
-import type { AttemptMode } from '../store/db';
+import type { AttemptMode, AttemptRecord } from '../store/db';
 import { useAttempts, useCardReviews, useCatalog, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
 
 const BANNER_KEY = 'coach:signin-banner-dismissed';
@@ -84,6 +85,7 @@ export function TodayPage() {
   const sprintDay = sprint && sprint.daysLeft > 0 ? sprint.plan.days[0] : null;
   const [recording, setRecording] = useState<{ problem: Problem; mode: AttemptMode } | null>(null);
   const [quickRecord, setQuickRecord] = useState(false);
+  const [editing, setEditing] = useState<{ problem: Problem; attempt: AttemptRecord } | null>(null);
   // 「再來一題」多加的題數，只算當天
   const [extra, setExtra] = useState({ day, count: 0 });
   const extraToday = extra.day === day ? extra.count : 0;
@@ -109,6 +111,16 @@ export function TodayPage() {
 
   const practiced = practiceAttempts(attempts ?? []);
   const todayAttempts = practiced.filter((a) => a.day === day);
+  // 今天做過的題，同一題做了兩次只列一次（編輯的是最後那次）；跟上面一樣用題目列，看得到下次複習的日子
+  const lastToday = new Map<number, AttemptRecord>();
+  for (const a of todayAttempts) {
+    const prev = lastToday.get(a.problemId);
+    if (!prev || a.at > prev.at) lastToday.set(a.problemId, a);
+  }
+  const doneToday = [...lastToday.values()].flatMap((attempt) => {
+    const problem = catalog.byId.get(attempt.problemId);
+    return problem ? [{ problem, attempt }] : [];
+  });
   // 做過微複習的日子也算連續天數
   const streak = practiceStreak(streakDays(practiced, cardReviews ?? [], rehearsals ?? []), day);
   const cardsToday = (cardReviews ?? []).filter((r) => r.day === day).length;
@@ -255,7 +267,7 @@ export function TodayPage() {
 
         <Sheet
           title={t.today.doneTitle}
-          count={todayAttempts.length}
+          count={doneToday.length}
           id="done"
           actions={
             <button className="btn btn-small" onClick={() => setQuickRecord(true)}>
@@ -263,22 +275,32 @@ export function TodayPage() {
             </button>
           }
         >
-          {todayAttempts.length === 0 ? (
+          {doneToday.length === 0 ? (
             <p className="sheet-empty">{t.today.doneEmpty}</p>
           ) : (
-            <ul className="done-list">
-              {todayAttempts.map((a) => {
-                const p = catalog.byId.get(a.problemId);
-                return (
-                  <li key={a.id} className="chip">
-                    <Link to={`/problems/${a.problemId}`}>{p?.title ?? `#${a.problemId}`}</Link>
-                    {t.today.doneItem(t.ratings[a.rating].label)}
-                  </li>
-                );
-              })}
+            <ul className="rows">
+              {doneToday.map(({ problem: p, attempt }) => (
+                <li key={p.id}>
+                  <ProblemRow
+                    problem={p}
+                    progress={progress.get(p.id)}
+                    today={day}
+                    showPattern
+                    actions={
+                      <button
+                        className="btn btn-small btn-quiet"
+                        aria-label={t.editAttempt.actionLabel(p.title)}
+                        onClick={() => setEditing({ problem: p, attempt })}
+                      >
+                        {t.editAttempt.action}
+                      </button>
+                    }
+                  />
+                </li>
+              ))}
             </ul>
           )}
-          <div className="inline-stats" style={{ padding: '0 20px 16px' }}>
+          <div className="inline-stats done-stats">
             <span>{rich(t.today.streak(streak), { b: bold })}</span>
             <span>{rich(t.today.thisWeek(thisWeek), { b: bold })}</span>
           </div>
@@ -287,6 +309,7 @@ export function TodayPage() {
 
       <RecordDialog problem={recording?.problem ?? null} mode={recording?.mode} onClose={() => setRecording(null)} />
       <QuickRecordDialog open={quickRecord} onClose={() => setQuickRecord(false)} />
+      <EditAttemptDialog edit={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }
