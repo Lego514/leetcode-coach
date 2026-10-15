@@ -1468,6 +1468,15 @@ kbd,
   white-space: nowrap;
 }
 
+/* 日期和「編輯」靠右 */
+.history-side {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin-block: -4px;
+}
+
 .tag-editor {
   display: flex;
   flex-wrap: wrap;

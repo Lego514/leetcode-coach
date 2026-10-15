@@ -11,7 +11,7 @@ import { StuckPicker } from './StuckPicker';
 import { useToast } from './toast';
 import { Dialog } from './ui';
 
-// 改今天記過的一筆練習：選錯結果、時間打錯、卡在哪漏勾，或整筆記錯題目要刪掉。
+// 改記過的一筆練習（今天頁和題目頁的紀錄）：選錯結果、時間打錯、卡在哪漏勾，或整筆記錯題目要刪掉。
 
 interface EditAttemptDialogProps {
   edit: { problem: Problem; attempt: AttemptRecord } | null;
@@ -19,13 +19,13 @@ interface EditAttemptDialogProps {
 }
 
 export function EditAttemptDialog({ edit, onClose }: EditAttemptDialogProps) {
-  const { t } = useI18n();
+  const { t, fmt } = useI18n();
   return (
     <Dialog
       open={edit !== null}
       onClose={onClose}
       title={t.editAttempt.title}
-      subtitle={edit ? `${edit.problem.id}. ${edit.problem.title}` : undefined}
+      subtitle={edit ? `${edit.problem.id}. ${edit.problem.title} · ${fmt.day(edit.attempt.day)}` : undefined}
     >
       {edit && <EditAttemptForm key={edit.attempt.uid} attempt={edit.attempt} onDone={onClose} />}
     </Dialog>
