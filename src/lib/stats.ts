@@ -179,3 +179,33 @@ export function finishDay(remaining: number, dailyNew: number, today: Day): Day 
   if (dailyNew <= 0) return null;
   return addDays(today, Math.ceil(remaining / dailyNew) - 1);
 }
+
+export interface MonthBlock {
+  /** 這個月的 1 號（範圍從月中開始時是範圍的第一天） */
+  first: Day;
+  /** 一欄一週，七格依星期排（週一在上）；不屬於這個月或不在範圍內的格子是 null */
+  weeks: (Day | null)[][];
+}
+
+/**
+ * 熱度圖照月份分塊，跟 LeetCode 一樣：跨月的那一週拆成兩欄，前一個月的留在前一塊，
+ * 月份之間留空隙，一眼就看得出哪幾格是哪個月。
+ */
+export function monthBlocks(from: Day, to: Day): MonthBlock[] {
+  const blocks: MonthBlock[] = [];
+  for (let day = from; day <= to; day = addDays(day, 1)) {
+    let block = blocks.at(-1);
+    if (!block || block.first.slice(0, 7) !== day.slice(0, 7)) {
+      block = { first: day, weeks: [] };
+      blocks.push(block);
+    }
+    const row = diffDays(startOfWeek(day), day);
+    let week = block.weeks.at(-1);
+    if (!week || row === 0) {
+      week = Array.from({ length: 7 }, () => null);
+      block.weeks.push(week);
+    }
+    week[row] = day;
+  }
+  return blocks;
+}

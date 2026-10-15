@@ -4,6 +4,7 @@ import {
   dueProblems,
   finishDay,
   longestStreak,
+  monthBlocks,
   newProblemsStartedOn,
   planToTarget,
   practiceAttempts,
@@ -125,5 +126,28 @@ describe('imported attempts', () => {
 
   it('leaves imports out of activity stats', () => {
     expect(practiceAttempts(attempts).map((a) => a.problemId)).toEqual([1, 1, 2, 4]);
+  });
+});
+
+describe('monthBlocks', () => {
+  it('splits the week that crosses into a new month, so each month is its own block', () => {
+    // 2026-09-28 是週一；10/1 是週四
+    const blocks = monthBlocks('2026-09-28', '2026-10-06');
+    expect(blocks.map((b) => b.first)).toEqual(['2026-09-28', '2026-10-01']);
+    // 九月：一欄，只有週一到週三
+    expect(blocks[0].weeks).toEqual([['2026-09-28', '2026-09-29', '2026-09-30', null, null, null, null]]);
+    // 十月：第一欄從週四開始，下一欄是新的一週（到今天為止）
+    expect(blocks[1].weeks).toEqual([
+      [null, null, null, '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04'],
+      ['2026-10-05', '2026-10-06', null, null, null, null, null],
+    ]);
+  });
+
+  it('covers every day of a year once', () => {
+    const blocks = monthBlocks('2025-10-13', '2026-10-15');
+    const days = blocks.flatMap((b) => b.weeks.flat()).filter((d) => d !== null);
+    expect(days).toHaveLength(368);
+    expect(new Set(days).size).toBe(368);
+    expect(blocks).toHaveLength(13);
   });
 });

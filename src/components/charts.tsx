@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
-import type { WeekCount } from '../lib/stats';
+import { monthBlocks, type WeekCount } from '../lib/stats';
 
 const WIDTH = 640;
 const HEIGHT = 200;
@@ -141,14 +141,12 @@ interface ActivityHeatmapProps {
   weeks?: number;
 }
 
-/** 一年的練習熱度圖：每格一天，一欄一週，練越多題顏色越深 */
+/** 一年的練習熱度圖：每格一天，一欄一週，練越多題顏色越深；跟 LeetCode 一樣照月份分塊 */
 export function ActivityHeatmap({ counts, cardDays, today, weeks = 53 }: ActivityHeatmapProps) {
   const { t, fmt } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const first = addDays(startOfWeek(today), -7 * (weeks - 1));
-  const columns = Array.from({ length: weeks }, (_, w) =>
-    Array.from({ length: 7 }, (_, d) => addDays(first, w * 7 + d)),
-  );
+  const blocks = monthBlocks(first, today);
 
   // 手機放不下一整年，一打開就捲到最近幾週
   useLayoutEffect(() => {
@@ -160,35 +158,32 @@ export function ActivityHeatmap({ counts, cardDays, today, weeks = 53 }: Activit
     <div className="heatmap">
       <div className="heatmap-scroll" ref={scrollRef}>
         <div className="heatmap-grid" aria-hidden>
-          {columns.map((days) => {
-            // 月份標在這個月 1 號所在的那一欄上面
-            const firstOfMonth = days.find((day) => day.endsWith('-01'));
-            return (
-              <div key={days[0]} className="heatmap-week">
-                <span className="heatmap-month">{firstOfMonth && <span>{fmt.month(firstOfMonth)}</span>}</span>
-                {days.map((day) => {
-                  const count = counts.get(day) ?? 0;
-                  const cardsOnly = count === 0 && cardDays.has(day);
-                  const future = day > today;
-                  return (
-                    <span
-                      key={day}
-                      className="cell"
-                      data-level={cardsOnly ? 1 : activityLevel(count)}
-                      data-future={future}
-                      title={
-                        future
-                          ? undefined
-                          : cardsOnly
-                            ? t.charts.dayCards(fmt.day(day, false))
-                            : t.charts.dayCell(fmt.day(day, false), count)
-                      }
-                    />
-                  );
-                })}
+          {blocks.map((block) => (
+            <div key={block.first} className="heatmap-block" style={{ flexGrow: block.weeks.length }}>
+              <div className="heatmap-days" style={{ gridTemplateColumns: `repeat(${block.weeks.length}, minmax(0, 1fr))` }}>
+                {block.weeks.map((days, w) =>
+                  days.map((day, d) => {
+                    // 依星期排：欄是週、列是星期幾
+                    const place = { gridColumn: w + 1, gridRow: d + 1 };
+                    if (!day) return <span key={`${w}-${d}`} className="cell-gap" style={place} />;
+                    const count = counts.get(day) ?? 0;
+                    const cardsOnly = count === 0 && cardDays.has(day);
+                    return (
+                      <span
+                        key={day}
+                        className="cell"
+                        style={place}
+                        data-level={cardsOnly ? 1 : activityLevel(count)}
+                        title={cardsOnly ? t.charts.dayCards(fmt.day(day, false)) : t.charts.dayCell(fmt.day(day, false), count)}
+                      />
+                    );
+                  }),
+                )}
               </div>
-            );
-          })}
+              {/* 範圍開頭只剩一週的月份放不下名字 */}
+              <span className="heatmap-month">{block.weeks.length > 1 && <span>{fmt.month(block.first)}</span>}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div className="heatmap-legend" aria-hidden>
