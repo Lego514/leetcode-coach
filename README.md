@@ -52,6 +52,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 - **Whiteboard**: [DSA Whiteboard](https://github.com/Lego514/dsa-whiteboard), which I built from scratch for this app and later split into its own open-source package ([try it standalone](https://lego514.github.io/dsa-whiteboard/)). Drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, recursion trees, DP tables, intervals, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand. It has templates for common patterns, Build from text (paste a problem's example), range frames for sliding windows, a LeetCode-style code box with line-by-line tracing, step-by-step playback, and PNG export. See its README for the full list.
   - **Explain mode** (this app only): walk through your steps out loud in English. The current step's note shows as a prompt while a timer, audio recording, and live transcript run. Afterwards you see how long you spent on each step (the slow one is usually the part you can't explain smoothly yet), play back the audio, and fix the transcript. On a problem's whiteboard you can also tick which of the five points you covered, get AI feedback, save the transcript as the problem's script, and save the run as an explanation drill, marked "Whiteboard" in the mock interview history.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
+  - **Share** a board for a mock interview or study session: everyone who opens the link edits it together, with each person's cursor and name. Joining doesn't need an account. Your own board isn't touched, and "Save a copy to my board" keeps the shared one. Rooms run on the package's Cloudflare Worker.
   - On the practice page the board opens on top, so the timer keeps running.
   - The app installs the package from GitHub at a release tag and plugs in its own storage, sync status, toasts, and explain mode. The server validates boards with the package's zod schema before storing them.
 - **Behavioral interviews**: a STAR story bank for the non-coding round.
@@ -269,6 +270,7 @@ Notes:
 - 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、遞迴樹、DP 表、區間、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。有常見模式的模板、貼上題目範例就能建立、滑動視窗的範圍框、LeetCode 風格的程式碼框和逐行追蹤、逐步播放、匯出圖片。完整功能請看那邊的 README。
 - **講解模式**（只有這個 App 有）：照著記好的步驟用英文講出來。這一步的說明會當作提詞，同時計時、錄音、顯示即時逐字稿。講完看每一步講了多久（特別久的那步通常就是還講不順的地方）、聽錄音、修正逐字稿；在題目的白板上還可以勾有講到哪幾個重點、拿 AI 回饋、把逐字稿存成講解稿，並存成一筆講解練習，在模擬面試的紀錄裡標成「白板」。
 - 每一題有自己的白板，另外有一張自由白板；在「我的白板」可以看到全部。白板存在這台裝置，登入後會同步到雲端。
+- **共用**：模擬面試或一起讀書時，把白板的連結傳給對方，打開的人都能一起編輯，看得到每個人的游標和名字，對方不用帳號。自己的白板不會被改到，想留下共用的內容就按「存一份到我的白板」。房間在 dsa-whiteboard 的 Cloudflare Worker 上。
 - 練習頁打開白板時，計時不會中斷。
 
 題庫的「標記以前刷過的題」會把一大批題目分散到之後幾天，每天最多 5 題到期，不會全擠在同一天。
