@@ -130,6 +130,7 @@ const zhTW = {
   editAttempt: {
     action: '編輯',
     actionLabel: (title: string) => `編輯「${title}」今天的紀錄`,
+    historyLabel: (day: string) => `編輯 ${day} 的紀錄`,
     title: '編輯這次的紀錄',
     delete: '刪除這筆紀錄',
     deleteConfirm: '確定要刪除嗎？複習排程會照這題剩下的紀錄重算。',

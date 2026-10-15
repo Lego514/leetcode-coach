@@ -138,6 +138,7 @@ const en: Messages = {
   editAttempt: {
     action: 'Edit',
     actionLabel: (title) => `Edit today’s record for ${title}`,
+    historyLabel: (day) => `Edit the record from ${day}`,
     title: 'Edit this record',
     delete: 'Delete this record',
     deleteConfirm: 'Delete it? The review schedule is recalculated from this problem’s other records.',

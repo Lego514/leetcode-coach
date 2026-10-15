@@ -4,6 +4,7 @@ import { SaveStatus, useAutosave } from '../components/autosave';
 import { ScriptBuilder } from '../components/ScriptBuilder';
 import { hasStepNotes, SolvingStepsSheet } from '../components/SolvingSteps';
 import { CodeTextarea } from '../components/CodeTextarea';
+import { EditAttemptDialog } from '../components/EditAttemptDialog';
 import { RecordDialog } from '../components/RecordDialog';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
 import { useToast } from '../components/toast';
@@ -17,7 +18,7 @@ import { diffDays } from '../lib/dates';
 import { LANGUAGES } from '../lib/languages';
 import { recallOn, stageOf } from '../lib/srs';
 import { deleteCustomProblem, resetProgress, saveNote, setCompanies } from '../store/actions';
-import type { NoteRecord } from '../store/db';
+import type { AttemptRecord, NoteRecord } from '../store/db';
 import {
   useAttemptsFor,
   useCatalog,
@@ -135,7 +136,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
             </div>
           </Sheet>
           <CompanyEditor problemId={problem.id} />
-          <History problemId={problem.id} />
+          <History problem={problem} />
           <DangerZone problem={problem} hasProgress={!!progress} />
         </div>
       </div>
@@ -380,9 +381,11 @@ function CompanyEditor({ problemId }: { problemId: number }) {
   );
 }
 
-function History({ problemId }: { problemId: number }) {
+/** 練習紀錄；每一筆都可以改（選錯結果、時間打錯）或刪掉 */
+function History({ problem }: { problem: Problem }) {
   const { t, fmt } = useI18n();
-  const attempts = useAttemptsFor(problemId);
+  const attempts = useAttemptsFor(problem.id);
+  const [editing, setEditing] = useState<AttemptRecord | null>(null);
   return (
     <Sheet title={t.detail.historyTitle} count={attempts?.length} id="history">
       <div className="sheet-body">
@@ -401,12 +404,22 @@ function History({ problemId }: { problemId: number }) {
                     </span>
                   ))}
                 </span>
-                <span className="history-when history-date">{fmt.day(a.day)}</span>
+                <span className="history-side">
+                  <span className="history-when history-date">{fmt.day(a.day)}</span>
+                  <button
+                    className="btn btn-small btn-quiet"
+                    aria-label={t.editAttempt.historyLabel(fmt.day(a.day))}
+                    onClick={() => setEditing(a)}
+                  >
+                    {t.editAttempt.action}
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
         )}
       </div>
+      <EditAttemptDialog edit={editing && { problem, attempt: editing }} onClose={() => setEditing(null)} />
     </Sheet>
   );
 }
