@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:e2e": "npm run build:all && playwright test --project=chromium",
     "test:e2e:all": "npm run build:all && playwright test",
+    "screenshots": "npm run build:all && playwright test -c playwright.screenshots.config.ts",
     "lint": "eslint .",
     "typecheck": "tsc -b && npm run typecheck -w server",
     "build:all": "npm run build && npm run build:server"
