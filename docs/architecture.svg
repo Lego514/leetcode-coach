@@ -1,12 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-labelledby="title desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-labelledby="title desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
   <title id="title">LeetCode Coach architecture</title>
-  <desc id="desc">An installable React PWA, including a custom whiteboard editor and spaced-repetition flashcards, stores data locally in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL. The API calls the Claude API for explanation feedback and Brevo for password reset email. GitHub Actions runs lint, type checks, unit, API and Playwright tests before Render deploys main.</desc>
+  <desc id="desc">An installable React PWA stores data locally in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL. The API calls the Claude API for feedback, GitHub for sign-in, and Brevo for password reset email. The whiteboard, an open-source package, connects over WebSockets to Cloudflare Workers with one Durable Object per room for live co-editing. Sentry receives errors from the web app and the API. GitHub Actions runs lint, type checks, unit, API, Playwright, and Docker container tests before Render deploys main.</desc>
   <defs>
     <style>
       .bg { fill: #ffffff; }
       .panel { fill: #f5f7fb; stroke: #c9d2e1; stroke-width: 1.5; }
       .item { fill: #ffffff; stroke: #dbe2ee; stroke-width: 1; }
       .ext { fill: #fbf7f0; stroke: #e2d3b8; stroke-width: 1.5; }
+      .edge { fill: #f4f2fb; stroke: #cfc6e8; stroke-width: 1.5; }
       .ci { fill: #f3f8f4; stroke: #c3dbc9; stroke-width: 1.5; }
       .h1 { font-size: 24px; font-weight: 700; fill: #16233a; }
       .h2 { font-size: 16px; font-weight: 700; fill: #16233a; }
@@ -21,6 +22,7 @@
         .panel { fill: #131f34; stroke: #2b3a55; }
         .item { fill: #0f1a2d; stroke: #25344e; }
         .ext { fill: #1f1a12; stroke: #4d3f28; }
+        .edge { fill: #1a1730; stroke: #3d3566; }
         .ci { fill: #12211a; stroke: #2b4a36; }
         .h1, .h2, .t { fill: #e8eef8; }
         .sub, .label { fill: #8593ab; }
@@ -34,12 +36,12 @@
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1200" height="800" />
+  <rect class="bg" x="0" y="0" width="1200" height="900" />
   <text class="h1" x="30" y="46">LeetCode Coach — Architecture</text>
-  <text class="sub" x="30" y="66">Offline-first study tracker for coding interviews · React PWA + Node/PostgreSQL sync API</text>
+  <text class="sub" x="30" y="66">Offline-first study coach for coding interviews · React PWA + Node/PostgreSQL sync API + live whiteboard rooms</text>
 
   <!-- Browser -->
-  <rect class="panel" x="30" y="84" width="370" height="496" rx="10" />
+  <rect class="panel" x="30" y="84" width="370" height="552" rx="10" />
   <text class="h2" x="50" y="114">Browser — installable PWA</text>
   <g>
     <rect class="item" x="50" y="128" width="330" height="54" rx="6" />
@@ -51,109 +53,135 @@
     <text class="d" x="66" y="231">Dexie 4 on IndexedDB · change outbox</text>
 
     <rect class="item" x="50" y="252" width="330" height="54" rx="6" />
-    <text class="t" x="66" y="274">Whiteboard</text>
-    <text class="d" x="66" y="293">Custom editor · step replay · PNG export</text>
+    <text class="t" x="66" y="274">Whiteboard (dsa-whiteboard, open source)</text>
+    <text class="d" x="66" y="293">Custom editor · step replay · live co-editing</text>
 
     <rect class="item" x="50" y="314" width="330" height="54" rx="6" />
-    <text class="t" x="66" y="336">Flashcards</text>
-    <text class="d" x="66" y="355">Leitner spaced repetition · 59 tested tips</text>
+    <text class="t" x="66" y="336">Study engine</text>
+    <text class="d" x="66" y="355">FSRS-6 reviews · interleaved daily plan · flashcards</text>
 
     <rect class="item" x="50" y="376" width="330" height="54" rx="6" />
-    <text class="t" x="66" y="398">Offline &amp; updates</text>
-    <text class="d" x="66" y="417">Service worker (Workbox) · self-updating</text>
+    <text class="t" x="66" y="398">Speech</text>
+    <text class="d" x="66" y="417">Web Speech API · live English transcripts</text>
 
     <rect class="item" x="50" y="438" width="330" height="54" rx="6" />
-    <text class="t" x="66" y="460">Speech</text>
-    <text class="d" x="66" y="479">Web Speech API · live English transcripts</text>
+    <text class="t" x="66" y="460">Offline &amp; updates</text>
+    <text class="d" x="66" y="479">Service worker (Workbox) · self-updating</text>
 
     <rect class="item" x="50" y="500" width="330" height="54" rx="6" />
     <text class="t" x="66" y="522">Localization</text>
     <text class="d" x="66" y="541">English + Traditional Chinese dictionaries</text>
+
+    <rect class="item" x="50" y="562" width="330" height="54" rx="6" />
+    <text class="t" x="66" y="584">Error monitoring</text>
+    <text class="d" x="66" y="603">Sentry, loaded only when configured</text>
   </g>
 
   <!-- Render -->
-  <rect class="panel" x="470" y="84" width="340" height="496" rx="10" />
-  <text class="h2" x="490" y="114">Render — Node 24 web service</text>
+  <rect class="panel" x="470" y="84" width="340" height="428" rx="10" />
+  <text class="h2" x="490" y="114">Render — Node 24 (Docker-ready)</text>
   <g>
-    <rect class="item" x="490" y="128" width="300" height="62" rx="6" />
-    <text class="t" x="506" y="153">Hono API</text>
-    <text class="d" x="506" y="174">zod schemas shared with the client</text>
+    <rect class="item" x="490" y="128" width="300" height="54" rx="6" />
+    <text class="t" x="506" y="150">Hono API</text>
+    <text class="d" x="506" y="169">zod schemas shared with the client</text>
 
-    <rect class="item" x="490" y="202" width="300" height="62" rx="6" />
-    <text class="t" x="506" y="227">Auth</text>
-    <text class="d" x="506" y="248">scrypt · HttpOnly sessions · email reset</text>
+    <rect class="item" x="490" y="190" width="300" height="54" rx="6" />
+    <text class="t" x="506" y="212">Sync</text>
+    <text class="d" x="506" y="231">Outbox push/pull · last-write-wins</text>
 
-    <rect class="item" x="490" y="276" width="300" height="62" rx="6" />
-    <text class="t" x="506" y="301">Sync</text>
-    <text class="d" x="506" y="322">Outbox push/pull · last-write-wins</text>
+    <rect class="item" x="490" y="252" width="300" height="54" rx="6" />
+    <text class="t" x="506" y="274">AI feedback</text>
+    <text class="d" x="506" y="293">Allow-list · per-user daily quota</text>
 
-    <rect class="item" x="490" y="350" width="300" height="62" rx="6" />
-    <text class="t" x="506" y="375">AI feedback</text>
-    <text class="d" x="506" y="396">Per-user daily quota in PostgreSQL</text>
+    <rect class="item" x="490" y="314" width="300" height="54" rx="6" />
+    <text class="t" x="506" y="336">Auth</text>
+    <text class="d" x="506" y="355">scrypt sessions · GitHub OAuth with PKCE</text>
 
-    <rect class="item" x="490" y="424" width="300" height="62" rx="6" />
-    <text class="t" x="506" y="449">Static hosting</text>
-    <text class="d" x="506" y="470">Serves the built PWA on the same origin</text>
+    <rect class="item" x="490" y="376" width="300" height="54" rx="6" />
+    <text class="t" x="506" y="398">Static hosting</text>
+    <text class="d" x="506" y="417">Serves the built PWA on the same origin</text>
 
-    <rect class="item" x="490" y="498" width="300" height="62" rx="6" />
-    <text class="t" x="506" y="523">Data access</text>
-    <text class="d" x="506" y="544">Drizzle ORM · plain SQL migrations</text>
+    <rect class="item" x="490" y="438" width="300" height="54" rx="6" />
+    <text class="t" x="506" y="460">Data access</text>
+    <text class="d" x="506" y="479">Drizzle ORM · plain SQL migrations</text>
   </g>
 
+  <!-- Cloudflare -->
+  <rect class="edge" x="470" y="540" width="340" height="96" rx="10" />
+  <text class="h2" x="490" y="568">Cloudflare Workers</text>
+  <text class="d" x="490" y="592">Whiteboard rooms: one Durable Object each</text>
+  <text class="d" x="490" y="614">WebSockets · server-ordered last-write-wins</text>
+
   <!-- External services -->
-  <rect class="ext" x="880" y="84" width="290" height="176" rx="10" />
+  <rect class="ext" x="880" y="84" width="290" height="140" rx="10" />
   <text class="h2" x="900" y="114">Neon PostgreSQL</text>
-  <text class="d" x="900" y="142">users · sessions</text>
-  <text class="d" x="900" y="164">records (jsonb) · 9 synced collections</text>
-  <text class="d" x="900" y="186">password_resets · ai_usage</text>
-  <text class="d" x="900" y="208">Serverless, scales to zero when idle</text>
-  <text class="sub" x="900" y="240">AWS US East 2 (Ohio)</text>
+  <text class="d" x="900" y="140">users · sessions · oauth_accounts</text>
+  <text class="d" x="900" y="160">records (jsonb) · 11 synced collections</text>
+  <text class="d" x="900" y="180">password_resets · ai_usage · reports</text>
+  <text class="sub" x="900" y="206">Serverless · AWS US East 2 (Ohio)</text>
 
-  <rect class="ext" x="880" y="290" width="290" height="130" rx="10" />
-  <text class="h2" x="900" y="320">Anthropic Claude API</text>
-  <text class="d" x="900" y="348">Claude Opus 5</text>
-  <text class="d" x="900" y="370">JSON-schema structured output</text>
-  <text class="d" x="900" y="392">Server-side refusal fallback</text>
+  <rect class="ext" x="880" y="240" width="290" height="90" rx="10" />
+  <text class="h2" x="900" y="268">Anthropic Claude API</text>
+  <text class="d" x="900" y="292">Claude Opus 5.5</text>
+  <text class="d" x="900" y="312">JSON-schema structured output</text>
 
-  <rect class="ext" x="880" y="450" width="290" height="110" rx="10" />
-  <text class="h2" x="900" y="480">Brevo</text>
-  <text class="d" x="900" y="508">Transactional email</text>
-  <text class="d" x="900" y="530">One-time password reset links</text>
+  <rect class="ext" x="880" y="346" width="290" height="80" rx="10" />
+  <text class="h2" x="900" y="374">GitHub OAuth</text>
+  <text class="d" x="900" y="398">Sign in with GitHub · verified email</text>
+
+  <rect class="ext" x="880" y="442" width="290" height="70" rx="10" />
+  <text class="h2" x="900" y="470">Brevo</text>
+  <text class="d" x="900" y="492">Password reset email</text>
+
+  <rect class="ext" x="880" y="540" width="290" height="96" rx="10" />
+  <text class="h2" x="900" y="568">Sentry</text>
+  <text class="d" x="900" y="592">Errors from the web app and the API</text>
+  <text class="d" x="900" y="614">No accounts, bodies, or query strings</text>
 
   <!-- Connections -->
-  <line class="wire" x1="402" y1="330" x2="468" y2="330" marker-start="url(#arrow)" marker-end="url(#arrow)" />
-  <text class="label" x="435" y="318" text-anchor="middle">HTTPS</text>
-  <text class="label" x="435" y="350" text-anchor="middle">/api JSON</text>
+  <line class="wire" x1="402" y1="210" x2="468" y2="210" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text class="label" x="435" y="198" text-anchor="middle">HTTPS</text>
+  <text class="label" x="435" y="230" text-anchor="middle">/api JSON</text>
 
-  <line class="wire" x1="812" y1="172" x2="878" y2="172" marker-end="url(#arrow)" />
-  <text class="label" x="845" y="162" text-anchor="middle">SQL</text>
+  <line class="wire" x1="402" y1="588" x2="468" y2="588" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text class="label" x="435" y="576" text-anchor="middle">WebSocket</text>
 
-  <line class="wire" x1="812" y1="355" x2="878" y2="355" marker-end="url(#arrow)" />
-  <text class="label" x="845" y="345" text-anchor="middle">HTTPS</text>
+  <line class="wire" x1="812" y1="154" x2="878" y2="154" marker-end="url(#arrow)" />
+  <text class="label" x="845" y="144" text-anchor="middle">SQL</text>
 
-  <line class="wire" x1="812" y1="505" x2="878" y2="505" marker-end="url(#arrow)" />
-  <text class="label" x="845" y="495" text-anchor="middle">HTTPS</text>
+  <line class="wire" x1="812" y1="280" x2="878" y2="280" marker-end="url(#arrow)" />
+  <text class="label" x="845" y="270" text-anchor="middle">HTTPS</text>
+
+  <line class="wire" x1="812" y1="386" x2="878" y2="386" marker-end="url(#arrow)" />
+  <text class="label" x="845" y="376" text-anchor="middle">OAuth</text>
+
+  <line class="wire" x1="812" y1="477" x2="878" y2="477" marker-end="url(#arrow)" />
+  <text class="label" x="845" y="467" text-anchor="middle">HTTPS</text>
 
   <!-- CI/CD -->
-  <rect class="ci" x="30" y="610" width="1140" height="166" rx="10" />
-  <text class="h2" x="50" y="640">CI/CD</text>
+  <rect class="ci" x="30" y="670" width="1140" height="206" rx="10" />
+  <text class="h2" x="50" y="700">CI/CD</text>
 
-  <rect class="item" x="60" y="660" width="300" height="96" rx="6" />
-  <text class="t" x="78" y="690">GitHub</text>
-  <text class="d" x="78" y="712">Pull requests into main</text>
-  <text class="d" x="78" y="734">github.com/Lego514/leetcode-coach</text>
+  <rect class="item" x="60" y="720" width="300" height="130" rx="6" />
+  <text class="t" x="78" y="750">GitHub</text>
+  <text class="d" x="78" y="772">Pull requests into main</text>
+  <text class="d" x="78" y="794">github.com/Lego514/leetcode-coach</text>
+  <text class="d" x="78" y="816">github.com/Lego514/dsa-whiteboard</text>
 
-  <rect class="item" x="440" y="660" width="340" height="104" rx="6" />
-  <text class="t" x="458" y="688">GitHub Actions</text>
-  <text class="d" x="458" y="710">ESLint · tsc · Vitest: 343 unit &amp; API tests</text>
-  <text class="d" x="458" y="730">Playwright: 59 e2e tests on Chromium</text>
-  <text class="d" x="458" y="750">and iPhone WebKit, against PostgreSQL 17</text>
+  <rect class="item" x="440" y="720" width="340" height="130" rx="6" />
+  <text class="t" x="458" y="750">GitHub Actions</text>
+  <text class="d" x="458" y="772">ESLint · tsc · Vitest: 265 unit &amp; API tests</text>
+  <text class="d" x="458" y="794">Playwright: 74 e2e tests on Chromium and</text>
+  <text class="d" x="458" y="814">iPhone WebKit, against PostgreSQL 17</text>
+  <text class="d" x="458" y="836">Docker: build the image, test the container</text>
 
-  <rect class="item" x="860" y="660" width="290" height="96" rx="6" />
-  <text class="t" x="878" y="690">Render</text>
-  <text class="d" x="878" y="712">Deploys main after CI passes</text>
-  <text class="d" x="878" y="734">Migrations run on startup</text>
+  <rect class="item" x="860" y="720" width="290" height="130" rx="6" />
+  <text class="t" x="878" y="750">Deploy</text>
+  <text class="d" x="878" y="772">Render: main after CI passes</text>
+  <text class="d" x="878" y="794">Migrations run on startup</text>
+  <text class="d" x="878" y="816">Cloudflare: whiteboard rooms</text>
+  <text class="d" x="878" y="838">GitHub Pages: standalone whiteboard</text>
 
-  <line class="wire" x1="362" y1="708" x2="438" y2="708" marker-end="url(#arrow)" />
-  <line class="wire" x1="782" y1="708" x2="858" y2="708" marker-end="url(#arrow)" />
+  <line class="wire" x1="362" y1="785" x2="438" y2="785" marker-end="url(#arrow)" />
+  <line class="wire" x1="782" y1="785" x2="858" y2="785" marker-end="url(#arrow)" />
 </svg>

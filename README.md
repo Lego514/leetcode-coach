@@ -6,7 +6,22 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 
 **Live app:** https://leetcode-coach-f6q7.onrender.com — it runs on free hosting that sleeps when idle, so the first visit after a while can take about a minute to wake up. After that it's fast, and once loaded it keeps working offline.
 
-![Architecture: a React PWA (with a custom whiteboard and spaced-repetition flashcards) stores data in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL; the API calls Claude for feedback and Brevo for email; GitHub Actions tests every change on Chromium and iPhone WebKit before Render deploys](docs/architecture.svg)
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/today-dark.png"><img src="docs/images/today-light.png" alt="The Today page: progress toward the target date, flashcards, and the reviews due today"></picture>
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/practice-dark.png"><img src="docs/images/practice-light.png" alt="Timed practice with one-line notes for each interview step"></picture><br><b>Timed practice</b>: a timer, one-line notes per interview step, and hints that open one layer at a time.</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/whiteboard-dark.png"><img src="docs/images/whiteboard-light.png" alt="The whiteboard with a sliding-window template on Longest Substring Without Repeating Characters"></picture><br><b>Whiteboard</b>: arrays, pointers, a window frame, and a count dict, from a template in one click.</td>
+  </tr>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/ai-feedback-dark.png"><img src="docs/images/ai-feedback-light.png" alt="AI feedback on a spoken explanation, scored on five points with a model answer"></picture><br><b>Explaining out loud</b>: a live transcript, then Claude scores it on five points and suggests a model answer.</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/progress-dark.png"><img src="docs/images/progress-light.png" alt="The Progress page with a year of practice as a heatmap"></picture><br><b>Progress</b>: a year of practice in month blocks, streaks, and mastery by pattern.</td>
+  </tr>
+</table>
+
+Screenshots use generated demo data and are regenerated with `npm run screenshots`. They follow your GitHub theme (light or dark).
 
 ## Features
 
@@ -101,6 +116,8 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 
 ## Architecture
 
+![Architecture: a React PWA stores data in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL; the API calls Claude for feedback, GitHub for sign-in, and Brevo for email; the whiteboard connects over WebSockets to Cloudflare Workers for live co-editing; Sentry receives errors; GitHub Actions tests every change, including a Docker container, before Render deploys](docs/architecture.svg)
+
 ```
 src/                 Web app
   data/                Static content: problems, lists, patterns, hints, interview steps
@@ -184,6 +201,7 @@ npm run test:e2e     # build, then run the Playwright tests in Chromium
 npm run lint
 npm run typecheck
 npm run build:all    # web app into dist/ and API into server/dist/
+npm run screenshots  # rebuild, then regenerate the README screenshots in docs/images/ from demo data
 npm start            # run the built API (and the web app when NODE_ENV=production)
 ```
 
@@ -257,7 +275,7 @@ Notes:
 
 ## 中文說明
 
-這是一個幫忙準備美國軟體工程師面試的刷題教練。題目還是在 LeetCode 上寫，這個 App 負責三件事：
+這是一個幫忙準備美國軟體工程師面試的刷題教練。上面的截圖是示範資料，`npm run screenshots` 會重新產生。題目還是在 LeetCode 上寫，這個 App 負責三件事：
 
 - 決定今天該刷哪些題
 - 計時作答，卡住時一層一層給提示，再用 FSRS（Anki 用的排程演算法）排好每一題的複習日
