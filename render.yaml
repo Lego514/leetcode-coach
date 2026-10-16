@@ -36,6 +36,11 @@ services:
       # 忘記密碼的重設信；留空就停用
       - key: BREVO_API_KEY
         sync: false
+      # 用 GitHub 登入（GitHub 的 OAuth App）；兩個都填才啟用
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
       # 錯誤追蹤（Sentry）；留空就停用。DSN 前後端共用
       - key: SENTRY_DSN
         sync: false

@@ -7,17 +7,25 @@ import type { Formatters } from '../i18n/format';
 import { errorCode } from '../store/api';
 import {
   deleteAccount,
+  githubStartUrl,
   requestPasswordReset,
   retryConnection,
   signIn,
   signOut,
   syncNow,
+  unlinkGithub,
   useCloud,
   type CloudState,
 } from '../store/cloud';
 import { db } from '../store/db';
 import { useToast } from './toast';
 import { Dialog, Sheet } from './ui';
+
+const GITHUB_ICON = (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden width="16" height="16">
+    <path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.16-1.18 3.16-1.18.63 1.59.24 2.76.12 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.7 5.38-5.26 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z" />
+  </svg>
+);
 
 export function syncStatusText(cloud: CloudState, t: Messages, fmt: Formatters): string {
   switch (cloud.phase) {
@@ -47,7 +55,7 @@ export function AccountSection() {
       <div className="sheet-body stack" style={{ gap: 16 }}>
         {account.kind === 'loading' && <p className="sheet-note">{t.account.checking}</p>}
         {account.kind === 'unavailable' && <Unavailable />}
-        {account.kind === 'signed-out' && <SignInForm expiredEmail={account.expiredEmail} />}
+        {account.kind === 'signed-out' && <SignInForm expiredEmail={account.expiredEmail} github={cloud.providers.github} />}
         {account.kind === 'signed-in' && <SignedIn email={account.user.email} cloud={cloud} />}
       </div>
     </Sheet>
@@ -148,7 +156,7 @@ function PasswordInput({ id, autoComplete, minLength, value, onChange }: Passwor
   );
 }
 
-function SignInForm({ expiredEmail }: { expiredEmail?: string }) {
+function SignInForm({ expiredEmail, github }: { expiredEmail?: string; github: boolean }) {
   const { t } = useI18n();
   const toast = useToast();
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -182,6 +190,17 @@ function SignInForm({ expiredEmail }: { expiredEmail?: string }) {
     <>
       {expiredEmail && <p className="form-error">{t.account.expired(expiredEmail)}</p>}
       <p>{t.account.intro}</p>
+
+      {github && (
+        <>
+          {/* 整頁轉到伺服器再轉到 GitHub，回來時已經登入 */}
+          <a className="btn github-btn" href={githubStartUrl('signin')} style={{ alignSelf: 'flex-start' }}>
+            {GITHUB_ICON}
+            {t.account.github.continue}
+          </a>
+          <p className="or-divider">{t.account.github.or}</p>
+        </>
+      )}
 
       <div className="segmented" role="group" aria-label={t.account.modeLabel} style={{ alignSelf: 'flex-start' }}>
         <button type="button" aria-pressed={!isRegister} onClick={() => setMode('login')}>
@@ -316,6 +335,9 @@ function SignedIn({ email, cloud }: { email: string; cloud: CloudState }) {
   const pending = useLiveQuery(() => db.outbox.count(), []) ?? 0;
   const [dialog, setDialog] = useState<'logout' | 'delete' | null>(null);
   const [password, setPassword] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
+  // 只用 GitHub 登入的帳號沒有密碼：刪除時改成輸入 email
+  const hasPassword = cloud.login?.password ?? true;
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -335,7 +357,7 @@ function SignedIn({ email, cloud }: { email: string; cloud: CloudState }) {
     setError('');
     setBusy(true);
     try {
-      await deleteAccount(password);
+      await deleteAccount(hasPassword ? { password } : { confirmEmail });
       setDialog(null);
       toast(t.account.deleted);
     } catch (err) {
@@ -343,6 +365,19 @@ function SignedIn({ email, cloud }: { email: string; cloud: CloudState }) {
     } finally {
       setBusy(false);
       setPassword('');
+      setConfirmEmail('');
+    }
+  }
+
+  async function disconnectGithub() {
+    setBusy(true);
+    try {
+      await unlinkGithub();
+      toast(t.account.github.disconnected);
+    } catch (err) {
+      toast(t.errors.api[errorCode(err)]);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -357,6 +392,26 @@ function SignedIn({ email, cloud }: { email: string; cloud: CloudState }) {
         </dd>
         <dt>{t.account.pendingLabel}</dt>
         <dd>{pending === 0 ? t.account.pendingNone : t.account.pendingCount(pending)}</dd>
+        {cloud.login && (cloud.providers.github || cloud.login.github) && (
+          <>
+            <dt>{t.account.github.label}</dt>
+            <dd className="github-row">
+              <span>{cloud.login.github ? t.account.github.linkedAs(cloud.login.github) : t.account.github.notLinked}</span>
+              {cloud.login.github
+                ? cloud.login.password && (
+                    <button className="btn btn-small btn-quiet" disabled={busy} onClick={() => void disconnectGithub()}>
+                      {t.account.github.disconnect}
+                    </button>
+                  )
+                : cloud.providers.github && (
+                    <a className="btn btn-small" href={githubStartUrl('link')}>
+                      {GITHUB_ICON}
+                      {t.account.github.connect}
+                    </a>
+                  )}
+            </dd>
+          </>
+        )}
       </dl>
       <div className="btn-row">
         <button className="btn" disabled={cloud.phase === 'syncing'} onClick={() => void syncNow()}>
@@ -401,17 +456,28 @@ function SignedIn({ email, cloud }: { email: string; cloud: CloudState }) {
               {error}
             </p>
           )}
-          <div className="field">
-            <label className="field-label" htmlFor="delete-password">
-              {t.account.confirmPassword}
+          {hasPassword ? (
+            <div className="field">
+              <label className="field-label" htmlFor="delete-password">
+                {t.account.confirmPassword}
+              </label>
+              <PasswordInput id="delete-password" autoComplete="current-password" value={password} onChange={setPassword} />
+            </div>
+          ) : (
+            <label className="field">
+              <span className="field-label">{t.account.confirmEmail(email)}</span>
+              <input className="input" type="email" autoComplete="off" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} />
             </label>
-            <PasswordInput id="delete-password" autoComplete="current-password" value={password} onChange={setPassword} />
-          </div>
+          )}
           <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-quiet" onClick={() => setDialog(null)}>
               {t.common.cancel}
             </button>
-            <button type="submit" className="btn btn-danger" disabled={busy || !password}>
+            <button
+              type="submit"
+              className="btn btn-danger"
+              disabled={busy || (hasPassword ? !password : confirmEmail.trim().toLowerCase() !== email.toLowerCase())}
+            >
               {t.account.deleteForever}
             </button>
           </div>

@@ -989,6 +989,51 @@ kbd,
   color: var(--ink-3);
 }
 
+/* 用 GitHub 登入：按鈕、「或用 email」分隔線、回來後的結果 */
+.github-btn {
+  gap: 8px;
+}
+
+.github-btn svg,
+.github-row svg {
+  width: 16px;
+  height: 16px;
+}
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.or-divider::before,
+.or-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--rule);
+}
+
+.github-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.notice {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--pen-soft);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.github-result {
+  margin-bottom: 16px;
+}
+
 /* ---------- 對話框 ---------- */
 
 .dialog {

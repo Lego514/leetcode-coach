@@ -30,6 +30,16 @@ const app = createApp({
   staticDir: env.staticDir,
   adminEmails: env.adminEmails,
   log: logError,
+  github:
+    env.githubClientId && env.githubClientSecret && env.appUrl
+      ? {
+          clientId: env.githubClientId,
+          clientSecret: env.githubClientSecret,
+          appUrl: env.appUrl,
+          oauthBaseUrl: env.githubOauthUrl,
+          apiBaseUrl: env.githubApiUrl,
+        }
+      : undefined,
   mail:
     env.brevoApiKey && env.mailFrom && env.appUrl
       ? {
@@ -53,6 +63,11 @@ const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
   console.log(`API listening on http://localhost:${info.port}，資料庫：${storage}`);
   if (env.staticDir) console.log(`Serving web app from ${env.staticDir}`);
   console.log(reportError ? 'Error monitoring on (Sentry)' : 'Error monitoring off (SENTRY_DSN not set)');
+  console.log(
+    env.githubClientId && env.githubClientSecret
+      ? `GitHub sign-in on, callback ${env.appUrl}/api/auth/github/callback`
+      : 'GitHub sign-in off (GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET not set)',
+  );
   if (!env.anthropicApiKey) console.log('AI feedback off (ANTHROPIC_API_KEY not set)');
   else if (env.aiAllowedEmails === '*') console.log(`AI feedback on for every account, ${env.aiDailyLimit} per user per day`);
   else if (env.aiAllowedEmails.length === 0) console.log('AI feedback on, but AI_ALLOWED_EMAILS is empty, so no account can use it');

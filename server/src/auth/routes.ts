@@ -1,6 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { credentialsSchema, deleteAccountSchema, forgotPasswordSchema, resetPasswordSchema } from '../../../shared/protocol';
+import {
+  credentialsSchema,
+  deleteAccountSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  type AuthResponse,
+  type MeResponse,
+} from '../../../shared/protocol';
 import { users } from '../db/schema';
 import {
   clearSessionCookie,
@@ -14,6 +21,7 @@ import {
   type AppEnv,
 } from '../http';
 import { resetPasswordMail, type Mailer } from '../mail/brevo';
+import { loginMethods } from './methods';
 import { hashPassword, verifyAgainstDummy, verifyPassword } from './password';
 import { consumeReset, createReset, deleteStaleResets, RESET_TTL_MS } from './reset';
 import { RateLimiter } from './rate-limit';
@@ -41,8 +49,12 @@ export interface MailOptions {
   appUrl: string;
 }
 
-export function authRoutes(deps: AppDeps, mail?: MailOptions) {
+export function authRoutes(deps: AppDeps, mail?: MailOptions, providers: MeResponse['providers'] = { github: false }) {
   const { db } = deps;
+  const signedIn = async (row: { id: string; email: string; createdAt: Date }): Promise<AuthResponse> => ({
+    user: toPublicUser(row),
+    login: await loginMethods(db, row.id),
+  });
   const now = () => deps.now().getTime();
   // 同一個 IP 每小時最多註冊 10 次；同一組 IP 與帳號 15 分鐘內最多試 10 次密碼
   const registerLimiter = new RateLimiter(10, 60 * MINUTE, now);
@@ -67,7 +79,7 @@ export function authRoutes(deps: AppDeps, mail?: MailOptions) {
       }
       const session = await createSession(db, row.id, deps.now());
       setSessionCookie(c, deps, session.token, session.expiresAt);
-      return c.json({ user: toPublicUser(row) }, 201);
+      return c.json(await signedIn(row), 201);
     })
 
     .post('/login', async (c) => {
@@ -78,14 +90,15 @@ export function authRoutes(deps: AppDeps, mail?: MailOptions) {
       limitOrThrow(loginLimiter, key);
 
       const [row] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      const ok = row ? await verifyPassword(password, row.passwordHash) : await verifyAgainstDummy(password);
+      // 只用 GitHub 登入的帳號沒有密碼：跟帳號不存在一樣，花一樣的時間、回一樣的錯誤
+      const ok = row?.passwordHash ? await verifyPassword(password, row.passwordHash) : await verifyAgainstDummy(password);
       if (!row || !ok) throw new HttpError(401, 'invalid_credentials', 'Email or password is incorrect');
 
       loginLimiter.reset(key);
       await deleteExpiredSessions(db, deps.now());
       const session = await createSession(db, row.id, deps.now());
       setSessionCookie(c, deps, session.token, session.expiresAt);
-      return c.json({ user: toPublicUser(row) });
+      return c.json(await signedIn(row));
     })
 
     // 不透露這個 email 有沒有註冊過，一律回 204
@@ -119,7 +132,7 @@ export function authRoutes(deps: AppDeps, mail?: MailOptions) {
       const [row] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
       const session = await createSession(db, userId, deps.now());
       setSessionCookie(c, deps, session.token, session.expiresAt);
-      return c.json({ user: toPublicUser(row) });
+      return c.json(await signedIn(row));
     })
 
     .post('/logout', async (c) => {
@@ -135,19 +148,23 @@ export function authRoutes(deps: AppDeps, mail?: MailOptions) {
       const session = token ? await findSession(db, token, deps.now()) : null;
       if (!session) {
         if (token) clearSessionCookie(c, deps);
-        return c.json({ user: null });
+        return c.json({ user: null, providers } satisfies MeResponse);
       }
       if (session.renewed) setSessionCookie(c, deps, token!, session.expiresAt);
-      return c.json({ user: session.user });
+      return c.json({ user: session.user, login: await loginMethods(db, session.user.id), providers } satisfies MeResponse);
     })
 
     .post('/delete-account', requireUser(deps), async (c) => {
       const user = c.get('user');
       limitOrThrow(loginLimiter, `${clientIp(c, deps.trustProxy)}|${user.email}`);
-      const { password } = await readJson(c, deleteAccountSchema);
+      const { password, confirmEmail } = await readJson(c, deleteAccountSchema);
       const [row] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
-      if (!row || !(await verifyPassword(password, row.passwordHash))) {
-        throw new HttpError(401, 'invalid_credentials', 'Password is incorrect');
+      // 有密碼就要密碼；只用 GitHub 登入的帳號要打一次自己的 email
+      const confirmed = row?.passwordHash
+        ? Boolean(password) && (await verifyPassword(password!, row.passwordHash))
+        : Boolean(row) && confirmEmail === row!.email;
+      if (!confirmed) {
+        throw new HttpError(401, 'invalid_credentials', row?.passwordHash ? 'Password is incorrect' : 'Email does not match');
       }
       // sessions 與 records 透過 ON DELETE CASCADE 一起刪除
       await db.delete(users).where(eq(users.id, user.id));

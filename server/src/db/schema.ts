@@ -1,14 +1,31 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, date, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, date, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 // 資料表結構以 migrations/*.sql 為準，這裡的定義用來產生型別安全的查詢，兩邊要一起改。
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
+  /** 只用 GitHub 登入的帳號沒有密碼 */
+  passwordHash: text('password_hash'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** 用其他服務登入（目前只有 GitHub）：哪個外部帳號對到哪個使用者 */
+export const oauthAccounts = pgTable(
+  'oauth_accounts',
+  {
+    provider: text('provider').notNull(),
+    providerUserId: text('provider_user_id').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** 顯示用的帳號名稱（GitHub 的 login），登入時更新 */
+    username: text('username').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.provider, t.providerUserId] }), uniqueIndex('oauth_accounts_user_provider_idx').on(t.userId, t.provider)],
+);
 
 export const sessions = pgTable(
   'sessions',

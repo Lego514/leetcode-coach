@@ -1,6 +1,6 @@
 import { liveQuery, type Subscription } from 'dexie';
 import { useSyncExternalStore } from 'react';
-import type { PublicUser } from '../../shared/protocol';
+import type { AuthResponse, LoginMethods, MeResponse, PublicUser } from '../../shared/protocol';
 import { ApiError, apiRequest, errorCode, type ClientErrorCode, type FetchLike } from './api';
 import { db } from './db';
 import { adoptAccount, detachAccount, runSync, SyncAbortedError, wipeLocalData } from './sync';
@@ -23,6 +23,10 @@ export interface CloudState {
   lastSyncedAt?: number;
   /** 最近一次同步失敗的原因 */
   error?: ClientErrorCode | 'unknown';
+  /** 這個帳號可以怎麼登入（登入中、連得到伺服器時才有） */
+  login?: LoginMethods;
+  /** 伺服器有沒有開放用 GitHub 登入 */
+  providers: MeResponse['providers'];
 }
 
 const PUSH_DELAY_MS = 1500;
@@ -32,7 +36,7 @@ const STALE_MS = 60_000;
 
 const fetchImpl: FetchLike = (input, init) => fetch(input, init);
 
-let state: CloudState = { account: { kind: 'loading' }, phase: 'idle' };
+let state: CloudState = { account: { kind: 'loading' }, phase: 'idle', providers: { github: false } };
 const listeners = new Set<() => void>();
 
 function setState(patch: Partial<CloudState>) {
@@ -144,13 +148,18 @@ function stopAutoSync() {
 async function sessionExpired() {
   stopAutoSync();
   const saved = await getSyncState(db);
-  setState({ account: { kind: 'signed-out', expiredEmail: saved.email }, phase: 'idle', error: undefined });
+  setState({ account: { kind: 'signed-out', expiredEmail: saved.email }, phase: 'idle', error: undefined, login: undefined });
 }
 
-async function enter(user: Pick<PublicUser, 'id' | 'email'>) {
+async function enter(user: Pick<PublicUser, 'id' | 'email'>, login?: LoginMethods) {
   await adoptAccount(db, user);
   const saved = await getSyncState(db);
-  setState({ account: { kind: 'signed-in', user: { id: user.id, email: user.email } }, lastSyncedAt: saved.lastSyncedAt, error: undefined });
+  setState({
+    account: { kind: 'signed-in', user: { id: user.id, email: user.email } },
+    lastSyncedAt: saved.lastSyncedAt,
+    error: undefined,
+    login,
+  });
   startAutoSync();
   await syncNow();
 }
@@ -165,8 +174,10 @@ export async function initCloud(): Promise<void> {
   initialized = true;
   const saved = await getSyncState(db);
   try {
-    const { user } = await apiRequest<{ user: PublicUser | null }>(fetchImpl, '/api/auth/me');
-    if (user) await enter(user);
+    const { user, login, providers } = await apiRequest<MeResponse>(fetchImpl, '/api/auth/me');
+    setState({ providers });
+    // 用 GitHub 登入時，從 GitHub 轉回來的這次載入就已經登入了，跟一般登入一樣合併本機資料
+    if (user) await enter(user, login);
     else setState({ account: { kind: 'signed-out', expiredEmail: saved.userId ? saved.email : undefined } });
   } catch (err) {
     if (saved.userId && saved.email) {
@@ -193,11 +204,11 @@ export async function retryConnection(): Promise<void> {
 }
 
 export async function signIn(mode: 'login' | 'register', email: string, password: string): Promise<void> {
-  const { user } = await apiRequest<{ user: PublicUser }>(fetchImpl, `/api/auth/${mode}`, {
+  const { user, login } = await apiRequest<AuthResponse>(fetchImpl, `/api/auth/${mode}`, {
     method: 'POST',
     body: { email, password },
   });
-  await enter(user);
+  await enter(user, login);
 }
 
 /** 寄出重設密碼的信；伺服器一律回成功，不透露 email 是否註冊過 */
@@ -207,11 +218,11 @@ export async function requestPasswordReset(email: string): Promise<void> {
 
 /** 用信裡的連結設定新密碼，成功後直接登入 */
 export async function resetPassword(token: string, password: string): Promise<void> {
-  const { user } = await apiRequest<{ user: PublicUser }>(fetchImpl, '/api/auth/reset-password', {
+  const { user, login } = await apiRequest<AuthResponse>(fetchImpl, '/api/auth/reset-password', {
     method: 'POST',
     body: { token, password },
   });
-  await enter(user);
+  await enter(user, login);
 }
 
 /** 登出；keepData 為 false 時清除這個瀏覽器裡的資料 */
@@ -225,13 +236,24 @@ export async function signOut({ keepData }: { keepData: boolean }): Promise<void
   }
   if (keepData) await detachAccount(db);
   else await wipeLocalData(db);
-  setState({ account: { kind: 'signed-out' }, phase: 'idle', lastSyncedAt: undefined, error: undefined });
+  setState({ account: { kind: 'signed-out' }, phase: 'idle', lastSyncedAt: undefined, error: undefined, login: undefined });
 }
 
-/** 刪除帳號與雲端資料；這個瀏覽器裡的資料保留 */
-export async function deleteAccount(password: string): Promise<void> {
-  await apiRequest(fetchImpl, '/api/auth/delete-account', { method: 'POST', body: { password } });
+/** 刪除帳號與雲端資料；這個瀏覽器裡的資料保留。有密碼的帳號用密碼確認，只用 GitHub 的帳號用 email 確認 */
+export async function deleteAccount(confirm: { password: string } | { confirmEmail: string }): Promise<void> {
+  await apiRequest(fetchImpl, '/api/auth/delete-account', { method: 'POST', body: confirm });
   stopAutoSync();
   await detachAccount(db);
-  setState({ account: { kind: 'signed-out' }, phase: 'idle', lastSyncedAt: undefined, error: undefined });
+  setState({ account: { kind: 'signed-out' }, phase: 'idle', lastSyncedAt: undefined, error: undefined, login: undefined });
+}
+
+/** 開始用 GitHub 登入（或把 GitHub 連到目前的帳號）：整頁轉到伺服器，再轉到 GitHub */
+export function githubStartUrl(intent: 'signin' | 'link'): string {
+  return `api/auth/github/start?intent=${intent}`;
+}
+
+/** 取消連結 GitHub；沒有密碼的帳號不能取消 */
+export async function unlinkGithub(): Promise<void> {
+  const { login } = await apiRequest<{ login: LoginMethods }>(fetchImpl, '/api/auth/github/unlink', { method: 'POST' });
+  setState({ login });
 }
