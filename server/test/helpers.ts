@@ -101,10 +101,14 @@ export class TestClient {
     const eq = pair.indexOf('=');
     const name = pair.slice(0, eq).trim();
     const value = pair.slice(eq + 1).trim();
+    // 只認「刪除 cookie」的寫法（Max-Age=0 或 1970 年的 Expires）。
+    // 不拿 Expires 跟現在的時間比：測試伺服器用假的時鐘（2026-09-16），
+    // session 的期限是假時鐘加 30 天，跟真的時間比，過了那天所有登入的測試都會失敗。
+    // session 有沒有過期由伺服器照它自己的時鐘判斷（auth.test 有測）。
     const expired = attrs.some((a) => {
       const [k, v] = a.trim().split('=');
       if (k.toLowerCase() === 'max-age') return Number(v) <= 0;
-      if (k.toLowerCase() === 'expires') return new Date(v).getTime() <= Date.now();
+      if (k.toLowerCase() === 'expires') return new Date(v).getTime() < Date.UTC(2000, 0, 1);
       return false;
     });
     if (!value || expired) this.cookies.delete(name);
