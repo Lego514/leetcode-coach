@@ -4,6 +4,7 @@ import type { BehavioralFeedback, BoardDoc, ExplanationFeedback, FollowUpRecord 
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
+import type { NewProblemMode } from '../lib/daily';
 import type { Day } from '../lib/dates';
 import type { SprintSettings } from '../lib/sprint';
 import type { Rating, ReviewState } from '../lib/srs';
@@ -177,6 +178,12 @@ export interface SettingsRecord {
   retention?: number;
   /** 面試衝刺；沒有就是平常的每日計畫 */
   sprint?: SprintSettings;
+  /** 每天的新題怎麼挑（src/lib/daily.ts）；沒寫是 mixed */
+  newMode?: NewProblemMode;
+  /** newMode 是 focus 時專練的模式 */
+  focusPattern?: PatternId;
+  /** 新題直接顯示是哪個模式；沒寫是不顯示，練習自己看出來 */
+  showPatterns?: boolean;
 }
 
 export const DEFAULT_SETTINGS: SettingsRecord = {

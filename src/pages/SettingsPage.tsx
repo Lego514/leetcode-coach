@@ -4,7 +4,9 @@ import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useToast } from '../components/toast';
 import { Dialog, PageHead, Sheet } from '../components/ui';
 import { STUDY_LISTS, type ListId } from '../data/lists';
+import { getPatterns, type PatternId } from '../data/patterns';
 import { useI18n } from '../i18n';
+import { NEW_PROBLEM_MODES } from '../lib/daily';
 import { isDay, toDay } from '../lib/dates';
 import { RETENTIONS } from '../lib/srs';
 import { LANGUAGES } from '../lib/languages';
@@ -26,7 +28,7 @@ import { useSettings, useToday } from '../store/queries';
 const THEMES: ThemeChoice[] = ['system', 'light', 'dark'];
 
 export function SettingsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const settings = useSettings();
   const day = useToday();
   const [theme, setTheme] = useTheme();
@@ -67,6 +69,61 @@ export function SettingsPage() {
                   </label>
                 ))}
               </div>
+            </fieldset>
+
+            {/* 每天的新題怎麼挑（src/lib/daily.ts） */}
+            <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+              <legend className="field-label" style={{ marginBottom: 8 }}>
+                {t.settings.newMode}
+              </legend>
+              <div className="stack" style={{ gap: 8 }}>
+                {NEW_PROBLEM_MODES.map((mode) => (
+                  <label key={mode} className="rating-option" style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                    <input
+                      type="radio"
+                      name="new-mode"
+                      style={{ marginTop: 5, accentColor: 'var(--pen)' }}
+                      checked={(settings.newMode ?? 'mixed') === mode}
+                      onChange={() =>
+                        void updateSettings(
+                          mode === 'focus' && !settings.focusPattern ? { newMode: mode, focusPattern: 'arrays' } : { newMode: mode },
+                        )
+                      }
+                    />
+                    <span>
+                      <span className="rating-label">{t.settings.newModes[mode].label}</span>
+                      <span className="rating-detail" style={{ display: 'block' }}>
+                        {t.settings.newModes[mode].detail}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {settings.newMode === 'focus' && (
+                <label className="field" style={{ marginTop: 12 }}>
+                  <span className="field-label">{t.settings.focusPattern}</span>
+                  <select
+                    className="input"
+                    value={settings.focusPattern ?? 'arrays'}
+                    onChange={(e) => void updateSettings({ focusPattern: e.target.value as PatternId })}
+                  >
+                    {getPatterns(locale).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="check" style={{ marginTop: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={settings.showPatterns ?? false}
+                  onChange={(e) => void updateSettings({ showPatterns: e.target.checked })}
+                />
+                {t.settings.showPatterns}
+              </label>
+              <span className="field-hint">{t.settings.showPatternsHint}</span>
             </fieldset>
 
             <div className="form-grid">

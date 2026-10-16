@@ -16,10 +16,12 @@ interface ProblemRowProps {
   marked?: boolean;
   showPattern?: boolean;
   companies?: string[];
+  /** 這題為什麼出現，例如穿插或鞏固 */
+  note?: string;
   actions?: ReactNode;
 }
 
-export function ProblemRow({ problem, progress, today, marked, showPattern, companies, actions }: ProblemRowProps) {
+export function ProblemRow({ problem, progress, today, marked, showPattern, companies, note, actions }: ProblemRowProps) {
   const { t, fmt, locale } = useI18n();
   const stage = stageOf(progress);
   const overdue = progress && progress.due < today;
@@ -47,6 +49,7 @@ export function ProblemRow({ problem, progress, today, marked, showPattern, comp
             </span>
           ) : null}
           {progress && <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>}
+          {note && <span className="problem-note">{note}</span>}
           {problem.premium && <span>{t.common.premium}</span>}
           {problem.custom && <span>{t.common.customTag}</span>}
           {companies?.map((c) => (

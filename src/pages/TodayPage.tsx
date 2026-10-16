@@ -9,13 +9,16 @@ import { PageHead, Sheet } from '../components/ui';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
-import { nextNewProblems, problemsInList } from '../lib/catalog';
-import { startOfWeek, type Day } from '../lib/dates';
+import { getPattern, type PatternId } from '../data/patterns';
+import { problemsInList } from '../lib/catalog';
+import { pickNewProblems, STRUGGLE_DAYS, strugglingPatterns, type NewPick } from '../lib/daily';
+import { addDays, startOfWeek, type Day } from '../lib/dates';
 import {
   dueProblems,
   finishDay,
   newProblemsStartedOn,
   planToTarget,
+  problemsStartedOn,
   practiceAttempts,
   practiceStreak,
   streakDays,
@@ -72,7 +75,7 @@ function SignInBanner() {
 }
 
 export function TodayPage() {
-  const { t, fmt } = useI18n();
+  const { t, fmt, locale } = useI18n();
   const day = useToday();
   const settings = useSettings();
   const catalog = useCatalog();
@@ -100,11 +103,54 @@ export function TodayPage() {
   // 不管是從今天頁、題庫還是「記錄其他題目」開始的新題，都算進每天的目標
   const startedToday = newProblemsStartedOn(attempts ?? [], day);
   const newRemaining = Math.max(0, settings.dailyNew + extraToday - startedToday);
+  const newMode = settings.newMode ?? 'mixed';
+  // 最近常卡住的模式，和每個模式最後一次練習的日子（穿插時挑最久沒碰的）
+  const struggling = useMemo(
+    () => strugglingPatterns(attempts ?? [], (id) => catalog.byId.get(id), addDays(day, -STRUGGLE_DAYS), day),
+    [attempts, catalog, day],
+  );
+  const lastPracticed = useMemo(() => {
+    const last = new Map<PatternId, Day>();
+    for (const state of progress.values()) {
+      const pattern = catalog.byId.get(state.problemId)?.pattern;
+      if (pattern && (last.get(pattern) ?? '') < state.lastDay) last.set(pattern, state.lastDay);
+    }
+    return last;
+  }, [progress, catalog]);
+  // 用今天開始時的狀態排今天的新題：今天才第一次練的題目當作還沒做過，做完一題清單才不會整個換掉。
+  // 今天標記「以前刷過」的題目不算練習，照樣當作做過
+  const practicedFirstToday = useMemo(() => new Set(problemsStartedOn(attempts ?? [], day)), [attempts, day]);
+  const dayPlan = pickNewProblems({
+    list: listProblems,
+    started: (id) => progress.has(id) && !practicedFirstToday.has(id),
+    count: settings.dailyNew + extraToday,
+    mode: newMode,
+    focus: settings.focusPattern,
+    struggling,
+    lastPracticed,
+  });
   // 衝刺時照衝刺的順序（公司題、還沒碰過的模式優先），數量照每天的時間
-  const newProblems =
+  const newPicks: NewPick[] =
     sprint && sprintDay
-      ? sprint.plan.queue.slice(0, sprintDay.newProblems.length + extraToday).map((pick) => pick.problem)
-      : nextNewProblems(listProblems, (id) => progress.has(id), newRemaining);
+      ? sprint.plan.queue.slice(0, sprintDay.newProblems.length + extraToday).map((pick) => ({ problem: pick.problem, reason: 'next' }))
+      : dayPlan.filter((pick) => !progress.has(pick.problem.id)).slice(0, newRemaining);
+  const newProblems = newPicks.map((pick) => pick.problem);
+  const showPatterns = settings.showPatterns ?? false;
+  const pickNote = (pick: NewPick): string | undefined => {
+    if (pick.reason === 'mix') return t.today.pick.mix;
+    if (pick.reason !== 'reinforce') return undefined;
+    // 模式名稱不顯示時，也不在說明裡講出來
+    return showPatterns ? t.today.pick.reinforceNamed(getPattern(pick.problem.pattern, locale).name) : t.today.pick.reinforce;
+  };
+  const focusName = settings.focusPattern ? getPattern(settings.focusPattern, locale).name : '';
+  const planNote =
+    newMode === 'focus' && settings.focusPattern
+      ? dayPlan.some((pick) => pick.reason === 'focus')
+        ? t.today.pick.focusOrder(focusName)
+        : t.today.pick.focusDone(focusName)
+      : newMode === 'roadmap'
+        ? t.today.roadmapOrder(listName)
+        : t.today.pick.mixedOrder(listName);
   const untouched = listProblems.filter((p) => !progress.has(p.id)).length;
   const moreAvailable = sprint && sprintDay ? sprint.plan.queue.length > newProblems.length : untouched > newProblems.length;
   const beyondGoal = Math.max(0, startedToday - settings.dailyNew);
@@ -222,7 +268,7 @@ export function TodayPage() {
                 ? t.today.extraNote(beyondGoal)
                 : startedToday > 0
                   ? t.today.startedToday(startedToday)
-                  : t.today.roadmapOrder(listName)
+                  : planNote
           }
           actions={
             newProblems.length > 0 && moreAvailable ? (
@@ -234,9 +280,18 @@ export function TodayPage() {
         >
           {newProblems.length > 0 ? (
             <ul className="rows">
-              {newProblems.map((p) => (
-                <li key={p.id}>
-                  <ProblemRow problem={p} progress={undefined} today={day} marked showPattern actions={rowActions(p, 'practice')} />
+              {newPicks.map((pick) => (
+                <li key={pick.problem.id}>
+                  <ProblemRow
+                    problem={pick.problem}
+                    progress={undefined}
+                    today={day}
+                    marked
+                    // 預設不顯示模式：面試時沒人會告訴你是哪個模式，自己看出來也是練習
+                    showPattern={showPatterns}
+                    note={pickNote(pick)}
+                    actions={rowActions(pick.problem, 'practice')}
+                  />
                 </li>
               ))}
             </ul>

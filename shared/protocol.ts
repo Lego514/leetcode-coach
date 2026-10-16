@@ -189,6 +189,11 @@ export const settingsDataSchema = z.object({
   targetDate: day.optional(),
   /** 複習排程的目標記憶率（FSRS）；沒寫是 0.9 */
   retention: z.number().min(0.7).max(0.97).optional(),
+  /** 每天的新題怎麼挑：穿插（預設）、照路線圖、專練一個模式 */
+  newMode: z.enum(['mixed', 'roadmap', 'focus']).optional(),
+  focusPattern: z.enum(PATTERN_IDS).optional(),
+  /** 新題直接顯示模式 */
+  showPatterns: z.boolean().optional(),
   /** 面試衝刺：面試日、公司、每天的時間、最後只複習幾天 */
   sprint: z
     .object({

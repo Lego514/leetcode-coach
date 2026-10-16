@@ -138,3 +138,37 @@ test('edits or deletes a record from today', async ({ page }) => {
   await expect(edit).toBeHidden();
   await expect(doneList(page)).toContainText('Nothing recorded yet');
 });
+
+test('mixes another pattern into new problems, hides the pattern, and lets me choose how they are picked', async ({ page }) => {
+  await page.goto('/');
+  const items = newList(page).getByRole('listitem');
+  // 預設穿插：兩題陣列加一題別的模式，看不到模式名稱
+  await expect(items).toHaveCount(3);
+  await expect(newList(page)).toContainText('mostly in pattern order, with one from another pattern');
+  await expect(items.nth(2)).toContainText('Mixed in from another pattern');
+  await expect(newList(page)).not.toContainText('Arrays & Hashing');
+
+  await page.goto('/#/settings');
+  // 設定存好之後勾選才會變，所以點一下再等它變
+  const show = page.getByLabel('Show the pattern on new problems');
+  await show.click();
+  await expect(show).toBeChecked();
+  const focus = page.getByRole('radio', { name: /^Focus on one pattern/ });
+  await focus.click();
+  await expect(focus).toBeChecked();
+  await page.getByLabel('Pattern to focus on').selectOption({ label: 'Graphs' });
+  await expect(page.getByLabel('Pattern to focus on')).toHaveValue('graphs');
+
+  await page.goto('/');
+  await expect(newList(page)).toContainText('Focusing on Graphs');
+  await expect(items).toHaveCount(3);
+  for (let i = 0; i < 3; i += 1) await expect(items.nth(i)).toContainText('Graphs');
+
+  await page.goto('/#/settings');
+  const roadmap = page.getByRole('radio', { name: /^Roadmap order/ });
+  await roadmap.click();
+  await expect(roadmap).toBeChecked();
+  await page.goto('/');
+  await expect(newList(page)).toContainText('In NeetCode 150 pattern order');
+  for (let i = 0; i < 3; i += 1) await expect(items.nth(i)).toContainText('Arrays & Hashing');
+});

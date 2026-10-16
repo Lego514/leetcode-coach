@@ -1370,6 +1370,11 @@ kbd,
   height: 16px;
 }
 
+/* 今天的新題為什麼出現（穿插、鞏固） */
+.problem-note {
+  color: var(--pen);
+}
+
 /* 編輯今天的紀錄：刪除放在最左邊，存檔在右邊 */
 .edit-attempt-actions {
   justify-content: flex-end;
