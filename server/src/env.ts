@@ -29,6 +29,12 @@ export interface Env {
   appUrl?: string;
   /** 可以在 app 裡看所有回報的帳號 email */
   adminEmails: string[];
+  /** 用 GitHub 登入（GitHub 的 OAuth App）；兩個都有才啟用 */
+  githubClientId?: string;
+  githubClientSecret?: string;
+  /** 換成假的 GitHub（端對端測試用） */
+  githubOauthUrl?: string;
+  githubApiUrl?: string;
   /** 錯誤追蹤（Sentry）；沒設定就不啟用 */
   sentryDsn?: string;
   /** 這一版的 commit（Render 會提供），讓錯誤對到版本 */
@@ -80,6 +86,10 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
     aiDailyLimit,
     aiAllowedEmails: parseAllowedEmails(source.AI_ALLOWED_EMAILS),
     adminEmails,
+    githubClientId: source.GITHUB_CLIENT_ID?.trim() || undefined,
+    githubClientSecret: source.GITHUB_CLIENT_SECRET?.trim() || undefined,
+    githubOauthUrl: source.GITHUB_OAUTH_URL?.trim() || undefined,
+    githubApiUrl: source.GITHUB_API_URL?.trim() || undefined,
     sentryDsn: source.SENTRY_DSN?.trim() || undefined,
     release: source.RENDER_GIT_COMMIT?.trim().slice(0, 7) || undefined,
   };

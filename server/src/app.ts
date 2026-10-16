@@ -3,6 +3,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
+import { githubRoutes, type GithubOptions } from './auth/github';
 import { authRoutes, type MailOptions } from './auth/routes';
 import { aiRoutes, type AiOptions } from './ai/routes';
 import type { Database } from './db/client';
@@ -21,6 +22,8 @@ export interface AppOptions {
   ai?: AiOptions;
   /** 沒有設定時忘記密碼停用 */
   mail?: MailOptions;
+  /** 沒有設定時不能用 GitHub 登入 */
+  github?: GithubOptions;
   /** 可以看所有回報的帳號 email（小寫）；沒設定時沒有人看得到收件匣 */
   adminEmails?: string[];
   now?: () => Date;
@@ -64,7 +67,8 @@ export function createApp(options: AppOptions) {
   app.use('/api/*', requestGuard(deps.allowedOrigins));
 
   app.get('/api/health', (c) => c.json({ ok: true }));
-  app.route('/api/auth', authRoutes(deps, options.mail));
+  if (options.github) app.route('/api/auth/github', githubRoutes(deps, options.github));
+  app.route('/api/auth', authRoutes(deps, options.mail, { github: Boolean(options.github) }));
   app.route('/api/sync', syncRoutes(deps));
   app.route('/api/ai', aiRoutes(deps, options.ai));
   app.route('/api/reports', reportRoutes(deps, options.adminEmails ?? []));

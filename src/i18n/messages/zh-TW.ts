@@ -238,6 +238,7 @@ const zhTW = {
       ai_failed: 'AI 回饋暫時無法產生，請稍後再試一次。',
       mail_unavailable: '這個伺服器沒有開啟重設密碼的信件功能。',
       invalid_token: '這個重設連結已經失效，請重新申請一次。',
+      last_login_method: '請先設定密碼（登出後用「忘記密碼」設定），不然取消連結後就沒辦法登入了。',
       unknown: '發生了預期之外的錯誤，請稍後再試。',
     },
     // {id} 會換成題號
@@ -333,8 +334,29 @@ const zhTW = {
     deleteTitle: '刪除帳號？',
     deleteBody: '帳號和雲端上的所有資料會永久刪除，無法復原。這個瀏覽器裡的資料會保留，之後可以繼續在本機使用。',
     confirmPassword: '輸入密碼確認',
+    confirmEmail: (email: string) => `輸入 ${email} 確認`,
     deleteForever: '永久刪除帳號',
     deleted: '帳號和雲端資料已刪除，這個瀏覽器裡的資料仍然保留。',
+    github: {
+      continue: '用 GitHub 登入',
+      or: '或用 email',
+      label: 'GitHub',
+      linkedAs: (login: string) => `@${login}`,
+      notLinked: '沒有連結',
+      connect: '連結 GitHub',
+      disconnect: '取消連結 GitHub',
+      disconnected: '已取消連結 GitHub。',
+      results: {
+        'signed-in': '已用 GitHub 登入。',
+        'signed-up': '已用 GitHub 的 email 建立帳號。',
+        linked: '已連結 GitHub，之後可以直接用 GitHub 登入。',
+        'email-taken': '已經有帳號用了你 GitHub 的 email。請先用那個帳號的密碼登入，再到這裡按「連結 GitHub」。',
+        'in-use': '這個 GitHub 帳號已經連結到另一個帳號了。',
+        'no-email': '你的 GitHub 帳號沒有驗證過的 email。請先到 GitHub 驗證一個，再試一次。',
+        cancelled: '已取消用 GitHub 登入。',
+        failed: '用 GitHub 登入沒有成功，請再試一次。',
+      },
+    },
   },
 
   leave: {

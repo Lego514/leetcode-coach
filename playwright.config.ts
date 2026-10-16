@@ -31,19 +31,32 @@ export default defineConfig({
   ],
   webServer: external
     ? undefined
-    : {
-        command: 'npm start',
-        url: `${baseURL}/api/health`,
-        // 每次都用新的伺服器，記憶體資料庫和登入次數限制才會重設
-        reuseExistingServer: false,
-        timeout: 60_000,
-        env: {
-          NODE_ENV: 'production',
-          PORT: String(PORT),
-          APP_ORIGINS: baseURL,
-          DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'pglite:memory',
-          // e2e/feedback.spec.ts 用這個帳號看收件匣
-          ADMIN_EMAILS: 'admin@e2e.test',
+    : [
+        {
+          command: 'npm start',
+          url: `${baseURL}/api/health`,
+          // 每次都用新的伺服器，記憶體資料庫和登入次數限制才會重設
+          reuseExistingServer: false,
+          timeout: 60_000,
+          env: {
+            NODE_ENV: 'production',
+            PORT: String(PORT),
+            APP_ORIGINS: baseURL,
+            DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'pglite:memory',
+            // e2e/feedback.spec.ts 用這個帳號看收件匣
+            ADMIN_EMAILS: 'admin@e2e.test',
+            // 用 GitHub 登入：連到下面的假 GitHub（e2e/github-login.spec.ts）
+            GITHUB_CLIENT_ID: 'e2e-client',
+            GITHUB_CLIENT_SECRET: 'e2e-secret',
+            GITHUB_OAUTH_URL: 'http://localhost:4320',
+            GITHUB_API_URL: 'http://localhost:4320',
+          },
         },
-      },
+        {
+          command: 'node e2e/fake-github.mjs',
+          url: 'http://localhost:4320/health',
+          reuseExistingServer: false,
+          timeout: 30_000,
+        },
+      ],
 });

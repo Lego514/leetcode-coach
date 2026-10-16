@@ -340,8 +340,10 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(PASSWORD_MIN_LENGTH).max(200),
 });
 
+/** 有密碼的帳號要輸入密碼；只用 GitHub 登入的帳號（沒有密碼）要打一次自己的 email */
 export const deleteAccountSchema = z.object({
-  password: z.string().min(1).max(200),
+  password: z.string().min(1).max(200).optional(),
+  confirmEmail: z.string().trim().toLowerCase().max(254).optional(),
 });
 
 export interface PublicUser {
@@ -349,6 +351,30 @@ export interface PublicUser {
   email: string;
   createdAt: string;
 }
+
+/** 這個帳號可以怎麼登入 */
+export interface LoginMethods {
+  password: boolean;
+  /** 連結的 GitHub 帳號名稱；沒連結是 null */
+  github: string | null;
+}
+
+/** 登入、註冊、重設密碼成功後的回應 */
+export interface AuthResponse {
+  user: PublicUser;
+  login: LoginMethods;
+}
+
+/** GET /api/auth/me：沒登入時 user 是 null；providers 說這台伺服器能不能用 GitHub 登入 */
+export interface MeResponse {
+  user: PublicUser | null;
+  login?: LoginMethods;
+  providers: { github: boolean };
+}
+
+/** 用 GitHub 登入後回到 #/account?github=… 的結果 */
+export const GITHUB_RESULTS = ['signed-in', 'signed-up', 'linked', 'email-taken', 'in-use', 'no-email', 'cancelled', 'failed'] as const;
+export type GithubResult = (typeof GITHUB_RESULTS)[number];
 
 export type ApiErrorCode =
   | 'invalid_request'
@@ -367,6 +393,7 @@ export type ApiErrorCode =
   | 'ai_failed'
   | 'mail_unavailable'
   | 'invalid_token'
+  | 'last_login_method'
   | 'server_error';
 
 export interface ApiErrorBody {

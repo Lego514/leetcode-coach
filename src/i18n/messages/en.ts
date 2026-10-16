@@ -245,6 +245,7 @@ const en: Messages = {
       ai_failed: 'AI feedback couldn’t be generated right now. Please try again in a moment.',
       mail_unavailable: 'Password reset email isn’t turned on for this server.',
       invalid_token: 'This reset link is no longer valid. Request a new one.',
+      last_login_method: 'Set a password first (use “Forgot password” after signing out), or you won’t be able to sign in without GitHub.',
       unknown: 'Something unexpected went wrong. Please try again later.',
     },
     validation: {
@@ -339,8 +340,29 @@ const en: Messages = {
     deleteTitle: 'Delete your account?',
     deleteBody: 'Your account and all of its cloud data will be permanently deleted. Data in this browser is kept, so you can keep using the app locally.',
     confirmPassword: 'Enter your password to confirm',
+    confirmEmail: (email) => `Type ${email} to confirm`,
     deleteForever: 'Delete account permanently',
     deleted: 'Your account and cloud data were deleted. Data in this browser is still here.',
+    github: {
+      continue: 'Continue with GitHub',
+      or: 'or use your email',
+      label: 'GitHub',
+      linkedAs: (login) => `@${login}`,
+      notLinked: 'Not connected',
+      connect: 'Connect GitHub',
+      disconnect: 'Disconnect GitHub',
+      disconnected: 'GitHub disconnected.',
+      results: {
+        'signed-in': 'Signed in with GitHub.',
+        'signed-up': 'Account created with your GitHub email.',
+        linked: 'GitHub connected. You can now sign in with it.',
+        'email-taken': 'An account with your GitHub email already exists. Sign in with its password, then choose “Connect GitHub” here.',
+        'in-use': 'That GitHub account is already connected to a different account.',
+        'no-email': 'Your GitHub account has no verified email. Verify one on GitHub, then try again.',
+        cancelled: 'GitHub sign-in was cancelled.',
+        failed: 'GitHub sign-in didn’t work. Please try again.',
+      },
+    },
   },
 
   leave: {
