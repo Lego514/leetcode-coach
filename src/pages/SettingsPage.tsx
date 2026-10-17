@@ -5,6 +5,7 @@ import { useToast } from '../components/toast';
 import { Dialog, PageHead, Sheet } from '../components/ui';
 import { STUDY_LISTS, type ListId } from '../data/lists';
 import { getPatterns, type PatternId } from '../data/patterns';
+import { BUILTIN_PROBLEMS } from '../data/problems';
 import { useI18n } from '../i18n';
 import { NEW_PROBLEM_MODES } from '../lib/daily';
 import { isDay, toDay } from '../lib/dates';
@@ -26,12 +27,15 @@ import { retentionOf } from '../store/progress';
 import { useSettings, useToday } from '../store/queries';
 
 const THEMES: ThemeChoice[] = ['system', 'light', 'dark'];
+const PREMIUM_IDS = new Set(BUILTIN_PROBLEMS.filter((p) => p.premium).map((p) => p.id));
 
 export function SettingsPage() {
   const { t, locale } = useI18n();
   const settings = useSettings();
   const day = useToday();
   const [theme, setTheme] = useTheme();
+  // 目前題單裡要 LeetCode Premium 的題數
+  const premiumInList = (STUDY_LISTS.find((l) => l.id === settings.activeList)?.problemIds ?? []).filter((id) => PREMIUM_IDS.has(id)).length;
 
   return (
     <div className="page">
@@ -124,6 +128,15 @@ export function SettingsPage() {
                 {t.settings.showPatterns}
               </label>
               <span className="field-hint">{t.settings.showPatternsHint}</span>
+              <label className="check" style={{ marginTop: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={settings.skipPremium ?? false}
+                  onChange={(e) => void updateSettings({ skipPremium: e.target.checked })}
+                />
+                {t.settings.skipPremium}
+              </label>
+              <span className="field-hint">{t.settings.skipPremiumHint(premiumInList)}</span>
             </fieldset>
 
             <div className="form-grid">

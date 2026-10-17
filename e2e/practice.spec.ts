@@ -70,3 +70,24 @@ test('filters the problem list by a tagged company', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Two Sum' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Valid Anagram' })).toHaveCount(0);
 });
+
+test('skips LeetCode Premium problems everywhere once turned on', async ({ page }) => {
+  await page.goto('/#/problems?list=neetcode150&q=meeting');
+  await expect(page.getByRole('link', { name: 'Meeting Rooms', exact: true })).toBeVisible();
+
+  const skip = page.getByLabel('Skip Premium');
+  await skip.click();
+  await expect(skip).toBeChecked();
+  await expect(page.getByRole('link', { name: 'Meeting Rooms', exact: true })).toHaveCount(0);
+  await expect(page.getByText(/^NeetCode 150: 143 problems/)).toBeVisible();
+
+  // 設定頁是同一個設定
+  await page.goto('/#/settings');
+  const setting = page.getByLabel('Skip LeetCode Premium problems');
+  await expect(setting).toBeChecked();
+  await expect(page.getByText(/problems in your list need LeetCode Premium/)).toBeVisible();
+  await setting.click();
+  await expect(setting).not.toBeChecked();
+  await page.goto('/#/problems?list=neetcode150&q=meeting');
+  await expect(page.getByRole('link', { name: 'Meeting Rooms', exact: true })).toBeVisible();
+});

@@ -3,7 +3,7 @@ import { LIST_IDS, PATTERN_IDS } from '../../shared/constants';
 import { STUDY_LISTS } from '../data/lists';
 import { PATTERN_ORDER } from '../data/patterns';
 import { BUILTIN_PROBLEMS } from '../data/problems';
-import { buildCatalog, lookupProblem, nextNewProblems, parseProblemList, problemsInList } from './catalog';
+import { buildCatalog, lookupProblem, nextNewProblems, parseProblemList, problemsInList, skipPremium } from './catalog';
 
 describe('built-in data', () => {
   it('has unique ids and slugs', () => {
@@ -118,5 +118,21 @@ describe('parseProblemList', () => {
 
   it('ignores empty input', () => {
     expect(parseProblemList(catalog, ' ,\n ')).toEqual({ found: [], unknown: [] });
+  });
+});
+
+describe('skipping Premium problems', () => {
+  const list = problemsInList(buildCatalog([]), 'neetcode150');
+  const premium = list.filter((p) => p.premium);
+
+  it('drops Premium problems you have not done, but keeps the ones you have', () => {
+    expect(premium.length).toBeGreaterThan(0);
+    expect(skipPremium(list, false, () => false)).toBe(list);
+    const skipped = skipPremium(list, true, () => false);
+    expect(skipped.some((p) => p.premium)).toBe(false);
+    expect(skipped).toHaveLength(list.length - premium.length);
+    // 做過的 Premium 題照樣留著複習
+    const done = premium[0].id;
+    expect(skipPremium(list, true, (id) => id === done).map((p) => p.id)).toContain(done);
   });
 });

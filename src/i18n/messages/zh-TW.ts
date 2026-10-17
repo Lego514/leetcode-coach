@@ -475,6 +475,7 @@ const zhTW = {
     company: '公司',
     allCompanies: '全部公司',
     search: '搜尋',
+    skipPremium: '跳過 Premium 題目',
     searchPlaceholder: '題號或英文題名',
     add: '新增題目',
     emptyTitle: '沒有符合的題目',
@@ -1060,6 +1061,9 @@ const zhTW = {
         detail: '只出你選的那個模式的題目；做完了就回到路線圖。',
       },
     },
+    skipPremium: '跳過要 LeetCode Premium 的題目',
+    skipPremiumHint: (n: number) =>
+      `目前的題單裡有 ${n} 題要 LeetCode Premium 才能做。跳過後，新題、衝刺計畫、模擬面試和題庫都不會出現這些題；已經做過的照樣會排複習。`,
     focusPattern: '要專練的模式',
     showPatterns: '新題直接顯示是哪個模式',
     showPatternsHint: '預設不顯示：面試時沒人會告訴你是哪個模式，自己看出來也是練習。練習頁和提示裡想看時還是看得到。',

@@ -59,6 +59,14 @@ export function problemsInList(catalog: Catalog, filter: ListFilter): Problem[] 
   return catalog.problems.filter((p) => inList(catalog, p, filter));
 }
 
+/**
+ * 設定了跳過 Premium 時，拿掉還沒做過的 LeetCode Premium 題目（沒訂閱打不開）。
+ * 已經做過的照樣留著，該複習還是會出現。
+ */
+export function skipPremium(problems: Problem[], skip: boolean | undefined, started: (id: number) => boolean): Problem[] {
+  return skip ? problems.filter((p) => !p.premium || started(p.id)) : problems;
+}
+
 /** 下一批還沒做過的題目，依路線圖順序 */
 export function nextNewProblems(problems: Problem[], started: (id: number) => boolean, count: number): Problem[] {
   if (count <= 0) return [];

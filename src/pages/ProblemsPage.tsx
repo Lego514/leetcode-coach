@@ -10,7 +10,7 @@ import type { Difficulty, Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { inList, LIST_FILTERS } from '../lib/catalog';
 import { IMPORT_DUE_PER_DAY, schedule, stageOf, STAGES, type Rating, type Stage } from '../lib/srs';
-import { markSolvedBefore } from '../store/actions';
+import { markSolvedBefore, updateSettings } from '../store/actions';
 import { retentionOf } from '../store/progress';
 import { useCatalog, useCompanies, useMetaMap, useProgressMap, useSettings, useToday } from '../store/queries';
 
@@ -64,6 +64,7 @@ export function ProblemsPage() {
     const q = query.trim().toLowerCase();
     return catalog.problems.filter((p) => {
       if (!inList(catalog, p, list)) return false;
+      if (settings.skipPremium && p.premium && !progress.has(p.id)) return false;
       if (pattern !== 'any' && p.pattern !== pattern) return false;
       if (difficulty !== 'any' && p.difficulty !== difficulty) return false;
       const state = progress.get(p.id);
@@ -73,7 +74,7 @@ export function ProblemsPage() {
       if (q && !p.title.toLowerCase().includes(q) && String(p.id) !== q) return false;
       return true;
     });
-  }, [catalog, list, pattern, difficulty, status, company, query, progress, metaMap, day]);
+  }, [catalog, list, pattern, difficulty, status, company, query, progress, metaMap, day, settings.skipPremium]);
 
   const groups = useMemo(() => {
     const map = new Map<PatternId, Problem[]>();
@@ -81,7 +82,10 @@ export function ProblemsPage() {
     return [...map.entries()];
   }, [filtered]);
 
-  const listTotal = catalog.problems.filter((p) => inList(catalog, p, list));
+  // 跳過 Premium 時，題數也不算還沒做過的 Premium 題
+  const listTotal = catalog.problems.filter(
+    (p) => inList(catalog, p, list) && !(settings.skipPremium && p.premium && !progress.has(p.id)),
+  );
   const listStarted = listTotal.filter((p) => progress.has(p.id)).length;
   const statusLabel = (s: StatusFilter) =>
     s === 'any' ? t.problems.statusAny : s === 'due' ? t.problems.statusDue : t.stages[s];
@@ -165,6 +169,11 @@ export function ProblemsPage() {
             </select>
           </label>
         )}
+        {/* 跟設定頁的「跳過 Premium 題目」同一個設定 */}
+        <label className="check filters-check">
+          <input type="checkbox" checked={settings.skipPremium ?? false} onChange={(e) => void updateSettings({ skipPremium: e.target.checked })} />
+          {t.problems.skipPremium}
+        </label>
         <label className="field field-search">
           <span className="field-label">{t.problems.search}</span>
           <input

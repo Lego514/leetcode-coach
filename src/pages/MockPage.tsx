@@ -27,7 +27,7 @@ import { getPattern, getPatterns, type PatternId } from '../data/patterns';
 import type { Difficulty, Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { rich } from '../i18n/rich';
-import { problemsInList } from '../lib/catalog';
+import { problemsInList, skipPremium } from '../lib/catalog';
 import { formatDuration, today } from '../lib/dates';
 import { HINT_LEVELS, suggestRating } from '../lib/practice';
 import { useRecorder, useStopwatch } from '../lib/session';
@@ -128,7 +128,10 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
   const [withTranscript, setWithTranscript] = useState(false);
   const [error, setError] = useState<'notFound' | 'noMatch' | null>(null);
 
-  const listProblems = useMemo(() => problemsInList(catalog, settings.activeList), [catalog, settings.activeList]);
+  const listProblems = useMemo(
+    () => skipPremium(problemsInList(catalog, settings.activeList), settings.skipPremium, (id) => progress.has(id)),
+    [catalog, settings.activeList, settings.skipPremium, progress],
+  );
 
   const pool = useMemo(() => {
     let result = listProblems.filter(

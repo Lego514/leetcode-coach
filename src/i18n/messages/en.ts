@@ -481,6 +481,7 @@ const en: Messages = {
     company: 'Company',
     allCompanies: 'All companies',
     search: 'Search',
+    skipPremium: 'Skip Premium',
     searchPlaceholder: 'Number or title',
     add: 'Add problem',
     emptyTitle: 'No matching problems',
@@ -1081,6 +1082,9 @@ const en: Messages = {
         detail: 'Only problems from the pattern you choose. When it’s done, the roadmap takes over.',
       },
     },
+    skipPremium: 'Skip LeetCode Premium problems',
+    skipPremiumHint: (n) =>
+      `${n} ${n === 1 ? 'problem' : 'problems'} in your list need${n === 1 ? 's' : ''} LeetCode Premium. Skipped ones stay out of new problems, sprints, mock interviews, and the problem list. Ones you’ve already done still come up for review.`,
     focusPattern: 'Pattern to focus on',
     showPatterns: 'Show the pattern on new problems',
     showPatternsHint: 'Off by default: in an interview nobody tells you the pattern, so working it out is part of the practice. The practice page and hints still show it when you ask.',
