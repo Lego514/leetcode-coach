@@ -22,6 +22,7 @@ import {
   type BackupFile,
 } from '../store/backup';
 import { useCloud } from '../store/cloud';
+import { endDemo } from '../store/demo';
 import { retentionOf } from '../store/progress';
 import { useSettings, useToday } from '../store/queries';
 
@@ -271,12 +272,14 @@ function BackupSection() {
   async function confirmImport() {
     if (!pending) return;
     await restoreBackup(pending);
+    endDemo();
     setPending(null);
     toast(t.settings.imported);
   }
 
   async function clear() {
     await clearAllData();
+    endDemo();
     setConfirmClear(false);
     toast(t.settings.cleared);
   }

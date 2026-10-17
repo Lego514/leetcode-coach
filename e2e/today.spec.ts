@@ -172,3 +172,41 @@ test('mixes another pattern into new problems, hides the pattern, and lets me ch
   await expect(newList(page)).toContainText('In NeetCode 150 pattern order');
   for (let i = 0; i < 3; i += 1) await expect(items.nth(i)).toContainText('Arrays & Hashing');
 });
+
+test('loads demo data to look around, then clears it', async ({ page }) => {
+  await page.goto('/');
+  const welcome = page.getByRole('region', { name: 'Before you start' });
+  await welcome.getByRole('button', { name: 'Try it with demo data' }).click();
+  // 每一頁上面都提醒是示範資料
+  const banner = page.getByRole('status').filter({ hasText: 'You’re looking at demo data' });
+  await expect(banner).toBeVisible();
+  await expect(page.getByRole('region', { name: /^Due for review/ }).getByRole('listitem').first()).toBeVisible();
+  await page.goto('/#/progress');
+  await expect(banner).toBeVisible();
+  await expect(page.getByRole('region', { name: /practice sessions in the past year/ })).toBeVisible();
+
+  await banner.getByRole('button', { name: 'Clear demo data' }).click();
+  await expect(banner).toHaveCount(0);
+  await page.goto('/');
+  await expect(page.getByRole('region', { name: 'Before you start' })).toBeVisible();
+});
+
+test('never carries demo data into an account', { tag: '@desktop' }, async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try it with demo data' }).click();
+  await expect(page.getByText('You’re looking at demo data')).toBeVisible();
+
+  await page.goto('/#/account');
+  const account = page.getByRole('region', { name: 'Account & sync' });
+  await account.getByRole('group', { name: 'Sign in or register' }).getByRole('button', { name: 'Register' }).click();
+  await account.getByLabel('Email', { exact: true }).fill(`demo-${Date.now()}@example.com`);
+  await account.getByLabel('Password').fill('e2e-password-123');
+  await account.getByRole('button', { name: 'Create account' }).click();
+  await expect(account.getByText('Waiting to upload')).toBeVisible();
+
+  // 登入前先清掉示範資料：帳號裡什麼都沒有
+  await expect(page.getByText('You’re looking at demo data')).toHaveCount(0);
+  await page.goto('/');
+  await expect(page.getByRole('region', { name: 'Before you start' })).toBeVisible();
+  await expect(page.getByRole('region', { name: /^Due for review/ }).getByRole('listitem')).toHaveCount(0);
+});

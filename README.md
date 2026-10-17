@@ -6,6 +6,8 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 
 **Live app:** https://leetcode-coach-f6q7.onrender.com — it runs on free hosting that sleeps when idle, so the first visit after a while can take about a minute to wake up. After that it's fast, and once loaded it keeps working offline.
 
+**No account needed to look around:** on the Today page, press **Try it with demo data** to fill the app with six weeks of made-up practice (reviews due, a streak, a heatmap, stuck patterns). It stays in your browser, is never synced, and **Clear demo data** removes it.
+
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/today-dark.png"><img src="docs/images/today-light.png" alt="The Today page: progress toward the target date, flashcards, and the reviews due today"></picture>
 
 ## Screenshots
@@ -275,7 +277,7 @@ Notes:
 
 ## 中文說明
 
-這是一個幫忙準備美國軟體工程師面試的刷題教練。上面的截圖是示範資料，`npm run screenshots` 會重新產生。題目還是在 LeetCode 上寫，這個 App 負責三件事：
+這是一個幫忙準備美國軟體工程師面試的刷題教練。上面的截圖是示範資料，`npm run screenshots` 會重新產生。想先看看的話，在今天頁按「用示範資料看看」，會載入六週編出來的練習紀錄，只存在你的瀏覽器、不會同步，隨時可以清掉。題目還是在 LeetCode 上寫，這個 App 負責三件事：
 
 - 決定今天該刷哪些題
 - 計時作答，卡住時一層一層給提示，再用 FSRS（Anki 用的排程演算法）排好每一題的複習日

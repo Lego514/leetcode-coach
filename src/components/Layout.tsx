@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-rou
 import { useI18n, type Messages } from '../i18n';
 import { applyUpdate, canReloadNow, useUpdateReady } from '../lib/appUpdate';
 import { useCloud } from '../store/cloud';
+import { clearDemoData, useDemo } from '../store/demo';
 import { rememberPage } from '../store/reports';
 import { useProgressMap, useToday } from '../store/queries';
 import { syncStatusText } from './AccountSection';
@@ -53,6 +54,21 @@ function useDueCount(): number {
 }
 
 /** 練習或模擬面試進行中時，讓使用者自己決定何時更新 */
+/** 看示範資料時，每一頁上面都提醒一下，可以一鍵清掉 */
+function DemoBanner() {
+  const { t } = useI18n();
+  const demo = useDemo();
+  if (!demo) return null;
+  return (
+    <div className="demo-banner" role="status">
+      <span>{t.demo.banner}</span>
+      <button type="button" className="btn btn-small" onClick={() => void clearDemoData()}>
+        {t.demo.clear}
+      </button>
+    </div>
+  );
+}
+
 function UpdateNotice() {
   const { t } = useI18n();
   return (
@@ -173,6 +189,7 @@ export function Layout() {
       </nav>
 
       <main className="main" id="main">
+        <DemoBanner />
         <Outlet />
       </main>
 
