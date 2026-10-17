@@ -1422,6 +1422,23 @@ kbd,
   height: 16px;
 }
 
+/* 看示範資料時每一頁上面的提醒 */
+.demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  max-width: var(--content-width);
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--marker);
+  color: var(--marker-ink);
+  font-size: 14px;
+}
+
 /* 今天的新題為什麼出現（穿插、鞏固） */
 .problem-note {
   color: var(--pen);

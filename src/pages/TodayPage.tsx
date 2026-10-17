@@ -5,6 +5,7 @@ import { ProblemRow } from '../components/ProblemRow';
 import { QuickRecordDialog } from '../components/QuickRecordDialog';
 import { RecordDialog } from '../components/RecordDialog';
 import { SprintSummary } from '../components/SprintSummary';
+import { useToast } from '../components/toast';
 import { PageHead, Sheet } from '../components/ui';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
@@ -24,6 +25,7 @@ import {
   streakDays,
 } from '../lib/stats';
 import { useCloud } from '../store/cloud';
+import { loadDemoData } from '../store/demo';
 import { useSprint } from '../store/sprint';
 import type { AttemptMode, AttemptRecord } from '../store/db';
 import { useAttempts, useCardReviews, useCatalog, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
@@ -77,6 +79,12 @@ function SignInBanner() {
 export function TodayPage() {
   const { t, fmt, locale } = useI18n();
   const day = useToday();
+  const { account } = useCloud();
+  const toast = useToast();
+  const tryDemo = async () => {
+    await loadDemoData(day);
+    toast(t.demo.loaded);
+  };
   const settings = useSettings();
   const catalog = useCatalog();
   const { progress, loaded } = useProgressMap();
@@ -216,7 +224,14 @@ export function TodayPage() {
                 <Link className="btn" to="/settings">
                   {t.today.adjustPlan}
                 </Link>
+                {/* 還沒登入時可以先看示範資料（例如看履歷的面試官，不用自己刷題就看得到所有功能） */}
+                {account.kind !== 'signed-in' && (
+                  <button className="btn btn-primary" onClick={() => void tryDemo()}>
+                    {t.demo.load}
+                  </button>
+                )}
               </div>
+              {account.kind !== 'signed-in' && <p className="field-hint" style={{ marginTop: 8 }}>{t.demo.loadHint}</p>}
             </div>
           </Sheet>
         )}
