@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 import type { AuthResponse, LoginMethods, MeResponse, PublicUser } from '../../shared/protocol';
 import { ApiError, apiRequest, errorCode, type ClientErrorCode, type FetchLike } from './api';
 import { db } from './db';
+import { endDemo, isDemo } from './demo';
 import { adoptAccount, detachAccount, runSync, SyncAbortedError, wipeLocalData } from './sync';
 import { getSyncState } from './tracking';
 
@@ -152,6 +153,11 @@ async function sessionExpired() {
 }
 
 async function enter(user: Pick<PublicUser, 'id' | 'email'>, login?: LoginMethods) {
+  // 示範資料是編出來的，不能合併進真的帳號
+  if (isDemo()) {
+    await wipeLocalData(db);
+    endDemo();
+  }
   await adoptAccount(db, user);
   const saved = await getSyncState(db);
   setState({

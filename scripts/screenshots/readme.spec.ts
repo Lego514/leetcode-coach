@@ -1,9 +1,9 @@
-import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { demoData } from '../../src/lib/demo';
 
-// README 的截圖，淺色和深色各一張。資料是這裡產生的示範紀錄（約六週的練習），不是任何人的真實資料。
+// README 的截圖，淺色和深色各一張。資料是 src/lib/demo.ts 的示範紀錄（約六週的練習），不是任何人的真實資料。
 // 執行：npm run screenshots
 
 const OUT = path.resolve('docs/images');
@@ -15,66 +15,23 @@ function dayOffset(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/**
- * 六週的示範練習：照 NeetCode 150 的順序做新題，之後照間隔複習（3、10、24 天後），
- * 最近幾天每天都有練、有幾題卡住，今天到期的複習只有幾題，跟平常用起來一樣。
- */
+/** 示範資料（跟 App 裡「用示範資料看看」同一份），包成備份檔從設定頁匯入 */
 function demoBackup() {
-  // 陣列、雙指標、滑動視窗、堆疊、二分搜尋的前幾題
-  const order = [217, 242, 1, 49, 347, 238, 36, 128, 125, 167, 15, 11, 121, 3, 424, 567, 20, 155, 150, 22, 739];
-  const firsts = ['solo', 'hint', 'solo', 'solo', 'hint', 'solo', 'hint', 'solution'] as const;
-  const attempts: Record<string, unknown>[] = [];
-  const cardReviews: Record<string, unknown>[] = [];
-  const add = (problemId: number, offset: number, rating: string, mode: string, extra: Record<string, unknown> = {}) => {
-    const day = dayOffset(offset);
-    attempts.push({
-      uid: randomUUID(),
-      problemId,
-      day,
-      at: `${day}T${String(17 + (attempts.length % 5)).padStart(2, '0')}:15:00.000Z`,
-      rating,
-      mode,
-      minutes: 16 + (attempts.length % 5) * 5,
-      ...extra,
-    });
-  };
-
-  // 前五週：大概兩天做一題新題（週末休息），做完之後照間隔回來複習
-  const days = Array.from({ length: 36 }, (_, i) => -40 + i).filter((offset) => ((offset % 7) + 7) % 7 !== 2);
-  order.forEach((problemId, i) => {
-    const offset = days[Math.min(days.length - 1, Math.round(i * 1.6))];
-    const rating = firsts[i % firsts.length];
-    add(problemId, offset, rating, 'practice', rating === 'solution' ? { stuck: ['optimize'], hints: 2 } : rating === 'hint' ? { hints: 1 } : {});
-    for (const gap of [3, 10, 24]) if (offset + gap < -1) add(problemId, offset + gap, gap === 3 && rating !== 'solo' ? 'hint' : 'solo', 'review');
-  });
-  // 最近一週每天都有練：二分搜尋卡住了兩次
-  add(704, -4, 'solution', 'practice', { stuck: ['edge'], hints: 3 });
-  add(74, -3, 'hint', 'practice', { hints: 1 });
-  add(875, -2, 'fail', 'practice', { stuck: ['pattern', 'edge'], hints: 3 });
-  add(153, -1, 'hint', 'practice', { hints: 1 });
-  // 今天已經複習了一題
-  add(1, 0, 'solo', 'review');
-  // 微複習：大部分的日子做一回合
-  for (let offset = -40; offset <= 0; offset += 1) {
-    if (offset % 3 === 0) continue;
-    const day = dayOffset(offset);
-    cardReviews.push({ uid: randomUUID(), cardId: `pattern:${order[(offset + 40) % order.length]}`, day, at: `${day}T07:30:00.000Z`, result: 'good' });
-  }
-
+  const demo = demoData(dayOffset(0));
   return {
     app: 'leetcode-coach',
     version: 1,
     exportedAt: new Date().toISOString(),
     data: {
       progress: [],
-      attempts,
+      attempts: demo.attempts,
       notes: [],
       meta: [],
       patternNotes: [],
       mocks: [],
       customProblems: [],
-      settings: [{ key: 'app', activeList: 'neetcode150', dailyNew: 3, language: 'python', targetDate: dayOffset(45) }],
-      cardReviews,
+      settings: demo.settings,
+      cardReviews: demo.cardReviews,
     },
   };
 }

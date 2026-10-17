@@ -4,6 +4,13 @@ import type { Messages } from './zh-TW';
 const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 const en: Messages = {
+  demo: {
+    load: 'Try it with demo data',
+    loadHint: 'Fills the app with six weeks of made-up practice so you can see every feature. Clear it anytime; it’s never synced.',
+    loaded: 'Demo data loaded. Look around: reviews, the whiteboard, progress, and more.',
+    banner: 'You’re looking at demo data: six weeks of made-up practice.',
+    clear: 'Clear demo data',
+  },
   app: {
     name: 'LeetCode Coach',
     homeLabel: 'LeetCode Coach, back to Today',
