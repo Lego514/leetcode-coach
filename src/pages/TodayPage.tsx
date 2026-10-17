@@ -11,7 +11,7 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { getPattern, type PatternId } from '../data/patterns';
-import { problemsInList } from '../lib/catalog';
+import { problemsInList, skipPremium } from '../lib/catalog';
 import { pickNewProblems, STRUGGLE_DAYS, strugglingPatterns, type NewPick } from '../lib/daily';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
 import {
@@ -102,7 +102,10 @@ export function TodayPage() {
   const extraToday = extra.day === day ? extra.count : 0;
 
   const listName = t.lists.labels[settings.activeList];
-  const listProblems = useMemo(() => problemsInList(catalog, settings.activeList), [catalog, settings.activeList]);
+  const listProblems = useMemo(
+    () => skipPremium(problemsInList(catalog, settings.activeList), settings.skipPremium, (id) => progress.has(id)),
+    [catalog, settings.activeList, settings.skipPremium, progress],
+  );
   const dueNow = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
   // 衝刺時，面試那天會忘記的題目提前到最後幾天複習
   const pulled = (sprintDay?.pulled ?? []).filter((p) => !dueNow.some((d) => d.id === p.id));

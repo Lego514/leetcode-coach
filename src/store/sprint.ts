@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { problemsInList } from '../lib/catalog';
+import { problemsInList, skipPremium } from '../lib/catalog';
 import { addDays, diffDays } from '../lib/dates';
 import { planSprint, type SprintPlan, type SprintSettings } from '../lib/sprint';
 import { problemsStartedOn } from '../lib/stats';
@@ -22,7 +22,7 @@ export function useSprint(): SprintState | null {
   const { progress, loaded } = useProgressMap();
   const meta = useMetaMap();
   const attempts = useAttempts();
-  const { sprint, activeList } = settings;
+  const { sprint, activeList, skipPremium: skip } = settings;
   const retention = retentionOf(settings);
 
   return useMemo(() => {
@@ -31,8 +31,8 @@ export function useSprint(): SprintState | null {
     const plan = planSprint({
       sprint,
       today: day,
-      list: problemsInList(catalog, activeList),
-      all: catalog.problems,
+      list: skipPremium(problemsInList(catalog, activeList), skip, (id) => progress.has(id)),
+      all: skipPremium(catalog.problems, skip, (id) => progress.has(id)),
       progress,
       companiesOf: (id) => meta.get(id)?.companies ?? [],
       startedToday,
@@ -40,5 +40,5 @@ export function useSprint(): SprintState | null {
       stuckPatterns: stuckPatterns(attempts, (id) => catalog.byId.get(id), addDays(day, -STUCK_SPRINT_DAYS)),
     });
     return { sprint, daysLeft: diffDays(day, sprint.date), plan };
-  }, [sprint, loaded, attempts, day, catalog, activeList, progress, meta, retention]);
+  }, [sprint, loaded, attempts, day, catalog, activeList, skip, progress, meta, retention]);
 }

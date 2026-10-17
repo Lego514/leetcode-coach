@@ -941,6 +941,13 @@ kbd,
   flex: 1 1 130px;
 }
 
+/* 篩選列裡的勾選框：跟下拉選單的底部對齊 */
+.filters .filters-check {
+  align-self: flex-end;
+  min-height: 38px;
+  font-size: 14px;
+}
+
 .filters .field-search {
   flex: 2 1 220px;
 }

@@ -194,6 +194,8 @@ export const settingsDataSchema = z.object({
   focusPattern: z.enum(PATTERN_IDS).optional(),
   /** 新題直接顯示模式 */
   showPatterns: z.boolean().optional(),
+  /** 跳過要 LeetCode Premium 的題目 */
+  skipPremium: z.boolean().optional(),
   /** 面試衝刺：面試日、公司、每天的時間、最後只複習幾天 */
   sprint: z
     .object({
