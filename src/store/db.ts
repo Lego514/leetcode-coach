@@ -184,6 +184,8 @@ export interface SettingsRecord {
   focusPattern?: PatternId;
   /** 新題直接顯示是哪個模式；沒寫是不顯示，練習自己看出來 */
   showPatterns?: boolean;
+  /** 跳過要 LeetCode Premium 才能做的題目（還沒做過的） */
+  skipPremium?: boolean;
 }
 
 export const DEFAULT_SETTINGS: SettingsRecord = {
