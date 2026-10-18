@@ -290,6 +290,9 @@ export async function updateSettings(patch: Partial<Omit<SettingsRecord, 'key'>>
     const next: SettingsRecord = { ...prev, ...patch, key: 'app' };
     if (!next.targetDate) delete next.targetDate;
     if (!next.sprint) delete next.sprint;
+    // 難度上限改回「不限」時把欄位拿掉
+    if (next.maxMedium === undefined) delete next.maxMedium;
+    if (next.maxHard === undefined) delete next.maxHard;
     await db.settings.put(next);
     await track(db, 'settings', 'app');
     // 目標記憶率變了，每一題的下次複習日都要重算

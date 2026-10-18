@@ -1074,6 +1074,10 @@ const en: Messages = {
     planTitle: 'Study plan',
     mainList: 'Main list',
     dailyNew: 'New problems per day',
+    maxMedium: 'Most Medium problems per day',
+    maxHard: 'Most Hard problems per day',
+    noLimit: 'No limit',
+    difficultyCapHint: 'Counts new problems only, not reviews. Extra ones are swapped for the next easier problem in your list.',
     newMode: 'How new problems are picked',
     newModes: {
       mixed: {

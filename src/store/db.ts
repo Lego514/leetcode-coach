@@ -186,6 +186,9 @@ export interface SettingsRecord {
   showPatterns?: boolean;
   /** 跳過要 LeetCode Premium 才能做的題目（還沒做過的） */
   skipPremium?: boolean;
+  /** 每天的新題最多幾題 Medium、幾題 Hard；沒設定是不限 */
+  maxMedium?: number;
+  maxHard?: number;
 }
 
 export const DEFAULT_SETTINGS: SettingsRecord = {

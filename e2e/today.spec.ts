@@ -210,3 +210,31 @@ test('never carries demo data into an account', { tag: '@desktop' }, async ({ pa
   await expect(page.getByRole('region', { name: 'Before you start' })).toBeVisible();
   await expect(page.getByRole('region', { name: /^Due for review/ }).getByRole('listitem')).toHaveCount(0);
 });
+
+test('caps how many Medium and Hard problems come each day', async ({ page }) => {
+  await page.goto('/#/settings');
+  // 專練圖：前幾題都是 Medium
+  const focus = page.getByRole('radio', { name: /^Focus on one pattern/ });
+  await focus.click();
+  await expect(focus).toBeChecked();
+  await page.getByLabel('Pattern to focus on').selectOption({ label: 'Graphs' });
+  await expect(page.getByLabel('Pattern to focus on')).toHaveValue('graphs');
+  await page.getByLabel('Most Medium problems per day').selectOption('1');
+  await expect(page.getByLabel('Most Medium problems per day')).toHaveValue('1');
+  await page.getByLabel('Most Hard problems per day').selectOption('0');
+  await expect(page.getByLabel('Most Hard problems per day')).toHaveValue('0');
+
+  await page.goto('/');
+  const items = newList(page).getByRole('listitem');
+  await expect(items).toHaveCount(3);
+  await expect(items.filter({ hasText: 'Medium' })).toHaveCount(1);
+  await expect(items.filter({ hasText: 'Hard' })).toHaveCount(0);
+  await expect(items.filter({ hasText: 'Easy' })).toHaveCount(2);
+
+  // 改回不限：三題都是圖的 Medium
+  await page.goto('/#/settings');
+  await page.getByLabel('Most Medium problems per day').selectOption({ label: 'No limit' });
+  await expect(page.getByLabel('Most Medium problems per day')).toHaveValue('');
+  await page.goto('/');
+  await expect(items.filter({ hasText: 'Medium' })).toHaveCount(3);
+});

@@ -78,6 +78,25 @@ describe('picking new problems', () => {
     expect(last.map((p) => p.reason)).toEqual(['focus', 'next', 'next']);
     expect(last[1].problem.pattern).toBe('arrays');
   });
+
+  it('keeps Medium and Hard under the daily caps, swapping in easier problems', () => {
+    const count = (picks: { problem: Problem }[], d: Problem['difficulty']) => picks.filter((p) => p.problem.difficulty === d).length;
+    // 陣列的 Easy 都做完了：沒有上限時五題大多是 Medium
+    const easyDone = new Set(list.filter((p) => p.difficulty === 'Easy' && p.pattern === 'arrays').map((p) => p.id));
+    const started = (id: number) => easyDone.has(id);
+    for (const mode of ['mixed', 'roadmap', 'focus'] as const) {
+      const free = pickNewProblems({ list, started, count: 5, mode, focus: 'arrays' });
+      expect(count(free, 'Medium')).toBeGreaterThan(2);
+      const capped = pickNewProblems({ list, started, count: 5, mode, focus: 'arrays', maxMedium: 2, maxHard: 0 });
+      expect(capped).toHaveLength(5);
+      expect(count(capped, 'Medium')).toBe(2);
+      expect(count(capped, 'Hard')).toBe(0);
+    }
+    // 0 題 Medium、0 題 Hard：只剩 Easy
+    const easyOnly = pickNewProblems({ list, started: () => false, count: 4, mode: 'mixed', maxMedium: 0, maxHard: 0 });
+    expect(easyOnly.every((p) => p.problem.difficulty === 'Easy')).toBe(true);
+    expect(easyOnly).toHaveLength(4);
+  });
 });
 
 describe('struggling patterns', () => {
