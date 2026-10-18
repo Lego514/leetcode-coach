@@ -196,6 +196,8 @@ export const settingsDataSchema = z.object({
   showPatterns: z.boolean().optional(),
   /** 跳過要 LeetCode Premium 的題目 */
   skipPremium: z.boolean().optional(),
+  maxMedium: z.number().int().min(0).max(20).optional(),
+  maxHard: z.number().int().min(0).max(20).optional(),
   /** 面試衝刺：面試日、公司、每天的時間、最後只複習幾天 */
   sprint: z
     .object({

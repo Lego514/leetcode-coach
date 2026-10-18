@@ -1053,6 +1053,10 @@ const zhTW = {
     planTitle: '刷題計畫',
     mainList: '主要清單',
     dailyNew: '每天的新題數',
+    maxMedium: '每天最多幾題 Medium',
+    maxHard: '每天最多幾題 Hard',
+    noLimit: '不限',
+    difficultyCapHint: '只算新題，複習不受影響。超過的會換成題單裡下一題比較簡單的。',
     newMode: '新題怎麼挑',
     newModes: {
       mixed: {

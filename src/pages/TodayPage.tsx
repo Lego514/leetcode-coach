@@ -139,6 +139,8 @@ export function TodayPage() {
     focus: settings.focusPattern,
     struggling,
     lastPracticed,
+    maxMedium: settings.maxMedium,
+    maxHard: settings.maxHard,
   });
   // 衝刺時照衝刺的順序（公司題、還沒碰過的模式優先），數量照每天的時間
   const newPicks: NewPick[] =

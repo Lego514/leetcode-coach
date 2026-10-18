@@ -157,6 +157,25 @@ export function SettingsPage() {
                 />
                 <span className="field-hint">{t.settings.dailyNewHint}</span>
               </label>
+              {/* 每天最多幾題 Medium、Hard（src/lib/daily.ts）；空的是不限 */}
+              {(['maxMedium', 'maxHard'] as const).map((key) => (
+                <label key={key} className="field">
+                  <span className="field-label">{t.settings[key]}</span>
+                  <select
+                    className="input"
+                    value={settings[key] ?? ''}
+                    onChange={(e) => void updateSettings({ [key]: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  >
+                    <option value="">{t.settings.noLimit}</option>
+                    {[0, 1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="field-hint">{t.settings.difficultyCapHint}</span>
+                </label>
+              ))}
               <label className="field">
                 <span className="field-label">{t.settings.retention}</span>
                 <select className="input" value={retentionOf(settings)} onChange={(e) => void updateSettings({ retention: Number(e.target.value) })}>

@@ -7,6 +7,7 @@ import type { Day } from './dates';
 //   最近常卡住的模式，再補一題比較簡單的鞏固。
 // - roadmap：完全照路線圖順序（模式 → 難度），一個模式做完才換下一個。
 // - focus：只做選定的一個模式，做完了再回到路線圖。
+// 三種都可以限制每天最多幾題 Medium、幾題 Hard：超過的跳過，換成清單裡下一題比較簡單的。
 // 面試時不會有人告訴你這題是哪個模式；一直做同一個模式，等於先知道答案的方向。
 
 export const NEW_PROBLEM_MODES = ['mixed', 'roadmap', 'focus'] as const;
@@ -73,6 +74,16 @@ export interface PickInput {
   struggling?: readonly PatternId[];
   /** 每個模式最後一次練習的日子：穿插時挑最久沒碰的模式 */
   lastPracticed?: ReadonlyMap<PatternId, Day>;
+  /** 每天最多幾題 Medium、幾題 Hard；沒寫是不限 */
+  maxMedium?: number;
+  maxHard?: number;
+}
+
+/** 某個難度今天最多幾題；Easy 不限 */
+function capOf(input: PickInput, difficulty: Problem['difficulty']): number {
+  if (difficulty === 'Medium') return input.maxMedium ?? Infinity;
+  if (difficulty === 'Hard') return input.maxHard ?? Infinity;
+  return Infinity;
 }
 
 export function pickNewProblems(input: PickInput): NewPick[] {
@@ -80,8 +91,12 @@ export function pickNewProblems(input: PickInput): NewPick[] {
   if (count <= 0) return [];
   const fresh = list.filter((p) => !started(p.id));
   const taken = new Set<number>();
+  const perDifficulty = new Map<Problem['difficulty'], number>();
   const take = (problem: Problem | undefined, reason: NewPickReason, picks: NewPick[]) => {
     if (!problem || taken.has(problem.id)) return false;
+    const used = perDifficulty.get(problem.difficulty) ?? 0;
+    if (used >= capOf(input, problem.difficulty)) return false;
+    perDifficulty.set(problem.difficulty, used + 1);
     taken.add(problem.id);
     picks.push({ problem, reason });
     return true;
@@ -120,8 +135,8 @@ export function pickNewProblems(input: PickInput): NewPick[] {
     for (const pattern of input.struggling ?? []) {
       const easiest = fresh
         .filter((p) => p.pattern === pattern)
-        .sort((a, b) => DIFFICULTY_RANK[a.difficulty] - DIFFICULTY_RANK[b.difficulty])[0];
-      if (take(easiest, 'reinforce', extras)) break;
+        .sort((a, b) => DIFFICULTY_RANK[a.difficulty] - DIFFICULTY_RANK[b.difficulty]);
+      if (easiest.some((p) => take(p, 'reinforce', extras))) break;
     }
   }
 
@@ -134,8 +149,10 @@ export function pickNewProblems(input: PickInput): NewPick[] {
     const learnedFirst = candidates
       .filter((p) => learned.has(p))
       .sort((a, b) => (last.get(a) ?? '').localeCompare(last.get(b) ?? ''));
-    const pattern = learnedFirst[0] ?? candidates[0];
-    if (pattern) take(fresh.find((p) => p.pattern === pattern), 'mix', extras);
+    // 那個模式的下一題超過難度上限時，換下一個模式
+    for (const pattern of [...learnedFirst, ...candidates.filter((p) => !learned.has(p))]) {
+      if (fresh.some((p) => p.pattern === pattern && take(p, 'mix', extras))) break;
+    }
   }
 
   const picks: NewPick[] = [];
