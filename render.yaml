@@ -41,6 +41,17 @@ services:
         sync: false
       - key: GITHUB_CLIENT_SECRET
         sync: false
+      # 每日提醒（推播）：npx web-push generate-vapid-keys 產生一對金鑰；留空就停用
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      # 選用：推播服務聯絡你的 mailto: 或網址，沒設定用 APP_URL
+      - key: VAPID_SUBJECT
+        sync: false
+      # GitHub Actions 每小時呼叫 /api/push/send-due 時帶的密碼，repo 的 Actions secret 也要設一樣的
+      - key: CRON_SECRET
+        sync: false
       # 錯誤追蹤（Sentry）；留空就停用。DSN 前後端共用
       - key: SENTRY_DSN
         sync: false

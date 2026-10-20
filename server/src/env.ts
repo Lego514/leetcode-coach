@@ -39,6 +39,13 @@ export interface Env {
   sentryDsn?: string;
   /** 這一版的 commit（Render 會提供），讓錯誤對到版本 */
   release?: string;
+  /** 每日提醒的推播金鑰（npx web-push generate-vapid-keys 產生）；兩個都有才啟用 */
+  vapidPublicKey?: string;
+  vapidPrivateKey?: string;
+  /** 推播服務聯絡得到你的 mailto: 或網址；沒設定用 APP_URL */
+  vapidSubject?: string;
+  /** 排程呼叫 /api/push/send-due 時要帶的密碼 */
+  cronSecret?: string;
 }
 
 export class EnvError extends Error {}
@@ -92,6 +99,10 @@ export function loadEnv(source: NodeJS.ProcessEnv, serverRoot: string): Env {
     githubApiUrl: source.GITHUB_API_URL?.trim() || undefined,
     sentryDsn: source.SENTRY_DSN?.trim() || undefined,
     release: source.RENDER_GIT_COMMIT?.trim().slice(0, 7) || undefined,
+    vapidPublicKey: source.VAPID_PUBLIC_KEY?.trim() || undefined,
+    vapidPrivateKey: source.VAPID_PRIVATE_KEY?.trim() || undefined,
+    vapidSubject: source.VAPID_SUBJECT?.trim() || undefined,
+    cronSecret: source.CRON_SECRET?.trim() || undefined,
   };
 }
 

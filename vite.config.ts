@@ -67,6 +67,8 @@ export default defineConfig({
         // 新版啟用後立刻接管，不用等所有分頁關掉
         clientsClaim: true,
         skipWaiting: true,
+        // 每日提醒的推播（public/push-sw.js）
+        importScripts: ['push-sw.js'],
       },
     }),
     sentryUpload

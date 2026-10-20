@@ -8,6 +8,7 @@ import { authRoutes, type MailOptions } from './auth/routes';
 import { aiRoutes, type AiOptions } from './ai/routes';
 import type { Database } from './db/client';
 import { errorBody, HttpError, requestGuard, type AppDeps, type AppEnv } from './http';
+import { pushRoutes, type PushOptions } from './push/routes';
 import { reportRoutes } from './reports/routes';
 import { syncRoutes } from './sync/routes';
 
@@ -24,6 +25,8 @@ export interface AppOptions {
   mail?: MailOptions;
   /** 沒有設定時不能用 GitHub 登入 */
   github?: GithubOptions;
+  /** 沒有設定時不能開每日提醒 */
+  push?: PushOptions;
   /** 可以看所有回報的帳號 email（小寫）；沒設定時沒有人看得到收件匣 */
   adminEmails?: string[];
   now?: () => Date;
@@ -72,6 +75,7 @@ export function createApp(options: AppOptions) {
   app.route('/api/sync', syncRoutes(deps));
   app.route('/api/ai', aiRoutes(deps, options.ai));
   app.route('/api/reports', reportRoutes(deps, options.adminEmails ?? []));
+  app.route('/api/push', pushRoutes(deps, options.push));
   app.all('/api/*', (c) => c.json(errorBody('not_found', 'Not found'), 404));
 
   if (options.staticDir) {
