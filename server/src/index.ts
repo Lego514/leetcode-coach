@@ -8,6 +8,7 @@ import { openDatabase } from './db/client';
 import { migrate } from './db/migrate';
 import { loadEnv } from './env';
 import { flushMonitoring, initMonitoring } from './monitoring';
+import { createWebPushSender } from './push/webpush';
 
 // src/index.ts 與建置後的 dist/index.js 都在 server/ 底下一層
 const serverRoot = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
@@ -47,6 +48,14 @@ const app = createApp({
           appUrl: env.appUrl,
         }
       : undefined,
+  push:
+    env.vapidPublicKey && env.vapidPrivateKey && (env.vapidSubject || env.appUrl)
+      ? {
+          publicKey: env.vapidPublicKey,
+          send: createWebPushSender(env.vapidPublicKey, env.vapidPrivateKey, env.vapidSubject || env.appUrl!),
+          cronSecret: env.cronSecret,
+        }
+      : undefined,
   ai: env.anthropicApiKey
     ? {
         generate: createClaudeFeedback(env.anthropicApiKey, logError),
@@ -68,6 +77,9 @@ const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
       ? `GitHub sign-in on, callback ${env.appUrl}/api/auth/github/callback`
       : 'GitHub sign-in off (GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET not set)',
   );
+  if (!env.vapidPublicKey || !env.vapidPrivateKey) console.log('Daily reminders off (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set)');
+  else if (!env.cronSecret) console.log('Daily reminders: people can turn them on, but nothing sends them until CRON_SECRET is set');
+  else console.log('Daily reminders on; GitHub Actions calls POST /api/push/send-due every hour');
   if (!env.anthropicApiKey) console.log('AI feedback off (ANTHROPIC_API_KEY not set)');
   else if (env.aiAllowedEmails === '*') console.log(`AI feedback on for every account, ${env.aiDailyLimit} per user per day`);
   else if (env.aiAllowedEmails.length === 0) console.log('AI feedback on, but AI_ALLOWED_EMAILS is empty, so no account can use it');

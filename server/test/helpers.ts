@@ -4,6 +4,7 @@ import type { PublicUser, SyncChange, SyncResponse } from '../../shared/protocol
 import type { AiOptions } from '../src/ai/routes';
 import type { GithubOptions } from '../src/auth/github';
 import type { MailOptions } from '../src/auth/routes';
+import type { PushOptions } from '../src/push/routes';
 import { createApp, type App } from '../src/app';
 import { openDatabase, type DatabaseHandle } from '../src/db/client';
 import { migrate } from '../src/db/migrate';
@@ -19,7 +20,7 @@ export interface TestServer {
 }
 
 export async function startTestServer(
-  options: { ai?: AiOptions; mail?: MailOptions; github?: GithubOptions; adminEmails?: string[]; trustProxy?: boolean } = {},
+  options: { ai?: AiOptions; mail?: MailOptions; github?: GithubOptions; push?: PushOptions; adminEmails?: string[]; trustProxy?: boolean } = {},
 ): Promise<TestServer> {
   const database = await openDatabase('pglite:memory');
   await migrate(database.db, MIGRATIONS_DIR);
@@ -33,6 +34,7 @@ export async function startTestServer(
     ai: options.ai,
     mail: options.mail,
     github: options.github,
+    push: options.push,
     adminEmails: options.adminEmails,
     trustProxy: options.trustProxy,
   });

@@ -15,7 +15,7 @@
 
 - **用繁體中文回覆。** 使用者用繁中下指令；程式碼的註解也是繁中，說明「為什麼」。
 - **流程**：開分支做 → 自己驗證（測試、改到畫面就截圖）→ 用繁中報告做了什麼、怎麼驗證的 → **等使用者說「commit 並開 PR」才 commit、push、開 PR**。
-  - 開了 PR 之後（2026-10-18 起使用者同意）：CI 失敗自己修到綠燈，CI 通過就自己合併（`gh pr merge N --merge`），再把本機 main 拉到最新、刪掉分支。Claude Code 用桌面版的自動修正；repo 沒開 GitHub 的 auto-merge。
+  - 開了 PR 之後（2026-10-18 起使用者同意）：CI 失敗自己修到綠燈，CI 通過就自己合併，再把本機 main 拉到最新、刪掉分支。repo 開了 GitHub 的 auto-merge，main 規定 `check`、`e2e`、`docker` 都要通過才能合併：開 PR 後打開 auto-merge（`gh pr merge N --auto --merge`），綠燈就自動合併。Claude Code 另外開桌面版的自動修正。
   - 不要直接 push 到 main。
 - **commit 訊息**：英文，第一行寫使用者看得到的改變（不寫 "feat:" 之類的前綴），內文寫為什麼和怎麼做。PR 描述分「What changes」和「Tests」兩段。
 - 使用者看不到你的工具輸出，報告要自己說清楚：做了什麼、驗證結果（幾個測試過）、還沒驗證的部分、需要使用者做的事。
@@ -54,6 +54,7 @@ src/                 React 19 + TypeScript 前端（PWA，hash 路由 #/…）
   i18n/messages/     介面文字，zh-TW.ts 和 en.ts 兩份
 server/              Hono API（Node 24），esbuild 打包成 server/dist/index.js
   src/auth/          密碼登入、session、重設密碼、GitHub 登入（github.ts）
+  src/push/          每日提醒（Web Push）：訂閱、POST /api/push/send-due（GitHub Actions 每小時呼叫）
   src/sync/          同步（通用的 records 表，last-write-wins by updatedAt）
   src/ai/            Claude 回饋（Opus 5.5，JSON schema 結構化輸出、每日額度）
   migrations/        SQL migration，依檔名順序在啟動時套用；src/db/schema.ts 要跟著改
@@ -86,7 +87,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 - CI（`.github/workflows/ci.yml`）有三個工作：`check`（lint、typecheck、單元測試、建置）、`e2e`（PostgreSQL 17，Chromium + iPhone）、`docker`（用 compose 建映像跑起來，再對容器跑一部分 e2e）。
 - Render 在 main 的 CI 通過後自動部署（`render.yaml`，`autoDeployTrigger: checksPass`），啟動時跑 migration。
-- Render 上的設定（使用者設，不在 repo 裡）：`DATABASE_URL`（Neon）、`ANTHROPIC_API_KEY`、`AI_ALLOWED_EMAILS`、`BREVO_API_KEY`/`MAIL_FROM`；`ADMIN_EMAILS` 不確定有沒有設。還沒設定的：`SENTRY_DSN`（錯誤追蹤）、`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（GitHub 登入）。沒設定時那個功能就不出現。
+- Render 上的設定（使用者設，不在 repo 裡）：`DATABASE_URL`（Neon）、`ANTHROPIC_API_KEY`、`AI_ALLOWED_EMAILS`、`BREVO_API_KEY`/`MAIL_FROM`；`ADMIN_EMAILS` 不確定有沒有設。還沒設定的：`SENTRY_DSN`（錯誤追蹤）、`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（GitHub 登入）、`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（每日提醒；`CRON_SECRET` 也要設成 repo 的 Actions secret）。沒設定時那個功能就不出現。
 - 白板共用伺服器在 dsa-whiteboard 的 Cloudflare Worker；網址放在 `.env.production` 的 `VITE_COLLAB_URL`（公開設定，建置時用）。
 
 ## 這台電腦的坑（Windows）
@@ -107,7 +108,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 ## 待辦（使用者提過、還沒做的）
 
-- 使用者要做的設定：Render 加 `SENTRY_DSN`；建 GitHub OAuth App 並設定 `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（callback 是 `https://leetcode-coach-f6q7.onrender.com/api/auth/github/callback`）。
+- 使用者要做的設定：每日提醒的 `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（Render 和 Actions secret）；Render 加 `SENTRY_DSN`；建 GitHub OAuth App 並設定 `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（callback 是 `https://leetcode-coach-f6q7.onrender.com/api/auth/github/callback`）。
 - 跟朋友互相模擬面試（面試官看題目和評分表，兩邊共用白板）。
 - 講解能力的進步曲線（講解練習、AI 追問的分數趨勢）。
-- 每日推播提醒、求職進度追蹤、資料模型的 ER 圖（Mermaid）。
+- 求職進度追蹤、資料模型的 ER 圖（Mermaid）。

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import webpush from 'web-push';
 
 // 端對端測試跑的是正式環境的建置：同一個 Node 服務提供網頁與 API。
 // 先執行 npm run build:all（npm run test:e2e 會自動建置）。
@@ -7,6 +8,8 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 4310;
 const external = process.env.E2E_BASE_URL;
 const baseURL = external ?? `http://localhost:${PORT}`;
+// 每日提醒：每次跑測試產生一對新的推播金鑰，不放進 repo（e2e/reminder.spec.ts）
+const vapid = webpush.generateVAPIDKeys();
 
 export default defineConfig({
   testDir: './e2e',
@@ -50,6 +53,10 @@ export default defineConfig({
             GITHUB_CLIENT_SECRET: 'e2e-secret',
             GITHUB_OAUTH_URL: 'http://localhost:4320',
             GITHUB_API_URL: 'http://localhost:4320',
+            VAPID_PUBLIC_KEY: vapid.publicKey,
+            VAPID_PRIVATE_KEY: vapid.privateKey,
+            VAPID_SUBJECT: 'mailto:e2e@example.test',
+            CRON_SECRET: 'e2e-cron',
           },
         },
         {

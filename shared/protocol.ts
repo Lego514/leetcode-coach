@@ -508,6 +508,23 @@ export const reportContextSchema = z
   .strict();
 export type ReportContext = z.infer<typeof reportContextSchema>;
 
+/** 每日提醒：這台裝置的推播訂閱，和要在當地幾點提醒 */
+export const pushSubscribeSchema = z.object({
+  endpoint: z.url({ protocol: /^https$/ }).max(1000),
+  keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
+  hour: z.number().int().min(0).max(23),
+  timeZone: z.string().min(1).max(64),
+  locale: z.enum(['zh-TW', 'en']),
+});
+export type PushSubscribeRequest = z.infer<typeof pushSubscribeSchema>;
+
+export const pushUnsubscribeSchema = z.object({ endpoint: z.url({ protocol: /^https$/ }).max(1000) });
+
+/** 伺服器有沒有開每日提醒；有的話附上訂閱要用的公鑰 */
+export interface PushConfigResponse {
+  publicKey: string | null;
+}
+
 export const reportRequestSchema = z.object({
   kind: z.enum(REPORT_KINDS),
   message: z.string().trim().min(1).max(REPORT_MAX_LENGTH),

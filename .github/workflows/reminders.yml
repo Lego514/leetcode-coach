@@ -1,0 +1,32 @@
+name: Daily reminders
+
+# 每小時叫醒伺服器，寄出到時間、今天還沒練習的提醒（server/src/push/routes.ts）。
+# Render 免費方案閒置會睡，伺服器自己的計時器靠不住，所以從這裡觸發。
+# 要先在 repo 的 Settings → Secrets and variables → Actions 加 CRON_SECRET（跟 Render 上的一樣）；沒設定時這個工作直接跳過。
+
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Send due reminders
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL || 'https://leetcode-coach-f6q7.onrender.com' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set; skipping."
+            exit 0
+          fi
+          # 伺服器在睡的話要一分鐘左右才醒，多試幾次
+          curl --fail-with-body --silent --show-error \
+            --retry 6 --retry-delay 20 --retry-all-errors --max-time 120 \
+            -X POST "$APP_URL/api/push/send-due" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -d '{}'

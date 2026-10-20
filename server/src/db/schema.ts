@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, date, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, date, index, integer, jsonb, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 // 資料表結構以 migrations/*.sql 為準，這裡的定義用來產生型別安全的查詢，兩邊要一起改。
 
@@ -106,6 +106,25 @@ export const reports = pgTable(
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   },
   (t) => [index('reports_created_idx').on(t.createdAt), index('reports_user_idx').on(t.userId)],
+);
+
+/** 每日提醒的推播訂閱：一台裝置一筆；last_sent_day 是當地的哪一天已經處理過 */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    endpoint: text('endpoint').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    hour: smallint('hour').notNull(),
+    timeZone: text('time_zone').notNull(),
+    locale: text('locale').notNull(),
+    lastSentDay: date('last_sent_day', { mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('push_subscriptions_user_idx').on(t.userId)],
 );
 
 export const schemaMigrations = pgTable('schema_migrations', {
