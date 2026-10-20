@@ -16,6 +16,7 @@ import { problemsInList, skipPremium } from '../lib/catalog';
 import { pickNewProblems, STRUGGLE_DAYS, strugglingPatterns, type NewPick } from '../lib/daily';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
 import {
+  capDue,
   dueProblems,
   finishDay,
   newProblemsStartedOn,
@@ -23,6 +24,7 @@ import {
   problemsStartedOn,
   practiceAttempts,
   practiceStreak,
+  reviewsDoneOn,
   streakDays,
 } from '../lib/stats';
 import { useCloud } from '../store/cloud';
@@ -111,7 +113,9 @@ export function TodayPage() {
   const dueNow = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
   // 衝刺時，面試那天會忘記的題目提前到最後幾天複習
   const pulled = (sprintDay?.pulled ?? []).filter((p) => !dueNow.some((d) => d.id === p.id));
-  const due = pulled.length > 0 ? [...dueNow, ...pulled] : dueNow;
+  // 每天最多複習幾題：最可能忘的先做，其他的留到之後（衝刺提前排的不受影響）
+  const capped = capDue(dueNow, settings.maxReviews, reviewsDoneOn(attempts ?? [], day));
+  const due = pulled.length > 0 ? [...capped.shown, ...pulled] : capped.shown;
 
   // 不管是從今天頁、題庫還是「記錄其他題目」開始的新題，都算進每天的目標
   const startedToday = newProblemsStartedOn(attempts ?? [], day);
@@ -258,7 +262,9 @@ export function TodayPage() {
           title={t.today.dueTitle}
           count={due.length}
           id="due"
-          note={pulled.length > 0 ? t.today.sprint.pulledNote(pulled.length) : undefined}
+          note={
+            pulled.length > 0 ? t.today.sprint.pulledNote(pulled.length) : capped.later > 0 ? t.today.dueLater(capped.later) : undefined
+          }
           actions={
             due.length > 0 ? (
               <Link className="btn btn-primary btn-small" to="/review">

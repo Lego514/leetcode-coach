@@ -160,6 +160,23 @@ export function dueProblems(problems: Problem[], progress: StateMap, today: Day)
     });
 }
 
+/** 某天複習了幾題：那天練過、而且不是那天第一次練的題目（新題不算） */
+export function reviewsDoneOn(attempts: readonly AttemptLike[], day: Day): number {
+  const started = new Set(problemsStartedOn(attempts, day));
+  const practiced = new Set(attempts.filter((a) => a.day === day && a.mode !== 'import').map((a) => a.problemId));
+  return [...practiced].filter((id) => !started.has(id)).length;
+}
+
+/**
+ * 每天最多複習幾題：到期的題目已經照「最可能忘的在前」排好，今天只拿前面幾題（扣掉今天已經複習的），
+ * 其他的留著，明天自然排進來。cap 沒設定就全部
+ */
+export function capDue<T>(due: readonly T[], cap: number | undefined, doneToday: number): { shown: T[]; later: number } {
+  if (cap === undefined) return { shown: [...due], later: 0 };
+  const room = Math.max(0, cap - doneToday);
+  return { shown: due.slice(0, room), later: Math.max(0, due.length - room) };
+}
+
 export interface TargetPlan {
   /** 目標日前還能用來刷新題的天數（不含目標日當天） */
   daysLeft: number;

@@ -6,7 +6,8 @@ import { applyUpdate, canReloadNow, useUpdateReady } from '../lib/appUpdate';
 import { useCloud } from '../store/cloud';
 import { clearDemoData, useDemo } from '../store/demo';
 import { rememberPage } from '../store/reports';
-import { useProgressMap, useToday } from '../store/queries';
+import { reviewsDoneOn } from '../lib/stats';
+import { useAttempts, useProgressMap, useSettings, useToday } from '../store/queries';
 import { syncStatusText } from './AccountSection';
 import { LanguageSwitch } from './LanguageSwitch';
 import { ThemeToggle } from './ThemeToggle';
@@ -48,9 +49,13 @@ const NAV_GROUPS: NavItem[][] = [
 function useDueCount(): number {
   const day = useToday();
   const { progress } = useProgressMap();
+  const settings = useSettings();
+  const attempts = useAttempts();
   let count = 0;
   for (const p of progress.values()) if (p.due <= day) count += 1;
-  return count;
+  // 設了每天最多複習幾題時，只數今天要做的
+  if (settings.maxReviews === undefined) return count;
+  return Math.min(count, Math.max(0, settings.maxReviews - reviewsDoneOn(attempts ?? [], day)));
 }
 
 /** 練習或模擬面試進行中時，讓使用者自己決定何時更新 */

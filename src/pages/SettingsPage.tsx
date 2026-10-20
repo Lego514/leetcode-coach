@@ -158,6 +158,23 @@ export function SettingsPage() {
                 />
                 <span className="field-hint">{t.settings.dailyNewHint}</span>
               </label>
+              {/* 每天最多複習幾題（src/lib/stats.ts 的 capDue）；空的是不限 */}
+              <label className="field">
+                <span className="field-label">{t.settings.maxReviews}</span>
+                <select
+                  className="input"
+                  value={settings.maxReviews ?? ''}
+                  onChange={(e) => void updateSettings({ maxReviews: e.target.value === '' ? undefined : Number(e.target.value) })}
+                >
+                  <option value="">{t.settings.noLimit}</option>
+                  {[5, 10, 15, 20, 30].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <span className="field-hint">{t.settings.maxReviewsHint}</span>
+              </label>
               {/* 每天最多幾題 Medium、Hard（src/lib/daily.ts）；空的是不限 */}
               {(['maxMedium', 'maxHard'] as const).map((key) => (
                 <label key={key} className="field">

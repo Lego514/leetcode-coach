@@ -198,6 +198,7 @@ export const settingsDataSchema = z.object({
   skipPremium: z.boolean().optional(),
   maxMedium: z.number().int().min(0).max(20).optional(),
   maxHard: z.number().int().min(0).max(20).optional(),
+  maxReviews: z.number().int().min(1).max(100).optional(),
   /** 面試衝刺：面試日、公司、每天的時間、最後只複習幾天 */
   sprint: z
     .object({

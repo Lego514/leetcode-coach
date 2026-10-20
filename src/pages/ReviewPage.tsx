@@ -10,23 +10,33 @@ import { rich } from '../i18n/rich';
 import { diffDays } from '../lib/dates';
 import { languageLabel } from '../lib/languages';
 import { RATINGS, recallOn, schedule, type Rating } from '../lib/srs';
-import { dueProblems } from '../lib/stats';
+import { capDue, dueProblems, reviewsDoneOn } from '../lib/stats';
 import { recordAttempt } from '../store/actions';
 import type { ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
-import { useCatalog, useNote, useProgressMap, useSettings, useToday } from '../store/queries';
+import { useAttempts, useCatalog, useNote, useProgressMap, useSettings, useToday } from '../store/queries';
 
 export function ReviewPage() {
   const { t, fmt } = useI18n();
   const day = useToday();
   const catalog = useCatalog();
   const { progress, loaded } = useProgressMap();
+  const settings = useSettings();
+  const attempts = useAttempts();
   const [skipped, setSkipped] = useState<number[]>([]);
   const [doneCount, setDoneCount] = useState(0);
+  // 在清單上點了哪一題，就先做它
+  const [picked, setPicked] = useState<number | null>(null);
+  // 做完今天的上限後，按「再複習 5 題」加上去（只算這次打開的時候）
+  const [extra, setExtra] = useState(0);
 
   const due = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
-  // 評分後題目的到期日會往後移，自動離開佇列；跳過的題目排到最後
-  const queue = [...due.filter((p) => !skipped.includes(p.id)), ...due.filter((p) => skipped.includes(p.id))];
+  const cap = settings.maxReviews === undefined ? undefined : settings.maxReviews + extra;
+  const { shown, later } = capDue(due, cap, reviewsDoneOn(attempts ?? [], day));
+  // 評分後題目的到期日會往後移，自動離開佇列；跳過的題目排到最後；點了清單上的題目就排到最前面
+  const ordered = [...shown.filter((p) => !skipped.includes(p.id)), ...shown.filter((p) => skipped.includes(p.id))];
+  const first = ordered.find((p) => p.id === picked);
+  const queue = first ? [first, ...ordered.filter((p) => p !== first)] : ordered;
   const current = queue[0];
 
   const nextDue = useMemo(() => {
@@ -38,42 +48,110 @@ export function ReviewPage() {
   return (
     <div className="page">
       <PageHead title={t.review.title} lede={t.review.lede} />
-      {!loaded ? null : current ? (
-        <ReviewCard
-          key={current.id}
-          problem={current}
-          progress={progress.get(current.id)!}
-          remaining={queue.length}
-          doneCount={doneCount}
-          today={day}
-          onRated={() => {
-            setDoneCount((n) => n + 1);
-            setSkipped((s) => s.filter((id) => id !== current.id));
-          }}
-          onSkip={() => setSkipped((s) => [...s.filter((id) => id !== current.id), current.id])}
-        />
-      ) : (
-        <Sheet title={doneCount > 0 ? t.review.doneTitle(doneCount) : t.review.emptyTitle} id="review-empty">
-          <div className="sheet-empty">
-            <p>
-              {progress.size === 0
-                ? t.review.emptyFirstRun
-                : nextDue
-                  ? t.review.nextDue(fmt.day(nextDue), t.date.relative(diffDays(day, nextDue)))
-                  : t.review.nothingDue}
-            </p>
-            <div className="btn-row" style={{ marginTop: 12 }}>
-              <Link className="btn" to="/">
-                {t.common.backToToday}
-              </Link>
-              <Link className="btn" to="/mock">
-                {t.review.doMock}
-              </Link>
+      <div className="stack">
+        {!loaded ? null : current ? (
+          <ReviewCard
+            key={current.id}
+            problem={current}
+            progress={progress.get(current.id)!}
+            remaining={queue.length}
+            doneCount={doneCount}
+            today={day}
+            onRated={() => {
+              setDoneCount((n) => n + 1);
+              setSkipped((s) => s.filter((id) => id !== current.id));
+            }}
+            onSkip={() => {
+              setPicked(null);
+              setSkipped((s) => [...s.filter((id) => id !== current.id), current.id]);
+            }}
+          />
+        ) : later > 0 && settings.maxReviews !== undefined ? (
+          <Sheet title={t.review.capTitle(settings.maxReviews + extra)} id="review-cap">
+            <div className="sheet-empty">
+              <p>{t.review.capBody(later)}</p>
+              <div className="btn-row" style={{ marginTop: 12 }}>
+                <button type="button" className="btn btn-primary" onClick={() => setExtra((n) => n + 5)}>
+                  {t.review.more}
+                </button>
+                <Link className="btn" to="/">
+                  {t.common.backToToday}
+                </Link>
+              </div>
             </div>
-          </div>
-        </Sheet>
-      )}
+          </Sheet>
+        ) : (
+          <Sheet title={doneCount > 0 ? t.review.doneTitle(doneCount) : t.review.emptyTitle} id="review-empty">
+            <div className="sheet-empty">
+              <p>
+                {progress.size === 0
+                  ? t.review.emptyFirstRun
+                  : nextDue
+                    ? t.review.nextDue(fmt.day(nextDue), t.date.relative(diffDays(day, nextDue)))
+                    : t.review.nothingDue}
+              </p>
+              <div className="btn-row" style={{ marginTop: 12 }}>
+                <Link className="btn" to="/">
+                  {t.common.backToToday}
+                </Link>
+                <Link className="btn" to="/mock">
+                  {t.review.doMock}
+                </Link>
+              </div>
+            </div>
+          </Sheet>
+        )}
+        {loaded && queue.length > 1 && (
+          <ReviewQueue
+            queue={queue}
+            progress={progress}
+            today={day}
+            onPick={(id) => {
+              setPicked(id);
+              window.scrollTo({ top: 0 });
+            }}
+          />
+        )}
+      </div>
     </div>
+  );
+}
+
+/** 接下來的題目：看得到還有哪幾題、各剩多少機率記得、逾期多久，點一題就先做它 */
+function ReviewQueue({
+  queue,
+  progress,
+  today,
+  onPick,
+}: {
+  queue: Problem[];
+  progress: ReadonlyMap<number, ProgressRecord>;
+  today: string;
+  onPick: (id: number) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <Sheet title={t.review.queueTitle(queue.length)} id="review-queue" note={t.review.queueHint}>
+      <ol className="rows review-queue">
+        {queue.map((p, i) => {
+          const state = progress.get(p.id)!;
+          const recall = recallOn(state, today);
+          return (
+            <li key={p.id}>
+              <button type="button" className="review-queue-item" aria-current={i === 0 || undefined} onClick={() => onPick(p.id)}>
+                <span className="review-queue-title">
+                  {p.id}. {p.title}
+                </span>
+                <DifficultyTag difficulty={p.difficulty} />
+                {recall !== undefined && <span className="review-queue-meta">{t.common.recallChance(Math.round(recall * 100))}</span>}
+                {state.due < today && <span className="review-queue-meta">{t.date.relative(diffDays(today, state.due))}</span>}
+                {i === 0 && <span className="review-queue-now">{t.review.current}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </Sheet>
   );
 }
 
