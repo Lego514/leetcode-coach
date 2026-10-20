@@ -87,7 +87,8 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 - CI（`.github/workflows/ci.yml`）有三個工作：`check`（lint、typecheck、單元測試、建置）、`e2e`（PostgreSQL 17，Chromium + iPhone）、`docker`（用 compose 建映像跑起來，再對容器跑一部分 e2e）。
 - Render 在 main 的 CI 通過後自動部署（`render.yaml`，`autoDeployTrigger: checksPass`），啟動時跑 migration。
-- Render 上的設定（使用者設，不在 repo 裡）：`DATABASE_URL`（Neon）、`ANTHROPIC_API_KEY`、`AI_ALLOWED_EMAILS`、`BREVO_API_KEY`/`MAIL_FROM`；`ADMIN_EMAILS` 不確定有沒有設。還沒設定的：`SENTRY_DSN`（錯誤追蹤）、`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（GitHub 登入）、`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（每日提醒；`CRON_SECRET` 也要設成 repo 的 Actions secret）。沒設定時那個功能就不出現。
+- Render 上的設定（使用者設，不在 repo 裡）：`DATABASE_URL`（Neon）、`ANTHROPIC_API_KEY`、`BREVO_API_KEY`/`MAIL_FROM`、`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（GitHub 登入，2026-10-20 設好）、`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（每日提醒，2026-10-20 設好；`CRON_SECRET` 也設成了 repo 的 Actions secret）。
+- 還沒設定的：`SENTRY_DSN`（錯誤追蹤）、`ADMIN_EMAILS`（回報收件匣）。2026-10-20 的日誌顯示 `AI_ALLOWED_EMAILS` 是空的（AI 回饋沒有帳號能用），已請使用者補上。沒設定時那個功能就不出現；伺服器啟動時的日誌會逐項寫出哪些功能開著。
 - 白板共用伺服器在 dsa-whiteboard 的 Cloudflare Worker；網址放在 `.env.production` 的 `VITE_COLLAB_URL`（公開設定，建置時用）。
 
 ## 這台電腦的坑（Windows）
@@ -108,7 +109,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 ## 待辦（使用者提過、還沒做的）
 
-- 使用者要做的設定：每日提醒的 `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（Render 和 Actions secret）；Render 加 `SENTRY_DSN`；建 GitHub OAuth App 並設定 `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（callback 是 `https://leetcode-coach-f6q7.onrender.com/api/auth/github/callback`）。
+- 使用者要做的設定：Render 補上 `AI_ALLOWED_EMAILS`；選用的 `SENTRY_DSN`、`ADMIN_EMAILS`。
 - 跟朋友互相模擬面試（面試官看題目和評分表，兩邊共用白板）。
 - 講解能力的進步曲線（講解練習、AI 追問的分數趨勢）。
 - 求職進度追蹤、資料模型的 ER 圖（Mermaid）。
