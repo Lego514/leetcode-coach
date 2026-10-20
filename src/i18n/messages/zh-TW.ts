@@ -1047,6 +1047,28 @@ const zhTW = {
     more: '多',
   },
 
+  /** 今天頁的每日提醒引導卡（components/ReminderBanner.tsx） */
+  reminderCard: {
+    title: {
+      'install-ios': '想每天收到練習提醒？',
+      'use-safari': '想每天收到練習提醒？',
+      'sign-in': '登入後就能收每日提醒',
+      enable: '每天提醒你練習',
+    },
+    body: {
+      'use-safari': 'iPhone 上建議用 Safari 打開這個網址，再加入主畫面，從主畫面打開就收得到提醒。',
+      'sign-in': '提醒由伺服器寄出，所以要先登入；登入後紀錄也會同步過來。',
+      enable: '那天還沒練習才會跳通知，練過就不打擾。時間可以到設定裡改。',
+    },
+    installBefore: '點 Safari 下方的分享',
+    installAfter: '，選「加入主畫面」，再從主畫面的圖示打開。',
+    enable: (hour: number) => `每天 ${String(hour).padStart(2, '0')}:00 提醒我`,
+    github: '用 GitHub 登入',
+    install: '安裝 App',
+    copyLink: '複製網址',
+    copied: '已複製網址，貼到 Safari 打開',
+    dismiss: '不用了',
+  },
   settings: {
     title: '設定',
     themes: { system: '跟隨系統', light: '淺色', dark: '深色' },

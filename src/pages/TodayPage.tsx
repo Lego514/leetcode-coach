@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { EditAttemptDialog } from '../components/EditAttemptDialog';
 import { ProblemRow } from '../components/ProblemRow';
 import { QuickRecordDialog } from '../components/QuickRecordDialog';
+import { ReminderBanner, useReminderSetup } from '../components/ReminderBanner';
 import { RecordDialog } from '../components/RecordDialog';
 import { SprintSummary } from '../components/SprintSummary';
 import { useToast } from '../components/toast';
@@ -81,6 +82,7 @@ export function TodayPage() {
   const day = useToday();
   const { account } = useCloud();
   const toast = useToast();
+  const reminderSetup = useReminderSetup();
   const tryDemo = async () => {
     await loadDemoData(day);
     toast(t.demo.loaded);
@@ -217,7 +219,8 @@ export function TodayPage() {
       </PageHead>
 
       <div className="stack">
-        <SignInBanner />
+        {/* 一次只放一張提示：每日提醒的下一步（加入主畫面、登入、打開）優先，沒有的話才是登入提示 */}
+        {reminderSetup.step !== 'none' ? <ReminderBanner setup={reminderSetup} /> : <SignInBanner />}
         {firstRun && (
           <Sheet title={t.today.welcomeTitle} id="welcome">
             <div className="sheet-empty">
