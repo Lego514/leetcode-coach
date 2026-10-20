@@ -3635,11 +3635,19 @@ a.more-account:hover {
   color: var(--ink-2);
 }
 
-/* 桌面版側邊欄已經有登入按鈕 */
+/* 桌面版側邊欄已經有登入按鈕；每日提醒的卡片桌面版也要顯示 */
 @media (min-width: 900px) {
-  .signin-banner {
+  .signin-banner:not(.reminder-banner) {
     display: none;
   }
+}
+
+/* iPhone 分享按鈕的圖示，夾在說明文字中間 */
+.reminder-share-icon {
+  display: inline-block;
+  margin: 0 3px;
+  vertical-align: -3px;
+  color: var(--pen);
 }
 
 /* ---------- 回報 ---------- */

@@ -1068,6 +1068,27 @@ const en: Messages = {
     more: 'More',
   },
 
+  reminderCard: {
+    title: {
+      'install-ios': 'Want a daily practice reminder?',
+      'use-safari': 'Want a daily practice reminder?',
+      'sign-in': 'Sign in to get daily reminders',
+      enable: 'Get a daily practice reminder',
+    },
+    body: {
+      'use-safari': 'On iPhone, open this page in Safari, add it to your home screen, and open it from there to get reminders.',
+      'sign-in': 'The server sends reminders, so sign in first. Your records sync over too.',
+      enable: 'You only get one on days you haven’t practiced yet. Change the time in Settings.',
+    },
+    installBefore: 'Tap Share',
+    installAfter: ' at the bottom of Safari, choose Add to Home Screen, then open the app from its icon.',
+    enable: (hour) => `Remind me at ${String(hour).padStart(2, '0')}:00`,
+    github: 'Sign in with GitHub',
+    install: 'Install app',
+    copyLink: 'Copy link',
+    copied: 'Link copied. Paste it into Safari.',
+    dismiss: 'No thanks',
+  },
   settings: {
     title: 'Settings',
     themes: { system: 'System', light: 'Light', dark: 'Dark' },

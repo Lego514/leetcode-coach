@@ -59,6 +59,8 @@ test('reports a flashcard after answering it', async ({ page }) => {
 });
 
 test('finds sign-in from Today and More', async ({ page, isMobile }) => {
+  // iPhone 的 Safari 上，今天頁先放「加入主畫面收提醒」的卡片；這裡測的是登入提示，先把那張卡關掉
+  await page.addInitScript(() => localStorage.setItem('leetcode-coach:reminder-card-dismissed', '1'));
   await page.goto('/');
   const banner = page.getByRole('complementary', { name: 'Sign in to sync across devices' });
   if (isMobile) {

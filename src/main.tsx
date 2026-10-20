@@ -8,10 +8,12 @@ import { initMonitoring } from './lib/monitoring';
 import { applyTheme } from './lib/theme';
 import { initPwaUpdates } from './pwa';
 import { initCloud } from './store/cloud';
+import { initInstallPrompt } from './store/install';
 import 'dsa-whiteboard/board.css';
 import './styles.css';
 
 void initMonitoring();
+initInstallPrompt();
 applyTheme();
 applyLocaleToDocument();
 
