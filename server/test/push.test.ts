@@ -126,6 +126,9 @@ describe('reminder helpers', () => {
   it('counts the streak up to yesterday', () => {
     expect(streakBefore(new Set(['2026-09-13', '2026-09-14', '2026-09-15']), '2026-09-16')).toBe(3);
     expect(streakBefore(new Set(['2026-09-13', '2026-09-15']), '2026-09-16')).toBe(1);
+    // 連續一週得到一次保護，9/8 沒練也不會斷（跟網頁的連續天數一樣）
+    const week = ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-05', '2026-09-06', '2026-09-07'];
+    expect(streakBefore(new Set([...week, '2026-09-09']), '2026-09-10')).toBe(8);
     expect(reminderMessage('en', 1).body).toBe('You haven’t practiced today. Open today’s plan?');
   });
 });

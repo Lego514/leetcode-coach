@@ -1,5 +1,6 @@
 import { PATTERN_ORDER, type PatternId } from '../data/patterns';
 import type { Difficulty, Problem } from '../data/problems';
+import { streakState } from '../../shared/streak';
 import { addDays, diffDays, startOfWeek, type Day } from './dates';
 import { masteryOf, recallOn, stageOf, type Rating, type ReviewState } from './srs';
 
@@ -32,16 +33,9 @@ export function newProblemsStartedOn(attempts: readonly AttemptLike[], day: Day)
   return problemsStartedOn(attempts, day).length;
 }
 
-/** 連續練習天數；今天還沒練習時從昨天往回算，不會因為早上打開就歸零 */
+/** 連續練習天數；今天還沒練習時算到昨天，不會因為早上打開就歸零。漏掉的日子有保護就不會斷（見 shared/streak.ts） */
 export function practiceStreak(days: Iterable<Day>, today: Day): number {
-  const set = new Set(days);
-  let cursor = set.has(today) ? today : addDays(today, -1);
-  let count = 0;
-  while (set.has(cursor)) {
-    count += 1;
-    cursor = addDays(cursor, -1);
-  }
-  return count;
+  return streakState(days, today).streak;
 }
 
 /** 算連續天數用的日子：有練習題目，或做過微複習 */

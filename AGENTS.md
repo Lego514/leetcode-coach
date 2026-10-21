@@ -66,6 +66,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 - **所有本機寫入都經過 `src/store/actions.ts`**，並在同一個交易裡呼叫 `track()` 記進待上傳清單（outbox），登入後才同步得出去。
 - **複習排程（progress）是從練習紀錄（attempts）算出來的，不同步**：改了 attempts 要 `rebuildProgress()`。
+- **連續天數（含「保護」）的算法在 `shared/streak.ts`**，網頁和每日提醒共用；準備度、題型等級、征服、每週回顧在 `src/lib/motivation.ts`，都從練習紀錄算出來，不另外存。
 - **介面文字只放在 `src/i18n/messages/{zh-TW,en}.ts`**：兩份的 key 要一樣（有測試檢查），其他檔案裡出現中文字會讓測試失敗。
 - **改資料格式**：先改 `shared/protocol.ts` 的 zod schema；資料庫要加 `server/migrations/000N_*.sql` 並同步改 `server/src/db/schema.ts`；server 測試裡的 migration 清單（`server/test/infra.test.ts`）也要加。
 - **新的環境變數**：`server/src/env.ts`、`render.yaml`、`server/.env.example`、README 的 Deploying 一節都要加。

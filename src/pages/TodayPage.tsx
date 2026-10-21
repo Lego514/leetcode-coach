@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { EditAttemptDialog } from '../components/EditAttemptDialog';
+import { LastWeekCard, StreakCard } from '../components/Motivation';
 import { ProblemRow } from '../components/ProblemRow';
 import { QuickRecordDialog } from '../components/QuickRecordDialog';
 import { ReminderBanner, useReminderSetup } from '../components/ReminderBanner';
@@ -24,11 +25,10 @@ import {
   problemsStartedOn,
   practiceAttempts,
   needsRewrite,
-  practiceStreak,
   reviewsDoneOn,
-  streakDays,
 } from '../lib/stats';
 import { useCloud } from '../store/cloud';
+import { retentionOf } from '../store/progress';
 import { loadDemoData } from '../store/demo';
 import { useSprint } from '../store/sprint';
 import type { AttemptMode, AttemptRecord } from '../store/db';
@@ -139,6 +139,9 @@ export function TodayPage() {
   // 用今天開始時的狀態排今天的新題：今天才第一次練的題目當作還沒做過，做完一題清單才不會整個換掉。
   // 今天標記「以前刷過」的題目不算練習，照樣當作做過
   const practicedFirstToday = useMemo(() => new Set(problemsStartedOn(attempts ?? [], day)), [attempts, day]);
+  // 有練習的日子：練題目、微複習、講解練習都算；連續天數和每週回顧用
+  const otherDays = useMemo(() => [...(cardReviews ?? []), ...(rehearsals ?? [])].map((r) => r.day), [cardReviews, rehearsals]);
+  const activeDays = useMemo(() => [...practiceAttempts(attempts ?? []).map((a) => a.day), ...otherDays], [attempts, otherDays]);
   const dayPlan = pickNewProblems({
     list: listProblems,
     started: (id) => progress.has(id) && !practicedFirstToday.has(id),
@@ -188,8 +191,6 @@ export function TodayPage() {
     const problem = catalog.byId.get(attempt.problemId);
     return problem ? [{ problem, attempt }] : [];
   });
-  // 做過微複習的日子也算連續天數
-  const streak = practiceStreak(streakDays(practiced, cardReviews ?? [], rehearsals ?? []), day);
   const cardsToday = (cardReviews ?? []).filter((r) => r.day === day).length;
   const weekStart = startOfWeek(day);
   const thisWeek = practiced.filter((a) => a.day >= weekStart).length;
@@ -227,6 +228,10 @@ export function TodayPage() {
       <div className="stack">
         {/* 一次只放一張提示：每日提醒的下一步（加入主畫面、登入、打開）優先，沒有的話才是登入提示 */}
         {reminderSetup.step !== 'none' ? <ReminderBanner setup={reminderSetup} /> : <SignInBanner />}
+        {loaded && (!firstRun || activeDays.length > 0) && <StreakCard days={activeDays} today={day} />}
+        {loaded && attempts && (
+          <LastWeekCard attempts={attempts} otherDays={otherDays} problems={listProblems} retention={retentionOf(settings)} today={day} />
+        )}
         {firstRun && (
           <Sheet title={t.today.welcomeTitle} id="welcome">
             <div className="sheet-empty">
@@ -392,7 +397,6 @@ export function TodayPage() {
             </ul>
           )}
           <div className="inline-stats done-stats">
-            <span>{rich(t.today.streak(streak), { b: bold })}</span>
             <span>{rich(t.today.thisWeek(thisWeek), { b: bold })}</span>
           </div>
         </Sheet>
