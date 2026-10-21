@@ -189,6 +189,8 @@ export interface SettingsRecord {
   /** 每天的新題最多幾題 Medium、幾題 Hard；沒設定是不限 */
   maxMedium?: number;
   maxHard?: number;
+  /** 每天最多複習幾題；沒設定是不限 */
+  maxReviews?: number;
 }
 
 export const DEFAULT_SETTINGS: SettingsRecord = {

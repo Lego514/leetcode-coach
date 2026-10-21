@@ -3827,3 +3827,45 @@ a.more-account:hover {
     color: var(--ink);
   }
 }
+
+/* ---------- 複習：接下來的題目 ---------- */
+.review-queue-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 12px 20px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-queue-item:hover .review-queue-title {
+  text-decoration: underline;
+}
+
+.review-queue-item[aria-current] {
+  font-weight: 600;
+}
+
+.review-queue-title {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.review-queue-meta {
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.review-queue-now {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--pen-soft);
+  color: var(--pen);
+  font-size: 12px;
+}

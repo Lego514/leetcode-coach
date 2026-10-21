@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BUILTIN_PROBLEMS } from '../data/problems';
 import {
+  capDue,
+  reviewsDoneOn,
   dueProblems,
   finishDay,
   longestStreak,
@@ -149,5 +151,32 @@ describe('monthBlocks', () => {
     expect(days).toHaveLength(368);
     expect(new Set(days).size).toBe(368);
     expect(blocks).toHaveLength(13);
+  });
+});
+
+describe('daily review limit', () => {
+  const attempt = (problemId: number, day: string, at: string, mode = 'practice') => ({ problemId, day, at, mode, rating: 'solo' });
+
+  it('counts reviews done today, leaving out problems first practiced today and imports', () => {
+    const attempts = [
+      attempt(1, '2026-09-10', '2026-09-10T10:00:00Z'),
+      attempt(1, '2026-09-16', '2026-09-16T10:00:00Z', 'review'),
+      attempt(2, '2026-09-11', '2026-09-11T10:00:00Z'),
+      attempt(2, '2026-09-16', '2026-09-16T11:00:00Z'),
+      attempt(2, '2026-09-16', '2026-09-16T12:00:00Z'),
+      attempt(3, '2026-09-16', '2026-09-16T09:00:00Z'),
+      attempt(4, '2026-09-16', '2026-09-16T09:00:00Z', 'import'),
+    ];
+    // 1 和 2 是以前練過的（2 今天練兩次只算一題），3 是今天的新題，4 是批次標記
+    expect(reviewsDoneOn(attempts, '2026-09-16')).toBe(2);
+  });
+
+  it('keeps the first problems up to the limit, minus reviews already done', () => {
+    const due = ['a', 'b', 'c', 'd', 'e'];
+    expect(capDue(due, undefined, 3)).toEqual({ shown: due, later: 0 });
+    expect(capDue(due, 3, 0)).toEqual({ shown: ['a', 'b', 'c'], later: 2 });
+    expect(capDue(due, 3, 2)).toEqual({ shown: ['a'], later: 4 });
+    expect(capDue(due, 3, 5)).toEqual({ shown: [], later: 5 });
+    expect(capDue(['a'], 3, 0)).toEqual({ shown: ['a'], later: 0 });
   });
 });
