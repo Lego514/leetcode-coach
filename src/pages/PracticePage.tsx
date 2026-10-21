@@ -10,6 +10,7 @@ import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { getI18n, useI18n } from '../i18n';
 import { formatDuration } from '../lib/dates';
+import { needsRewrite } from '../lib/stats';
 import {
   clearPracticeSession,
   HINT_LEVELS,
@@ -63,6 +64,8 @@ function PracticeSession({ problem }: { problem: Problem }) {
   const targetSec = MOCK_MINUTES[problem.difficulty] * 60;
   const over = elapsedSec > targetSec;
   const isReview = !!progress;
+  // 上次靠提示或解答的複習題，這次是重寫
+  const rewrite = needsRewrite(progress);
 
   // 打開頁面就開始計時；重新整理後則照原本的狀態接續
   useEffect(() => {
@@ -123,7 +126,9 @@ function PracticeSession({ problem }: { problem: Problem }) {
     <div className="page">
       <PageHead title={`${problem.id}. ${problem.title}`}>
         <div className="detail-meta">
-          <span className="chip">{isReview ? t.practice.reviewChip : t.practice.newChip}</span>
+          <span className={rewrite ? 'chip chip-rewrite' : 'chip'}>
+            {rewrite ? t.common.rewriteTag : isReview ? t.practice.reviewChip : t.practice.newChip}
+          </span>
           <DifficultyTag difficulty={problem.difficulty} />
           {showPattern || hints > 0 ? (
             <span>{pattern.name}</span>

@@ -34,6 +34,9 @@ test('practice a new problem with hints, then review it once it is due', async (
   await page.clock.setFixedTime(new Date(Date.now() + 5 * DAY_MS));
   await page.goto('/#/review');
   await expect(page.getByRole('heading', { level: 2, name: '1. Two Sum' })).toBeVisible();
+  // 上次看了提示，先請你重寫；這裡只回想
+  await expect(page.getByRole('heading', { name: 'Rewrite this one' })).toBeVisible();
+  await page.getByRole('button', { name: 'Just recall it' }).click();
   await page.getByRole('button', { name: 'Show my notes' }).click();
   await expect(page.getByText('Hash map from value to index', { exact: true })).toBeVisible();
   // 參考講法預設收起，自己想過再展開

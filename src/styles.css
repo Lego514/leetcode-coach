@@ -3869,3 +3869,15 @@ a.more-account:hover {
   color: var(--pen);
   font-size: 12px;
 }
+
+/* ---------- 複習：要重寫的題目 ---------- */
+.chip-rewrite {
+  border-color: var(--pen);
+  color: var(--pen);
+  background: var(--pen-soft);
+}
+
+.review-rewrite p {
+  margin: 0;
+  max-width: 62ch;
+}

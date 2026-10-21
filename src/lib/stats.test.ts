@@ -7,6 +7,7 @@ import {
   finishDay,
   longestStreak,
   monthBlocks,
+  needsRewrite,
   newProblemsStartedOn,
   planToTarget,
   practiceAttempts,
@@ -178,5 +179,15 @@ describe('daily review limit', () => {
     expect(capDue(due, 3, 2)).toEqual({ shown: ['a'], later: 4 });
     expect(capDue(due, 3, 5)).toEqual({ shown: [], later: 5 });
     expect(capDue(['a'], 3, 0)).toEqual({ shown: ['a'], later: 0 });
+  });
+});
+
+describe('needsRewrite', () => {
+  it('asks for a rewrite until the problem is solved without help', () => {
+    expect(needsRewrite(undefined)).toBe(false);
+    expect(needsRewrite({ lastRating: 'solo' })).toBe(false);
+    expect(needsRewrite({ lastRating: 'hint' })).toBe(true);
+    expect(needsRewrite({ lastRating: 'solution' })).toBe(true);
+    expect(needsRewrite({ lastRating: 'fail' })).toBe(true);
   });
 });
