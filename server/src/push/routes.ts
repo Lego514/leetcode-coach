@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { pushSubscribeSchema, pushUnsubscribeSchema, type PushConfigResponse } from '../../../shared/protocol';
+import { streakState } from '../../../shared/streak';
 import { pushSubscriptions, records } from '../db/schema';
 import { HttpError, readJson, requireUser, type AppDeps, type AppEnv } from '../http';
 
@@ -61,13 +62,9 @@ function daysBefore(day: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-const previousDay = (day: string) => daysBefore(day, 1);
-
-/** 到昨天為止連續練習了幾天 */
+/** 到昨天為止連續練習了幾天；跟網頁一樣，漏掉的日子有保護就不算斷 */
 export function streakBefore(days: ReadonlySet<string>, today: string): number {
-  let streak = 0;
-  for (let day = previousDay(today); days.has(day); day = previousDay(day)) streak += 1;
-  return streak;
+  return streakState([...days].filter((day) => day < today), today).streak;
 }
 
 /** 提醒的文字：有連續紀錄時提一下，比較有動力 */

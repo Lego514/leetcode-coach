@@ -3881,3 +3881,176 @@ a.more-account:hover {
   margin: 0;
   max-width: 62ch;
 }
+
+/* ---------- 今天的目標、連續天數保護 ---------- */
+.streak-card .sheet-note[data-done] {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.streak-body {
+  display: grid;
+  gap: 12px;
+}
+
+.streak-saved {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--pen-soft);
+  color: var(--pen);
+  font-size: 14px;
+}
+
+.streak-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 360px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.streak-day {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.streak-dot {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--sheet);
+}
+
+.streak-day[data-state='done'] .streak-dot {
+  border-color: var(--level-4);
+  background: var(--level-4);
+}
+
+/* 用了保護的日子：虛線圈 */
+.streak-day[data-state='frozen'] .streak-dot {
+  border-style: dashed;
+  border-color: var(--pen);
+  background: var(--pen-soft);
+}
+
+.streak-day[data-state='today'] .streak-dot {
+  border-color: var(--pen);
+}
+
+.streak-day[data-state='today'] .streak-weekday {
+  color: var(--pen);
+  font-weight: 700;
+}
+
+.streak-day[data-state='later'] .streak-dot {
+  border-style: dotted;
+  opacity: 0.6;
+}
+
+/* 慶祝：征服一題、題型升級 */
+.toast-win {
+  background: var(--marker);
+  color: var(--marker-ink);
+  border-color: var(--marker);
+  font-weight: 600;
+}
+
+/* ---------- 面試準備度 ---------- */
+.readiness {
+  display: grid;
+  gap: 14px;
+}
+
+.readiness-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.readiness-value strong {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.readiness-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.readiness-company {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 題型地圖 ---------- */
+.pattern-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 0;
+  list-style: none;
+}
+
+.pattern-tile {
+  display: grid;
+  gap: 2px;
+  height: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--level-0);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.pattern-tile:hover {
+  border-color: var(--pen);
+}
+
+.pattern-tile[data-level='1'] {
+  background: var(--level-1);
+}
+
+.pattern-tile[data-level='2'] {
+  background: var(--level-2);
+}
+
+.pattern-tile[data-level='3'] {
+  background: var(--level-4);
+  border-color: var(--level-4);
+  color: var(--on-pen);
+}
+
+.pattern-tile-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pattern-tile-level {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* ---------- 每週回顧 ---------- */
+.recap-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.recap-table th[scope='row'] {
+  color: var(--ink-2);
+  font-weight: 400;
+}

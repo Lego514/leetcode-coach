@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ActivityHeatmap, WeeklyChart } from '../components/charts';
+import { PatternMap, ReadinessSheet, WeeklyRecap } from '../components/Motivation';
 import { StuckSummary } from '../components/StuckSummary';
 import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
 import { CLARITY_OPTIONS } from '../data/interview';
@@ -21,7 +22,8 @@ import {
   weeklyCounts,
 } from '../lib/stats';
 import { STUCK_WINDOW_DAYS, summarizeStuck } from '../lib/stuck';
-import { useAttempts, useCardReviews, useCatalog, useMocks, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
+import { retentionOf } from '../store/progress';
+import { useAttempts, useCardReviews, useCatalog, useMetaMap, useMocks, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
 
 /** 熱度圖顯示一整年（含本週共 53 週） */
 const HEATMAP_WEEKS = 53;
@@ -36,6 +38,7 @@ export function ProgressPage() {
   const mocks = useMocks();
   const cardReviews = useCardReviews();
   const rehearsals = useRehearsals();
+  const meta = useMetaMap();
   const [listChoice, setListChoice] = useState<ListFilter | null>(null);
   const list = listChoice ?? settings.activeList;
 
@@ -46,6 +49,7 @@ export function ProgressPage() {
   const allAttempts = useMemo(() => practiceAttempts(attempts ?? []), [attempts]);
   const weeks = useMemo(() => weeklyCounts(allAttempts, day, 12), [allAttempts, day]);
   const byDay = useMemo(() => countByDay(allAttempts), [allAttempts]);
+  const otherDays = useMemo(() => [...(cardReviews ?? []), ...(rehearsals ?? [])].map((r) => r.day), [cardReviews, rehearsals]);
 
   const started = problems.filter((p) => progress.has(p.id)).length;
   const mastered = problems.filter((p) => stageOf(progress.get(p.id)) === 'mastered').length;
@@ -121,6 +125,17 @@ export function ProgressPage() {
             </p>
           </div>
         </section>
+
+        <ReadinessSheet problems={problems} all={catalog.problems} progress={progress} meta={meta} today={day} />
+        <PatternMap problems={problems} progress={progress} today={day} />
+        <WeeklyRecap
+          attempts={attempts ?? []}
+          otherDays={otherDays}
+          problems={problems}
+          progress={progress}
+          retention={retentionOf(settings)}
+          today={day}
+        />
 
         <Sheet title={t.progress.heatmapTitle(yearSessions)} id="heatmap" note={t.progress.heatmapNote(yearDays.length, yearLongest)}>
           <div className="sheet-body">

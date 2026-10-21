@@ -10,6 +10,7 @@ import { reviewsDoneOn } from '../lib/stats';
 import { useAttempts, useProgressMap, useSettings, useToday } from '../store/queries';
 import { syncStatusText } from './AccountSection';
 import { LanguageSwitch } from './LanguageSwitch';
+import { WinWatcher } from './Motivation';
 import { ThemeToggle } from './ThemeToggle';
 
 type NavKey = keyof Pick<
@@ -196,6 +197,7 @@ export function Layout() {
       <main className="main" id="main">
         <DemoBanner />
         <Outlet />
+        <WinWatcher />
       </main>
 
       <nav className="tabbar" aria-label={t.nav.main}>
