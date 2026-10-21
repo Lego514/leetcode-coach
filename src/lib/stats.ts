@@ -1,7 +1,7 @@
 import { PATTERN_ORDER, type PatternId } from '../data/patterns';
 import type { Difficulty, Problem } from '../data/problems';
 import { addDays, diffDays, startOfWeek, type Day } from './dates';
-import { masteryOf, recallOn, stageOf, type ReviewState } from './srs';
+import { masteryOf, recallOn, stageOf, type Rating, type ReviewState } from './srs';
 
 type StateMap = ReadonlyMap<number, Pick<ReviewState, 'interval' | 'due'> & Partial<Pick<ReviewState, 'stability' | 'lastReview'>>>;
 
@@ -175,6 +175,14 @@ export function capDue<T>(due: readonly T[], cap: number | undefined, doneToday:
   if (cap === undefined) return { shown: [...due], later: 0 };
   const room = Math.max(0, cap - doneToday);
   return { shown: due.slice(0, room), later: Math.max(0, due.length - room) };
+}
+
+/**
+ * 上次看了提示、看了解答或還不懂的題目，複習時要「重寫」：不看筆記，在 LeetCode 從頭寫到通過。
+ * 只是回想思路很容易覺得自己會了，自己寫得出來才算真的會；自己解出一次之後就回到一般的複習
+ */
+export function needsRewrite(state: { lastRating: Rating } | null | undefined): boolean {
+  return !!state && state.lastRating !== 'solo';
 }
 
 export interface TargetPlan {

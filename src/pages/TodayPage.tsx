@@ -23,6 +23,7 @@ import {
   planToTarget,
   problemsStartedOn,
   practiceAttempts,
+  needsRewrite,
   practiceStreak,
   reviewsDoneOn,
   streakDays,
@@ -116,6 +117,7 @@ export function TodayPage() {
   // 每天最多複習幾題：最可能忘的先做，其他的留到之後（衝刺提前排的不受影響）
   const capped = capDue(dueNow, settings.maxReviews, reviewsDoneOn(attempts ?? [], day));
   const due = pulled.length > 0 ? [...capped.shown, ...pulled] : capped.shown;
+  const rewrites = due.filter((p) => needsRewrite(progress.get(p.id))).length;
 
   // 不管是從今天頁、題庫還是「記錄其他題目」開始的新題，都算進每天的目標
   const startedToday = newProblemsStartedOn(attempts ?? [], day);
@@ -263,7 +265,12 @@ export function TodayPage() {
           count={due.length}
           id="due"
           note={
-            pulled.length > 0 ? t.today.sprint.pulledNote(pulled.length) : capped.later > 0 ? t.today.dueLater(capped.later) : undefined
+            [
+              pulled.length > 0 ? t.today.sprint.pulledNote(pulled.length) : capped.later > 0 ? t.today.dueLater(capped.later) : '',
+              rewrites > 0 ? t.today.dueRewrite(rewrites) : '',
+            ]
+              .filter(Boolean)
+              .join(' ') || undefined
           }
           actions={
             due.length > 0 ? (

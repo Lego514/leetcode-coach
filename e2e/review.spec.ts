@@ -30,11 +30,48 @@ test('caps reviews per day, lists what is next, and lets me pick one or do more'
   await expect(page.locator('#review-title')).toHaveText(title);
 
   // 做完今天的上限就停，可以再多做 5 題
+  const recallOnly = page.getByRole('button', { name: 'Just recall it' });
+  const notes = page.getByRole('button', { name: 'Show my notes' });
   for (let i = 0; i < left; i += 1) {
-    await page.getByRole('button', { name: 'Show my notes' }).click();
+    // 要重寫的題目先換回一般的回想
+    await expect(recallOnly.or(notes)).toBeVisible();
+    if (await recallOnly.isVisible()) await recallOnly.click();
+    await notes.click();
     await page.getByRole('button', { name: /^Solved alone/ }).click();
   }
   await expect(page.getByRole('heading', { name: 'Done with today’s 5 reviews' })).toBeVisible();
   await page.getByRole('button', { name: 'Review 5 more' }).click();
   await expect(page.locator('#review-title')).toBeVisible();
+});
+
+// 上次靠提示或解答的題目：今天頁和清單標「重寫」，複習卡請你計時重寫，也可以只回想
+test('asks me to rewrite problems I needed help with last time', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try it with demo data' }).click();
+  // 示範資料最近幾天有看了提示、看了解答、還不懂的題目
+  const dueList = page.getByRole('region', { name: /^Due for review/ });
+  await expect(dueList).toContainText(/marked “Rewrite” needed a hint or the solution/);
+  const rewriteRow = dueList.getByRole('listitem').filter({ has: page.locator('.chip-rewrite') }).first();
+  await expect(rewriteRow).toBeVisible();
+  const rowTitle = (await rewriteRow.locator('.problem-title a').textContent())!.trim();
+
+  await page.goto('/#/review');
+  const queue = page.getByRole('region', { name: /^Up next/ });
+  await queue.getByRole('button').filter({ hasText: rowTitle }).click();
+  await expect(page.locator('#review-title')).toContainText(rowTitle);
+  await expect(page.getByRole('heading', { name: 'Rewrite this one' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show my notes' })).toHaveCount(0);
+
+  // 計時重寫：練習頁標成「重寫」
+  await page.getByRole('link', { name: 'Rewrite with a timer' }).click();
+  await expect(page.locator('.page-head .chip-rewrite')).toHaveText('Rewrite');
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /^Review/ }).click();
+  await page.getByRole('dialog', { name: 'Leave this practice session?' }).getByRole('button', { name: 'Leave without recording' }).click();
+
+  // 只回想就好：換回一般的回想和筆記
+  await queue.getByRole('button').filter({ hasText: rowTitle }).click();
+  await page.getByRole('button', { name: 'Just recall it' }).click();
+  await expect(page.getByRole('heading', { name: 'Recall first' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show my notes' }).click();
+  await expect(page.getByRole('heading', { name: 'How well did you recall it?' })).toBeVisible();
 });

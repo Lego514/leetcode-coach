@@ -10,7 +10,7 @@ import { rich } from '../i18n/rich';
 import { diffDays } from '../lib/dates';
 import { languageLabel } from '../lib/languages';
 import { RATINGS, recallOn, schedule, type Rating } from '../lib/srs';
-import { capDue, dueProblems, reviewsDoneOn } from '../lib/stats';
+import { capDue, dueProblems, needsRewrite, reviewsDoneOn } from '../lib/stats';
 import { recordAttempt } from '../store/actions';
 import type { ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
@@ -143,6 +143,7 @@ function ReviewQueue({
                   {p.id}. {p.title}
                 </span>
                 <DifficultyTag difficulty={p.difficulty} />
+                {needsRewrite(state) && <span className="chip chip-rewrite">{t.common.rewriteTag}</span>}
                 {recall !== undefined && <span className="review-queue-meta">{t.common.recallChance(Math.round(recall * 100))}</span>}
                 {state.due < today && <span className="review-queue-meta">{t.date.relative(diffDays(today, state.due))}</span>}
                 {i === 0 && <span className="review-queue-now">{t.review.current}</span>}
@@ -174,6 +175,9 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
   const [showPattern, setShowPattern] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [saving, setSaving] = useState(false);
+  // 上次靠提示或解答的題目先請你重寫；按「只回想就好」才換回一般的回想
+  const [recallOnly, setRecallOnly] = useState(false);
+  const rewrite = needsRewrite(progress) && !recallOnly;
 
   async function rate(rating: Rating) {
     if (saving) return;
@@ -211,27 +215,45 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
         <Link to={`/problems/${problem.id}`}>{t.review.details}</Link>
       </div>
 
-      <div className="review-step">
-        <h3>{t.review.recallTitle}</h3>
-        <ul className="bullets">
-          {t.review.recall.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-        {!revealed && (
+      {rewrite ? (
+        <div className="review-step review-rewrite">
+          <h3>{t.review.rewriteTitle}</h3>
+          <p>{t.review.rewriteBody(t.ratings[progress.lastRating].label)}</p>
           <div className="btn-row" style={{ marginTop: 16 }}>
-            <button className="btn btn-primary" onClick={() => setRevealed(true)}>
-              {t.review.reveal}
-            </button>
-            <Link className="btn" to={`/practice/${problem.id}`}>
-              {t.review.redo}
+            <Link className="btn btn-primary" to={`/practice/${problem.id}`}>
+              {t.review.rewriteStart}
             </Link>
+            <button className="btn" onClick={() => setRecallOnly(true)}>
+              {t.review.recallInstead}
+            </button>
             <button className="btn btn-quiet" onClick={onSkip}>
               {t.review.skip}
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="review-step">
+          <h3>{t.review.recallTitle}</h3>
+          <ul className="bullets">
+            {t.review.recall.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          {!revealed && (
+            <div className="btn-row" style={{ marginTop: 16 }}>
+              <button className="btn btn-primary" onClick={() => setRevealed(true)}>
+                {t.review.reveal}
+              </button>
+              <Link className="btn" to={`/practice/${problem.id}`}>
+                {t.review.redo}
+              </Link>
+              <button className="btn btn-quiet" onClick={onSkip}>
+                {t.review.skip}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {revealed && (
         <>

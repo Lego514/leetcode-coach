@@ -5,6 +5,7 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays, type Day } from '../lib/dates';
 import { stageOf } from '../lib/srs';
+import { needsRewrite } from '../lib/stats';
 import type { ProgressRecord } from '../store/db';
 import { DifficultyTag, LeetCodeLink, MasteryCell } from './ui';
 
@@ -25,6 +26,8 @@ export function ProblemRow({ problem, progress, today, marked, showPattern, comp
   const { t, fmt, locale } = useI18n();
   const stage = stageOf(progress);
   const overdue = progress && progress.due < today;
+  // 到期而且上次靠提示或解答的題目，標成「重寫」
+  const rewrite = progress && progress.due <= today && needsRewrite(progress);
 
   return (
     <div className="problem-row">
@@ -49,6 +52,7 @@ export function ProblemRow({ problem, progress, today, marked, showPattern, comp
             </span>
           ) : null}
           {progress && <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>}
+          {rewrite && <span className="chip chip-rewrite">{t.common.rewriteTag}</span>}
           {note && <span className="problem-note">{note}</span>}
           {problem.premium && <span>{t.common.premium}</span>}
           {problem.custom && <span>{t.common.customTag}</span>}
