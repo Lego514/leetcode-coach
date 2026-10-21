@@ -27,7 +27,7 @@
     "@sentry/react": "11.5.0",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
-    "dsa-whiteboard": "github:Lego514/dsa-whiteboard#v0.1.6",
+    "dsa-whiteboard": "github:Lego514/dsa-whiteboard#v0.1.7",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0"
