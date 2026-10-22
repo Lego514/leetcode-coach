@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FREEZE_EVERY, streakState } from '../../shared/streak';
 import type { Problem } from '../data/problems';
 import { addDays } from './dates';
-import { conquests, isReady, nextMilestone, paceOf, patternLevels, progressBefore, readiness, weekSummary, winsFor } from './motivation';
+import { conquests, isReady, nextMilestone, paceOf, todayStatus, patternLevels, progressBefore, readiness, weekSummary, winsFor } from './motivation';
 import { schedule, type Rating } from './srs';
 
 const run = (start: string, n: number) => Array.from({ length: n }, (_, i) => addDays(start, i));
@@ -184,5 +184,19 @@ describe('pace', () => {
       now: 18,
     });
     expect(paceOf([at('2026-10-01', 'hint')])).toEqual({ first: undefined, previousBest: undefined, now: undefined });
+  });
+});
+
+describe('today status', () => {
+  const tasks = { newDone: 0, newGoal: 3, reviewDone: 0, reviewGoal: 6 };
+
+  it('keeps checking in separate from finishing today’s new problems and reviews', () => {
+    expect(todayStatus({ ...tasks, checkedIn: false })).toBe('todo');
+    // 只做了一回合卡片
+    expect(todayStatus({ ...tasks, checkedIn: true })).toBe('checkedIn');
+    expect(todayStatus({ ...tasks, newDone: 3, checkedIn: true })).toBe('checkedIn');
+    expect(todayStatus({ newDone: 3, newGoal: 3, reviewDone: 6, reviewGoal: 6, checkedIn: true })).toBe('allDone');
+    // 沒有新題、沒有複習的日子，打卡就算完成
+    expect(todayStatus({ newDone: 0, newGoal: 0, reviewDone: 0, reviewGoal: 0, checkedIn: true })).toBe('allDone');
   });
 });

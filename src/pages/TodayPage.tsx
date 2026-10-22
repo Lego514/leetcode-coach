@@ -261,7 +261,19 @@ export function TodayPage() {
         )}
 
         {loaded && attempts && (!firstRun || activeDays.length > 0) && (
-          <TodayCard days={activeDays} problems={listProblems} progress={progress} attempts={attempts} today={day} />
+          <TodayCard
+            days={activeDays}
+            tasks={{
+              newDone: startedToday,
+              newGoal: startedToday + newProblems.length,
+              reviewDone: reviewsDoneOn(attempts, day),
+              reviewGoal: reviewsDoneOn(attempts, day) + due.length,
+            }}
+            problems={listProblems}
+            progress={progress}
+            attempts={attempts}
+            today={day}
+          />
         )}
 
         <Sheet

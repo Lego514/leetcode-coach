@@ -215,3 +215,22 @@ export function paceOf(attempts: readonly AttemptLike[]): Pace {
     now: latest?.minutes,
   };
 }
+
+/**
+ * 今天的進度。打卡（做 1 題或一回合卡片，連續天數就延續）和今天的任務（新題、複習）分開：
+ * 只做了一回合卡片時，連續天數保住了，但新題和複習還沒做，不能說「今天都完成了」
+ */
+export interface TodayTasks {
+  checkedIn: boolean;
+  newDone: number;
+  newGoal: number;
+  reviewDone: number;
+  reviewGoal: number;
+}
+
+export type TodayStatus = 'todo' | 'checkedIn' | 'allDone';
+
+export function todayStatus(tasks: TodayTasks): TodayStatus {
+  if (!tasks.checkedIn) return 'todo';
+  return tasks.newDone >= tasks.newGoal && tasks.reviewDone >= tasks.reviewGoal ? 'allDone' : 'checkedIn';
+}

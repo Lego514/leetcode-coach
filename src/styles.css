@@ -4233,6 +4233,7 @@ a.more-account:hover {
   display: grid;
   grid-template-columns: minmax(96px, 170px) minmax(0, 1fr);
   grid-template-areas:
+    'tasks tasks'
     'tree stats'
     'tree week'
     'tree goal'
@@ -4245,6 +4246,7 @@ a.more-account:hover {
   .today-card {
     grid-template-columns: 120px minmax(0, 1fr);
     grid-template-areas:
+      'tasks tasks'
       'tree stats'
       'week week'
       'goal goal'
@@ -4408,4 +4410,34 @@ a.more-account:hover {
   margin: 0 auto;
   border: 1px solid var(--rule);
   border-radius: var(--radius);
+}
+
+/* 今天的進度：打卡、新題、複習分開，做完的打勾 */
+.today-tasks {
+  grid-area: tasks;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-task {
+  padding: 4px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.today-task[data-done] {
+  border-color: var(--good);
+  color: var(--good);
+  font-weight: 600;
+}
+
+.today-task[data-done]::before {
+  content: '✓ ';
 }
