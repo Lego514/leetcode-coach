@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FREEZE_EVERY, streakState } from '../../shared/streak';
 import type { Problem } from '../data/problems';
 import { addDays } from './dates';
-import { conquests, isReady, patternLevels, progressBefore, readiness, weekSummary, winsFor } from './motivation';
+import { conquests, isReady, nextMilestone, paceOf, patternLevels, progressBefore, readiness, weekSummary, winsFor } from './motivation';
 import { schedule, type Rating } from './srs';
 
 const run = (start: string, n: number) => Array.from({ length: n }, (_, i) => addDays(start, i));
@@ -151,5 +151,38 @@ describe('weekly recap', () => {
     const before = progressBefore(attempts, '2026-10-13', 0.9);
     expect([...before.keys()]).toEqual([1, 2]);
     expect(before.get(1)?.lastRating).toBe('hint');
+  });
+});
+
+describe('next milestone', () => {
+  const today = '2026-10-21';
+  const list = [problem(1, 'stack'), problem(2, 'stack'), problem(3, 'stack'), problem(4, 'stack'), problem(5, 'stack'), problem(6, 'binary-search')];
+
+  it('points at the started pattern closest to “Got it”, counting sprouts you can rewrite', () => {
+    const progress = new Map([
+      [1, stateAfter([['solo', '2026-10-20']])],
+      [2, stateAfter([['hint', '2026-10-20']])],
+    ]);
+    // 5 題要 2 題現在會，還差 1 題；有 1 題小芽
+    expect(nextMilestone(list, progress, today)).toEqual({ kind: 'pattern', pattern: 'stack', needed: 1, level: 2, sprouts: 1 });
+  });
+
+  it('falls back to the next 5% of readiness', () => {
+    expect(nextMilestone(list, new Map(), today)).toEqual({ kind: 'readiness', needed: 1, percent: 5 });
+    const all = new Map(list.map((p) => [p.id, stateAfter([['solo', '2026-10-20']])]));
+    expect(nextMilestone(list, all, today)).toBeNull();
+  });
+});
+
+describe('pace', () => {
+  const at = (day: string, rating: Rating, minutes?: number) => ({ problemId: 1, day, at: `${day}T10:00:00.000Z`, rating, mode: 'practice', minutes });
+
+  it('compares the latest try with the first one and the best solo time before it', () => {
+    expect(paceOf([at('2026-10-01', 'hint', 42), at('2026-10-05', 'solo', 25), at('2026-10-20', 'solo', 18)])).toEqual({
+      first: 42,
+      previousBest: 25,
+      now: 18,
+    });
+    expect(paceOf([at('2026-10-01', 'hint')])).toEqual({ first: undefined, previousBest: undefined, now: undefined });
   });
 });

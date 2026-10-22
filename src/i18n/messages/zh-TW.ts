@@ -388,6 +388,9 @@ const zhTW = {
     adjustPlan: '調整清單和每日題數',
     dueTitle: '該複習的題目',
     dueLater: (n: number) => `已達每天的複習上限，另外 ${n} 題留到之後`,
+    adaptEasier: (solo: number, total: number) =>
+      `最近 ${total} 次 Medium 只有 ${solo} 次自己解出，今天先少排 Medium、多做 Easy 打底（設定裡可以關掉自動調整）。`,
+    adaptReady: (solo: number, total: number) => `最近 ${total} 次 Medium 有 ${solo} 次自己解出，可以到設定把 Medium 上限調高了。`,
     dueRewrite: (n: number) => `標「重寫」的 ${n} 題上次靠提示或解答，這次不看筆記從頭寫一次。`,
     reviewAll: '逐題複習',
     dueEmptyFirstRun: '做完新題後，系統會依你的表現排好複習日，到期的題目會出現在這裡。',
@@ -1126,6 +1129,8 @@ const zhTW = {
     skipPremiumHint: (n: number) =>
       `目前的題單裡有 ${n} 題要 LeetCode Premium 才能做。跳過後，新題、衝刺計畫、模擬面試和題庫都不會出現這些題；已經做過的照樣會排複習。`,
     focusPattern: '要專練的模式',
+    adaptiveDifficulty: '自動調整難度',
+    adaptiveDifficultyHint: '最近的 Medium 大多要看提示時，新題先少排 Medium、不排 Hard，多做 Easy 打底；自己解得出來了再恢復。不會超過你自己設的上限。',
     showPatterns: '新題直接顯示是哪個模式',
     showPatternsHint: '預設不顯示：面試時沒人會告訴你是哪個模式，自己看出來也是練習。練習頁和提示裡想看時還是看得到。',
     dailyNewHint: '複習題不算在內。複習量多的時候，可以暫時設成 0。',
@@ -1520,6 +1525,11 @@ const zhTW = {
     conquered: (title: string, last: string) => `征服！${title}：上次「${last}」，這次自己寫出來了。`,
     levelUp: (pattern: string, level: string) => `題型升級：「${pattern}」到了「${level}」。`,
     levels: ['還沒開始', '練習中', '會了', '精通'],
+    milestonePattern: (n: number, pattern: string, level: string) => `下一個目標：再會 ${n} 題，「${pattern}」就升到「${level}」。`,
+    milestoneSprouts: (n: number) => `這個題型有 ${n} 題小芽，重寫出來就算。`,
+    milestoneReadiness: (n: number, pct: number) => `下一個目標：再會 ${n} 題，準備度就到 ${pct}%。`,
+    conqueredTime: (title: string, first: number, now: number) => `征服！${title}：第一次花了 ${first} 分鐘還要幫忙，這次 ${now} 分鐘自己寫出來。`,
+    personalBest: (title: string, now: number, best: number) => `新紀錄！${title}：${now} 分鐘，比之前最快的 ${best} 分鐘快了 ${best - now} 分鐘。`,
     readinessTitle: '面試準備度',
     readinessNote: '「會了」＝最近一次自己解出，而且現在還記得（機率至少 70%）。看了提示的題目要自己重寫出來才算。',
     readinessValue: (ready: number, total: number) => `${total} 題裡現在會 ${ready} 題`,
@@ -1584,6 +1594,24 @@ const zhTW = {
       fruit: '果實：征服（看過提示，後來自己寫出）',
       bud: '虛線：還沒長出來的題型和題目',
     },
+  },
+
+  share: {
+    button: '分享成圖片',
+    title: '分享你的演算法樹',
+    subtitle: '圖片裡有你的樹和這週的數字，沒有題目內容和筆記。',
+    making: '正在畫圖片…',
+    failed: '圖片沒畫出來，請再試一次。',
+    alt: '演算法樹和這週練習數字的分享圖片',
+    download: '下載圖片',
+    share: '分享',
+    cardTitle: '我的演算法樹',
+    statReady: (total: number) => `題現在會（共 ${total}）`,
+    statStreak: '天連續練習',
+    statFruits: '顆果實（征服）',
+    weekLine: (days: number, sessions: number, conquered: number) =>
+      `這週練了 ${days} 天、${sessions} 次${conquered > 0 ? `，征服 ${conquered} 題` : ''}`,
+    readinessLine: (from: number, now: number) => `面試準備度：上週一 ${from}% → 現在 ${now}%`,
   },
 
   notFound: {

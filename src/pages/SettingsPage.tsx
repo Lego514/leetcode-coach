@@ -139,6 +139,15 @@ export function SettingsPage() {
                 {t.settings.skipPremium}
               </label>
               <span className="field-hint">{t.settings.skipPremiumHint(premiumInList)}</span>
+              <label className="check" style={{ marginTop: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={settings.adaptiveDifficulty ?? true}
+                  onChange={(e) => void updateSettings({ adaptiveDifficulty: e.target.checked })}
+                />
+                {t.settings.adaptiveDifficulty}
+              </label>
+              <span className="field-hint">{t.settings.adaptiveDifficultyHint}</span>
             </fieldset>
 
             <div className="form-grid">

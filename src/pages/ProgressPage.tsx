@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { AlgorithmTree } from '../components/AlgorithmTree';
 import { ActivityHeatmap, WeeklyChart } from '../components/charts';
-import { PatternMap, ReadinessSheet, WeeklyRecap } from '../components/Motivation';
+import { PatternMap, ReadinessSheet, useRecapNumbers, WeeklyRecap } from '../components/Motivation';
 import { StuckSummary } from '../components/StuckSummary';
 import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
 import { CLARITY_OPTIONS } from '../data/interview';
@@ -25,6 +25,8 @@ import {
 import { STUCK_WINDOW_DAYS, summarizeStuck } from '../lib/stuck';
 import { retentionOf } from '../store/progress';
 import { useAttempts, useCardReviews, useCatalog, useMetaMap, useMocks, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
+
+const NO_ATTEMPTS: never[] = [];
 
 /** 熱度圖顯示一整年（含本週共 53 週） */
 const HEATMAP_WEEKS = 53;
@@ -63,6 +65,14 @@ export function ProgressPage() {
   const yearSessions = allAttempts.filter((a) => inYear(a.day)).length;
   const yearDays = [...new Set([...byDay.keys(), ...cardDays])].filter(inYear);
   const yearLongest = longestStreak(yearDays);
+  const recap = useRecapNumbers({
+    attempts: attempts ?? NO_ATTEMPTS,
+    otherDays,
+    problems,
+    progress,
+    retention: retentionOf(settings),
+    today: day,
+  });
 
   const weakest = patterns
     .filter((p) => p.started >= 2)
@@ -127,17 +137,12 @@ export function ProgressPage() {
           </div>
         </section>
 
-        {attempts && problems.length > 0 && <AlgorithmTree problems={problems} progress={progress} attempts={attempts} today={day} />}
+        {attempts && problems.length > 0 && (
+          <AlgorithmTree problems={problems} progress={progress} attempts={attempts} today={day} share={{ streak, recap }} />
+        )}
         <ReadinessSheet problems={problems} all={catalog.problems} progress={progress} meta={meta} today={day} />
         <PatternMap problems={problems} progress={progress} today={day} />
-        <WeeklyRecap
-          attempts={attempts ?? []}
-          otherDays={otherDays}
-          problems={problems}
-          progress={progress}
-          retention={retentionOf(settings)}
-          today={day}
-        />
+        <WeeklyRecap recap={recap} />
 
         <Sheet title={t.progress.heatmapTitle(yearSessions)} id="heatmap" note={t.progress.heatmapNote(yearDays.length, yearLongest)}>
           <div className="sheet-body">

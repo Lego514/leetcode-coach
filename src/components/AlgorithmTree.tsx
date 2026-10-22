@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -6,11 +6,13 @@ import { useI18n } from '../i18n';
 import type { Day } from '../lib/dates';
 import { GROUND, grownBetween, pointOn, TREE_VIEW, treeLayout, treeState, TRUNK_X, type TreeNode, type TreeState } from '../lib/tree';
 import type { AttemptRecord, ProgressRecord } from '../store/db';
+import type { RecapNumbers } from './Motivation';
+import { ShareTreeButton } from './ShareCard';
 import { DifficultyTag, Sheet } from './ui';
 
-// 演算法樹：今天頁放小的（只有樹和一行摘要），進度頁放完整的（題型名稱、點葉子看是哪一題、圖例）
+// 演算法樹：今天頁的「今天的目標」卡放小的（components/Motivation.tsx），進度頁放完整的（題型名稱、點葉子看是哪一題、圖例）
 
-interface TreeProps {
+export interface TreeProps {
   problems: readonly Problem[];
   progress: ReadonlyMap<number, ProgressRecord>;
   attempts: readonly AttemptRecord[];
@@ -20,7 +22,7 @@ interface TreeProps {
 const LEAF = 'M0 0 Q9 -6.5 18 0 Q9 6.5 0 0Z';
 const SPROUT = 'M0 0 Q5.5 -4 11 0 Q5.5 4 0 0Z';
 
-function useTree({ problems, progress, attempts, today }: TreeProps) {
+export function useTree({ problems, progress, attempts, today }: TreeProps) {
   const branches = useMemo(() => treeLayout(problems), [problems]);
   const state = useMemo(() => treeState(problems, progress, attempts, today), [problems, progress, attempts, today]);
   return { branches, state };
@@ -37,7 +39,7 @@ function useGrown(state: TreeState): ReadonlySet<number> {
   return grown;
 }
 
-function TreeSvg({
+export function TreeSvg({
   branches,
   state,
   labels,
@@ -144,53 +146,52 @@ function TreeSvg({
   );
 }
 
-/** 今天頁：小的樹和一行摘要，點進去看完整的 */
-export function TreeCard(props: TreeProps) {
-  const { t } = useI18n();
-  const tree = useTree(props);
-  const { ready, fading, fruits } = tree.state;
-  return (
-    <Sheet title={t.tree.todayTitle} id="tree-card">
-      <div className="sheet-body algo-card">
-        <Link to="/progress#algorithm-tree" className="algo-card-tree" aria-label={t.tree.seeFull}>
-          <TreeSvg {...tree} labels={false} ariaLabel={t.tree.label(ready, props.problems.length)} />
-        </Link>
-        <div className="algo-card-side">
-          <p className="algo-card-summary">{t.tree.summary(ready, fading.length, fruits)}</p>
-          <div className="btn-row">
-            {fading.length > 0 && (
-              <Link className="btn btn-small btn-primary" to="/review">
-                {t.tree.review(fading.length)}
-              </Link>
-            )}
-            <Link className="btn btn-small" to="/progress#algorithm-tree">
-              {t.tree.seeFull}
-            </Link>
-          </div>
-        </div>
-      </div>
-    </Sheet>
-  );
-}
-
 /** 進度頁：完整的樹，有題型名稱，點一片葉子看是哪一題 */
-export function AlgorithmTree(props: TreeProps) {
-  const { t, locale } = useI18n();
+export function AlgorithmTree({ share, ...props }: TreeProps & { share?: { streak: number; recap: RecapNumbers } }) {
+  const { t, locale, fmt } = useI18n();
   const tree = useTree(props);
   const [picked, setPicked] = useState<number | null>(null);
+  const body = useRef<HTMLDivElement>(null);
   const { ready, fading, fruits, blooms } = tree.state;
   const problem = picked === null ? undefined : props.problems.find((p) => p.id === picked);
   const node = picked === null ? undefined : tree.state.nodes.get(picked);
 
   return (
-    <Sheet title={t.tree.title} id="algorithm-tree" note={t.tree.note}>
+    <Sheet
+      title={t.tree.title}
+      id="algorithm-tree"
+      note={t.tree.note}
+      actions={
+        share && (
+          <ShareTreeButton
+            getTree={() => body.current?.querySelector('svg.algo-tree') ?? null}
+            fileName={`algorithm-tree-${props.today}.png`}
+            content={{
+              eyebrow: t.app.name,
+              title: t.share.cardTitle,
+              subtitle: fmt.fullDay(props.today),
+              stats: [
+                { value: String(ready), label: t.share.statReady(props.problems.length) },
+                { value: String(share.streak), label: t.share.statStreak },
+                { value: String(fruits), label: t.share.statFruits },
+              ],
+              lines: [
+                t.share.weekLine(share.recap.current.days, share.recap.current.sessions, share.recap.current.conquered),
+                t.share.readinessLine(share.recap.from, share.recap.now),
+              ],
+              footer: window.location.host,
+            }}
+          />
+        )
+      }
+    >
       <div className="algo-stats">
         <Stat value={ready} label={t.tree.stats.ready(props.problems.length)} />
         <Stat value={fading.length} label={t.tree.stats.fading} />
         <Stat value={fruits} label={t.tree.stats.fruits} />
         <Stat value={blooms} label={t.tree.stats.blooms} />
       </div>
-      <div className="sheet-body algo-full">
+      <div className="sheet-body algo-full" ref={body}>
         <TreeSvg {...tree} labels picked={picked} onPick={setPicked} ariaLabel={t.tree.label(ready, props.problems.length)} />
         <div className="algo-info" aria-live="polite">
           {problem && node ? (

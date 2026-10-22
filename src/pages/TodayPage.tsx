@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { TreeCard } from '../components/AlgorithmTree';
 import { EditAttemptDialog } from '../components/EditAttemptDialog';
-import { LastWeekCard, StreakCard } from '../components/Motivation';
+import { LastWeekCard, TodayCard } from '../components/Motivation';
 import { ProblemRow } from '../components/ProblemRow';
 import { QuickRecordDialog } from '../components/QuickRecordDialog';
 import { ReminderBanner, useReminderSetup } from '../components/ReminderBanner';
@@ -15,7 +14,7 @@ import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { getPattern, type PatternId } from '../data/patterns';
 import { problemsInList, skipPremium } from '../lib/catalog';
-import { pickNewProblems, STRUGGLE_DAYS, strugglingPatterns, type NewPick } from '../lib/daily';
+import { adaptDifficulty, pickNewProblems, STRUGGLE_DAYS, stricterCap, strugglingPatterns, type NewPick } from '../lib/daily';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
 import {
   capDue,
@@ -143,6 +142,12 @@ export function TodayPage() {
   // 有練習的日子：練題目、微複習、講解練習都算；連續天數和每週回顧用
   const otherDays = useMemo(() => [...(cardReviews ?? []), ...(rehearsals ?? [])].map((r) => r.day), [cardReviews, rehearsals]);
   const activeDays = useMemo(() => [...practiceAttempts(attempts ?? []).map((a) => a.day), ...otherDays], [attempts, otherDays]);
+  // 最近 Medium 常要看提示時，今天少排 Medium（設定可以關）；只會比使用者設的上限更嚴
+  const adaptation = useMemo(
+    () => adaptDifficulty(attempts ?? [], (id) => catalog.byId.get(id), day, settings.dailyNew),
+    [attempts, catalog, day, settings.dailyNew],
+  );
+  const adaptive = (settings.adaptiveDifficulty ?? true) && !sprint;
   const dayPlan = pickNewProblems({
     list: listProblems,
     started: (id) => progress.has(id) && !practicedFirstToday.has(id),
@@ -151,9 +156,15 @@ export function TodayPage() {
     focus: settings.focusPattern,
     struggling,
     lastPracticed,
-    maxMedium: settings.maxMedium,
-    maxHard: settings.maxHard,
+    maxMedium: adaptive ? stricterCap(settings.maxMedium, adaptation.maxMedium) : settings.maxMedium,
+    maxHard: adaptive ? stricterCap(settings.maxHard, adaptation.maxHard) : settings.maxHard,
   });
+  const adaptNote =
+    adaptive && adaptation.state === 'easier'
+      ? t.today.adaptEasier(adaptation.solo, adaptation.total)
+      : adaptive && adaptation.state === 'ready' && settings.maxMedium !== undefined && settings.maxMedium < settings.dailyNew
+        ? t.today.adaptReady(adaptation.solo, adaptation.total)
+        : undefined;
   // 衝刺時照衝刺的順序（公司題、還沒碰過的模式優先），數量照每天的時間
   const newPicks: NewPick[] =
     sprint && sprintDay
@@ -229,13 +240,6 @@ export function TodayPage() {
       <div className="stack">
         {/* 一次只放一張提示：每日提醒的下一步（加入主畫面、登入、打開）優先，沒有的話才是登入提示 */}
         {reminderSetup.step !== 'none' ? <ReminderBanner setup={reminderSetup} /> : <SignInBanner />}
-        {loaded && (!firstRun || activeDays.length > 0) && <StreakCard days={activeDays} today={day} />}
-        {loaded && attempts && !firstRun && listProblems.length > 0 && (
-          <TreeCard problems={listProblems} progress={progress} attempts={attempts} today={day} />
-        )}
-        {loaded && attempts && (
-          <LastWeekCard attempts={attempts} otherDays={otherDays} problems={listProblems} retention={retentionOf(settings)} today={day} />
-        )}
         {firstRun && (
           <Sheet title={t.today.welcomeTitle} id="welcome">
             <div className="sheet-empty">
@@ -256,18 +260,9 @@ export function TodayPage() {
           </Sheet>
         )}
 
-        <Sheet
-          title={t.today.cardsTitle}
-          id="cards"
-          note={cardsToday > 0 ? t.today.cardsDone(cardsToday) : undefined}
-          actions={
-            <Link className="btn btn-primary btn-small" to="/cards">
-              {t.common.start}
-            </Link>
-          }
-        >
-          <p className="sheet-empty">{t.today.cardsLede}</p>
-        </Sheet>
+        {loaded && attempts && (!firstRun || activeDays.length > 0) && (
+          <TodayCard days={activeDays} problems={listProblems} progress={progress} attempts={attempts} today={day} />
+        )}
 
         <Sheet
           title={t.today.dueTitle}
@@ -307,13 +302,18 @@ export function TodayPage() {
           count={newProblems.length}
           id="new"
           note={
-            sprintDay
-              ? t.today.sprint.newNote
-              : beyondGoal > 0
-                ? t.today.extraNote(beyondGoal)
-                : startedToday > 0
-                  ? t.today.startedToday(startedToday)
-                  : planNote
+            [
+              sprintDay
+                ? t.today.sprint.newNote
+                : beyondGoal > 0
+                  ? t.today.extraNote(beyondGoal)
+                  : startedToday > 0
+                    ? t.today.startedToday(startedToday)
+                    : planNote,
+              adaptNote,
+            ]
+              .filter(Boolean)
+              .join(' ')
           }
           actions={
             newProblems.length > 0 && moreAvailable ? (
@@ -364,6 +364,23 @@ export function TodayPage() {
             </div>
           )}
         </Sheet>
+
+        <Sheet
+          title={t.today.cardsTitle}
+          id="cards"
+          note={cardsToday > 0 ? t.today.cardsDone(cardsToday) : undefined}
+          actions={
+            <Link className="btn btn-primary btn-small" to="/cards">
+              {t.common.start}
+            </Link>
+          }
+        >
+          <p className="sheet-empty">{t.today.cardsLede}</p>
+        </Sheet>
+
+        {loaded && attempts && (
+          <LastWeekCard attempts={attempts} otherDays={otherDays} problems={listProblems} retention={retentionOf(settings)} today={day} />
+        )}
 
         <Sheet
           title={t.today.doneTitle}

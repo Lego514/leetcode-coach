@@ -394,6 +394,9 @@ const en: Messages = {
     adjustPlan: 'Change list and daily goal',
     dueTitle: 'Due for review',
     dueLater: (n) => `Daily review limit reached; ${count(n, 'more problem')} can wait`,
+    adaptEasier: (solo, total) =>
+      `You solved ${solo} of your last ${total} Medium problems on your own, so today has fewer Mediums and more Easy problems to build on (you can turn this off in Settings).`,
+    adaptReady: (solo, total) => `You solved ${solo} of your last ${total} Medium problems on your own. Consider raising your Medium limit in Settings.`,
     dueRewrite: (n) => `${count(n, 'problem')} marked “Rewrite” needed a hint or the solution last time. Write ${n === 1 ? 'it' : 'them'} from scratch without your notes.`,
     reviewAll: 'Review one by one',
     dueEmptyFirstRun: 'Once you’ve done a few new problems, reviews are scheduled based on how they went, and due ones show up here.',
@@ -1146,6 +1149,8 @@ const en: Messages = {
     skipPremiumHint: (n) =>
       `${n} ${n === 1 ? 'problem' : 'problems'} in your list need${n === 1 ? 's' : ''} LeetCode Premium. Skipped ones stay out of new problems, sprints, mock interviews, and the problem list. Ones you’ve already done still come up for review.`,
     focusPattern: 'Pattern to focus on',
+    adaptiveDifficulty: 'Adjust difficulty automatically',
+    adaptiveDifficultyHint: 'When most recent Medium problems needed a hint, new problems include fewer Mediums and no Hards, so you build up on Easy first. It goes back once you solve them on your own, and never goes above the limits you set.',
     showPatterns: 'Show the pattern on new problems',
     showPatternsHint: 'Off by default: in an interview nobody tells you the pattern, so working it out is part of the practice. The practice page and hints still show it when you ask.',
     dailyNewHint: 'Reviews don’t count toward this. Set it to 0 while you catch up on reviews.',
@@ -1543,6 +1548,11 @@ const en: Messages = {
     conquered: (title, last) => `Conquered! ${title}: last time “${last}”, this time you wrote it yourself.`,
     levelUp: (pattern, level) => `Pattern level up: ${pattern} is now “${level}”.`,
     levels: ['Not started', 'Practicing', 'Got it', 'Mastered'],
+    milestonePattern: (n, pattern, level) => `Next goal: ${count(n, 'more problem')} and ${pattern} reaches “${level}”.`,
+    milestoneSprouts: (n) => ` ${n === 1 ? 'One sprout' : `${n} sprouts`} in this pattern count once you rewrite them.`,
+    milestoneReadiness: (n, pct) => `Next goal: ${count(n, 'more problem')} and your readiness reaches ${pct}%.`,
+    conqueredTime: (title, first, now) => `Conquered! ${title}: ${first} min with help the first time, ${now} min on your own now.`,
+    personalBest: (title, now, best) => `New best! ${title}: ${now} min, ${best - now} min faster than your previous best of ${best}.`,
     readinessTitle: 'Interview readiness',
     readinessNote: '“Got it” means you solved it alone last time and probably still remember it (at least 70%). Problems you needed a hint for count once you rewrite them yourself.',
     readinessValue: (ready, total) => `${ready} of ${count(total, 'problem')} you can solve now`,
@@ -1607,6 +1617,24 @@ const en: Messages = {
       fruit: 'Fruit: conquered (needed help, later solved alone)',
       bud: 'Dashed: patterns and problems not grown yet',
     },
+  },
+
+  share: {
+    button: 'Share as image',
+    title: 'Share your algorithm tree',
+    subtitle: 'The image shows your tree and this week’s numbers, without problem notes.',
+    making: 'Drawing the image…',
+    failed: 'The image couldn’t be drawn. Try again.',
+    alt: 'Share image of the algorithm tree and this week’s practice numbers',
+    download: 'Download image',
+    share: 'Share',
+    cardTitle: 'My algorithm tree',
+    statReady: (total) => `solvable now (of ${total})`,
+    statStreak: 'day streak',
+    statFruits: 'fruits (conquered)',
+    weekLine: (days, sessions, conquered) =>
+      `This week: ${count(days, 'day')}, ${count(sessions, 'session')}${conquered > 0 ? `, ${conquered} conquered` : ''}`,
+    readinessLine: (from, now) => `Interview readiness: ${from}% last Monday → ${now}% now`,
   },
 
   notFound: {
