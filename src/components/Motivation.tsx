@@ -7,7 +7,7 @@ import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { problemsInList } from '../lib/catalog';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
-import { nextMilestone, paceOf, patternLevels, percent, progressBefore, readiness, weekSummary, winsFor, type WeekSummary } from '../lib/motivation';
+import { nextMilestone, paceOf, todayStatus, type TodayTasks, patternLevels, percent, progressBefore, readiness, weekSummary, winsFor, type WeekSummary } from '../lib/motivation';
 import type { AttemptRecord, MetaRecord, ProgressRecord } from '../store/db';
 import { loadAttemptsFor, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 import { TreeSvg, useTree, type TreeProps } from './AlgorithmTree';
@@ -22,7 +22,7 @@ type DayState = 'done' | 'frozen' | 'missed' | 'today' | 'later';
  * 今天頁最上面的一張卡：今天的目標（做 1 題或一回合卡片）、這週七天、連續天數保護、下一個目標，
  * 左邊是小的演算法樹，點進去看完整的
  */
-export function TodayCard({ days, ...tree }: TreeProps & { days: readonly Day[] }) {
+export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly Day[]; tasks: Omit<TodayTasks, 'checkedIn'> }) {
   const { t, locale } = useI18n();
   const m = t.motivation;
   const { today } = tree;
@@ -36,6 +36,12 @@ export function TodayCard({ days, ...tree }: TreeProps & { days: readonly Day[] 
   const stateOf = (day: Day): DayState =>
     day > today ? 'later' : practiced.has(day) ? 'done' : frozen.has(day) ? 'frozen' : day === today ? 'today' : 'missed';
   const { ready, fading, fruits } = model.state;
+  const status = todayStatus({ ...tasks, checkedIn: state.practicedToday });
+  const pill = (done: boolean, text: string) => (
+    <li className="today-task" data-done={done || undefined}>
+      {text}
+    </li>
+  );
 
   return (
     <section className="sheet streak-card" aria-labelledby="streak-title">
@@ -43,11 +49,16 @@ export function TodayCard({ days, ...tree }: TreeProps & { days: readonly Day[] 
         <h2 className="sheet-title" id="streak-title">
           {m.goalTitle}
         </h2>
-        <p className="sheet-note" data-done={state.practicedToday || undefined}>
-          {state.practicedToday ? m.goalDone : state.streak > 0 ? m.goalTodo : m.goalStart}
+        <p className="sheet-note" data-done={status === 'allDone' || undefined}>
+          {status === 'allDone' ? m.goalDone : status === 'checkedIn' ? m.goalCheckedIn : state.streak > 0 ? m.goalTodo : m.goalStart}
         </p>
       </div>
       <div className="sheet-body today-card">
+        <ul className="today-tasks" aria-label={m.tasksLabel}>
+          {pill(state.practicedToday, state.practicedToday ? m.checkedIn : m.notCheckedIn)}
+          {tasks.newGoal > 0 && pill(tasks.newDone >= tasks.newGoal, m.newTasks(tasks.newDone, tasks.newGoal))}
+          {tasks.reviewGoal > 0 && pill(tasks.reviewDone >= tasks.reviewGoal, m.reviewTasks(tasks.reviewDone, tasks.reviewGoal))}
+        </ul>
         {tree.problems.length > 0 && (
           <div className="today-card-tree">
             <Link to="/progress#algorithm-tree" aria-label={t.tree.seeFull}>

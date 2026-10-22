@@ -10,9 +10,14 @@ test('shows today’s goal, the streak with shields, and last week’s recap', a
   await page.goto('/');
   await page.getByRole('button', { name: 'Try it with demo data' }).click();
 
-  // 示範資料今天已經複習了一題：目標完成，最近一週每天都有練
+  // 示範資料今天已經複習了一題：打卡了，但新題和其他複習還沒做；最近一週每天都有練
   const goal = page.getByRole('region', { name: 'Today’s goal' });
-  await expect(goal).toContainText('Today’s goal is done.');
+  await expect(goal).toContainText('Checked in, so your streak continues.');
+  await expect(goal.getByRole('list', { name: 'Today’s progress' }).getByRole('listitem')).toHaveText([
+    'Checked in today',
+    'New 0/3',
+    /^Review 1\/\d+$/,
+  ]);
   await expect(goal).toContainText(/\d+-day streak/);
   await expect(goal.getByRole('listitem', { name: 'M: practiced' })).toBeVisible();
   await expect(goal.getByRole('listitem', { name: /: not yet$/ })).toHaveCount(6);

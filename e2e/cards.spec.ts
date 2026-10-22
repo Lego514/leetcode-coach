@@ -65,7 +65,13 @@ test('does a round, retries the missed card, and counts it toward the streak', a
   await answerCard(page, known);
   await page.getByRole('link', { name: 'End' }).click();
   await expect(cardsSheet(page)).toContainText(/\d+ cards reviewed today/);
-  await expect(page.getByRole('region', { name: 'Today’s goal' })).toContainText('1-day streak');
+  const goal = page.getByRole('region', { name: 'Today’s goal' });
+  await expect(goal).toContainText('1-day streak');
+  // 只做了卡片：打卡了，但新題還沒做，不能說今天都完成了
+  const tasks = goal.getByRole('list', { name: 'Today’s progress' });
+  await expect(tasks.getByRole('listitem')).toHaveText(['Checked in today', 'New 0/3']);
+  await expect(goal).toContainText('Checked in, so your streak continues. New problems and reviews are still left.');
+  await expect(goal).not.toContainText('all done');
 });
 
 test('practices one topic and remembers the choice', async ({ page }) => {
