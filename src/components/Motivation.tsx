@@ -7,9 +7,10 @@ import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { problemsInList } from '../lib/catalog';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
-import { patternLevels, percent, progressBefore, readiness, weekSummary, winsFor, type WeekSummary } from '../lib/motivation';
+import { nextMilestone, paceOf, patternLevels, percent, progressBefore, readiness, weekSummary, winsFor, type WeekSummary } from '../lib/motivation';
 import type { AttemptRecord, MetaRecord, ProgressRecord } from '../store/db';
-import { useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
+import { loadAttemptsFor, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
+import { TreeSvg, useTree, type TreeProps } from './AlgorithmTree';
 import { useToast } from './toast';
 import { Sheet } from './ui';
 
@@ -17,17 +18,24 @@ import { Sheet } from './ui';
 
 type DayState = 'done' | 'frozen' | 'missed' | 'today' | 'later';
 
-/** 今天的目標：做 1 題或一回合卡片就算；下面是這週七天和連續天數保護 */
-export function StreakCard({ days, today }: { days: readonly Day[]; today: Day }) {
-  const { t } = useI18n();
+/**
+ * 今天頁最上面的一張卡：今天的目標（做 1 題或一回合卡片）、這週七天、連續天數保護、下一個目標，
+ * 左邊是小的演算法樹，點進去看完整的
+ */
+export function TodayCard({ days, ...tree }: TreeProps & { days: readonly Day[] }) {
+  const { t, locale } = useI18n();
   const m = t.motivation;
+  const { today } = tree;
   const state = useMemo(() => streakState(days, today), [days, today]);
   const practiced = useMemo(() => new Set(days), [days]);
+  const model = useTree(tree);
+  const milestone = useMemo(() => nextMilestone(tree.problems, tree.progress, today), [tree.problems, tree.progress, today]);
   const frozen = new Set(state.frozen);
   const weekStart = startOfWeek(today);
   const week = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const stateOf = (day: Day): DayState =>
     day > today ? 'later' : practiced.has(day) ? 'done' : frozen.has(day) ? 'frozen' : day === today ? 'today' : 'missed';
+  const { ready, fading, fruits } = model.state;
 
   return (
     <section className="sheet streak-card" aria-labelledby="streak-title">
@@ -39,9 +47,22 @@ export function StreakCard({ days, today }: { days: readonly Day[]; today: Day }
           {state.practicedToday ? m.goalDone : state.streak > 0 ? m.goalTodo : m.goalStart}
         </p>
       </div>
-      <div className="sheet-body streak-body">
-        {frozen.has(addDays(today, -1)) && <p className="streak-saved">{m.frozeYesterday}</p>}
-        <ol className="streak-week" aria-label={m.weekLabel}>
+      <div className="sheet-body today-card">
+        {tree.problems.length > 0 && (
+          <div className="today-card-tree">
+            <Link to="/progress#algorithm-tree" aria-label={t.tree.seeFull}>
+              <TreeSvg {...model} labels={false} ariaLabel={t.tree.label(ready, tree.problems.length)} />
+            </Link>
+            <p className="today-card-caption">{t.tree.summary(ready, fading.length, fruits)}</p>
+          </div>
+        )}
+        <div className="today-card-stats">
+          {frozen.has(addDays(today, -1)) && <p className="streak-saved">{m.frozeYesterday}</p>}
+          <p>{rich(m.streak(state.streak), { b: bold })}</p>
+          <p title={m.freezesHint(FREEZE_EVERY, MAX_FREEZES)}>{rich(m.freezes(state.freezes), { b: bold })}</p>
+          <p className="today-card-muted">{state.untilFreeze > 0 ? m.untilFreeze(state.untilFreeze) : m.freezesFull}</p>
+        </div>
+        <ol className="streak-week today-card-week" aria-label={m.weekLabel}>
           {week.map((day, i) => {
             const s = stateOf(day);
             return (
@@ -54,12 +75,26 @@ export function StreakCard({ days, today }: { days: readonly Day[]; today: Day }
             );
           })}
         </ol>
-        <div className="inline-stats">
-          <span>{rich(m.streak(state.streak), { b: bold })}</span>
-          <span>{rich(m.freezes(state.freezes), { b: bold })}</span>
-          <span>{state.untilFreeze > 0 ? m.untilFreeze(state.untilFreeze) : m.freezesFull}</span>
+        {milestone && (
+          <p className="today-milestone">
+            {milestone.kind === 'pattern'
+              ? `${m.milestonePattern(milestone.needed, getPattern(milestone.pattern, locale).name, m.levels[milestone.level])}${milestone.sprouts > 0 ? m.milestoneSprouts(milestone.sprouts) : ''}`
+              : m.milestoneReadiness(milestone.needed, milestone.percent)}
+          </p>
+        )}
+        <div className="today-card-actions">
+          <div className="btn-row">
+            {fading.length > 0 && (
+              <Link className="btn btn-small btn-primary" to="/review">
+                {t.tree.review(fading.length)}
+              </Link>
+            )}
+            <Link className="btn btn-small" to="/progress#algorithm-tree">
+              {t.tree.seeFull}
+            </Link>
+          </div>
+          <p className="field-hint">{m.freezesHint(FREEZE_EVERY, MAX_FREEZES)}</p>
         </div>
-        <p className="field-hint">{m.freezesHint(FREEZE_EVERY, MAX_FREEZES)}</p>
       </div>
     </section>
   );
@@ -89,14 +124,27 @@ export function WinWatcher() {
     if (record.attempts !== (before.get(record.problemId)?.attempts ?? 0) + 1 || record.lastDay !== day) return;
     const problem = catalog.byId.get(record.problemId);
     if (!problem) return;
-    for (const win of winsFor(problem, problemsInList(catalog, activeList), before, progress, day)) {
-      toast(
-        win.kind === 'conquered'
-          ? t.motivation.conquered(problem.title, t.ratings[win.lastRating].label)
-          : t.motivation.levelUp(getPattern(win.pattern, locale).name, t.motivation.levels[win.level]),
-        'win',
-      );
-    }
+    const wins = winsFor(problem, problemsInList(catalog, activeList), before, progress, day);
+    // 時間要看這題的所有紀錄：征服時比第一次，自己解出時比之前最快的一次
+    void loadAttemptsFor(problem.id).then((attempts) => {
+      const pace = paceOf(attempts);
+      const conquered = wins.some((w) => w.kind === 'conquered');
+      for (const win of wins) {
+        if (win.kind === 'conquered') {
+          toast(
+            pace.first && pace.now
+              ? t.motivation.conqueredTime(problem.title, pace.first, pace.now)
+              : t.motivation.conquered(problem.title, t.ratings[win.lastRating].label),
+            'win',
+          );
+        } else {
+          toast(t.motivation.levelUp(getPattern(win.pattern, locale).name, t.motivation.levels[win.level]), 'win');
+        }
+      }
+      if (!conquered && record.lastRating === 'solo' && pace.now && pace.previousBest && pace.now < pace.previousBest) {
+        toast(t.motivation.personalBest(problem.title, pace.now, pace.previousBest), 'win');
+      }
+    });
   }, [progress, loaded, catalog, activeList, day, toast, t, locale]);
 
   return null;
@@ -229,10 +277,17 @@ function readinessAt(input: RecapInput, day: Day): number {
 
 const RECAP_ROWS: (keyof WeekSummary)[] = ['days', 'sessions', 'newProblems', 'conquered', 'solo', 'minutes'];
 
-/** 每週回顧：本週（到今天）和上週並排，加上準備度從上週一到現在的變化 */
-export function WeeklyRecap({ progress, ...input }: RecapInput & { progress: ReadonlyMap<number, ProgressRecord> }) {
-  const { t } = useI18n();
-  const m = t.motivation;
+export interface RecapNumbers {
+  current: WeekSummary;
+  previous: WeekSummary;
+  /** 上週一開始時的準備度（%） */
+  from: number;
+  /** 現在的準備度（%） */
+  now: number;
+}
+
+/** 本週（到今天）、上週的摘要，和準備度從上週一到現在的變化 */
+export function useRecapNumbers({ progress, ...input }: RecapInput & { progress: ReadonlyMap<number, ProgressRecord> }): RecapNumbers {
   const { attempts, otherDays, problems, retention, today } = input;
   const thisWeek = startOfWeek(today);
   const lastWeek = addDays(thisWeek, -7);
@@ -245,6 +300,14 @@ export function WeeklyRecap({ progress, ...input }: RecapInput & { progress: Rea
     const r = readiness(problems, progress, today);
     return percent(r.ready, r.total);
   }, [problems, progress, today]);
+  return { current, previous, from, now };
+}
+
+/** 每週回顧：本週（到今天）和上週並排，加上準備度從上週一到現在的變化 */
+export function WeeklyRecap({ recap }: { recap: RecapNumbers }) {
+  const { t } = useI18n();
+  const m = t.motivation;
+  const { current, previous, from, now } = recap;
 
   return (
     <Sheet title={m.recapTitle} id="weekly-recap" note={m.readinessChange(from, now)}>

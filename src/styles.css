@@ -4228,27 +4228,81 @@ a.more-account:hover {
   }
 }
 
-/* 今天頁：小樹在左，摘要和按鈕在右 */
-.algo-card {
+/* 今天的目標卡：寬的畫面小樹在左、其他在右；手機上小樹和連續天數並排，這週七天、下一個目標、按鈕用整行 */
+.today-card {
   display: grid;
-  grid-template-columns: minmax(110px, 180px) minmax(0, 1fr);
-  align-items: center;
-  gap: 16px;
+  grid-template-columns: minmax(96px, 170px) minmax(0, 1fr);
+  grid-template-areas:
+    'tree stats'
+    'tree week'
+    'tree goal'
+    'tree actions';
+  align-items: start;
+  gap: 12px 20px;
 }
 
-.algo-card-tree {
+@media (max-width: 560px) {
+  .today-card {
+    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-areas:
+      'tree stats'
+      'week week'
+      'goal goal'
+      'actions actions';
+  }
+}
+
+.today-card-tree {
+  grid-area: tree;
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.today-card-tree a {
   display: block;
 }
 
-.algo-card-side {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
+.today-card-caption {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-3);
 }
 
-.algo-card-summary {
+.today-card-stats {
+  grid-area: stats;
+  display: grid;
+  gap: 2px;
+  align-self: center;
+}
+
+.today-card-stats p {
   margin: 0;
-  color: var(--ink-2);
+}
+
+.today-card-muted {
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+.today-card-week {
+  grid-area: week;
+}
+
+.today-card-actions {
+  grid-area: actions;
+  display: grid;
+  gap: 8px;
+}
+
+.today-milestone {
+  grid-area: goal;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--sheet-2);
+  font-size: 14px;
 }
 
 .algo-full {
@@ -4342,4 +4396,16 @@ a.more-account:hover {
 
 .algo-legend svg {
   flex: none;
+}
+
+/* 分享圖片的預覽 */
+.share-preview {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 60vh;
+  margin: 0 auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
 }

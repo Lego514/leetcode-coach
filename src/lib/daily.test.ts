@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { buildCatalog, problemsInList } from './catalog';
-import { pickNewProblems, strugglingPatterns } from './daily';
+import { addDays } from './dates';
+import { adaptDifficulty, pickNewProblems, stricterCap, strugglingPatterns } from './daily';
 
 // NeetCode 150，照路線圖順序（陣列 → 雙指標 → 滑動視窗 …）
 const catalog = buildCatalog([]);
@@ -121,5 +122,41 @@ describe('struggling patterns', () => {
       { problemId: twoSum, day: '2026-10-13', rating: 'solo' },
     ];
     expect(strugglingPatterns(attempts, problemOf, '2026-09-15', '2026-10-15')).toEqual(['binary-search', 'stack']);
+  });
+});
+
+describe('adapting difficulty', () => {
+  const medium: Problem = { id: 1, slug: 'm', title: 'M', difficulty: 'Medium', pattern: 'arrays', premium: false, custom: false };
+  const easy: Problem = { ...medium, id: 2, difficulty: 'Easy' };
+  const problemOf = (id: number) => (id === 1 ? medium : id === 2 ? easy : undefined);
+  const today = '2026-10-22';
+  const tries = (ratings: string[], problemId = 1) =>
+    ratings.map((rating, i) => ({ problemId, day: addDays(today, -i), at: `${addDays(today, -i)}T10:00:00.000Z`, rating, mode: 'practice' }));
+
+  it('schedules fewer Mediums and no Hards when recent Mediums mostly needed help', () => {
+    expect(adaptDifficulty(tries(['hint', 'solution', 'hint', 'solo', 'fail']), problemOf, today, 3)).toEqual({
+      state: 'easier',
+      solo: 1,
+      total: 5,
+      maxMedium: 1,
+      maxHard: 0,
+    });
+    expect(adaptDifficulty(tries(['hint', 'hint', 'hint', 'hint']), problemOf, today, 6).maxMedium).toBe(2);
+  });
+
+  it('says you are ready for more when most were solved alone, and waits for enough tries', () => {
+    expect(adaptDifficulty(tries(['solo', 'solo', 'solo', 'hint']), problemOf, today, 3)).toMatchObject({ state: 'ready', solo: 3, total: 4 });
+    expect(adaptDifficulty(tries(['hint', 'hint', 'hint']), problemOf, today, 3).state).toBeNull();
+    // Easy、批次標記、三週以前的都不算
+    expect(adaptDifficulty(tries(['hint', 'hint', 'hint', 'hint'], 2), problemOf, today, 3).total).toBe(0);
+    const old = tries(['hint', 'hint', 'hint', 'hint']).map((a) => ({ ...a, day: '2026-09-01' }));
+    expect(adaptDifficulty(old, problemOf, today, 3).total).toBe(0);
+  });
+
+  it('keeps the stricter of two limits', () => {
+    expect(stricterCap(undefined, 1)).toBe(1);
+    expect(stricterCap(2, undefined)).toBe(2);
+    expect(stricterCap(2, 1)).toBe(1);
+    expect(stricterCap(undefined, undefined)).toBeUndefined();
   });
 });

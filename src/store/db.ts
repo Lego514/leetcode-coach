@@ -191,6 +191,8 @@ export interface SettingsRecord {
   maxHard?: number;
   /** 每天最多複習幾題；沒設定是不限 */
   maxReviews?: number;
+  /** 最近 Medium 常要看提示時自動少排 Medium（src/lib/daily.ts 的 adaptDifficulty）；沒寫是開著 */
+  adaptiveDifficulty?: boolean;
 }
 
 export const DEFAULT_SETTINGS: SettingsRecord = {

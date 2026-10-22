@@ -63,6 +63,11 @@ export function useAttempts(): AttemptRecord[] | undefined {
   return useLiveQuery(() => db.attempts.orderBy('day').toArray(), []);
 }
 
+/** 一題的所有練習紀錄（不訂閱變化），例如做完一題時比較時間 */
+export function loadAttemptsFor(problemId: number): Promise<AttemptRecord[]> {
+  return db.attempts.where('problemId').equals(problemId).toArray();
+}
+
 export function useAttemptsFor(problemId: number): AttemptRecord[] | undefined {
   return useLiveQuery(
     async () => (await db.attempts.where('problemId').equals(problemId).sortBy('at')).reverse(),

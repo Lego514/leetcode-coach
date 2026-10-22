@@ -1,6 +1,6 @@
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
-import type { Day } from './dates';
+import { addDays, type Day } from './dates';
 
 // 每天的新題怎麼挑。三種排法，在設定裡選：
 // - mixed（預設）：大部分照路線圖做目前在學的模式；另外穿插一題別的模式，練「看到題目想到該用哪個方法」；
@@ -161,4 +161,50 @@ export function pickNewProblems(input: PickInput): NewPick[] {
     take(p, 'next', picks);
   }
   return [...picks, ...extras];
+}
+
+/**
+ * 自動調整難度：看最近幾次 Medium 的結果。大多要看提示，今天就少排 Medium（每天最多三分之一）、先不排 Hard，
+ * 讓成功率回到能進入狀況的程度；大多自己解出，就提醒可以把 Medium 上限調高。
+ * 只會比設定更保守，不會超過使用者自己設的上限
+ */
+export const ADAPT_DAYS = 21;
+/** 看最近幾次 Medium */
+export const ADAPT_SAMPLE = 8;
+/** 至少要有幾次才判斷 */
+export const ADAPT_MIN = 4;
+
+export interface Adaptation {
+  /** easier：最近 Medium 常要幫忙；ready：最近 Medium 大多自己解出 */
+  state: 'easier' | 'ready' | null;
+  solo: number;
+  total: number;
+  maxMedium?: number;
+  maxHard?: number;
+}
+
+export function adaptDifficulty(
+  attempts: readonly (AttemptLike & { at: string; mode: string })[],
+  problemOf: (id: number) => Problem | undefined,
+  today: Day,
+  count: number,
+): Adaptation {
+  const since = addDays(today, -ADAPT_DAYS);
+  const recent = attempts
+    .filter((a) => a.mode !== 'import' && a.day >= since && a.day <= today && problemOf(a.problemId)?.difficulty === 'Medium')
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, ADAPT_SAMPLE);
+  const solo = recent.filter((a) => a.rating === 'solo').length;
+  const total = recent.length;
+  if (total < ADAPT_MIN) return { state: null, solo, total };
+  if (solo / total < 0.4) return { state: 'easier', solo, total, maxMedium: Math.max(1, Math.floor(count / 3)), maxHard: 0 };
+  if (solo / total >= 0.75) return { state: 'ready', solo, total };
+  return { state: null, solo, total };
+}
+
+/** 兩個上限取比較嚴的那個；都沒有是不限 */
+export function stricterCap(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return Math.min(a, b);
 }

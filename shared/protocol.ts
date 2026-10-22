@@ -199,6 +199,8 @@ export const settingsDataSchema = z.object({
   maxMedium: z.number().int().min(0).max(20).optional(),
   maxHard: z.number().int().min(0).max(20).optional(),
   maxReviews: z.number().int().min(1).max(100).optional(),
+  /** 依最近 Medium 的結果自動少排 Medium；沒寫是開著 */
+  adaptiveDifficulty: z.boolean().optional(),
   /** 面試衝刺：面試日、公司、每天的時間、最後只複習幾天 */
   sprint: z
     .object({

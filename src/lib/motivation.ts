@@ -168,3 +168,50 @@ export function winsFor(problem: Problem, list: readonly Problem[], before: Stat
   }
   return wins;
 }
+
+/**
+ * 下一個目標：最快能達成的那一個，讓人知道「再一點就到了」。
+ * 先看已經開始的題型還差幾題升到「會了」；都沒有的話，看準備度到下一個 5% 還差幾題
+ */
+export type Milestone =
+  | { kind: 'pattern'; pattern: PatternId; needed: number; level: PatternLevel; sprouts: number }
+  | { kind: 'readiness'; needed: number; percent: number };
+
+export function nextMilestone(problems: readonly Problem[], progress: StateMap, today: Day): Milestone | null {
+  let best: Milestone | null = null;
+  for (const p of patternLevels(problems, progress, today)) {
+    if (p.level !== 1) continue;
+    const needed = Math.ceil(p.total * 0.4) - p.ready;
+    if (needed <= 0 || (best && needed >= best.needed)) continue;
+    // 這個題型裡靠提示做過的題目（小芽）：重寫出來就算，最容易達成
+    const sprouts = problems.filter((q) => q.pattern === p.pattern && progress.get(q.id) && progress.get(q.id)!.lastRating !== 'solo').length;
+    best = { kind: 'pattern', pattern: p.pattern, needed, level: 2, sprouts };
+  }
+  if (best) return best;
+  const { ready, total } = readiness(problems, progress, today);
+  if (total === 0 || ready >= total) return null;
+  const next = Math.min(100, (Math.floor(percent(ready, total) / 5) + 1) * 5);
+  return { kind: 'readiness', needed: Math.max(1, Math.ceil((next * total) / 100) - ready), percent: next };
+}
+
+/**
+ * 同一題的時間進步：第一次花了多久、之前自己解出最快多久、這次多久（分鐘）。
+ * attempts 是這一題的所有紀錄，最後一筆是剛做完的那次
+ */
+export interface Pace {
+  first?: number;
+  previousBest?: number;
+  now?: number;
+}
+
+export function paceOf(attempts: readonly AttemptLike[]): Pace {
+  const sorted = attempts.filter((a) => a.mode !== 'import').sort((a, b) => a.at.localeCompare(b.at));
+  const latest = sorted[sorted.length - 1];
+  const earlier = sorted.slice(0, -1);
+  const soloTimes = earlier.filter((a) => a.rating === 'solo' && a.minutes).map((a) => a.minutes!);
+  return {
+    first: earlier.find((a) => a.minutes)?.minutes,
+    previousBest: soloTimes.length > 0 ? Math.min(...soloTimes) : undefined,
+    now: latest?.minutes,
+  };
+}
