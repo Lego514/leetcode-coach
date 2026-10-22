@@ -1574,6 +1574,41 @@ const en: Messages = {
     dismiss: 'Got it',
   },
 
+  tree: {
+    title: 'Algorithm tree',
+    todayTitle: 'My algorithm tree',
+    note: 'Patterns are branches and problems you can solve now are leaves. Leaves you’re about to forget turn yellow, and reviewing turns them green again. Conquered problems bear fruit, and mastered patterns bloom.',
+    summary: (ready, fading, fruits) =>
+      `${count(ready, 'problem')} solvable now${fading > 0 ? `, ${fading} yellow ${fading === 1 ? 'leaf' : 'leaves'} to review` : ''}${fruits > 0 ? `, ${fruits} ${fruits === 1 ? 'fruit' : 'fruits'}` : ''}`,
+    label: (ready, total) => `Algorithm tree: ${ready} of ${count(total, 'problem')} solvable now`,
+    stats: {
+      ready: (total) => `solvable now (of ${total})`,
+      fading: 'yellow leaves to review',
+      fruits: 'fruits from conquered problems',
+      blooms: 'patterns in bloom (mastered)',
+    },
+    hint: 'Tap a leaf, fruit, or sprout to see which problem it is.',
+    nodes: {
+      bud: 'Not done yet. Solve it on your own and a leaf grows here.',
+      sprout: 'You needed a hint or the solution last time, so it’s a sprout. Rewrite it without your notes and it grows into a leaf.',
+      leaf: (pct) => `Got it: ${pct}% likely you still remember it.`,
+      fading: (pct) => `Fading: ${pct}% likely you still remember it. Review it to turn the leaf green again.`,
+      faded: (pct) => `Probably forgotten: ${pct}% likely you remember it. Review it soon.`,
+      fruit: ' You conquered this one, so it bears fruit.',
+    },
+    review: (n) => `Review ${n} yellow ${n === 1 ? 'leaf' : 'leaves'}`,
+    seeFull: 'See the whole tree',
+    legendLabel: 'Legend',
+    legend: {
+      leaf: 'Got it, remembered well',
+      fading: 'Yellow leaf: fading, time to review',
+      faded: 'Dry leaf: probably forgotten',
+      sprout: 'Sprout: needed help, rewrite it to grow a leaf',
+      fruit: 'Fruit: conquered (needed help, later solved alone)',
+      bud: 'Dashed: patterns and problems not grown yet',
+    },
+  },
+
   notFound: {
     title: 'Page not found',
     lede: 'The address may be mistyped, or the page no longer exists.',

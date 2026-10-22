@@ -42,6 +42,19 @@
   --nav-width: 208px;
   --content-width: 920px;
 
+  --wood: #7a5434;
+  --blueprint: #9fb2dc;
+  --leaf-1: #1f7a45;
+  --leaf-2: #3d9a4f;
+  --leaf-3: #84b83a;
+  --leaf-y: #e2b52b;
+  --leaf-b: #b46a2c;
+  --sprout: #a8d39a;
+  --fruit: #d8452a;
+  --fruit-hi: #ffb4a0;
+  --flower: #f2a2bd;
+  --flower-c: #ffe45c;
+  --ground: #cfdcc4;
   color-scheme: light;
 }
 
@@ -76,6 +89,19 @@
     --level-4: #8fb0ff;
     --toast-bg: #e8eef8;
     --toast-ink: #0e1829;
+    --wood: #b88a5e;
+    --blueprint: #3b5285;
+    --leaf-1: #45b86d;
+    --leaf-2: #63c46a;
+    --leaf-3: #a6d156;
+    --leaf-y: #f0c640;
+    --leaf-b: #d58a46;
+    --sprout: #5f8f55;
+    --fruit: #ff6a4d;
+    --fruit-hi: #ffc3b3;
+    --flower: #f6b3cb;
+    --flower-c: #ffe45c;
+    --ground: #24382c;
     color-scheme: dark;
   }
 }
@@ -110,6 +136,19 @@
   --level-4: #8fb0ff;
   --toast-bg: #e8eef8;
   --toast-ink: #0e1829;
+  --wood: #b88a5e;
+  --blueprint: #3b5285;
+  --leaf-1: #45b86d;
+  --leaf-2: #63c46a;
+  --leaf-3: #a6d156;
+  --leaf-y: #f0c640;
+  --leaf-b: #d58a46;
+  --sprout: #5f8f55;
+  --fruit: #ff6a4d;
+  --fruit-hi: #ffc3b3;
+  --flower: #f6b3cb;
+  --flower-c: #ffe45c;
+  --ground: #24382c;
   color-scheme: dark;
 }
 
@@ -4053,4 +4092,254 @@ a.more-account:hover {
 .recap-table th[scope='row'] {
   color: var(--ink-2);
   font-weight: 400;
+}
+
+/* ---------- 演算法樹 ---------- */
+.algo-tree {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+.algo-ground {
+  fill: var(--ground);
+}
+
+.algo-trunk {
+  fill: var(--wood);
+}
+
+.algo-wood {
+  fill: none;
+  stroke: var(--wood);
+  stroke-linecap: round;
+}
+
+/* 還沒長出來的題型：藍色虛線的藍圖 */
+.algo-ghost {
+  fill: none;
+  stroke: var(--blueprint);
+  stroke-width: 1.3;
+  stroke-dasharray: 4 4;
+  stroke-linecap: round;
+}
+
+.algo-bud {
+  fill: var(--blueprint);
+}
+
+.algo-sprout {
+  fill: var(--sprout);
+  stroke: var(--leaf-2);
+  stroke-width: 0.8;
+}
+
+.algo-leaf {
+  fill: var(--leaf-1);
+  transition: fill 600ms ease;
+}
+
+.algo-leaf[data-shade='good'] {
+  fill: var(--leaf-2);
+}
+
+.algo-leaf[data-shade='ok'] {
+  fill: var(--leaf-3);
+}
+
+.algo-leaf[data-shade='fading'] {
+  fill: var(--leaf-y);
+}
+
+.algo-leaf[data-shade='faded'] {
+  fill: var(--leaf-b);
+}
+
+.algo-stem {
+  stroke: var(--wood);
+  stroke-width: 0.8;
+}
+
+.algo-fruit {
+  fill: var(--fruit);
+}
+
+.algo-fruit-hi {
+  fill: var(--fruit-hi);
+  pointer-events: none;
+}
+
+.algo-petal {
+  fill: var(--flower);
+}
+
+.algo-flower {
+  fill: var(--flower-c);
+}
+
+.algo-label {
+  fill: var(--ink-2);
+  font-size: 11px;
+}
+
+.algo-label[data-ghost] {
+  fill: var(--ink-3);
+  opacity: 0.7;
+}
+
+.algo-tree[data-interactive] :is(.algo-leaf, .algo-sprout, .algo-bud, .algo-fruit) {
+  cursor: pointer;
+}
+
+.algo-tree[data-interactive] :is(.algo-leaf, .algo-sprout, .algo-bud, .algo-fruit):hover {
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+
+.algo-tree [data-picked] {
+  stroke: var(--pen);
+  stroke-width: 2;
+}
+
+@keyframes algo-grow {
+  from {
+    transform: scale(0.2);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* 剛長出來的葉子或小芽 */
+.algo-grown {
+  animation: algo-grow 420ms ease-out both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .algo-grown {
+    animation: none;
+  }
+
+  .algo-leaf {
+    transition: none;
+  }
+}
+
+/* 今天頁：小樹在左，摘要和按鈕在右 */
+.algo-card {
+  display: grid;
+  grid-template-columns: minmax(110px, 180px) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.algo-card-tree {
+  display: block;
+}
+
+.algo-card-side {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.algo-card-summary {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.algo-full {
+  display: grid;
+  gap: 14px;
+}
+
+.algo-full .algo-tree {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.algo-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--rule);
+}
+
+.algo-stat {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 16px;
+}
+
+.algo-stat + .algo-stat {
+  border-left: 1px solid var(--rule);
+}
+
+.algo-stat strong {
+  font-size: 22px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.algo-stat span {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+@media (max-width: 560px) {
+  .algo-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .algo-stat:nth-child(3) {
+    border-left: 0;
+  }
+
+  .algo-stat:nth-child(n + 3) {
+    border-top: 1px solid var(--rule);
+  }
+}
+
+.algo-info {
+  min-height: 48px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.algo-info p {
+  margin: 0;
+}
+
+.algo-info .algo-info-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-bottom: 4px;
+}
+
+.algo-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.algo-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.algo-legend svg {
+  flex: none;
 }
