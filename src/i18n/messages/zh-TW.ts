@@ -1551,6 +1551,41 @@ const zhTW = {
     dismiss: '知道了',
   },
 
+  tree: {
+    title: '演算法樹',
+    todayTitle: '我的演算法樹',
+    note: '題型是樹枝，現在會的題目是葉子。快忘的葉子會變黃，複習就變回綠色；征服的題目結果實，精通的題型開花。',
+    summary: (ready: number, fading: number, fruits: number) =>
+      `會了 ${ready} 題${fading > 0 ? `，${fading} 片黃葉該複習` : ''}${fruits > 0 ? `，結了 ${fruits} 顆果實` : ''}`,
+    label: (ready: number, total: number) => `演算法樹：${total} 題裡現在會 ${ready} 題`,
+    stats: {
+      ready: (total: number) => `題現在會（共 ${total} 題）`,
+      fading: '片黃葉，快忘了',
+      fruits: '顆果實，征服的題目',
+      blooms: '個題型開花（精通）',
+    },
+    hint: '點一片葉子、果實或小芽，看是哪一題。',
+    nodes: {
+      bud: '還沒做。做了而且自己解出，這裡就會長出一片葉子。',
+      sprout: '上次靠提示或解答，現在是小芽。不看筆記重寫出來，就會長成葉子。',
+      leaf: (pct: number) => `會了：現在還記得的機率 ${pct}%。`,
+      fading: (pct: number) => `快忘了：現在還記得的機率 ${pct}%，複習就會變回綠色。`,
+      faded: (pct: number) => `很可能已經忘了：記得的機率 ${pct}%，找時間複習吧。`,
+      fruit: '這題是征服來的，所以結了果實。',
+    },
+    review: (n: number) => `複習 ${n} 片黃葉`,
+    seeFull: '看整棵樹',
+    legendLabel: '圖例',
+    legend: {
+      leaf: '會了，記得很清楚',
+      fading: '黃葉：快忘了，該複習',
+      faded: '枯葉：很可能已經忘了',
+      sprout: '小芽：靠提示做的，重寫出來才長葉',
+      fruit: '果實：征服（看過提示，後來自己寫出）',
+      bud: '虛線：還沒長出來的題型和題目',
+    },
+  },
+
   notFound: {
     title: '找不到這個頁面',
     lede: '網址可能打錯了，或這個頁面已經不存在。',

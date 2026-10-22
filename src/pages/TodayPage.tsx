@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { TreeCard } from '../components/AlgorithmTree';
 import { EditAttemptDialog } from '../components/EditAttemptDialog';
 import { LastWeekCard, StreakCard } from '../components/Motivation';
 import { ProblemRow } from '../components/ProblemRow';
@@ -229,6 +230,9 @@ export function TodayPage() {
         {/* 一次只放一張提示：每日提醒的下一步（加入主畫面、登入、打開）優先，沒有的話才是登入提示 */}
         {reminderSetup.step !== 'none' ? <ReminderBanner setup={reminderSetup} /> : <SignInBanner />}
         {loaded && (!firstRun || activeDays.length > 0) && <StreakCard days={activeDays} today={day} />}
+        {loaded && attempts && !firstRun && listProblems.length > 0 && (
+          <TreeCard problems={listProblems} progress={progress} attempts={attempts} today={day} />
+        )}
         {loaded && attempts && (
           <LastWeekCard attempts={attempts} otherDays={otherDays} problems={listProblems} retention={retentionOf(settings)} today={day} />
         )}

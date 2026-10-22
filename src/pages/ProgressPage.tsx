@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { AlgorithmTree } from '../components/AlgorithmTree';
 import { ActivityHeatmap, WeeklyChart } from '../components/charts';
 import { PatternMap, ReadinessSheet, WeeklyRecap } from '../components/Motivation';
 import { StuckSummary } from '../components/StuckSummary';
@@ -126,6 +127,7 @@ export function ProgressPage() {
           </div>
         </section>
 
+        {attempts && problems.length > 0 && <AlgorithmTree problems={problems} progress={progress} attempts={attempts} today={day} />}
         <ReadinessSheet problems={problems} all={catalog.problems} progress={progress} meta={meta} today={day} />
         <PatternMap problems={problems} progress={progress} today={day} />
         <WeeklyRecap
