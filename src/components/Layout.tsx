@@ -25,21 +25,25 @@ interface NavItem {
   badge?: 'due';
 }
 
+// 側邊欄依用途分組：每天都會用的、面試練習、查資料和工具、其他。
+// 面試衝刺只有排了面試的那幾週才用，而且衝刺時今天頁就會顯示計畫，所以放在面試練習的最後
 const NAV_GROUPS: NavItem[][] = [
   [
     { to: '/', key: 'today', end: true },
-    { to: '/sprint', key: 'sprint' },
     { to: '/review', key: 'review', badge: 'due' },
     { to: '/cards', key: 'cards' },
+    { to: '/progress', key: 'progress' },
+  ],
+  [
     { to: '/mock', key: 'mock' },
     { to: '/stories', key: 'stories' },
+    { to: '/sprint', key: 'sprint' },
   ],
   [
     { to: '/problems', key: 'problems' },
     { to: '/patterns', key: 'patterns' },
     { to: '/phrases', key: 'phrases' },
     { to: '/board', key: 'board' },
-    { to: '/progress', key: 'progress' },
   ],
   [
     { to: '/settings', key: 'settings' },
@@ -103,7 +107,8 @@ const Icons = {
   ),
   problems: <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />,
   review: <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" />,
-  mock: <path d="M12 8v4l2.5 2.5M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM10 2h4" />,
+  // 進度頁有演算法樹，用一株兩片葉子的小芽
+  progress: <path d="M12 21v-9M12 12c0-4.4 3.1-7.5 7.5-7.5 0 4.4-3.1 7.5-7.5 7.5ZM12 15c0-3.6-2.6-6-6-6 0 3.4 2.4 6 6 6Z" />,
   more: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />,
 };
 
@@ -205,18 +210,18 @@ export function Layout() {
           <TabIcon>{Icons.today}</TabIcon>
           {t.nav.today}
         </NavLink>
-        <NavLink to="/problems" className="tab">
-          <TabIcon>{Icons.problems}</TabIcon>
-          {t.nav.problems}
-        </NavLink>
         <NavLink to="/review" className="tab">
           <TabIcon>{Icons.review}</TabIcon>
           {t.nav.review}
           <Badge count={due} />
         </NavLink>
-        <NavLink to="/mock" className="tab">
-          <TabIcon>{Icons.mock}</TabIcon>
-          {t.nav.mockShort}
+        <NavLink to="/progress" className="tab">
+          <TabIcon>{Icons.progress}</TabIcon>
+          {t.nav.progress}
+        </NavLink>
+        <NavLink to="/problems" className="tab">
+          <TabIcon>{Icons.problems}</TabIcon>
+          {t.nav.problems}
         </NavLink>
         <NavLink to="/more" className="tab">
           <TabIcon>{Icons.more}</TabIcon>

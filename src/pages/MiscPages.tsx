@@ -9,14 +9,15 @@ import { reportError } from '../lib/monitoring';
 import { useCloud } from '../store/cloud';
 import { stashError } from '../store/reports';
 
+// 手機分頁列沒有的頁面，順序跟側邊欄一樣
 const MORE_LINKS = [
-  { to: '/sprint', key: 'sprint' },
-  { to: '/stories', key: 'stories' },
   { to: '/cards', key: 'cards' },
-  { to: '/board', key: 'board' },
-  { to: '/progress', key: 'progress' },
+  { to: '/mock', key: 'mock' },
+  { to: '/stories', key: 'stories' },
+  { to: '/sprint', key: 'sprint' },
   { to: '/patterns', key: 'patterns' },
   { to: '/phrases', key: 'phrases' },
+  { to: '/board', key: 'board' },
   { to: '/settings', key: 'settings' },
   { to: '/feedback', key: 'feedback' },
 ] as const;
