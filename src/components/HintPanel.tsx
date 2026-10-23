@@ -20,12 +20,27 @@ interface HintPanelProps {
   onRevealTo?: (level: number) => void;
   /** 卡在舉例時可以直接開白板 */
   onOpenBoard?: () => void;
+  /** 由外面指定卡在哪一步（練習頁的「我卡住了」）；沒給時面板自己記 */
+  stuck?: StepId | null;
+  onStuckChange?: (step: StepId | null) => void;
 }
 
-export function HintPanel({ problem, used, sawSolution, onReveal, onSolution, onRevealTo, onOpenBoard }: HintPanelProps) {
+export function HintPanel({
+  problem,
+  used,
+  sawSolution,
+  onReveal,
+  onSolution,
+  onRevealTo,
+  onOpenBoard,
+  stuck: stuckProp,
+  onStuckChange,
+}: HintPanelProps) {
   const { t, locale } = useI18n();
   const note = useNote(problem.id);
-  const [stuck, setStuck] = useState<StepId | null>(null);
+  const [ownStuck, setOwnStuck] = useState<StepId | null>(null);
+  const stuck = stuckProp === undefined ? ownStuck : stuckProp;
+  const setStuck = onStuckChange ?? setOwnStuck;
   const patternNote = usePatternNote(problem.pattern);
   const pattern = getPattern(problem.pattern, locale);
   const keyHint = hintFor(problem.id, locale);

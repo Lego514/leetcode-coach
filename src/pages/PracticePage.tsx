@@ -3,9 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { HintPanel } from '../components/HintPanel';
 import { LeaveGuard } from '../components/LeaveGuard';
 import { RecordForm } from '../components/RecordDialog';
-import { SolvingStepsSheet } from '../components/SolvingSteps';
+import { SolvingStepsSheet, StepWizard } from '../components/SolvingSteps';
 import { DifficultyTag, LeetCodeLink, PageHead, Sheet } from '../components/ui';
-import { MOCK_MINUTES } from '../data/interview';
+import { MOCK_MINUTES, type StepId } from '../data/interview';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { getI18n, useI18n } from '../i18n';
@@ -58,6 +58,10 @@ function PracticeSession({ problem }: { problem: Problem }) {
   const [finished, setFinished] = useState(restored?.finished ?? false);
   const [saved, setSaved] = useState(false);
   const [showPattern, setShowPattern] = useState(false);
+  // 解題步驟現在在哪一步；按「我卡住了」時提示直接看這一步
+  const [step, setStep] = useState<StepId>('clarify');
+  const [stuckStep, setStuckStep] = useState<StepId | null>(null);
+  const hintsRef = useRef<HTMLDivElement>(null);
   const [boardOpen, setBoardOpen] = useState(false);
   const autoStarted = useRef(false);
 
@@ -180,9 +184,6 @@ function PracticeSession({ problem }: { problem: Problem }) {
               <button className="btn" onClick={togglePause}>
                 {running ? t.common.pause : t.practice.resume}
               </button>
-              <button className="btn btn-primary" onClick={finish}>
-                {t.practice.finish}
-              </button>
             </div>
           )}
         </section>
@@ -198,6 +199,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
                 problem={problem}
                 mode={isReview ? 'review' : 'practice'}
                 askIdea
+                insightFirst
                 initialRating={suggestRating(hints, sawSolution)}
                 initialMinutes={minutes}
                 hints={hints}
@@ -213,19 +215,49 @@ function PracticeSession({ problem }: { problem: Problem }) {
           </Sheet>
         )}
 
-        {/* 一步寫一句；寫完計時後也還能補，紀錄表單放在上面 */}
-        <SolvingStepsSheet problemId={problem.id} title={t.solving.title} onOpenBoard={() => setBoardOpen(true)} scriptButton />
+        {/* 做題時一次只露出一步；做完之後步驟變成選填，收起來放在紀錄下面 */}
+        {finished ? (
+          <SolvingStepsSheet problemId={problem.id} title={t.solving.afterTitle} collapsible scriptButton />
+        ) : (
+          <StepWizard problemId={problem.id} onStepChange={setStep} onOpenBoard={() => setBoardOpen(true)} onFinish={finish} />
+        )}
 
         {!finished && (
-          <HintPanel
-            problem={problem}
-            used={hints}
-            sawSolution={sawSolution}
-            onReveal={revealHint}
-            onRevealTo={revealHintTo}
-            onOpenBoard={() => setBoardOpen(true)}
-            onSolution={() => setSawSolution(true)}
-          />
+          <div ref={hintsRef}>
+            <HintPanel
+              problem={problem}
+              used={hints}
+              sawSolution={sawSolution}
+              onReveal={revealHint}
+              onRevealTo={revealHintTo}
+              onOpenBoard={() => setBoardOpen(true)}
+              onSolution={() => setSawSolution(true)}
+              stuck={stuckStep}
+              onStuckChange={setStuckStep}
+            />
+          </div>
+        )}
+
+        {/* 做題時固定在畫面下方：時間、我卡住了、完成，隨時按得到 */}
+        {!finished && (
+          <div className="practice-dock" role="group" aria-label={t.practice.dockLabel}>
+            <span className="practice-dock-time" data-over={over}>
+              {formatDuration(elapsedSec)}
+            </span>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setStuckStep(step);
+                hintsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+            >
+              {t.practice.stuck}
+            </button>
+            <button type="button" className="btn btn-primary" onClick={finish}>
+              {t.practice.finish}
+            </button>
+          </div>
         )}
       </div>
 

@@ -3,12 +3,14 @@ import { expect, test } from '@playwright/test';
 test('writes solving steps during practice and finds them in the mock interview and on the problem page', async ({ page }) => {
   await page.goto('/#/practice/1');
   const steps = page.getByRole('region', { name: 'Solving steps' });
+  // 一次只露出一步，從第一步開始
+  await expect(steps).toContainText('Step 1 of 7');
   await steps.getByLabel('What the problem asks').fill('Find two indices whose values add up to target');
-  // 舉例拆成例子和邊界情況，優化拆成三個問題
+  await expect(steps.getByLabel('Edge cases')).toHaveCount(0);
+  // 舉例拆成例子和邊界情況
+  await steps.getByRole('button', { name: 'Next' }).click();
+  await expect(steps).toContainText('Step 2 of 7');
   await steps.getByLabel('Edge cases').fill('Duplicates, negatives, exactly one answer');
-  await steps.getByLabel('What’s slow?').fill('Rescanning the array for every number');
-  await steps.getByLabel('What should I keep?').fill('A map from value to index');
-  await expect(steps.getByText(/Saved at/)).toBeVisible();
 
   // 白板從「舉例」那一步就打得開
   await steps.getByRole('button', { name: 'Trace it on the whiteboard' }).click();
@@ -16,6 +18,12 @@ test('writes solving steps during practice and finds them in the mock interview 
   await expect(board).toBeVisible();
   await board.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(board).toBeHidden();
+
+  // 上面一排可以直接跳到任何一步；優化拆成三個問題
+  await steps.getByRole('button', { name: 'Optimize', exact: true }).click();
+  await steps.getByLabel('What’s slow?').fill('Rescanning the array for every number');
+  await steps.getByLabel('What should I keep?').fill('A map from value to index');
+  await expect(steps.getByText(/Saved at/)).toBeVisible();
 
   // 模擬面試同一題，每一步的欄位帶著剛才寫的內容
   await page.goto('/#/mock?problem=1');
@@ -50,7 +58,9 @@ test('writes the English explanation script from the steps', async ({ page }) =>
   const steps = page.getByRole('region', { name: 'Solving steps' });
   // 還沒寫步驟時沒有這個按鈕
   await expect(steps.getByRole('button', { name: 'Write the English script from these steps' })).toHaveCount(0);
+  await steps.getByRole('button', { name: 'Optimize', exact: true }).click();
   await steps.getByLabel('What should I keep?').fill('A map from value to index');
+  await steps.getByRole('button', { name: 'Examples', exact: true }).click();
   await steps.getByLabel('Edge cases').fill('The same number can’t be used twice');
 
   await steps.getByRole('button', { name: 'Write the English script from these steps' }).click();
@@ -80,7 +90,9 @@ test('writes the English explanation script from the steps', async ({ page }) =>
 
 test('points the hints at the step you are stuck on', async ({ page }) => {
   await page.goto('/#/practice/1');
-  await page.getByRole('region', { name: 'Solving steps' }).getByLabel('Brute force').fill('Try every pair, O(n²)');
+  const steps = page.getByRole('region', { name: 'Solving steps' });
+  await steps.getByRole('button', { name: 'Brute force', exact: true }).click();
+  await steps.getByLabel('Brute force').fill('Try every pair, O(n²)');
 
   const hints = page.getByRole('region', { name: 'Hints' });
   const stuck = hints.getByRole('group', { name: 'Where are you stuck?' });
@@ -100,4 +112,33 @@ test('points the hints at the step you are stuck on', async ({ page }) => {
   await stuck.getByRole('button', { name: 'Examples' }).click();
   await hints.getByRole('button', { name: 'Trace it on the whiteboard' }).click();
   await expect(page.getByRole('dialog', { name: /Two Sum/ })).toBeVisible();
+});
+
+// 做題時「我卡住了」和「我做完了」固定在下方：卡住時提示直接看目前這一步；做完先記一句關鍵洞察，其他選填
+test('keeps I’m stuck and I’m done at hand, and asks for one key insight at the end', async ({ page }) => {
+  await page.goto('/#/practice/1');
+  const steps = page.getByRole('region', { name: 'Solving steps' });
+  await steps.getByRole('button', { name: 'Optimize', exact: true }).click();
+  await expect(steps).toContainText('Step 4 of 7');
+
+  const dock = page.getByRole('group', { name: 'While solving' });
+  await expect(dock).toContainText(/^\d+:\d{2}/);
+  await dock.getByRole('button', { name: 'I’m stuck' }).click();
+  const hints = page.getByRole('region', { name: 'Hints' });
+  await expect(hints.getByRole('group', { name: 'Where are you stuck?' }).getByRole('button', { name: 'Optimize' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(hints).toContainText('What’s repeated:');
+
+  await dock.getByRole('button', { name: 'I’m done' }).click();
+  const record = page.getByRole('region', { name: 'Record this attempt' });
+  // 關鍵洞察放第一個；卡在哪、花多久收起來
+  await expect(record.getByLabel('Key idea in one line')).toBeFocused();
+  await expect(record.getByLabel('Minutes spent')).toBeHidden();
+  await record.getByText('More (optional)').click();
+  await expect(record.getByLabel('Minutes spent')).toBeVisible();
+  // 做完之後步驟變成選填，下方的工具列也收起來
+  await expect(page.getByRole('region', { name: 'Solving steps (optional)' })).toBeVisible();
+  await expect(dock).toHaveCount(0);
 });

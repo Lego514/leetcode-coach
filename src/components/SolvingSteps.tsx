@@ -1,7 +1,9 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import type { StepId as InterviewStepId } from '../data/interview';
 import { STEP_NOTE_KEYS, type StepNoteKey } from '../../shared/constants';
 import { INTERVIEW_STEPS, STEP_NOTE_FIELDS, type StepId } from '../data/interview';
 import { useI18n } from '../i18n';
+import { firstOpenStep } from '../lib/practice';
 import { saveNote } from '../store/actions';
 import type { StepNotes } from '../store/db';
 import { useNote } from '../store/queries';
@@ -179,6 +181,110 @@ export function SolvingStepsSheet({ problemId, title, collapsible = false, onOpe
           }}
         />
       )}
+    </Sheet>
+  );
+}
+
+interface StepWizardProps {
+  problemId: number;
+  /** 練習頁的「我卡住了」要知道現在在哪一步 */
+  onStepChange?: (step: InterviewStepId) => void;
+  onOpenBoard?: () => void;
+  /** 最後一步的「完成」：停止計時、開始記錄 */
+  onFinish: () => void;
+}
+
+/**
+ * 練習頁的解題步驟：一次只露出一步，寫一句就按下一步，想不出來可以直接跳過。
+ * 跟題目頁的完整表單存在同一份筆記裡
+ */
+export function StepWizard({ problemId, onStepChange, onOpenBoard, onFinish }: StepWizardProps) {
+  const { t, locale } = useI18n();
+  const s = t.solving;
+  const toast = useToast();
+  const state = useStepNotes(problemId);
+  const [index, setIndex] = useState<number | null>(null);
+  const [writing, setWriting] = useState(false);
+  // 讀到筆記時決定從哪一步開始（第一個還沒寫的），之後就不再跟著內容跳，不然寫完一格會自己換頁
+  if (index === null && state.value !== undefined) setIndex(firstOpenStep(state.value));
+  const current = index ?? 0;
+  const step = INTERVIEW_STEPS[current];
+  const last = current === INTERVIEW_STEPS.length - 1;
+  const go = (i: number) => setIndex(i);
+  // 讓練習頁知道現在在哪一步，「我卡住了」才帶得到
+  useEffect(() => onStepChange?.(step.id), [step.id, onStepChange]);
+
+  return (
+    <Sheet title={s.title} id="solving-steps" actions={state.edited ? <SaveStatus status={state.status} /> : undefined}>
+      <div className="sheet-body wizard">
+        <ol className="wizard-nav" aria-label={s.stepsLabel}>
+          {INTERVIEW_STEPS.map((item, i) => {
+            const filled = STEP_NOTE_FIELDS[item.id].some((key) => state.value?.[key]?.trim());
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className="wizard-dot"
+                  data-filled={filled || undefined}
+                  aria-current={i === current ? 'step' : undefined}
+                  onClick={() => go(i)}
+                >
+                  <span aria-hidden>{i + 1}</span>
+                  <span className="visually-hidden">{t.interview.steps[item.id].name}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="wizard-step">
+          <p className="wizard-count">{s.stepCount(current + 1, INTERVIEW_STEPS.length)}</p>
+          <h3 className="wizard-name">
+            {t.interview.steps[step.id].name}
+            {locale !== 'en' && <span lang="en">{step.english}</span>}
+          </h3>
+          <p className="sheet-note">{t.interview.steps[step.id].goal}</p>
+          <StepFields key={step.id} step={step.id} state={state} />
+          {step.id === 'examples' && onOpenBoard && (
+            <button type="button" className="btn btn-quiet btn-small" onClick={onOpenBoard}>
+              {s.board}
+            </button>
+          )}
+        </div>
+        <div className="btn-row wizard-buttons">
+          {current > 0 && (
+            <button type="button" className="btn" onClick={() => go(current - 1)}>
+              {s.prev}
+            </button>
+          )}
+          {last ? (
+            <button type="button" className="btn btn-primary" onClick={onFinish}>
+              {t.practice.finish}
+            </button>
+          ) : (
+            <button type="button" className="btn btn-primary" onClick={() => go(current + 1)}>
+              {s.next}
+            </button>
+          )}
+          {hasStepNotes(state.value) && (
+            <button type="button" className="btn btn-quiet" onClick={() => setWriting(true)}>
+              {s.writeScript}
+            </button>
+          )}
+        </div>
+      </div>
+      <ScriptBuilder
+        open={writing}
+        onClose={() => setWriting(false)}
+        steps={state.value}
+        current={state.explanation}
+        onUse={(script) => {
+          setWriting(false);
+          saveNote(problemId, { explanation: script }).then(
+            () => toast(t.script.saved),
+            () => toast(t.errors.unknown),
+          );
+        }}
+      />
     </Sheet>
   );
 }
