@@ -40,6 +40,8 @@ interface RecordFormProps {
   problem: Problem;
   mode: AttemptMode;
   askIdea: boolean;
+  /** 練習頁：關鍵洞察放最上面，卡在哪、花多久收起來（選填） */
+  insightFirst?: boolean;
   /** 計時練習會依提示使用情況預先選好 */
   initialRating?: Rating;
   initialMinutes?: number;
@@ -54,6 +56,7 @@ export function RecordForm({
   problem,
   mode,
   askIdea,
+  insightFirst = false,
   initialRating,
   initialMinutes,
   hints,
@@ -98,8 +101,37 @@ export function RecordForm({
     }
   }
 
+  const minutesField = (
+    <label className="field">
+      <span className="field-label">{initialMinutes ? t.record.minutes : t.record.minutesOptional}</span>
+      <input
+        className="input"
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={600}
+        value={minutes}
+        onChange={(e) => setMinutes(e.target.value)}
+      />
+    </label>
+  );
+  const ideaField = (first: boolean) => (
+    <label className={first ? 'field' : 'field span-2'}>
+      <span className="field-label">{t.record.idea}</span>
+      <input
+        className="input"
+        value={currentIdea}
+        placeholder={t.record.ideaPlaceholder}
+        autoFocus={first}
+        onChange={(e) => setIdea(e.target.value)}
+      />
+      <span className="field-hint">{first ? t.record.ideaFirstHint : t.record.ideaHint}</span>
+    </label>
+  );
+
   return (
     <form onSubmit={submit} className="stack" style={{ gap: 16 }}>
+      {askIdea && insightFirst && ideaField(true)}
       <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
         <legend className="field-label" style={{ marginBottom: 8 }}>
           {t.record.question}
@@ -123,34 +155,23 @@ export function RecordForm({
         </div>
       </fieldset>
 
-      <StuckPicker value={stuck} onChange={setStuck} />
-
-      <div className="form-grid">
-        <label className="field">
-          <span className="field-label">{initialMinutes ? t.record.minutes : t.record.minutesOptional}</span>
-          <input
-            className="input"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={600}
-            value={minutes}
-            onChange={(e) => setMinutes(e.target.value)}
-          />
-        </label>
-        {askIdea && (
-          <label className="field span-2">
-            <span className="field-label">{t.record.idea}</span>
-            <input
-              className="input"
-              value={currentIdea}
-              placeholder={t.record.ideaPlaceholder}
-              onChange={(e) => setIdea(e.target.value)}
-            />
-            <span className="field-hint">{t.record.ideaHint}</span>
-          </label>
-        )}
-      </div>
+      {insightFirst ? (
+        <details className="record-more">
+          <summary>{t.record.more}</summary>
+          <div className="stack" style={{ gap: 16, marginTop: 12 }}>
+            <StuckPicker value={stuck} onChange={setStuck} />
+            {minutesField}
+          </div>
+        </details>
+      ) : (
+        <>
+          <StuckPicker value={stuck} onChange={setStuck} />
+          <div className="form-grid">
+            {minutesField}
+            {askIdea && ideaField(false)}
+          </div>
+        </>
+      )}
 
       <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
         <button type="button" className="btn btn-quiet" onClick={onCancel}>

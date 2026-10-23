@@ -1,3 +1,5 @@
+import type { StepNoteKey } from '../../shared/constants';
+import { INTERVIEW_STEPS, STEP_NOTE_FIELDS } from '../data/interview';
 import type { Rating } from './srs';
 
 /** 內建提示的層數：方向、關鍵觀察、模板 */
@@ -71,4 +73,10 @@ export function clearPracticeSession(storage?: Storage | null): void {
   } catch {
     // 同上
   }
+}
+
+/** 練習頁的解題步驟從哪一步開始：第一個還沒寫的；都寫過了就從頭 */
+export function firstOpenStep(steps: Partial<Record<StepNoteKey, string>> | undefined): number {
+  const i = INTERVIEW_STEPS.findIndex((step) => !STEP_NOTE_FIELDS[step.id].some((key) => steps?.[key]?.trim()));
+  return i === -1 ? 0 : i;
 }

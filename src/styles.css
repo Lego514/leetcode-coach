@@ -4441,3 +4441,110 @@ a.more-account:hover {
 .today-task[data-done]::before {
   content: '✓ ';
 }
+
+/* ---------- 練習頁：逐步展開的解題步驟 ---------- */
+.wizard {
+  display: grid;
+  gap: 14px;
+}
+
+.wizard-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-dot {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--sheet);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.wizard-dot[data-filled] {
+  border-color: var(--level-3);
+  background: var(--level-1);
+  color: var(--ink);
+}
+
+.wizard-dot[aria-current] {
+  border-color: var(--pen);
+  background: var(--pen);
+  color: var(--on-pen);
+  font-weight: 700;
+}
+
+.wizard-step {
+  display: grid;
+  gap: 6px;
+}
+
+.wizard-count {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.wizard-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 18px;
+}
+
+.wizard-name span {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+/* 做題時固定在畫面下方的工具列；手機上要在分頁列上面 */
+.practice-dock {
+  position: sticky;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+}
+
+@media (max-width: 899px) {
+  .practice-dock {
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.practice-dock-time {
+  margin-right: auto;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.practice-dock-time[data-over='true'] {
+  color: var(--danger);
+}
+
+.record-more summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 14px;
+}

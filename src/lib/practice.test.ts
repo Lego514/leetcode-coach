@@ -3,6 +3,7 @@ import { BUILTIN_PROBLEMS } from '../data/problems';
 import { hintFor } from '../data/hints';
 import {
   clearPracticeSession,
+  firstOpenStep,
   loadPracticeSession,
   savePracticeSession,
   suggestRating,
@@ -73,5 +74,16 @@ describe('practice session storage', () => {
     expect(loadPracticeSession(15, storage)).toBeNull();
     expect(loadPracticeSession(15, null)).toBeNull();
     expect(() => savePracticeSession(snapshot, null)).not.toThrow();
+  });
+});
+
+describe('firstOpenStep', () => {
+  it('starts the solving steps at the first one without notes', () => {
+    expect(firstOpenStep(undefined)).toBe(0);
+    expect(firstOpenStep({ clarify: 'Two indices that sum to target' })).toBe(1);
+    // 只寫了一部分的步驟（舉例只寫了邊界情況）也算寫過；空白不算
+    expect(firstOpenStep({ clarify: 'x', edge: 'empty input', brute: '   ' })).toBe(2);
+    const all = { clarify: 'x', example: 'x', brute: 'x', slow: 'x', code: 'x', test: 'x', complexity: 'x' };
+    expect(firstOpenStep(all)).toBe(0);
   });
 });
