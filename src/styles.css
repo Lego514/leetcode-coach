@@ -4724,3 +4724,15 @@ a.more-account:hover {
   align-items: center;
   gap: 8px;
 }
+
+/* 設定頁帳號摘要的 GitHub 狀態：連結了用一般文字色，沒連結用淡色 */
+.github-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+}
+
+.github-status[data-linked] {
+  color: var(--ink);
+}

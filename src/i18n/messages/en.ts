@@ -363,7 +363,7 @@ const en: Messages = {
       continue: 'Continue with GitHub',
       or: 'or use your email',
       label: 'GitHub',
-      linkedAs: (login) => `@${login}`,
+      linkedAs: (login) => `Connected as @${login}`,
       notLinked: 'Not connected',
       connect: 'Connect GitHub',
       disconnect: 'Disconnect GitHub',
