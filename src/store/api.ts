@@ -2,7 +2,8 @@ import type { ApiErrorBody, ApiErrorCode } from '../../shared/protocol';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
-export type ClientErrorCode = ApiErrorCode | 'network_error' | 'unavailable';
+/** ai_key_invalid、ai_busy 只在用自己的 AI 金鑰時出現（瀏覽器直接呼叫，沒經過伺服器） */
+export type ClientErrorCode = ApiErrorCode | 'network_error' | 'unavailable' | 'ai_key_invalid' | 'ai_busy';
 
 export class ApiError extends Error {
   constructor(

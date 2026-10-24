@@ -234,6 +234,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
               onSolution={() => setSawSolution(true)}
               stuck={stuckStep}
               onStuckChange={setStuckStep}
+              onUseAi={() => revealHintTo(1)}
             />
           </div>
         )}

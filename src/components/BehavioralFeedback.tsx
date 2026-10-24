@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
-import type { AiStatus, BehavioralFeedback, BehavioralFeedbackRequest } from '../../shared/protocol';
+import type { BehavioralFeedback, BehavioralFeedbackRequest } from '../../shared/protocol';
 import { useI18n } from '../i18n';
 import { rich } from '../i18n/rich';
-import { fetchAiStatus, requestBehavioralFeedback } from '../store/ai';
+import { markAiQuotaUsed, requestBehavioralFeedback, updateAiUsage, useAiStatus } from '../store/ai';
 import { errorCode } from '../store/api';
 import { useCloud } from '../store/cloud';
 
@@ -21,22 +21,11 @@ interface BehavioralFeedbackPanelProps {
 export function BehavioralFeedbackPanel({ request, feedback, onFeedback }: BehavioralFeedbackPanelProps) {
   const { t, locale } = useI18n();
   const signedIn = useCloud().account.kind === 'signed-in';
-  const [status, setStatus] = useState<AiStatus | null>(null);
+  const status = useAiStatus(signedIn);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requestedFor, setRequestedFor] = useState<string | null>(null);
   const text = request.transcript.trim();
-
-  useEffect(() => {
-    if (!signedIn) return;
-    let active = true;
-    fetchAiStatus()
-      .then((s) => active && setStatus(s))
-      .catch(() => active && setStatus({ available: false, dailyLimit: 0, usedToday: 0 }));
-    return () => {
-      active = false;
-    };
-  }, [signedIn]);
 
   async function send() {
     setLoading(true);
@@ -45,18 +34,18 @@ export function BehavioralFeedbackPanel({ request, feedback, onFeedback }: Behav
       const response = await requestBehavioralFeedback({ ...request, transcript: text, language: locale });
       onFeedback(response.feedback);
       setRequestedFor(text);
-      setStatus({ available: true, dailyLimit: response.dailyLimit, usedToday: response.usedToday });
+      updateAiUsage(response.usedToday, response.dailyLimit);
     } catch (err) {
       const code = errorCode(err);
       setError(t.errors.api[code]);
-      if (code === 'ai_quota_exceeded' && status) setStatus({ ...status, usedToday: status.dailyLimit });
+      if (code === 'ai_quota_exceeded') markAiQuotaUsed();
     } finally {
       setLoading(false);
     }
   }
 
   let action;
-  if (!signedIn) {
+  if (!signedIn && !status) {
     action = <p className="sheet-note">{rich(t.mock.aiSignIn, { link: (s) => <Link to="/account">{s}</Link> })}</p>;
   } else if (!status) {
     action = <p className="sheet-note">{t.common.loading}</p>;
@@ -68,10 +57,10 @@ export function BehavioralFeedbackPanel({ request, feedback, onFeedback }: Behav
     action = (
       <div className="stack" style={{ gap: 8 }}>
         <div className="btn-row">
-          <button type="button" className="btn btn-primary btn-small" disabled={loading || tooShort || remaining === 0} onClick={() => void send()}>
+          <button type="button" className="btn btn-primary btn-small" disabled={loading || tooShort || (!status?.own && remaining === 0)} onClick={() => void send()}>
             {feedback ? t.mock.aiRequestAgain : t.mock.aiRequest}
           </button>
-          <span className="sheet-note">{t.mock.aiRemaining(remaining, status.dailyLimit)}</span>
+          <span className="sheet-note">{status.own ? t.ai.ownKeyNote(status.own) : t.mock.aiRemaining(remaining, status.dailyLimit)}</span>
         </div>
         {tooShort && <p className="field-hint">{t.mock.aiNeedsText}</p>}
         {loading && (
