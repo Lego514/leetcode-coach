@@ -63,3 +63,22 @@ test('celebrates conquering a problem, and shows readiness, the pattern map, and
   await expect(recap.getByRole('row', { name: /^Conquered/ })).toContainText('1');
   await expect(recap.getByRole('row', { name: /^Problems practiced/ })).toContainText('2');
 });
+
+// 保護畫成盾牌：每練習一天存一個，最多兩個；漏掉一天用掉一個，那天在這週的圓點上是盾牌
+test('shows shields, and uses one on a missed day', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try it with demo data' }).click();
+  const goal = page.getByRole('region', { name: 'Today’s goal' });
+  await expect(goal).toContainText('2 of 2 shields saved');
+  await expect(goal.locator('.shield-row .shield-icon[data-filled]')).toHaveCount(2);
+
+  // 兩天後再打開（示範資料最後一天是 10/19）：10/20 沒練，用掉一個
+  await page.clock.setFixedTime(new Date('2026-10-21T12:00:00'));
+  await page.reload();
+  await expect(goal).toContainText('You missed yesterday, so a shield kept your streak alive.');
+  await expect(goal).toContainText('1 of 2 shields saved');
+  await expect(goal.locator('.shield-row .shield-icon[data-filled]')).toHaveCount(1);
+  await expect(goal.getByRole('listitem', { name: 'T: shield used' })).toBeVisible();
+  await expect(goal).toContainText('Practice today to earn a shield');
+  await page.screenshot({ path: 'test-results/shield-used.png' });
+});

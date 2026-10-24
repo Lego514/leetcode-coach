@@ -4009,11 +4009,17 @@ a.more-account:hover {
   background: var(--level-4);
 }
 
-/* 用了保護的日子：虛線圈 */
+/* 用了保護的日子：圓點換成盾牌 */
 .streak-day[data-state='frozen'] .streak-dot {
-  border-style: dashed;
-  border-color: var(--pen);
-  background: var(--pen-soft);
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+}
+
+.streak-day[data-state='frozen'] .shield-icon {
+  width: 26px;
+  height: 26px;
 }
 
 .streak-day[data-state='today'] .streak-dot {
@@ -4667,4 +4673,45 @@ a.more-account:hover {
   width: 5.5em;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+/* 連續天數的保護：盾牌 */
+.shield-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.shield-body {
+  fill: none;
+  stroke: var(--rule-strong);
+  stroke-width: 1.6;
+  stroke-dasharray: 3 2.5;
+  stroke-linejoin: round;
+}
+
+.shield-icon[data-filled] .shield-body {
+  fill: var(--pen);
+  stroke: var(--pen);
+  stroke-dasharray: none;
+}
+
+.shield-check {
+  fill: none;
+  stroke: var(--on-pen);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.shield-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.streak-saved {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

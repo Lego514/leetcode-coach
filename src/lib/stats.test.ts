@@ -28,7 +28,8 @@ describe('practiceStreak', () => {
     const practiced = [{ day: '2026-09-14' }, { day: '2026-09-16' }];
     const cards = [{ day: '2026-09-15' }, { day: '2026-09-16' }];
     expect(practiceStreak(streakDays(practiced, cards), '2026-09-16')).toBe(3);
-    expect(practiceStreak(streakDays(practiced, []), '2026-09-16')).toBe(1);
+    // 沒有卡片那天：9/14 練習存了一次保護，9/15 用掉，連續天數不斷（9/15 不算進天數）
+    expect(practiceStreak(streakDays(practiced, []), '2026-09-16')).toBe(2);
   });
 
   it('counts days with only behavioral practice', () => {
