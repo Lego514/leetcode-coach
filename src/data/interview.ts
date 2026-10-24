@@ -45,8 +45,8 @@ export const STEP_CONTEXT: Record<StepId, StepNoteKey[]> = {
   complexity: ['brute', 'keep'],
 };
 
-/** 卡在優化就看關鍵觀察（第 2 層），卡在寫程式就看模板（第 3 層） */
-export const STEP_HINT_LEVEL: Partial<Record<StepId, number>> = { optimize: 2, code: 3 };
+/** 卡在優化就看關鍵觀察（第 2 層），卡在舉例或測試就看邊界情況（第 3 層），卡在寫程式就看模板（第 4 層） */
+export const STEP_HINT_LEVEL: Partial<Record<StepId, number>> = { examples: 3, optimize: 2, test: 3, code: 4 };
 
 /** 美國技術面試常見的解題流程，模擬面試會依序走過 */
 export const INTERVIEW_STEPS: InterviewStep[] = [
