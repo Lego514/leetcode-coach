@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FREEZE_EVERY, streakState } from '../../shared/streak';
+import { streakState } from '../../shared/streak';
 import type { Problem } from '../data/problems';
 import { addDays } from './dates';
 import { conquests, isReady, nextMilestone, paceOf, todayStatus, patternLevels, progressBefore, readiness, weekSummary, winsFor } from './motivation';
@@ -8,25 +8,26 @@ import { schedule, type Rating } from './srs';
 const run = (start: string, n: number) => Array.from({ length: n }, (_, i) => addDays(start, i));
 
 describe('streakState', () => {
-  it('earns a shield every week in a row and uses it on a missed day', () => {
-    const week = run('2026-10-01', FREEZE_EVERY);
-    expect(streakState(week, '2026-10-07')).toMatchObject({ streak: 7, freezes: 1, untilFreeze: 7, practicedToday: true, frozen: [] });
-    // 10/8 沒練，10/9 回來：保護用掉，連續天數不斷（沒練的那天不算進天數）
-    expect(streakState([...week, '2026-10-09'], '2026-10-09')).toMatchObject({ streak: 8, freezes: 0, frozen: ['2026-10-08'] });
+  it('earns a shield every day you practice and uses it on a missed day', () => {
+    expect(streakState(['2026-10-01'], '2026-10-01')).toMatchObject({ streak: 1, freezes: 1, practicedToday: true, frozen: [] });
+    // 10/2 沒練，10/3 回來：保護用掉，連續天數不斷（沒練的那天不算進天數）；10/3 練了又存一次
+    expect(streakState(['2026-10-01', '2026-10-03'], '2026-10-03')).toMatchObject({ streak: 2, freezes: 1, frozen: ['2026-10-02'] });
   });
 
   it('breaks without a shield, and does not count today until you practice', () => {
-    expect(streakState(run('2026-10-01', 3), '2026-10-05')).toMatchObject({ streak: 0, freezes: 0, untilFreeze: 7 });
-    expect(streakState(run('2026-10-01', 3), '2026-10-04')).toMatchObject({ streak: 3, practicedToday: false, untilFreeze: 4 });
+    // 練一天只存一次：連漏兩天，第二天就斷了
+    expect(streakState(['2026-10-01'], '2026-10-04')).toMatchObject({ streak: 0, freezes: 0, frozen: ['2026-10-02'] });
+    expect(streakState(run('2026-10-01', 3), '2026-10-04')).toMatchObject({ streak: 3, freezes: 2, practicedToday: false });
   });
 
   it('keeps at most two shields, and each covers one missed day', () => {
     const days = run('2026-09-01', 21);
     const full = streakState(days, '2026-09-21');
-    expect(full).toMatchObject({ streak: 21, freezes: 2, untilFreeze: 0 });
+    expect(full).toMatchObject({ streak: 21, freezes: 2 });
     // 連續漏兩天用掉兩次，第三天就斷了
     expect(streakState([...days, '2026-09-24'], '2026-09-24')).toMatchObject({ streak: 22, frozen: ['2026-09-22', '2026-09-23'] });
-    expect(streakState([...days, '2026-09-25'], '2026-09-25')).toMatchObject({ streak: 1, freezes: 0 });
+    // 斷掉後重新開始，那天練習又存一次
+    expect(streakState([...days, '2026-09-25'], '2026-09-25')).toMatchObject({ streak: 1, freezes: 1 });
   });
 });
 

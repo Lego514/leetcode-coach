@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { FREEZE_EVERY, MAX_FREEZES, streakState } from '../../shared/streak';
+import { MAX_FREEZES, streakState } from '../../shared/streak';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
@@ -17,6 +17,16 @@ import { Sheet } from './ui';
 // 讓人想繼續刷的畫面：今天的目標和連續天數保護、做完一題的慶祝、準備度、題型地圖、每週回顧
 
 type DayState = 'done' | 'frozen' | 'missed' | 'today' | 'later';
+
+/** 連續天數的保護畫成盾牌：存著的是實心打勾，空位是虛線 */
+function ShieldIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg className="shield-icon" data-filled={filled || undefined} viewBox="0 0 24 24" aria-hidden>
+      <path className="shield-body" d="M12 2.5 4.5 5.4v5.8c0 4.7 3.1 8.8 7.5 10.3 4.4-1.5 7.5-5.6 7.5-10.3V5.4L12 2.5Z" />
+      {filled && <path className="shield-check" d="m8.6 12.2 2.4 2.4 4.4-4.6" />}
+    </svg>
+  );
+}
 
 /**
  * 今天頁最上面的一張卡：今天的目標（做 1 題或一回合卡片）、這週七天、連續天數保護、下一個目標，
@@ -68,17 +78,32 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
           </div>
         )}
         <div className="today-card-stats">
-          {frozen.has(addDays(today, -1)) && <p className="streak-saved">{m.frozeYesterday}</p>}
+          {frozen.has(addDays(today, -1)) && (
+            <p className="streak-saved">
+              <ShieldIcon filled />
+              {m.frozeYesterday}
+            </p>
+          )}
           <p>{rich(m.streak(state.streak), { b: bold })}</p>
-          <p title={m.freezesHint(FREEZE_EVERY, MAX_FREEZES)}>{rich(m.freezes(state.freezes), { b: bold })}</p>
-          <p className="today-card-muted">{state.untilFreeze > 0 ? m.untilFreeze(state.untilFreeze) : m.freezesFull}</p>
+          <p className="shield-row" title={m.freezesHint(MAX_FREEZES)}>
+            <span aria-hidden>{m.shieldsTitle}</span>
+            {Array.from({ length: MAX_FREEZES }, (_, i) => (
+              <ShieldIcon key={i} filled={i < state.freezes} />
+            ))}
+            <span className="visually-hidden">{m.shieldCount(state.freezes, MAX_FREEZES)}</span>
+          </p>
+          <p className="today-card-muted">
+            {state.freezes >= MAX_FREEZES ? m.freezesFull : state.practicedToday ? m.earnedToday : m.earnToday}
+          </p>
         </div>
         <ol className="streak-week today-card-week" aria-label={m.weekLabel}>
           {week.map((day, i) => {
             const s = stateOf(day);
             return (
               <li key={day} className="streak-day" data-state={s} aria-label={m.dayLabel(m.weekdays[i], m.dayStates[s])}>
-                <span className="streak-dot" aria-hidden />
+                <span className="streak-dot" aria-hidden>
+                  {s === 'frozen' && <ShieldIcon filled />}
+                </span>
                 <span className="streak-weekday" aria-hidden>
                   {m.weekdays[i]}
                 </span>
@@ -104,7 +129,7 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
               {t.tree.seeFull}
             </Link>
           </div>
-          <p className="field-hint">{m.freezesHint(FREEZE_EVERY, MAX_FREEZES)}</p>
+          <p className="field-hint">{m.freezesHint(MAX_FREEZES)}</p>
         </div>
       </div>
     </section>
