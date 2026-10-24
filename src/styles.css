@@ -2840,6 +2840,15 @@ audio {
   font-weight: 600;
 }
 
+/* 微複習：題目名稱下面的一句摘要 */
+.flash-summary {
+  display: block;
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .flash-question {
   margin: 0;
   font-size: 20px;
