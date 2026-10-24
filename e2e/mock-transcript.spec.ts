@@ -84,7 +84,7 @@ test.describe('explanation drill with a transcript', () => {
     await textarea.fill('The key insight is to store each value in a hash map. It runs in linear time.');
     await expect(review).toContainText('No common filler words detected.');
     // 沒登入時提示登入後才能用 AI 回饋
-    await expect(review).toContainText('Sign in to use AI feedback.');
+    await expect(review).toContainText('Sign in to use AI feedback, or add your own AI key in Settings.');
     await review.getByRole('button', { name: 'Save as this problem’s script' }).click();
     const replace = page.getByRole('dialog', { name: 'Replace your explanation script?' });
     await replace.getByRole('button', { name: 'Replace' }).click();

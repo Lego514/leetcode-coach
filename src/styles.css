@@ -4548,3 +4548,72 @@ a.more-account:hover {
   color: var(--ink-2);
   font-size: 14px;
 }
+
+/* ---------- 自己的 AI 金鑰、AI 陪你想 ---------- */
+.own-ai-current {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--pen-soft);
+  color: var(--ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.own-ai-ok {
+  margin: 0;
+  color: var(--good);
+  font-size: 14px;
+}
+
+.ai-hint {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.ai-hint .field-label {
+  margin: 0;
+}
+
+.ai-chat {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-chat-message {
+  display: grid;
+  gap: 2px;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--sheet-2);
+  border: 1px solid var(--rule);
+  font-size: 14px;
+}
+
+.ai-chat-message[data-role='user'] {
+  justify-self: end;
+  background: var(--pen-soft);
+  border-color: var(--pen-soft);
+}
+
+.ai-chat-who {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.ai-chat-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-chat-form {
+  display: grid;
+  gap: 8px;
+}

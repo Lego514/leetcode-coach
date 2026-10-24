@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { AccountSummary } from '../components/AccountSection';
 import { LanguageSwitch } from '../components/LanguageSwitch';
+import { OwnAiSettings } from '../components/OwnAiSettings';
 import { ReminderSettings } from '../components/ReminderSettings';
 import { useToast } from '../components/toast';
 import { Dialog, PageHead, Sheet } from '../components/ui';
@@ -220,6 +221,8 @@ export function SettingsPage() {
         </Sheet>
 
         <ReminderSettings />
+
+        <OwnAiSettings />
 
         <Sheet title={t.settings.appearanceTitle} id="appearance">
           <div className="sheet-body form-grid">

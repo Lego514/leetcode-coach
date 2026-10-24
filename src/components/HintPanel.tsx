@@ -7,6 +7,7 @@ import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { HINT_LEVELS, solutionsUrl } from '../lib/practice';
 import { useNote, usePatternNote } from '../store/queries';
+import { AiHintChat } from './AiHintChat';
 import { ExternalIcon, Sheet } from './ui';
 
 interface HintPanelProps {
@@ -23,6 +24,8 @@ interface HintPanelProps {
   /** 由外面指定卡在哪一步（練習頁的「我卡住了」）；沒給時面板自己記 */
   stuck?: StepId | null;
   onStuckChange?: (step: StepId | null) => void;
+  /** 練習頁：放「AI 陪你想」，開始時呼叫（算用了第一層提示） */
+  onUseAi?: () => void;
 }
 
 export function HintPanel({
@@ -35,6 +38,7 @@ export function HintPanel({
   onOpenBoard,
   stuck: stuckProp,
   onStuckChange,
+  onUseAi,
 }: HintPanelProps) {
   const { t, locale } = useI18n();
   const note = useNote(problem.id);
@@ -132,6 +136,8 @@ export function HintPanel({
             <p className="field-hint">{t.hints.stuckNote}</p>
           )}
         </div>
+
+        {onUseAi && <AiHintChat problem={problem} stuck={stuck} onStart={onUseAi} />}
 
         {used > 0 && (
           <ol className="hint-list">

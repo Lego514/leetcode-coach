@@ -58,7 +58,7 @@ export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeed
   }
 
   let action;
-  if (!signedIn) {
+  if (!signedIn && !status) {
     action = <p className="sheet-note">{rich(t.mock.aiSignIn, { link: (s) => <Link to="/account">{s}</Link> })}</p>;
   } else if (!status) {
     action = <p className="sheet-note">{t.common.loading}</p>;
@@ -73,12 +73,12 @@ export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeed
           <button
             type="button"
             className="btn btn-primary btn-small"
-            disabled={loading || tooShort || remaining === 0}
+            disabled={loading || tooShort || (!status?.own && remaining === 0)}
             onClick={() => void request()}
           >
             {feedback ? t.mock.aiRequestAgain : t.mock.aiRequest}
           </button>
-          <span className="sheet-note">{t.mock.aiRemaining(remaining, status.dailyLimit)}</span>
+          <span className="sheet-note">{status.own ? t.ai.ownKeyNote(status.own) : t.mock.aiRemaining(remaining, status.dailyLimit)}</span>
         </div>
         {tooShort && <p className="field-hint">{t.mock.aiNeedsText}</p>}
         {loading && (

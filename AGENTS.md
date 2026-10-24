@@ -56,7 +56,7 @@ server/              Hono API（Node 24），esbuild 打包成 server/dist/index
   src/auth/          密碼登入、session、重設密碼、GitHub 登入（github.ts）
   src/push/          每日提醒（Web Push）：訂閱、POST /api/push/send-due（GitHub Actions 每小時呼叫）
   src/sync/          同步（通用的 records 表，last-write-wins by updatedAt）
-  src/ai/            Claude 回饋（Opus 5.5，JSON schema 結構化輸出、每日額度）
+  src/ai/            Claude 回饋（Opus 5.5，JSON schema 結構化輸出、每日額度）；提示詞在 shared/ai.ts
   migrations/        SQL migration，依檔名順序在啟動時套用；src/db/schema.ts 要跟著改
 shared/              前後端共用：protocol.ts（zod schema、API 型別）、constants.ts、prompts.ts
 e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
@@ -67,6 +67,8 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 - **所有本機寫入都經過 `src/store/actions.ts`**，並在同一個交易裡呼叫 `track()` 記進待上傳清單（outbox），登入後才同步得出去。
 - **複習排程（progress）是從練習紀錄（attempts）算出來的，不同步**：改了 attempts 要 `rebuildProgress()`。
 - **連續天數（含「保護」）的算法在 `shared/streak.ts`**，網頁和每日提醒共用；準備度、題型等級、征服、每週回顧在 `src/lib/motivation.ts`，演算法樹的樹形和每題的樣子在 `src/lib/tree.ts`（畫圖在 `components/AlgorithmTree.tsx`），都從練習紀錄算出來，不另外存。
+- **AI 的提示詞、輸出 schema、整理輸出的函式在 `shared/ai.ts`**：伺服器（`server/src/ai/feedback.ts`）和使用者自己的金鑰（`src/lib/llm.ts`，瀏覽器直接呼叫 Anthropic、OpenAI、OpenRouter）共用同一份，改評分標準只改一個地方。
+- **使用者自己的 AI 金鑰只存在 localStorage（`src/store/ownAi.ts`）**：刻意不經過 `actions.ts`、不進同步的待上傳清單，永遠不送到我們的伺服器。測試裡用 `page.route` 攔下 AI 的網址，不要真的呼叫。
 - **介面文字只放在 `src/i18n/messages/{zh-TW,en}.ts`**：兩份的 key 要一樣（有測試檢查），其他檔案裡出現中文字會讓測試失敗。
 - **改資料格式**：先改 `shared/protocol.ts` 的 zod schema；資料庫要加 `server/migrations/000N_*.sql` 並同步改 `server/src/db/schema.ts`；server 測試裡的 migration 清單（`server/test/infra.test.ts`）也要加。
 - **新的環境變數**：`server/src/env.ts`、`render.yaml`、`server/.env.example`、README 的 Deploying 一節都要加。

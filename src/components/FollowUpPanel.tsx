@@ -118,7 +118,7 @@ export function FollowUpPanel({ problem, transcript, usedSec, value, onChange }:
   }, [readAloud, graded, current]);
 
   let gate = null;
-  if (!signedIn) gate = <p className="sheet-note">{rich(t.mock.aiSignIn, { link: (s) => <Link to="/account">{s}</Link> })}</p>;
+  if (!signedIn && !status) gate = <p className="sheet-note">{rich(t.mock.aiSignIn, { link: (s) => <Link to="/account">{s}</Link> })}</p>;
   else if (!status) gate = <p className="sheet-note">{t.common.loading}</p>;
   else if (!status.available) gate = <p className="sheet-note">{status.reason === 'not_allowed' ? t.mock.aiNotAllowed : t.mock.aiOff}</p>;
   const remaining = status ? Math.max(0, status.dailyLimit - status.usedToday) : 0;
@@ -133,10 +133,10 @@ export function FollowUpPanel({ problem, transcript, usedSec, value, onChange }:
           {items.length === 0 ? (
             <div className="stack" style={{ gap: 8 }}>
               <div className="btn-row">
-                <button type="button" className="btn btn-primary btn-small" disabled={loading !== null || tooShort || remaining === 0} onClick={() => void ask()}>
+                <button type="button" className="btn btn-primary btn-small" disabled={loading !== null || tooShort || (!status?.own && remaining === 0)} onClick={() => void ask()}>
                   {f.ask}
                 </button>
-                <span className="sheet-note">{t.mock.aiRemaining(remaining, status!.dailyLimit)}</span>
+                <span className="sheet-note">{status!.own ? t.ai.ownKeyNote(status!.own) : t.mock.aiRemaining(remaining, status!.dailyLimit)}</span>
               </div>
               {tooShort && <p className="field-hint">{t.mock.aiNeedsText}</p>}
             </div>
@@ -172,11 +172,11 @@ export function FollowUpPanel({ problem, transcript, usedSec, value, onChange }:
                     {f.next}
                   </button>
                 ) : (
-                  <button type="button" className="btn btn-small btn-primary" disabled={loading !== null || remaining === 0} onClick={() => void grade()}>
+                  <button type="button" className="btn btn-small btn-primary" disabled={loading !== null || (!status?.own && remaining === 0)} onClick={() => void grade()}>
                     {f.grade}
                   </button>
                 )}
-                {index === items.length - 1 && <span className="sheet-note">{t.mock.aiRemaining(remaining, status!.dailyLimit)}</span>}
+                {index === items.length - 1 && <span className="sheet-note">{status!.own ? t.ai.ownKeyNote(status!.own) : t.mock.aiRemaining(remaining, status!.dailyLimit)}</span>}
               </div>
             </div>
           )}
@@ -187,10 +187,10 @@ export function FollowUpPanel({ problem, transcript, usedSec, value, onChange }:
           )}
           {graded && (
             <div className="btn-row">
-              <button type="button" className="btn btn-small" disabled={loading !== null || tooShort || remaining === 0} onClick={() => void ask()}>
+              <button type="button" className="btn btn-small" disabled={loading !== null || tooShort || (!status?.own && remaining === 0)} onClick={() => void ask()}>
                 {f.askAgain}
               </button>
-              <span className="sheet-note">{t.mock.aiRemaining(remaining, status!.dailyLimit)}</span>
+              <span className="sheet-note">{status!.own ? t.ai.ownKeyNote(status!.own) : t.mock.aiRemaining(remaining, status!.dailyLimit)}</span>
             </div>
           )}
         </>
