@@ -167,7 +167,7 @@ const zhTW = {
 
   hints: {
     title: '提示',
-    closedNote: '卡住再打開，提示會一層一層給',
+    closedNote: '卡住再打開，提示會一層一層給；打開任何一層都算用了提示',
     openedNote: (used: number, total: number) => `已打開 ${used} / ${total} 層`,
     levelTitle: (index: number, title: string) => `提示 ${index}：${title}`,
     directionTitle: '往哪個方向想',
@@ -176,7 +176,9 @@ const zhTW = {
     direction: (pattern: string) => `這題可以用<b>${pattern}</b>。這個模式常見的線索：`,
     insightTitle: '關鍵觀察',
     yourNote: (idea: string) => `你之前的筆記：${idea}`,
-    noBuiltinHint: '這題是你新增的，沒有內建的關鍵提示。可以直接看下一層的模板。',
+    noBuiltinHint: '這題是你新增的，沒有內建的關鍵提示。後面還有邊界情況和模板。',
+    edgeTitle: '要檢查的邊界情況',
+    noBuiltinEdge: '這題是你新增的，沒有內建的邊界情況。想想看：空的、只有一個、全部一樣、有負數、有重複、很大的輸入。',
     templateTitle: '套用模板',
     templateIntro: (pattern: string, custom: boolean) =>
       `${pattern}的模板${custom ? '（你的版本）' : ''}，挑跟這題相關的部分改寫：`,

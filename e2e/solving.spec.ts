@@ -104,12 +104,18 @@ test('points the hints at the step you are stuck on', async ({ page }) => {
 
   // 直接打開這一步需要的那層提示
   await hints.getByRole('button', { name: /Open the hint for this step \(hint 2/ }).click();
-  await expect(hints).toContainText('2 of 3 layers open');
+  await expect(hints).toContainText('2 of 4 layers open');
   await expect(hints).toContainText('Hint 2: Key insight');
   await expect(hints.getByRole('button', { name: /Open the hint for this step/ })).toHaveCount(0);
 
-  // 卡在舉例可以直接開白板
+  // 卡在舉例：直接打開第三層的邊界情況，也可以開白板
   await stuck.getByRole('button', { name: 'Examples' }).click();
+  await hints.getByRole('button', { name: /Open the hint for this step \(hint 3: Edge cases to check\)/ }).click();
+  await expect(hints).toContainText('3 of 4 layers open');
+  const edges = hints.locator('.hint').filter({ hasText: 'Hint 3: Edge cases to check' });
+  await expect(edges.getByRole('listitem').first()).toContainText('The same value used twice must be two different indices');
+  // 模板還沒打開
+  await expect(hints).not.toContainText('Hint 4: Use the template');
   await hints.getByRole('button', { name: 'Trace it on the whiteboard' }).click();
   await expect(page.getByRole('dialog', { name: /Two Sum/ })).toBeVisible();
 });

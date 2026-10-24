@@ -147,7 +147,7 @@ test('thinks a problem through with AI, one question at a time, using my own Ope
   const conversation = hints.getByRole('list', { name: 'Conversation with the AI' });
   await expect(conversation).toContainText('What do you need to find for each number?');
   // 開始時算用了第一層提示
-  await expect(hints).toContainText('1 of 3 layers open');
+  await expect(hints).toContainText('1 of 4 layers open');
 
   await hints.getByLabel('Answer the AI’s question, or say where you’re stuck…').fill('The complement, target minus the number.');
   await hints.getByRole('button', { name: 'Send' }).click();

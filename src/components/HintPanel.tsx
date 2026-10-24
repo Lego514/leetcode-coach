@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { edgeCaseList } from '../data/edgeCases';
 import { hintFor } from '../data/hints';
 import { INTERVIEW_STEPS, STEP_CONTEXT, STEP_HINT_LEVEL, type StepId } from '../data/interview';
 import { getPattern } from '../data/patterns';
@@ -48,6 +49,7 @@ export function HintPanel({
   const patternNote = usePatternNote(problem.pattern);
   const pattern = getPattern(problem.pattern, locale);
   const keyHint = hintFor(problem.id, locale);
+  const edgeCases = edgeCaseList(problem.id, locale);
   const template = patternNote?.template ?? pattern.template;
   const myIdea = note?.idea?.trim();
   const patternLabel = t.hints.patternLabel(pattern.name, pattern.english);
@@ -69,6 +71,20 @@ export function HintPanel({
     {
       title: t.hints.insightTitle,
       body: keyHint ? <p>{keyHint}</p> : myIdea ? <p>{t.hints.yourNote(myIdea)}</p> : <p>{t.hints.noBuiltinHint}</p>,
+    },
+    {
+      // 講解時最常漏的就是邊界情況；比模板透露得少，所以放在模板前面
+      title: t.hints.edgeTitle,
+      body:
+        edgeCases.length > 0 ? (
+          <ul className="bullets">
+            {edgeCases.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>{t.hints.noBuiltinEdge}</p>
+        ),
     },
     {
       title: t.hints.templateTitle,

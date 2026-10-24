@@ -2,8 +2,8 @@ import type { StepNoteKey } from '../../shared/constants';
 import { INTERVIEW_STEPS, STEP_NOTE_FIELDS } from '../data/interview';
 import type { Rating } from './srs';
 
-/** 內建提示的層數：方向、關鍵觀察、模板 */
-export const HINT_LEVELS = 3;
+/** 內建提示的層數：方向、關鍵觀察、邊界情況、模板 */
+export const HINT_LEVELS = 4;
 
 /** 依提示的使用情況建議自評結果，使用者仍然可以改 */
 export function suggestRating(hintsUsed: number, sawSolution: boolean): Rating {

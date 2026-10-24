@@ -175,7 +175,7 @@ const en: Messages = {
 
   hints: {
     title: 'Hints',
-    closedNote: 'Stuck? Hints open one layer at a time',
+    closedNote: 'Stuck? Hints open one layer at a time, and opening any layer counts as using a hint',
     openedNote: (used, total) => `${used} of ${total} layers open`,
     levelTitle: (index, title) => `Hint ${index}: ${title}`,
     directionTitle: 'Which direction to think',
@@ -183,7 +183,9 @@ const en: Messages = {
     direction: (pattern) => `This one is a <b>${pattern}</b> problem. Typical signs of this pattern:`,
     insightTitle: 'Key insight',
     yourNote: (idea) => `Your earlier note: ${idea}`,
-    noBuiltinHint: 'You added this problem, so there is no built-in insight. The next layer shows the template.',
+    noBuiltinHint: 'You added this problem, so there is no built-in insight. The next layers show edge cases and the template.',
+    edgeTitle: 'Edge cases to check',
+    noBuiltinEdge: 'You added this problem, so there are no built-in edge cases. Think about: empty, a single item, all the same, negatives, duplicates, very large input.',
     templateTitle: 'Use the template',
     templateIntro: (pattern, custom) =>
       `The ${pattern} template${custom ? ' (your version)' : ''}. Adapt the parts that fit this problem:`,
