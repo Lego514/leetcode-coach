@@ -330,6 +330,29 @@ kbd,
   color: var(--ink);
 }
 
+/* 側邊欄：圖示在文字左邊，顏色淡一點；目前這頁的圖示用筆的藍色 */
+.nav-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.nav-link .nav-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--ink-3);
+}
+
+.nav-link:hover .nav-icon {
+  color: var(--ink-2);
+}
+
+.nav-link[aria-current='page'] .nav-icon {
+  color: var(--pen);
+}
+
 .nav-link[aria-current='page'] {
   background: var(--pen-soft);
   color: var(--ink);
@@ -2388,10 +2411,24 @@ audio {
 }
 
 .more-link {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
   padding: 14px 20px;
   color: var(--ink);
   text-decoration: none;
+}
+
+.more-link .nav-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--pen);
+}
+
+.more-link-text {
+  min-width: 0;
 }
 
 .more-link:hover {
@@ -2399,7 +2436,7 @@ audio {
   color: var(--ink);
 }
 
-.more-link span {
+.more-link-text span {
   display: block;
   font-size: 14px;
   color: var(--ink-3);
