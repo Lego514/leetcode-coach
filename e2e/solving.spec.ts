@@ -133,12 +133,34 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
 
   await dock.getByRole('button', { name: 'I’m done' }).click();
   const record = page.getByRole('region', { name: 'Record this attempt' });
-  // 關鍵洞察放第一個；卡在哪、花多久收起來
+  // 關鍵洞察放第一個；卡在哪收起來
   await expect(record.getByLabel('Key idea in one line')).toBeFocused();
-  await expect(record.getByLabel('Minutes spent')).toBeHidden();
+  await expect(record.getByRole('button', { name: 'Couldn’t optimize', exact: true })).toBeHidden();
   await record.getByText('More (optional)').click();
-  await expect(record.getByLabel('Minutes spent')).toBeVisible();
+  await expect(record.getByRole('button', { name: 'Couldn’t optimize', exact: true })).toBeVisible();
+
+  // 時間可以調：計時器量到的是起點，按鈕加減、改回計時器的時間，也可以直接打
+  const minutes = record.getByLabel('Minutes spent');
+  await expect(minutes).toHaveValue('1');
+  await expect(record).toContainText('The timer measured 1 minute.');
+  await record.getByRole('button', { name: '5 minutes more' }).click();
+  await record.getByRole('button', { name: '1 minute more' }).click();
+  await expect(minutes).toHaveValue('7');
+  await record.getByRole('button', { name: '1 minute less' }).click();
+  await expect(minutes).toHaveValue('6');
+  await record.getByRole('button', { name: 'Use the timer’s time' }).click();
+  await expect(minutes).toHaveValue('1');
+  await expect(record.getByRole('button', { name: 'Use the timer’s time' })).toHaveCount(0);
+  // 不會少於 1 分鐘
+  await record.getByRole('button', { name: '5 minutes less' }).click();
+  await expect(minutes).toHaveValue('1');
+  await minutes.fill('25');
   // 做完之後步驟變成選填，下方的工具列也收起來
   await expect(page.getByRole('region', { name: 'Solving steps (optional)' })).toBeVisible();
   await expect(dock).toHaveCount(0);
+
+  // 存起來的是調過的時間
+  await record.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.goto('/#/problems/1');
+  await expect(page.getByRole('region', { name: /^History/ })).toContainText('25 min');
 });
