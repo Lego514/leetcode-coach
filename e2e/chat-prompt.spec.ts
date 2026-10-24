@@ -98,7 +98,8 @@ test('copies a behavioral feedback prompt after practicing out loud', { tag: '@d
   await page.getByRole('button', { name: 'Copy prompt: feedback' }).click();
   const prompt = await page.evaluate(() => navigator.clipboard.readText());
   expect(prompt).toContain('Score my answer on five points');
-  expect(prompt).toMatch(/Question: (Tell me|Describe)/);
+  // 練習的題目每次會換，不限定開頭或標點
+  expect(prompt).toMatch(/Question: \S.+/);
   expect(prompt).toContain('I owned the fix');
 
   await page.getByLabel('Paste the reply (optional, saved with this session)').fill('Situation 2, Task 1. Say what you owned.');

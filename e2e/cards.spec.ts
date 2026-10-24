@@ -153,3 +153,16 @@ test('does not repeat cards answered today, and offers everything when a topic r
   await expect(page.getByLabel('Topic')).toHaveValue('all');
   await expect(page.getByText('Card 1 of 5')).toBeVisible();
 });
+
+// 題目卡片只有名稱容易忘記題目在問什麼：附一句摘要（只說要做什麼）和 LeetCode 連結
+test('reminds me what each problem asks on problem cards', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try it with demo data' }).click();
+  await expect(page.getByText('You’re looking at demo data')).toBeVisible();
+  await page.goto('/#/cards');
+  await page.getByLabel('Topic').selectOption({ label: 'Problems I’ve done' });
+  await expect(page.getByText('Card 1 of 5')).toBeVisible();
+  const card = page.locator('.flash-card');
+  await expect(card.locator('.flash-summary')).toHaveText(/\w.{15,}/);
+  await expect(card.getByRole('link', { name: /LeetCode/ })).toHaveAttribute('href', /leetcode\.com\/problems\//);
+});

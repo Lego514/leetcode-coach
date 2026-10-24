@@ -4,7 +4,8 @@ import type { ReportKind } from '../../shared/constants';
 import type { ReportContext } from '../../shared/protocol';
 import { emptyDraft, ReportForm } from '../components/ReportForm';
 import { useToast } from '../components/toast';
-import { Dialog, DifficultyTag } from '../components/ui';
+import { Dialog, DifficultyTag, LeetCodeLink } from '../components/ui';
+import { summaryFor } from '../data/summaries';
 import { EXPLANATIONS_EN } from '../data/explanations';
 import { getPattern, getPatterns, type PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -326,12 +327,17 @@ function Round({ catalog, progress, reviews, attempts, scope, settings, timerBut
           )}
         </div>
         {problem && (
-          <p className="flash-problem">
-            <span>
-              {problem.id}. {problem.title}
-            </span>
-            <DifficultyTag difficulty={problem.difficulty} />
-          </p>
+          <>
+            <p className="flash-problem">
+              <span>
+                {problem.id}. {problem.title}
+              </span>
+              <DifficultyTag difficulty={problem.difficulty} />
+              <LeetCodeLink slug={problem.slug} />
+            </p>
+            {/* 只有題目名稱容易忘記題目在問什麼，附一句摘要（只說要做什麼，不提解法） */}
+            {summaryFor(problem.id, locale) && <p className="flash-summary">{summaryFor(problem.id, locale)}</p>}
+          </>
         )}
         <h2 className="flash-question" id="flash-question" tabIndex={-1} ref={headingRef}>
           {questionOf(card, t, lang)}
@@ -706,6 +712,7 @@ function MissedCard({ card, problems }: { card: DealtCard; problems: ReadonlyMap
       {problem && (
         <p className="flash-missed-subject">
           {problem.id}. {problem.title}
+          {summaryFor(problem.id, locale) && <span className="flash-summary">{summaryFor(problem.id, locale)}</span>}
         </p>
       )}
       {ref.kind === 'signal' && <p className="flash-missed-subject">{signalText(ref.patternId, ref.index, locale)}</p>}
