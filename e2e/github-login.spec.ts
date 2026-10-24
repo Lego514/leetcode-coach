@@ -38,6 +38,12 @@ test('signs up and back in with GitHub', { tag: '@desktop' }, async ({ page }) =
   await page.getByRole('link', { name: 'Continue with GitHub' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Signed in with GitHub.' })).toBeVisible();
   await expect(accountSheet).toContainText(account.email);
+
+  // 設定頁的帳號摘要也看得到有沒有連結 GitHub
+  await page.goto('/#/settings');
+  const summary = page.getByRole('region', { name: 'Account & sync' });
+  await expect(summary).toContainText(account.email);
+  await expect(summary).toContainText(`Connected as @${account.login}`);
 });
 
 test('connects GitHub to a password account, and disconnects it', { tag: '@desktop' }, async ({ page }) => {
@@ -55,6 +61,12 @@ test('connects GitHub to a password account, and disconnects it', { tag: '@deskt
   await expect(page.getByRole('status').filter({ hasText: 'GitHub connected.' })).toBeVisible();
   await expect(accountSheet).toContainText(`@${account.login}`);
 
+  await page.goto('/#/settings');
+  await expect(page.getByRole('region', { name: 'Account & sync' })).toContainText(`Connected as @${account.login}`);
+
+  await page.goto('/#/account');
   await accountSheet.getByRole('button', { name: 'Disconnect GitHub' }).click();
   await expect(accountSheet).toContainText('Not connected');
+  await page.goto('/#/settings');
+  await expect(page.getByRole('region', { name: 'Account & sync' })).toContainText('Not connected');
 });

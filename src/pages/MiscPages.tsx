@@ -66,7 +66,10 @@ function AccountCard() {
       <Link className="sheet more-account" to="/account" aria-label={t.more.accountLink(account.user.email)}>
         <span className="more-account-text">
           <span className="more-account-title">{account.user.email}</span>
-          <span className="more-account-note">{syncStatusText(cloud, t, fmt)}</span>
+          <span className="more-account-note">
+            {syncStatusText(cloud, t, fmt)}
+            {cloud.login?.github && ` · GitHub ${t.account.github.linkedAs(cloud.login.github)}`}
+          </span>
         </span>
         <span className="more-account-go" aria-hidden>
           ›

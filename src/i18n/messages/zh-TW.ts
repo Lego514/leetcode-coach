@@ -357,7 +357,7 @@ const zhTW = {
       continue: '用 GitHub 登入',
       or: '或用 email',
       label: 'GitHub',
-      linkedAs: (login: string) => `@${login}`,
+      linkedAs: (login: string) => `已連結 @${login}`,
       notLinked: '沒有連結',
       connect: '連結 GitHub',
       disconnect: '取消連結 GitHub',

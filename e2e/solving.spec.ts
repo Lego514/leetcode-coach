@@ -161,6 +161,9 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
 
   // 存起來的是調過的時間
   await record.getByRole('button', { name: 'Save', exact: true }).click();
+  // 存好之後練習頁會自己回上一頁；等它離開再去題目頁，不然會被拉回去
+  await expect(page.getByRole('status')).toContainText('Saved. Next review');
+  await expect(page).not.toHaveURL(/#\/practice\//);
   await page.goto('/#/problems/1');
   await expect(page.getByRole('region', { name: /^History/ })).toContainText('25 min');
 });
