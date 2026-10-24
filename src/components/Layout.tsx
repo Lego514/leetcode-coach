@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router';
 import { useI18n, type Messages } from '../i18n';
@@ -10,6 +9,7 @@ import { reviewsDoneOn } from '../lib/stats';
 import { useAttempts, useProgressMap, useSettings, useToday } from '../store/queries';
 import { syncStatusText } from './AccountSection';
 import { LanguageSwitch } from './LanguageSwitch';
+import { NavIcon } from './NavIcon';
 import { WinWatcher } from './Motivation';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -101,25 +101,6 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-const Icons = {
-  today: (
-    <path d="M4 6.5h16M8 3v4M16 3v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm4 9 2 2 4-4" />
-  ),
-  problems: <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />,
-  review: <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" />,
-  // 進度頁有演算法樹，用一株兩片葉子的小芽
-  progress: <path d="M12 21v-9M12 12c0-4.4 3.1-7.5 7.5-7.5 0 4.4-3.1 7.5-7.5 7.5ZM12 15c0-3.6-2.6-6-6-6 0 3.4 2.4 6 6 6Z" />,
-  more: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />,
-};
-
-function TabIcon({ children }: { children: ReactNode }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {children}
-    </svg>
-  );
-}
-
 function SyncFootnote() {
   const { t, fmt } = useI18n();
   const cloud = useCloud();
@@ -181,7 +162,10 @@ export function Layout() {
               {group.map((item) => (
                 <li key={item.to}>
                   <NavLink to={item.to} end={item.end} className="nav-link">
-                    {t.nav[item.key]}
+                    <span className="nav-label">
+                      <NavIcon name={item.key} />
+                      {t.nav[item.key]}
+                    </span>
                     {item.badge === 'due' && <Badge count={due} />}
                   </NavLink>
                 </li>
@@ -207,24 +191,24 @@ export function Layout() {
 
       <nav className="tabbar" aria-label={t.nav.main}>
         <NavLink to="/" end className="tab">
-          <TabIcon>{Icons.today}</TabIcon>
+          <NavIcon name="today" />
           {t.nav.today}
         </NavLink>
         <NavLink to="/review" className="tab">
-          <TabIcon>{Icons.review}</TabIcon>
+          <NavIcon name="review" />
           {t.nav.review}
           <Badge count={due} />
         </NavLink>
         <NavLink to="/progress" className="tab">
-          <TabIcon>{Icons.progress}</TabIcon>
+          <NavIcon name="progress" />
           {t.nav.progress}
         </NavLink>
         <NavLink to="/problems" className="tab">
-          <TabIcon>{Icons.problems}</TabIcon>
+          <NavIcon name="problems" />
           {t.nav.problems}
         </NavLink>
         <NavLink to="/more" className="tab">
-          <TabIcon>{Icons.more}</TabIcon>
+          <NavIcon name="more" />
           {t.nav.more}
         </NavLink>
       </nav>

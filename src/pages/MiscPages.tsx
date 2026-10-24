@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
 import { syncStatusText } from '../components/AccountSection';
 import { LanguageSwitch } from '../components/LanguageSwitch';
+import { NavIcon } from '../components/NavIcon';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { PageHead } from '../components/ui';
 import { useI18n } from '../i18n';
@@ -39,8 +40,11 @@ export function MorePage() {
             {MORE_LINKS.map((l) => (
               <li key={l.to}>
                 <Link className="more-link" to={l.to}>
-                  {t.nav[l.key]}
-                  <span>{t.more[l.key]}</span>
+                  <NavIcon name={l.key} />
+                  <span className="more-link-text">
+                    {t.nav[l.key]}
+                    <span>{t.more[l.key]}</span>
+                  </span>
                 </Link>
               </li>
             ))}

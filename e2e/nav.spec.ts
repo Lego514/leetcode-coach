@@ -11,6 +11,8 @@ test('groups the sidebar by how often each page is used @desktop', async ({ page
   expect(await names(1)).toEqual(['Mock interview', 'Behavioral', 'Interview sprint']);
   expect(await names(2)).toEqual(['Problems', 'Patterns', 'Phrases', 'Whiteboard']);
   expect(await names(3)).toEqual(['Settings', 'Report a problem']);
+  // 每一項都有小圖示
+  await expect(nav.locator('.nav-list .nav-link .nav-icon')).toHaveCount(13);
 });
 
 test.describe('on a phone', () => {
@@ -27,6 +29,7 @@ test.describe('on a phone', () => {
     await tabs.nth(4).click();
     const more = page.getByRole('navigation', { name: 'More pages' });
     await expect(more.getByRole('link')).toHaveCount(9);
+    await expect(more.locator('.nav-icon')).toHaveCount(9);
     await expect(more.getByRole('link').first()).toContainText('Flashcards');
     await expect(more.getByRole('link', { name: /^Mock interview/ })).toBeVisible();
     await expect(more.getByRole('link', { name: /^Progress/ })).toHaveCount(0);
