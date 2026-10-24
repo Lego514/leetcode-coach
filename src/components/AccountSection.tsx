@@ -68,21 +68,10 @@ export function AccountSummary() {
   const cloud = useCloud();
   const { account } = cloud;
   const signedIn = account.kind === 'signed-in';
-  let summary: string;
-  switch (account.kind) {
-    case 'loading':
-      summary = t.account.checking;
-      break;
-    case 'unavailable':
-      summary = t.account.unavailable;
-      break;
-    case 'signed-out':
-      summary = t.account.signedOutSummary;
-      break;
-    case 'signed-in':
-      summary = `${account.user.email} · ${syncStatusText(cloud, t, fmt)}`;
-      break;
-  }
+  const summary =
+    account.kind === 'loading' ? t.account.checking : account.kind === 'unavailable' ? t.account.unavailable : t.account.signedOutSummary;
+  // 伺服器能用 GitHub 登入、或已經連結過時，才顯示 GitHub 這一項
+  const showGithub = cloud.login && (cloud.providers.github || cloud.login.github);
   return (
     <Sheet
       title={t.account.title}
@@ -95,7 +84,25 @@ export function AccountSummary() {
         )
       }
     >
-      <p className="sheet-empty">{summary}</p>
+      {account.kind === 'signed-in' ? (
+        <dl className="facts sheet-body">
+          <dt>{t.account.accountLabel}</dt>
+          <dd>{account.user.email}</dd>
+          <dt>{t.account.syncLabel}</dt>
+          <dd className={cloud.phase === 'error' ? 'overdue' : undefined}>{syncStatusText(cloud, t, fmt)}</dd>
+          {showGithub && (
+            <>
+              <dt>{t.account.github.label}</dt>
+              <dd className="github-status" data-linked={cloud.login?.github ? true : undefined}>
+                {GITHUB_ICON}
+                {cloud.login?.github ? t.account.github.linkedAs(cloud.login.github) : t.account.github.notLinked}
+              </dd>
+            </>
+          )}
+        </dl>
+      ) : (
+        <p className="sheet-empty">{summary}</p>
+      )}
     </Sheet>
   );
 }
