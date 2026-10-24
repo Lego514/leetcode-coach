@@ -115,6 +115,47 @@ export function RecordForm({
       />
     </label>
   );
+  // 練習頁：計時器量到的時間可以調，例如中途離開座位、忘了按暫停
+  const adjust = (delta: number) => setMinutes(String(Math.min(600, Math.max(1, (Number(minutes) || initialMinutes || 1) + delta))));
+  const timeField = (
+    <div className="field">
+      <label className="field-label" htmlFor={`${problem.id}-minutes`}>
+        {t.record.minutes}
+      </label>
+      <div className="time-adjust">
+        <button type="button" className="btn btn-small" aria-label={t.record.minusMinutes(5)} onClick={() => adjust(-5)}>
+          −5
+        </button>
+        <button type="button" className="btn btn-small" aria-label={t.record.minusMinutes(1)} onClick={() => adjust(-1)}>
+          −1
+        </button>
+        <input
+          id={`${problem.id}-minutes`}
+          className="input time-adjust-input"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={600}
+          value={minutes}
+          onChange={(e) => setMinutes(e.target.value)}
+        />
+        <button type="button" className="btn btn-small" aria-label={t.record.plusMinutes(1)} onClick={() => adjust(1)}>
+          +1
+        </button>
+        <button type="button" className="btn btn-small" aria-label={t.record.plusMinutes(5)} onClick={() => adjust(5)}>
+          +5
+        </button>
+      </div>
+      <span className="field-hint">
+        {initialMinutes ? t.record.timerMeasured(initialMinutes) : t.record.timeHintNoTimer}{' '}
+        {initialMinutes !== undefined && Number(minutes) !== initialMinutes && (
+          <button type="button" className="link-button" onClick={() => setMinutes(String(initialMinutes))}>
+            {t.record.resetTime}
+          </button>
+        )}
+      </span>
+    </div>
+  );
   const ideaField = (first: boolean) => (
     <label className={first ? 'field' : 'field span-2'}>
       <span className="field-label">{t.record.idea}</span>
@@ -132,6 +173,7 @@ export function RecordForm({
   return (
     <form onSubmit={submit} className="stack" style={{ gap: 16 }}>
       {askIdea && insightFirst && ideaField(true)}
+      {insightFirst && timeField}
       <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
         <legend className="field-label" style={{ marginBottom: 8 }}>
           {t.record.question}
@@ -160,7 +202,6 @@ export function RecordForm({
           <summary>{t.record.more}</summary>
           <div className="stack" style={{ gap: 16, marginTop: 12 }}>
             <StuckPicker value={stuck} onChange={setStuck} />
-            {minutesField}
           </div>
         </details>
       ) : (

@@ -4617,3 +4617,17 @@ a.more-account:hover {
   display: grid;
   gap: 8px;
 }
+
+/* 記錄表單：調整寫題的時間 */
+.time-adjust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-adjust-input {
+  width: 5.5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
