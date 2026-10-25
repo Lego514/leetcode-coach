@@ -11,6 +11,7 @@ import { useAttempts, useProgressMap, useSettings, useToday } from '../store/que
 import { syncStatusText } from './AccountSection';
 import { LanguageSwitch } from './LanguageSwitch';
 import { NavIcon } from './NavIcon';
+import { CompanionWatcher } from './Companion';
 import { WinWatcher } from './Motivation';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -194,6 +195,7 @@ export function Layout() {
         <DemoBanner />
         <Outlet />
         <WinWatcher />
+        <CompanionWatcher />
       </main>
 
       <nav className="tabbar" aria-label={t.nav.main}>

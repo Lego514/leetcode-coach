@@ -1086,6 +1086,35 @@ const zhTW = {
     sourceColumn: '來源',
   },
 
+  /** 陪刷題的卡皮巴拉（components/Companion.tsx） */
+  companion: {
+    title: '卡皮巴拉',
+    note: '每天好好練習（做題目、複習、模擬面試、講解練習），牠就會長大；達成目標會收集到頭上的道具，點一下就戴上。',
+    stages: { baby: '卡皮巴拉寶寶', young: '小卡皮巴拉', grown: '長大的卡皮巴拉' },
+    days: (n: number) => `一起練習了 ${n} 天`,
+    nextStage: (n: number, name: string) => `，再練 ${n} 天就變成${name}`,
+    moods: { sleepy: '今天還沒練習，牠在打瞌睡。', happy: '今天練習了，牠很開心！' },
+    collected: (n: number, total: number) => `頭上的收藏 ${n} / ${total}`,
+    wearing: '戴著',
+    takeOff: '什麼都不戴',
+    items: { yuzu: '柚子', sprout: '小芽', acorn: '橡實', beanie: '毛帽', fruit: '果實', bird: '小鳥', flower: '花', headphones: '耳機', gradcap: '畢業帽', crown: '皇冠' },
+    goals: {
+      yuzu: '練習一天',
+      sprout: '自己解出一題',
+      acorn: '連續 3 天',
+      beanie: '連續 7 天',
+      fruit: '征服一題',
+      bird: '微複習做滿 100 張',
+      flower: '一個題型做 5 題',
+      headphones: '講解練習 10 次',
+      gradcap: '做過 60 題',
+      crown: '做過 150 題',
+    },
+    progress: (have: number, goal: number) => `${have} / ${goal}`,
+    unlocked: (names: string, n: number) => `收集到${n > 1 ? ` ${n} 個` : ''}新的頭飾：${names}！在進度頁的卡皮巴拉那裡可以換著戴。`,
+    and: '和',
+  },
+
   /** 進度頁的講解能力（components/ExplainProgress.tsx） */
   explainProgress: {
     title: '講解能力',

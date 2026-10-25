@@ -24,6 +24,7 @@ import type { AttemptRecord, MetaRecord, ProgressRecord } from '../store/db';
 import { loadAttemptsFor, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 import { nextStage, TREE_STAGES, treeStage } from '../lib/tree';
 import { TreeSvg, useTree, type TreeProps } from './AlgorithmTree';
+import { useCompanion } from './Companion';
 import { ArtIcon, LEVEL_ART } from './TreeArt';
 import { useToast } from './toast';
 import { Sheet } from './ui';
@@ -58,6 +59,7 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
   const state = useMemo(() => streakState(days, today), [days, today]);
   const practiced = useMemo(() => new Set(days), [days]);
   const model = useTree(tree);
+  const companion = useCompanion();
   const milestone = useMemo(() => nextMilestone(tree.problems, tree.progress, today), [tree.problems, tree.progress, today]);
   const frozen = new Set(state.frozen);
   const weekStart = startOfWeek(today);
@@ -92,7 +94,7 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
         {tree.problems.length > 0 && (
           <div className="today-card-tree">
             <Link to="/progress#algorithm-tree" aria-label={t.tree.seeFull}>
-              <TreeSvg {...model} labels={false} ariaLabel={t.tree.label(ready, tree.problems.length)} />
+              <TreeSvg {...model} labels={false} ariaLabel={t.tree.label(ready, tree.problems.length)} companion={companion ?? undefined} />
             </Link>
             <p className="today-card-caption">
               <strong>{t.tree.stages[model.stage]}</strong>

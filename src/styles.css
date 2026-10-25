@@ -65,6 +65,15 @@
   --flower-dark: #e27ba0;
   --pen-lit: #4466c2;
   --water: #8fb3e8;
+  --capy-fur: #cf9b63;
+  --capy-shade: #b5804b;
+  --capy-light: #e6bb87;
+  --capy-snout: #a8703f;
+  --capy-ear: #c48d57;
+  --capy-ear-in: #8a5a30;
+  --capy-foot-back: #b07a46;
+  --capy-line: #4a2e1b;
+  --capy-blush: #f29bb2;
   color-scheme: light;
 }
 
@@ -122,6 +131,15 @@
     --flower-dark: #e889ab;
     --pen-lit: #b7cbff;
     --water: #6f97e0;
+    --capy-fur: #cf9b63;
+    --capy-shade: #b5804b;
+    --capy-light: #e6bb87;
+    --capy-snout: #a8703f;
+    --capy-ear: #c48d57;
+    --capy-ear-in: #8a5a30;
+    --capy-foot-back: #b07a46;
+    --capy-line: #4a2e1b;
+    --capy-blush: #f29bb2;
     color-scheme: dark;
   }
 }
@@ -179,6 +197,15 @@
   --flower-dark: #e889ab;
   --pen-lit: #b7cbff;
   --water: #6f97e0;
+  --capy-fur: #cf9b63;
+  --capy-shade: #b5804b;
+  --capy-light: #e6bb87;
+  --capy-snout: #a8703f;
+  --capy-ear: #c48d57;
+  --capy-ear-in: #8a5a30;
+  --capy-foot-back: #b07a46;
+  --capy-line: #4a2e1b;
+  --capy-blush: #f29bb2;
   color-scheme: dark;
 }
 
@@ -4628,6 +4655,177 @@ a.more-account:hover {
   background: var(--pen-soft);
   color: var(--ink);
   font-weight: 600;
+}
+
+/* ---------- 陪刷題的卡皮巴拉（components/Capybara.tsx、Companion.tsx） ---------- */
+.capybara {
+  display: block;
+  width: 120px;
+  height: 134px;
+}
+
+.capy-fur {
+  fill: var(--capy-fur);
+}
+
+.capy-shade {
+  fill: var(--capy-shade);
+}
+
+.capy-light {
+  fill: var(--capy-light);
+}
+
+.capy-snout {
+  fill: var(--capy-snout);
+}
+
+.capy-ear,
+.capy-foot {
+  fill: var(--capy-ear);
+}
+
+.capy-ear-in {
+  fill: var(--capy-ear-in);
+}
+
+.capy-foot-back {
+  fill: var(--capy-foot-back);
+}
+
+.capy-blush {
+  fill: var(--capy-blush);
+  opacity: 0.75;
+}
+
+/* 粗的深色外框：卡皮巴拉和頭上的道具都有 */
+.capy-ol {
+  stroke: var(--capy-line);
+  stroke-width: 3.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.capy-ln {
+  fill: none;
+  stroke: var(--capy-line);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 打瞌睡的 z */
+.capy-z {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.companion {
+  display: grid;
+  gap: 14px;
+}
+
+.companion-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+.capybara-big {
+  width: 150px;
+  height: 168px;
+}
+
+.companion-status {
+  display: grid;
+  gap: 4px;
+}
+
+.companion-status p {
+  margin: 0;
+}
+
+.companion-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.companion-mood {
+  color: var(--ink-2);
+}
+
+/* 頭上的收藏：收集到的可以點一下戴上，還沒收集到的是藍圖的剪影 */
+.head-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.head-items li {
+  display: grid;
+}
+
+.head-item-slot {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  padding: 10px 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+}
+
+button.head-item-slot {
+  cursor: pointer;
+}
+
+button.head-item-slot:hover {
+  border-color: var(--pen);
+}
+
+.head-item-slot[aria-pressed='true'] {
+  border-color: var(--pen);
+  box-shadow: 0 0 0 1px var(--pen);
+  background: var(--pen-soft);
+}
+
+.head-item-slot[data-locked] {
+  border-style: dashed;
+  border-color: var(--rule-strong);
+  background: var(--sheet-2);
+  color: var(--ink-3);
+}
+
+.head-item-slot span {
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.head-item-slot .tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--pen);
+  color: var(--on-pen);
+}
+
+.head-item {
+  width: 72px;
+  height: 50px;
+}
+
+.head-item-progress {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- 空白和做完的時候的小插畫（components/SpotArt.tsx） ---------- */

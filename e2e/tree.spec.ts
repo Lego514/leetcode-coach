@@ -104,9 +104,11 @@ test('starts as a seed and sprouts after the first problem', async ({ page }) =>
   await page.goto('/#/practice/1');
   await page.getByRole('group', { name: 'While solving' }).getByRole('button', { name: 'I’m done' }).click();
   await page.getByRole('region', { name: 'Record this attempt' }).getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.locator('.toast-win')).toContainText('Your algorithm tree sprouted!');
+  // 同時也會收集到卡皮巴拉的頭飾，所以挑樹發芽的那一則
+  const sprouted = page.locator('.toast-win').filter({ hasText: 'Your algorithm tree sprouted!' });
+  await expect(sprouted).toBeVisible();
   // 慶祝訊息旁邊畫一根發芽的小莖
-  await expect(page.locator('.toast-win .win-icon .algo-stem-sprout')).toBeVisible();
+  await expect(sprouted.locator('.win-icon .algo-stem-sprout')).toBeVisible();
 
   await page.goto('/');
   await expect(card).toContainText('Sprouted');
