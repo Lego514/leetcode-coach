@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import type { CompanionStage, HeadItem } from '../lib/companion';
+import type { CompanionPose, CompanionStage, HeadItem } from '../lib/companion';
 
 // 陪刷題的卡皮巴拉（正面）：頭和身體是同一塊、沒有脖子，粗的深色外框；臉頰和身體兩邊有幾撮毛。
 // 鼻子是臉中間那一大塊（裡面有兩個鼻孔和微笑），兩隻小手抱在肚子前面。
@@ -150,10 +150,107 @@ const ITEMS: Record<HeadItem, () => ReactNode> = {
   ),
 };
 
+/**
+ * 今天卡上的樣子（座標跟身體一樣，跟著階段一起縮放）：
+ * 躺在床上、用電腦、喝珍奶、泡溫泉。back 畫在身體後面，front 畫在前面
+ */
+const POSE_ART: Record<CompanionPose, { back?: () => ReactNode; front: (item: HeadItem | null) => ReactNode }> = {
+  bed: {
+    // 枕頭墊在頭後面，四個角翹起來
+    back: () => (
+      <>
+        <path className="capy-ol" d="M8 6 Q60 14 112 6 Q105 40 112 74 Q60 67 8 74 Q15 40 8 6Z" fill="#fbf6ee" />
+        <path className="capy-ln" d="M15 12 Q19 15 20 21 M105 12 Q101 15 100 21" stroke="#d9cfc0" strokeWidth={2} />
+      </>
+    ),
+    front: () => (
+      <>
+        {/* 被子，上緣反摺一段白色的被單 */}
+        <path className="capy-ol" d="M2 84 C30 78 90 78 118 84 V112 Q118 117 113 117 H7 Q2 117 2 112Z" fill="#c9d6f5" />
+        <path className="capy-ol" d="M2 84 C30 78 90 78 118 84 V93 C90 87 30 87 2 93Z" fill="#fbf6ee" />
+        {[22, 44, 66, 88].map((x) => (
+          <circle key={x} cx={x + 6} cy={105} r={2.2} fill="#9fb2dc" />
+        ))}
+        {/* 兩隻手抓著被子 */}
+        <ellipse className="capy-fur capy-ol" strokeWidth={2.4} cx={44} cy={83} rx={6} ry={4.6} />
+        <ellipse className="capy-fur capy-ol" strokeWidth={2.4} cx={76} cy={83} rx={6} ry={4.6} />
+      </>
+    ),
+  },
+  laptop: {
+    front: () => (
+      <>
+        {/* 筆電的背面朝外，上面是小芽的 logo */}
+        <rect className="capy-ol" x={24} y={76} width={72} height={38} rx={5} fill="#2346a0" />
+        <rect x={28} y={80} width={8} height={30} rx={3} fill="#4466c2" />
+        <path className="capy-ln" d="M60 101 Q60.6 97 60 93" stroke="#a6d156" strokeWidth={2} />
+        <path d="M60 95 Q55 89 50 92 Q54 96 60 95Z" fill="#63c46a" />
+        <path d="M60 93 Q65 86 70 89 Q66 94 60 93Z" fill="#a6d156" />
+        <rect className="capy-ol" x={18} y={112} width={84} height={5} rx={2.5} fill="#c7cfdc" />
+        {/* 兩隻手放在螢幕上緣 */}
+        <ellipse className="capy-fur capy-ol" strokeWidth={2.4} cx={34} cy={76} rx={6} ry={4.6} />
+        <ellipse className="capy-fur capy-ol" strokeWidth={2.4} cx={86} cy={76} rx={6} ry={4.6} />
+      </>
+    ),
+  },
+  boba: {
+    front: () => (
+      <>
+        {/* 吸管一路通到嘴巴 */}
+        <path className="capy-ln" d="M63 87 L61 79" stroke="#f29bb2" strokeWidth={4} />
+        <path className="capy-ol" d="M48 89 H72 L69 113 Q60 116 51 113Z" fill="#d9b48a" />
+        <path d="M49 94 H71 L70.4 99 H49.6Z" fill="#e8cfae" />
+        {[
+          [54, 108],
+          [59, 110],
+          [64, 108.5],
+          [56.5, 104],
+          [62, 104.5],
+          [67, 104],
+        ].map(([x, y]) => (
+          <circle key={`${x} ${y}`} cx={x} cy={y} r={2.2} fill="#3d2414" />
+        ))}
+        <rect className="capy-ol" strokeWidth={2.4} x={46} y={85} width={28} height={6} rx={3} fill="#f7f2ea" />
+        {/* 兩隻手捧著杯子 */}
+        <ellipse className="capy-fur capy-ol" strokeWidth={2.4} cx={46} cy={102} rx={6} ry={4.8} />
+        <ellipse className="capy-fur capy-ol" strokeWidth={2.4} cx={74} cy={102} rx={6} ry={4.8} />
+      </>
+    ),
+  },
+  onsen: {
+    // 頭兩邊冒著熱氣
+    back: () => (
+      <path
+        className="capy-ln"
+        d="M12 44 q-5 -6 0 -12 q5 -6 0 -12 M108 44 q5 -6 0 -12 q-5 -6 0 -12"
+        stroke="#c9d1dc"
+        strokeWidth={3}
+      />
+    ),
+    front: (item) => (
+      <>
+        <ellipse cx={60} cy={94} rx={57} ry={9} fill="#9ecbe8" />
+        <path className="capy-ln" d="M20 92 Q30 90 40 92 M78 95 Q88 93 98 95" stroke="#d6ecf9" strokeWidth={2.4} />
+        {/* 水上漂著一顆柚子 */}
+        <circle className="capy-ol" strokeWidth={2.4} cx={94} cy={92} r={6} fill="#f5b02e" />
+        <path className="capy-ol" strokeWidth={2} d="M94 86 Q97 81 101 83 Q98 87 94 86Z" fill="#3d9a4f" />
+        {/* 木桶 */}
+        <path className="capy-ol" d="M3 94 Q60 106 117 94 V113 Q60 126 3 113Z" fill="#c48d57" />
+        <path className="capy-ln" d="M22 99 V117 M41 102 V120 M60 103 V121 M79 102 V120 M98 99 V117" stroke="#8a5a30" strokeWidth={2} />
+        <path className="capy-ln" d="M4 104 Q60 117 116 104" stroke="#7a5434" strokeWidth={3} />
+        {/* 沒戴東西的時候頭上放一條小毛巾 */}
+        {!item && <rect className="capy-ol" strokeWidth={2.4} x={45} y={20} width={30} height={9} rx={3} fill="#f7f2ea" />}
+      </>
+    ),
+  },
+};
+
 interface CapybaraProps {
   stage: CompanionStage;
   mood: CompanionMood;
   item: HeadItem | null;
+  /** 今天卡上的樣子；沒給就是坐著 */
+  pose?: CompanionPose;
   className?: string;
   /** 放在演算法樹裡時用樹的地面，不畫自己的 */
   ground?: boolean;
@@ -165,17 +262,28 @@ interface CapybaraProps {
 }
 
 /** 整隻卡皮巴拉；裝飾用，說明文字放在旁邊 */
-export function Capybara({ stage, mood, item, className = 'capybara', ground = true, ...place }: CapybaraProps) {
+export function Capybara({ stage, mood, item, pose, className = 'capybara', ground = true, ...place }: CapybaraProps) {
   // 同一頁可能有好幾隻（今天卡、進度頁），clipPath 的 id 不能重複
   const clip = useId().replace(/[^\w-]/g, '');
   const scale = SCALE[stage];
   // 縮小之後頭頂的高度：道具放在那裡，打瞌睡的 z 放在頭頂右邊
   const top = FEET - (FEET - 28) * scale;
   return (
-    <svg className={className} viewBox="0 -14 120 134" aria-hidden data-stage={stage} data-mood={mood} data-item={item ?? undefined} {...place}>
+    <svg
+      className={className}
+      viewBox="0 -14 120 134"
+      aria-hidden
+      data-stage={stage}
+      data-mood={mood}
+      data-item={item ?? undefined}
+      data-pose={pose}
+      {...place}
+    >
       {ground && <ellipse className="algo-ground" cx={60} cy={114} rx={40 + 8 * scale} ry={5} />}
       <g transform={scale === 1 ? undefined : `translate(60 ${FEET}) scale(${scale}) translate(-60 -${FEET})`}>
+        {pose && POSE_ART[pose].back?.()}
         <Body mood={mood} clip={`capy-${clip}`} />
+        {pose && POSE_ART[pose].front(item)}
       </g>
       {item && <g transform={`translate(${item === 'bird' ? 64 : 60} ${top})`}>{ITEMS[item]()}</g>}
       {mood === 'sleepy' && <path className="capy-z" d={`M98 ${top - 12} H106 L98 ${top - 4} H106`} />}

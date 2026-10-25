@@ -1,14 +1,20 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router';
+import { getPatterns } from '../data/patterns';
+import { PYTHON_TIPS } from '../data/tips';
 import { useI18n } from '../i18n';
 import {
   companionFacts,
   companionStage,
+  dailyPick,
   HEAD_ITEMS,
   itemProgress,
   newItems,
   nextCompanionStage,
+  nextItem,
   unlockedItems,
   wornItem,
+  type CompanionPose,
 } from '../lib/companion';
 import { readSeenItems, setWearing, useWearing, writeSeenItems } from '../store/companion';
 import { useAttempts, useCardReviews, useCatalog, useMocks, useRehearsals, useToday } from '../store/queries';
@@ -68,6 +74,58 @@ export function CompanionWatcher() {
   }, [unlocked, toast, t]);
 
   return null;
+}
+
+/**
+ * 今天卡右上角（寬的畫面）：卡皮巴拉今天的樣子，旁邊的對話框有一句鼓勵的話、一則小知識
+ * （每天換一則，也可以按「再一則」），和最快能收集到的下一個頭飾
+ */
+export function CompanionPet({
+  companion,
+  pose,
+  left,
+}: {
+  companion: NonNullable<ReturnType<typeof useCompanion>>;
+  pose: CompanionPose;
+  /** 今天的目標還差幾題（新題加複習） */
+  left: number;
+}) {
+  const { t, locale } = useI18n();
+  const m = t.companion;
+  const today = useToday();
+  const [more, setMore] = useState(0);
+  // 小知識：微複習的 Python 小知識，加上每個題型的一句話；標籤寫出是關於什麼的
+  const tips = useMemo(
+    () => [
+      ...PYTHON_TIPS.map((tip) => ({ topic: 'Python', text: tip.why[locale === 'en' ? 'en' : 'zh'] })),
+      ...getPatterns(locale).map((p) => ({ topic: p.name, text: p.summary })),
+    ],
+    [locale],
+  );
+  const tip = tips[dailyPick(today, tips.length, more)];
+  const say = pose === 'laptop' ? m.say.laptop(left) : m.say[pose][dailyPick(today, m.say[pose].length)];
+  const next = nextItem(companion.facts);
+
+  return (
+    <div className="today-card-pet">
+      <div className="pet-bubble">
+        <p>{say}</p>
+        <p className="pet-tip">
+          <strong>{m.tipLabel(tip.topic)}</strong>
+          {tip.text}
+        </p>
+        <p className="pet-bubble-foot">
+          <button type="button" className="link-button" onClick={() => setMore((n) => n + 1)}>
+            {m.nextTip}
+          </button>
+          <span>{next ? m.nextItem(m.items[next.item], m.goals[next.item], next.have, next.goal) : m.allCollected}</span>
+        </p>
+      </div>
+      <Link to="/progress#companion" aria-label={m.seeCollection}>
+        <Capybara stage={companion.stage} mood={companion.mood} item={companion.item} pose={pose} className="capybara pet-capybara" />
+      </Link>
+    </div>
+  );
 }
 
 /** 進度頁：卡皮巴拉現在的樣子，和頭上的收藏（收集到的點一下戴上） */
