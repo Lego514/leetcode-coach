@@ -13,6 +13,7 @@ import { NEW_PROBLEM_MODES } from '../lib/daily';
 import { isDay, toDay } from '../lib/dates';
 import { RETENTIONS } from '../lib/srs';
 import { LANGUAGES } from '../lib/languages';
+import { LOGO_URLS, LOGOS, useLogo } from '../lib/logo';
 import { useTheme, type ThemeChoice } from '../lib/theme';
 import { updateSettings } from '../store/actions';
 import {
@@ -37,6 +38,7 @@ export function SettingsPage() {
   const settings = useSettings();
   const day = useToday();
   const [theme, setTheme] = useTheme();
+  const [logo, setLogo] = useLogo();
   // 目前題單裡要 LeetCode Premium 的題數
   const premiumInList = (STUDY_LISTS.find((l) => l.id === settings.activeList)?.problemIds ?? []).filter((id) => PREMIUM_IDS.has(id)).length;
 
@@ -257,6 +259,20 @@ export function SettingsPage() {
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="field">
+              <span className="field-label" id="logo-label">
+                {t.settings.logo}
+              </span>
+              <div className="logo-choices" role="group" aria-labelledby="logo-label">
+                {LOGOS.map((id) => (
+                  <button key={id} type="button" className="logo-choice" aria-pressed={logo === id} onClick={() => setLogo(id)}>
+                    <img src={LOGO_URLS[id]} alt="" />
+                    {t.settings.logos[id]}
+                  </button>
+                ))}
+              </div>
+              <span className="field-hint">{t.settings.logoHint}</span>
             </div>
           </div>
         </Sheet>
