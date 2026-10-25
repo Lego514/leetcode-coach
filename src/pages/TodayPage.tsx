@@ -260,7 +260,7 @@ export function TodayPage() {
           </Sheet>
         )}
 
-        {loaded && attempts && (!firstRun || activeDays.length > 0) && (
+        {loaded && attempts && (
           <TodayCard
             days={activeDays}
             tasks={{

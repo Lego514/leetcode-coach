@@ -1,7 +1,25 @@
 import { describe, expect, it } from 'vitest';
+import { PATTERN_ORDER } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { schedule, type Rating } from './srs';
-import { grownBetween, pointOn, shadeOf, TREE_VIEW, treeLayout, treeState, type TreeNode } from './tree';
+import {
+  branchOutline,
+  canopyBlobs,
+  GROUND,
+  grownBetween,
+  nextStage,
+  pointOn,
+  shadeOf,
+  sproutHeight,
+  stageView,
+  taperedPath,
+  TREE_VIEW,
+  treeLayout,
+  treeStage,
+  treeState,
+  visibleProblems,
+  type TreeNode,
+} from './tree';
 
 const problem = (id: number, pattern: Problem['pattern']): Problem => ({
   id,
@@ -95,5 +113,124 @@ describe('grownBetween', () => {
       [4, { kind: 'bud' }],
     ]);
     expect([...grownBetween(before, after)]).toEqual([1, 2]);
+  });
+});
+
+describe('growth stages', () => {
+  it('starts as a seed and grows with every problem you do', () => {
+    expect([0, 1, 4, 5, 19, 20, 59, 60, 150].map(treeStage)).toEqual([
+      'seed',
+      'sprout',
+      'sprout',
+      'sapling',
+      'sapling',
+      'young',
+      'young',
+      'grown',
+      'grown',
+    ]);
+    expect(nextStage(0)).toEqual({ stage: 'sprout', needed: 1 });
+    expect(nextStage(3)).toEqual({ stage: 'sapling', needed: 2 });
+    expect(nextStage(59)).toEqual({ stage: 'grown', needed: 1 });
+    expect(nextStage(60)).toBeNull();
+  });
+
+  it('shows only the patterns you started, plus the next one or two, until the tree is grown', () => {
+    const problems = [problem(1, 'arrays'), problem(2, 'two-pointers'), problem(3, 'stack'), problem(4, 'binary-search'), problem(5, 'bits')];
+    const levels = new Map([['arrays', 1]] as const);
+    const patterns = (stage: Parameters<typeof visibleProblems>[2]) => [...new Set(visibleProblems(problems, levels, stage).map((p) => p.pattern))];
+    expect(patterns('seed')).toEqual([]);
+    expect(patterns('sprout')).toEqual([]);
+    expect(patterns('sapling')).toEqual(['arrays', 'two-pointers']);
+    expect(patterns('young')).toEqual(['arrays', 'two-pointers', 'stack']);
+    expect(patterns('grown')).toHaveLength(5);
+  });
+
+  it('frames the tree closely at every stage and keeps every branch in view', () => {
+    const ratio = TREE_VIEW.height / TREE_VIEW.width;
+    expect(stageView('seed', []).width).toBeLessThan(stageView('sprout', []).width);
+    // 發芽的莖每長一片葉子就高一截，畫面也跟著框高一點，上面不留一大片空白
+    expect(sproutHeight(3)).toBeGreaterThan(sproutHeight(1));
+    expect(stageView('sprout', [], false, 3).height).toBeGreaterThan(stageView('sprout', [], false, 1).height);
+    // 莖頂端的新芽（高 11）也要在畫面裡
+    expect(stageView('sprout', [], false, 4).y).toBeLessThan(GROUND - sproutHeight(4) - 11);
+    const few = treeLayout([problem(1, 'arrays'), problem(2, 'two-pointers')]);
+    const all = treeLayout(PATTERN_ORDER.map((pattern, i) => problem(i + 1, pattern)));
+    // 樹枝少，樹幹就短：最上面那根樹枝比完整的樹低很多
+    expect(Math.min(...few.map((b) => b.start.y))).toBeGreaterThan(Math.min(...all.map((b) => b.start.y)) + 200);
+    // 小樹苗框得比較扁，上面不留一大片空白；沒有題型名稱（今天卡）時左右不用留名稱的位置
+    expect(stageView('sapling', few).height / stageView('sapling', few).width).toBeLessThan(ratio);
+    expect(stageView('sapling', few, false).width).toBeLessThan(stageView('sapling', few).width);
+    const half = treeLayout(PATTERN_ORDER.slice(0, 9).map((pattern, i) => problem(i + 1, pattern)));
+    for (const labels of [true, false]) {
+      for (const [stage, branches] of [['sapling', few], ['young', half], ['grown', all]] as const) {
+        const view = stageView(stage, branches, labels);
+        expect(view.height / view.width).toBeGreaterThanOrEqual(0.6 - 1e-9);
+        expect(view.height / view.width).toBeLessThanOrEqual(ratio + 1e-9);
+        for (const b of branches) {
+          expect(b.end.y).toBeGreaterThan(view.y);
+          expect(b.end.x).toBeGreaterThan(view.x);
+          expect(b.end.x).toBeLessThan(view.x + view.width);
+        }
+      }
+    }
+  });
+
+  it('counts every problem you have done toward the stage', () => {
+    const problems = [problem(1, 'arrays'), problem(2, 'arrays'), problem(3, 'stack')];
+    const progress = new Map([
+      [1, stateAfter([['hint', '2026-10-20']])],
+      [2, stateAfter([['solo', '2026-10-20']])],
+    ]);
+    expect(treeState(problems, progress, [], '2026-10-21').started).toBe(2);
+  });
+});
+
+describe('drawing the tree', () => {
+  it('draws a shape that tapers from one width to another along a line', () => {
+    expect(
+      taperedPath(
+        [
+          { x: 0, y: 0 },
+          { x: 10, y: 0 },
+        ],
+        4,
+        2,
+      ),
+    ).toBe('M0 2 L10 1 L10 -1 L0 -2Z');
+  });
+
+  it('makes branches thick where they meet the trunk and thin at the tip', () => {
+    const [branch] = treeLayout([problem(1, 'arrays')]);
+    const corners = branchOutline(branch, 6)
+      .replace(/[MLZ]/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .map(Number);
+    const points = Array.from({ length: corners.length / 2 }, (_, i) => ({ x: corners[2 * i], y: corners[2 * i + 1] }));
+    // 13 個點沿著一邊出去，再沿著另一邊回來：第一個和最後一個點是樹枝根部的兩邊
+    expect(points).toHaveLength(26);
+    const width = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+    expect(width(points[0], points[25])).toBeCloseTo(6, 0);
+    expect(width(points[12], points[13])).toBeCloseTo(1.8, 0);
+  });
+
+  it('puts a canopy only around branches with problems you have done, bigger with more of them', () => {
+    const problems = [problem(1, 'arrays'), problem(2, 'arrays'), problem(3, 'arrays'), problem(4, 'two-pointers'), problem(5, 'stack')];
+    const branches = treeLayout(problems);
+    const leaf: TreeNode = { kind: 'leaf', shade: 'fresh', recall: 1, fruit: false };
+    const nodes = new Map<number, TreeNode>([
+      [1, leaf],
+      [2, leaf],
+      [3, { kind: 'sprout' }],
+      [4, leaf],
+      [5, { kind: 'bud' }],
+    ]);
+    const blobs = canopyBlobs(branches, nodes);
+    // 陣列與雜湊、雙指標各一團（四個圓），堆疊還沒做過，沒有
+    expect(blobs).toHaveLength(8);
+    const [arrays, pointers] = [blobs.slice(0, 4), blobs.slice(4)];
+    expect(Math.max(...arrays.map((c) => c.r))).toBeGreaterThan(Math.max(...pointers.map((c) => c.r)));
+    expect(canopyBlobs(branches, new Map())).toEqual([]);
   });
 });

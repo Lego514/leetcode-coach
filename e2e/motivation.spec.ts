@@ -44,6 +44,8 @@ test('celebrates conquering a problem, and shows readiness, the pattern map, and
   await page.getByRole('button', { name: 'Show my notes' }).click();
   await page.getByRole('button', { name: /^Solved alone/ }).click();
   await expect(page.locator('.toast-win')).toContainText('Conquered! Find Minimum in Rotated Sorted Array: last time “Needed a hint”');
+  // 征服的慶祝訊息旁邊是一顆果實，跟樹上的一樣
+  await expect(page.locator('.toast-win .win-icon .algo-fruit')).toBeVisible();
 
   await page.goto('/#/progress');
   const readiness = page.getByRole('region', { name: 'Interview readiness' });
@@ -53,6 +55,9 @@ test('celebrates conquering a problem, and shows readiness, the pattern map, and
 
   const map = page.getByRole('region', { name: 'Pattern map' });
   await expect(map.getByRole('link', { name: /^Arrays & Hashing: / })).toBeVisible();
+  // 每一格有等級的小圖：做過的題型至少是小芽，還沒開始的是藍圖的一個點
+  await expect(map.getByRole('link', { name: /^Arrays & Hashing: / }).locator('.pattern-tile-art')).toBeVisible();
+  await expect(map.getByRole('link', { name: /^Bit Manipulation: / }).locator('.pattern-tile-art .algo-bud')).toBeVisible();
   await map.getByRole('link', { name: /^Binary Search: / }).click();
   await expect(page).toHaveURL(/#\/patterns\/binary-search/);
 

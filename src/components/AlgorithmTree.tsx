@@ -4,10 +4,25 @@ import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import type { Day } from '../lib/dates';
-import { GROUND, grownBetween, pointOn, TREE_VIEW, treeLayout, treeState, TRUNK_X, type TreeNode, type TreeState } from '../lib/tree';
+import {
+  branchOutline,
+  canopyBlobs,
+  grownBetween,
+  nextStage,
+  pointOn,
+  stageView,
+  treeLayout,
+  treeStage,
+  treeState,
+  TRUNK_X,
+  visibleProblems,
+  type TreeNode,
+  type TreeState,
+} from '../lib/tree';
 import type { AttemptRecord, ProgressRecord } from '../store/db';
 import type { RecapNumbers } from './Motivation';
 import { ShareTreeButton } from './ShareCard';
+import { Flower, Fruit, Ground, LEAF, LeafIcon, Seed, Seedling, Sprout, Trunk, VEIN } from './TreeArt';
 import { DifficultyTag, Sheet } from './ui';
 
 // 演算法樹：今天頁的「今天的目標」卡放小的（components/Motivation.tsx），進度頁放完整的（題型名稱、點葉子看是哪一題、圖例）
@@ -19,13 +34,15 @@ export interface TreeProps {
   today: Day;
 }
 
-const LEAF = 'M0 0 Q9 -6.5 18 0 Q9 6.5 0 0Z';
-const SPROUT = 'M0 0 Q5.5 -4 11 0 Q5.5 4 0 0Z';
-
 export function useTree({ problems, progress, attempts, today }: TreeProps) {
-  const branches = useMemo(() => treeLayout(problems), [problems]);
   const state = useMemo(() => treeState(problems, progress, attempts, today), [problems, progress, attempts, today]);
-  return { branches, state };
+  // 從種子開始長：還小的時候只畫做過的題型，再加上接下來幾根
+  const stage = treeStage(state.started);
+  const visible = useMemo(() => visibleProblems(problems, state.levels, stage), [problems, state.levels, stage]);
+  const branches = useMemo(() => treeLayout(visible), [visible]);
+  // 發芽階段的嫩葉：做過的題目照清單順序
+  const seedlings = useMemo(() => problems.filter((p) => state.nodes.get(p.id)?.kind !== 'bud').slice(0, 4), [problems, state.nodes]);
+  return { branches, state, stage, seedlings };
 }
 
 /** 剛長出來的葉子和小芽，給一個生長動畫；第一次畫不算 */
@@ -42,6 +59,8 @@ function useGrown(state: TreeState): ReadonlySet<number> {
 export function TreeSvg({
   branches,
   state,
+  stage,
+  seedlings,
   labels,
   picked,
   onPick,
@@ -49,9 +68,12 @@ export function TreeSvg({
 }: ReturnType<typeof useTree> & { labels: boolean; picked?: number | null; onPick?: (id: number) => void; ariaLabel: string }) {
   const { locale } = useI18n();
   const grown = useGrown(state);
-  // 樹幹：會的題目越多越粗
+  const view = stageView(stage, branches, labels, seedlings.length);
+  // 樹幹：會的題目越多越粗；長到最高那根做過的題型再高一點，再上面還沒做的題型只畫藍色虛線
   const w = 7 + Math.min(14, state.ready * 0.35);
   const top = Math.min(...branches.map((b) => b.start.y)) - 20;
+  const grownStarts = branches.filter((b) => (state.levels.get(b.pattern) ?? 0) > 0).map((b) => b.start.y);
+  const grownTop = grownStarts.length > 0 ? Math.min(...grownStarts) - 20 : top;
   const pick = onPick
     ? (id: number) => ({
         onClick: () => onPick(id),
@@ -62,80 +84,73 @@ export function TreeSvg({
   return (
     <svg
       className="algo-tree"
-      viewBox={`${TREE_VIEW.x} ${TREE_VIEW.y} ${TREE_VIEW.width} ${TREE_VIEW.height}`}
+      viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`}
       role="img"
       aria-label={ariaLabel}
       data-interactive={onPick ? true : undefined}
+      data-stage={stage}
     >
-      <ellipse className="algo-ground" cx={TRUNK_X} cy={GROUND + 14} rx={190} ry={20} />
-      <path
-        className="algo-trunk"
-        d={`M${TRUNK_X - w} ${GROUND + 6} C${TRUNK_X - w * 0.6} ${GROUND - 120}, ${TRUNK_X - 3} ${top + 80}, ${TRUNK_X - 1.5} ${top} L${TRUNK_X + 1.5} ${top} C${TRUNK_X + 3} ${top + 80}, ${TRUNK_X + w * 0.6} ${GROUND - 120}, ${TRUNK_X + w} ${GROUND + 6} Z`}
-      />
-      {branches.map((b) => {
-        const level = state.levels.get(b.pattern) ?? 0;
-        const d = `M${b.start.x} ${b.start.y} Q${b.control.x} ${b.control.y} ${b.end.x} ${b.end.y}`;
-        return level === 0 ? (
-          <path key={b.pattern} className="algo-ghost" d={d} />
-        ) : (
-          <path key={b.pattern} className="algo-wood" d={d} strokeWidth={2 + level * 1.1} />
-        );
-      })}
-      {branches.map((b) =>
-        b.problems.map((p, k) => {
-          const node = state.nodes.get(p.id) ?? { kind: 'bud' as const };
-          const pos = pointOn(b, 0.22 + (0.74 * (k + 0.5)) / b.problems.length);
-          const flip = k % 2 === 0 ? 1 : -1;
-          const x = pos.x + Math.cos(pos.angle + (flip * Math.PI) / 2) * 7.5;
-          const y = pos.y + Math.sin(pos.angle + (flip * Math.PI) / 2) * 7.5;
-          const rotate = (pos.angle * 180) / Math.PI - flip * 38;
-          const className = grown.has(p.id) ? 'algo-grown' : undefined;
-          if (node.kind === 'bud') return <circle key={p.id} className="algo-bud" cx={pos.x} cy={pos.y} r={2.6} {...pick(p.id)} />;
-          if (node.kind === 'sprout')
-            return (
-              <g key={p.id} className={className}>
-                <path className="algo-sprout" d={SPROUT} transform={`translate(${x} ${y}) rotate(${rotate})`} {...pick(p.id)} />
-              </g>
+      <Ground width={view.width} shadow={stage === 'seed' || stage === 'sprout' ? 0 : w * 2.4 + 6} />
+      {stage === 'seed' && <Seed />}
+      {stage === 'sprout' && <Sprout seedlings={seedlings} state={state} />}
+      {stage !== 'seed' && stage !== 'sprout' && (
+        <g>
+          {canopyBlobs(branches, state.nodes).map((c, i) => (
+            <circle key={i} className="algo-canopy" cx={c.x} cy={c.y} r={c.r} />
+          ))}
+          {top < grownTop && <path className="algo-ghost" d={`M${TRUNK_X} ${grownTop - 12} L${TRUNK_X} ${top}`} />}
+          <Trunk top={grownTop} w={w} />
+          {branches.map((b) => {
+            const level = state.levels.get(b.pattern) ?? 0;
+            return level === 0 ? (
+              <path key={b.pattern} className="algo-ghost" d={`M${b.start.x} ${b.start.y} Q${b.control.x} ${b.control.y} ${b.end.x} ${b.end.y}`} />
+            ) : (
+              <path key={b.pattern} className="algo-branch" d={branchOutline(b, 4 + level * 1.4)} />
             );
-          const fx = pos.x + flip * 2;
-          const fy = pos.y + 9;
-          return (
-            <g key={p.id} className={className}>
-              <path className="algo-leaf" data-shade={node.shade} d={LEAF} transform={`translate(${x} ${y}) rotate(${rotate})`} {...pick(p.id)} />
-              {node.fruit && (
-                <>
-                  <line className="algo-stem" x1={pos.x} y1={pos.y + 1} x2={fx} y2={fy - 4} />
-                  <circle className="algo-fruit" cx={fx} cy={fy} r={5} {...pick(p.id)} />
-                  <circle className="algo-fruit-hi" cx={fx - 1.3} cy={fy - 1.4} r={1.2} />
-                </>
-              )}
-            </g>
-          );
-        }),
-      )}
-      {branches.map((b) =>
-        state.levels.get(b.pattern) === 3 ? (
-          <g key={b.pattern} transform={`translate(${b.end.x} ${b.end.y})`}>
-            {[0, 1, 2, 3, 4].map((a) => {
-              const r = (a * 72 * Math.PI) / 180;
-              const cx = Math.cos(r) * 4.2;
-              const cy = Math.sin(r) * 4.2;
-              return <ellipse key={a} className="algo-petal" cx={cx} cy={cy} rx={3.6} ry={2.4} transform={`rotate(${a * 72} ${cx} ${cy})`} />;
-            })}
-            <circle className="algo-flower" r={2.2} />
-          </g>
-        ) : null,
+          })}
+          {branches.map((b) =>
+            b.problems.map((p, k) => {
+              const node = state.nodes.get(p.id) ?? { kind: 'bud' as const };
+              const pos = pointOn(b, 0.22 + (0.74 * (k + 0.5)) / b.problems.length);
+              const flip = k % 2 === 0 ? 1 : -1;
+              const x = pos.x + Math.cos(pos.angle + (flip * Math.PI) / 2) * 7.5;
+              const y = pos.y + Math.sin(pos.angle + (flip * Math.PI) / 2) * 7.5;
+              const rotate = (pos.angle * 180) / Math.PI - flip * 38;
+              const className = grown.has(p.id) ? 'algo-grown' : undefined;
+              if (node.kind === 'bud') return <circle key={p.id} className="algo-bud" cx={pos.x} cy={pos.y} r={2.6} {...pick(p.id)} />;
+              // 小芽站在樹枝上，左右輪流歪一點
+              if (node.kind === 'sprout')
+                return (
+                  <g key={p.id} className={className}>
+                    <Seedling transform={`translate(${pos.x} ${pos.y}) rotate(${flip * 14})`} {...pick(p.id)} />
+                  </g>
+                );
+              const fx = pos.x + flip * 2;
+              const fy = pos.y + 9;
+              const transform = `translate(${x} ${y}) rotate(${rotate})`;
+              return (
+                <g key={p.id} className={className}>
+                  <path className="algo-leaf" data-shade={node.shade} d={LEAF} transform={transform} {...pick(p.id)} />
+                  <path className="algo-vein" d={VEIN} transform={transform} />
+                  {node.fruit && <Fruit stem={{ x: pos.x, y: pos.y + 1 }} at={{ x: fx, y: fy }} {...pick(p.id)} />}
+                </g>
+              );
+            }),
+          )}
+          {branches.map((b) => (state.levels.get(b.pattern) === 3 ? <Flower key={b.pattern} x={b.end.x} y={b.end.y} /> : null))}
+        </g>
       )}
       {labels &&
         branches.map((b) => {
           const level = state.levels.get(b.pattern) ?? 0;
+          const end = b.end;
           return (
             <text
               key={b.pattern}
               className="algo-label"
               data-ghost={level === 0 || undefined}
-              x={b.end.x + b.side * (level === 3 ? 10 : 4)}
-              y={b.end.y - 4}
+              x={end.x + b.side * (level === 3 ? 10 : 4)}
+              y={end.y - 4}
               textAnchor={b.side < 0 ? 'end' : 'start'}
             >
               {getPattern(b.pattern, locale).name}
@@ -192,6 +207,12 @@ export function AlgorithmTree({ share, ...props }: TreeProps & { share?: { strea
         <Stat value={blooms} label={t.tree.stats.blooms} />
       </div>
       <div className="sheet-body algo-full" ref={body}>
+        <p className="algo-stage">
+          <strong>{t.tree.stages[tree.stage]}</strong>
+          {nextStage(tree.state.started) && (
+            <span>{t.tree.nextStage(nextStage(tree.state.started)!.needed, t.tree.stageGoals[nextStage(tree.state.started)!.stage])}</span>
+          )}
+        </p>
         <TreeSvg {...tree} labels picked={picked} onPick={setPicked} ariaLabel={t.tree.label(ready, props.problems.length)} />
         <div className="algo-info" aria-live="polite">
           {problem && node ? (
@@ -217,19 +238,13 @@ export function AlgorithmTree({ share, ...props }: TreeProps & { share?: { strea
           </div>
         )}
         <ul className="algo-legend" aria-label={t.tree.legendLabel}>
-          <LegendItem shape={<path className="algo-leaf" data-shade="fresh" d="M2 7 Q11 -1 20 7 Q11 15 2 7Z" />} text={t.tree.legend.leaf} />
-          <LegendItem shape={<path className="algo-leaf" data-shade="fading" d="M2 7 Q11 -1 20 7 Q11 15 2 7Z" />} text={t.tree.legend.fading} />
-          <LegendItem shape={<path className="algo-leaf" data-shade="faded" d="M2 7 Q11 -1 20 7 Q11 15 2 7Z" />} text={t.tree.legend.faded} />
-          <LegendItem shape={<path className="algo-sprout" d="M6 7 Q11 2 16 7 Q11 12 6 7Z" />} text={t.tree.legend.sprout} />
-          <LegendItem
-            shape={
-              <>
-                <circle className="algo-fruit" cx="11" cy="8" r="5" />
-                <circle className="algo-fruit-hi" cx="9.4" cy="6.4" r="1.4" />
-              </>
-            }
-            text={t.tree.legend.fruit}
-          />
+          {/* 圖例用的是樹上同一套圖 */}
+          <LegendItem shape={<LeafIcon shade="fresh" transform="translate(2 7)" />} text={t.tree.legend.leaf} />
+          <LegendItem shape={<LeafIcon shade="fading" transform="translate(2 7)" />} text={t.tree.legend.fading} />
+          <LegendItem shape={<LeafIcon shade="faded" transform="translate(2 7)" />} text={t.tree.legend.faded} />
+          <LegendItem shape={<Seedling transform="translate(11 13.5) scale(1.1)" />} text={t.tree.legend.sprout} />
+          <LegendItem shape={<Fruit stem={{ x: 11, y: -2 }} at={{ x: 11, y: 8 }} />} text={t.tree.legend.fruit} />
+          <LegendItem shape={<Flower x={11} y={7} scale={0.78} />} text={t.tree.legend.flower} />
           <LegendItem
             shape={
               <>

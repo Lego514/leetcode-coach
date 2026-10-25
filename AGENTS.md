@@ -66,7 +66,8 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 - **所有本機寫入都經過 `src/store/actions.ts`**，並在同一個交易裡呼叫 `track()` 記進待上傳清單（outbox），登入後才同步得出去。
 - **複習排程（progress）是從練習紀錄（attempts）算出來的，不同步**：改了 attempts 要 `rebuildProgress()`。
-- **連續天數（含「保護」）的算法在 `shared/streak.ts`**，網頁和每日提醒共用；準備度、題型等級、征服、每週回顧在 `src/lib/motivation.ts`，演算法樹的樹形和每題的樣子在 `src/lib/tree.ts`（畫圖在 `components/AlgorithmTree.tsx`），都從練習紀錄算出來，不另外存。
+- **連續天數（含「保護」）的算法在 `shared/streak.ts`**，網頁和每日提醒共用；準備度、題型等級、征服、每週回顧在 `src/lib/motivation.ts`，演算法樹的樹形、每題的樣子和生長階段（種子 → 發芽 → 小樹苗 → 小樹 → 大樹，看做過幾題）在 `src/lib/tree.ts`（畫圖在 `components/AlgorithmTree.tsx`，地面、橡實、樹幹這些插畫零件在 `components/TreeArt.tsx`，顏色是 `styles.css` 的 `--wood`、`--canopy` 等變數，深色模式另有一組），都從練習紀錄算出來，不另外存。
+- **演算法樹的美術**：做到的東西上色（光從左上方來，右下是陰影），還沒做到的是藍色虛線的藍圖。同一個東西到處用同一個元件：果實、花、小芽、葉子、各階段的小樹都在 `TreeArt.tsx`，樹上、圖例、慶祝訊息（`toast` 的第三個參數）、題型地圖共用。
 - **AI 的提示詞、輸出 schema、整理輸出的函式在 `shared/ai.ts`**：伺服器（`server/src/ai/feedback.ts`）和使用者自己的金鑰（`src/lib/llm.ts`，瀏覽器直接呼叫 Anthropic、OpenAI、OpenRouter）共用同一份，改評分標準只改一個地方。
 - **使用者自己的 AI 金鑰只存在 localStorage（`src/store/ownAi.ts`）**：刻意不經過 `actions.ts`、不進同步的待上傳清單，永遠不送到我們的伺服器。測試裡用 `page.route` 攔下 AI 的網址，不要真的呼叫。
 - **介面文字只放在 `src/i18n/messages/{zh-TW,en}.ts`**：兩份的 key 要一樣（有測試檢查），其他檔案裡出現中文字會讓測試失敗。
@@ -85,6 +86,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 - **本機的 iPhone 測試不可信**：這台 Windows 電腦的顯示縮放是 125%，模擬的 iPhone 寬度變成 312px，底部分頁列會擋住按鈕，有幾個測試在 main 上也會失敗。iPhone 的結果看 CI（Linux）。截手機畫面用 Chromium 加 390×844、isMobile。
 - 外部服務一律用假的：GitHub 用 `e2e/fake-github.mjs`；白板共用的 WebSocket 用 `page.routeWebSocket`（見 `e2e/board-share.spec.ts`）。注意 `page.route` 攔不到轉址（302）之後的請求。
 - 截圖確認畫面：寫一個暫時的 `e2e/zz-*.tmp.spec.ts` 截圖，用完刪掉。
+- Playwright 會把測試檔（和它 import 的 `.tsx`）裡的 JSX 換成自己的物件，在 e2e 裡 `renderToStaticMarkup` 元件會失敗。要單獨看元件（例如小圖示），用 esbuild 打包（`NODE_PATH` 指到 repo 的 `node_modules`）在 repo 外面跑；不要放在 `e2e/`，`tsc -b` 會檢查那裡。
 
 ## CI 與部署
 
