@@ -86,6 +86,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 - **本機的 iPhone 測試不可信**：這台 Windows 電腦的顯示縮放是 125%，模擬的 iPhone 寬度變成 312px，底部分頁列會擋住按鈕，有幾個測試在 main 上也會失敗。iPhone 的結果看 CI（Linux）。截手機畫面用 Chromium 加 390×844、isMobile。
 - 外部服務一律用假的：GitHub 用 `e2e/fake-github.mjs`；白板共用的 WebSocket 用 `page.routeWebSocket`（見 `e2e/board-share.spec.ts`）。注意 `page.route` 攔不到轉址（302）之後的請求。
 - 截圖確認畫面：寫一個暫時的 `e2e/zz-*.tmp.spec.ts` 截圖，用完刪掉。
+- **README 的圖**：`npm run screenshots` 用示範資料重拍 `docs/images/` 的截圖（`scripts/screenshots/readme.spec.ts`），最後跑 `scripts/screenshots/capybara.ts` 畫卡皮巴拉一天的動畫（SVG）。動畫用 Vite 的 `ssrLoadModule` 載入 `Capybara.tsx` 和介面文字、顏色從 `styles.css` 讀，App 改了重跑就跟著變；這個 `.ts` 由 Node 24 直接執行，只能用會被拿掉的型別語法。畫面改很多的時候順便重拍，README 的功能說明也一起更新。
 - Playwright 會把測試檔（和它 import 的 `.tsx`）裡的 JSX 換成自己的物件，在 e2e 裡 `renderToStaticMarkup` 元件會失敗。要單獨看元件（例如小圖示），用 esbuild 打包（`NODE_PATH` 指到 repo 的 `node_modules`）在 repo 外面跑；不要放在 `e2e/`，`tsc -b` 會檢查那裡。
 
 ## CI 與部署
