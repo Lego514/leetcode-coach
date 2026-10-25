@@ -79,7 +79,7 @@ export function TreeSvg({
 }) {
   const { locale } = useI18n();
   const grown = useGrown(state);
-  const view = stageView(stage, branches, labels, seedlings.length);
+  const view = stageView(stage, branches, labels ? (pattern) => getPattern(pattern, locale).name : undefined, seedlings.length);
   // 樹幹：會的題目越多越粗；長到最高那根做過的題型再高一點，再上面還沒做的題型只畫藍色虛線
   const w = 7 + Math.min(14, state.ready * 0.35);
   const top = Math.min(...branches.map((b) => b.start.y)) - 20;
