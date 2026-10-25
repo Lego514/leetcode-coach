@@ -722,6 +722,7 @@ const zhTW = {
     discardTitle: '不儲存這次練習？',
     discardBody: '錄音和自評都會捨棄。',
     historyTitle: '過去的練習',
+    seeProgress: '看講解的進步',
     historyEmpty: '還沒有紀錄。可以先從講解練習開始：挑一題做過的題目，用兩分鐘把解法講給自己聽。',
     deletedProblem: '已刪除的題目',
     usedOfLimit: (used: string, limit: string) => `${used}（目標 ${limit}）`,
@@ -1061,10 +1062,7 @@ const zhTW = {
     heatmapNote: (days: number, streak: number) => `${days} 天有練習 · 最長連續 ${streak} 天`,
     difficultyTitle: '難度分布',
     difficultyLabel: (difficulty: string) => `${difficulty} 做過的題數`,
-    mockTitle: '模擬面試',
     mockFull: (n: number) => `完整模擬 <b>${n}</b> 次`,
-    mockExplain: (n: number, smooth: number) => `講解練習 <b>${n}</b> 次，其中講得很順的有 <b>${smooth}</b> 次`,
-    startMock: '開始一次練習',
   },
 
   charts: {
@@ -1079,6 +1077,33 @@ const zhTW = {
     dayCards: (day: string) => `${day}：做了微複習`,
     less: '少',
     more: '多',
+    explainLabel: (n: number) => `講解分數的變化，一共 ${n} 次，數值請見下方表格`,
+    explainPoint: (day: string, pct: number, source: string) => `${day}：${pct}%（${source}）`,
+    explainSource: { ai: 'AI 評分', self: '自己勾的重點' },
+    explainAverage: '最近三次的平均',
+    dayColumn: '日期',
+    scoreColumn: '分數',
+    sourceColumn: '來源',
+  },
+
+  /** 進度頁的講解能力（components/ExplainProgress.tsx） */
+  explainProgress: {
+    title: '講解能力',
+    note: '每一次講解：有 AI 評分就用 AI 的分數，沒有就用你自己勾的五個重點。',
+    drills: (n: number) => `講解練習 <b>${n}</b> 次`,
+    start: '做一次講解練習',
+    empty: '還沒有講解練習。挑一題做過的題目，用兩分鐘把解法講給自己聽，講完勾一勾講到了哪些重點，這裡就會開始畫出曲線。',
+    recent: (n: number) => `最近 ${n} 次的平均`,
+    previous: (pct: number) => `，再之前是 ${pct}%`,
+    pointsTitle: (n: number) => `五個重點講到幾成（最近 ${n} 次）`,
+    points: { insight: '關鍵觀察', structure: '資料結構', walkthrough: '走一遍例子', complexity: '複雜度', edge: '邊界情況' },
+    pointLabel: (name: string) => `${name}講到幾成`,
+    delta: (diff: number) => `（${diff > 0 ? '+' : ''}${diff}）`,
+    weakest: (name: string) => `最近最常漏掉的是「${name}」，下次講解先把這一段講清楚。`,
+    smooth: (recent: number, of: number, previous: number, previousOf: number) =>
+      previousOf > 0 ? `自評講得很順：最近 ${of} 次裡有 ${recent} 次，再之前 ${previousOf} 次裡有 ${previous} 次。` : `自評講得很順：最近 ${of} 次裡有 ${recent} 次。`,
+    followUps: (pct: number, count: number) => `面試官追問：最近的回答平均 ${pct}%（一共答了 ${count} 題）。`,
+    hardestKind: (kind: string) => `最難答的是「${kind}」。`,
   },
 
   /** 今天頁的每日提醒引導卡（components/ReminderBanner.tsx） */

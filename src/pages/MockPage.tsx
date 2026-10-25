@@ -847,7 +847,19 @@ function MockHistory() {
   if (!mocks) return null;
 
   return (
-    <Sheet title={t.mock.historyTitle} count={mocks.length} id="mock-history">
+    <Sheet
+      title={t.mock.historyTitle}
+      count={mocks.length}
+      id="mock-history"
+      actions={
+        // 做完講解練習，到進度頁看講解能力的曲線
+        mocks.length > 0 && (
+          <Link className="btn btn-small" to="/progress#explain-progress">
+            {t.mock.seeProgress}
+          </Link>
+        )
+      }
+    >
       {mocks.length === 0 ? (
         <p className="sheet-empty">{t.mock.historyEmpty}</p>
       ) : (

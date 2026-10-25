@@ -1921,6 +1921,62 @@ kbd,
   fill: var(--pen-hover);
 }
 
+/* 講解分數的曲線：AI 評的實心點、自己勾的空心點，最近三次平均的線 */
+.chart-line {
+  fill: none;
+  stroke: var(--level-2);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot {
+  fill: var(--pen);
+  stroke: var(--sheet);
+  stroke-width: 2;
+}
+
+.chart-dot[data-source='self'] {
+  fill: var(--sheet);
+  stroke: var(--pen);
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-key {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pen);
+}
+
+.chart-key[data-source='self'] {
+  border: 2px solid var(--pen);
+  background: var(--sheet);
+}
+
+.chart-key-line {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--level-2);
+}
+
 .chart-value {
   font-size: 12px;
   font-weight: 600;
@@ -4213,6 +4269,62 @@ a.more-account:hover {
 .pattern-tile-level {
   font-size: 12px;
   opacity: 0.85;
+}
+
+/* ---------- 講解能力（進度頁） ---------- */
+.explain-progress {
+  display: grid;
+  gap: 14px;
+}
+
+.explain-progress p {
+  margin: 0;
+}
+
+.explain-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.explain-score strong {
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.explain-score span {
+  color: var(--ink-2);
+}
+
+.explain-points .meter-row {
+  grid-template-columns: 7.5em minmax(0, 1fr) 6.5em;
+}
+
+/* 最常漏掉的那一項：字加粗、長條換成提醒的顏色 */
+.explain-points .meter-row[data-weakest] > span:first-child {
+  font-weight: 700;
+}
+
+.explain-points .meter-row[data-weakest] .meter-fill {
+  background: var(--medium);
+}
+
+.explain-delta {
+  margin-left: 4px;
+  color: var(--hard);
+  font-size: 12px;
+}
+
+.explain-delta[data-up] {
+  color: var(--good);
+}
+
+.explain-tip {
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--pen-soft);
+  color: var(--pen);
 }
 
 /* ---------- 每週回顧 ---------- */

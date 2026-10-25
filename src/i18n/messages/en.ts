@@ -733,6 +733,7 @@ const en: Messages = {
     discardTitle: 'Discard this session?',
     discardBody: 'The recording and your ratings will be discarded.',
     historyTitle: 'Past sessions',
+    seeProgress: 'See your progress',
     historyEmpty: 'No sessions yet. The explanation drill is a good first step: pick a problem you’ve solved and explain it to yourself in two minutes.',
     deletedProblem: 'Deleted problem',
     usedOfLimit: (used, limit) => `${used} (target ${limit})`,
@@ -1082,10 +1083,7 @@ const en: Messages = {
     heatmapNote: (days, streak) => `Active ${count(days, 'day')} · Longest streak ${count(streak, 'day')}`,
     difficultyTitle: 'By difficulty',
     difficultyLabel: (difficulty) => `${difficulty} problems attempted`,
-    mockTitle: 'Mock interviews',
     mockFull: (n) => `<b>${n}</b> full ${n === 1 ? 'mock' : 'mocks'}`,
-    mockExplain: (n, smooth) => `<b>${n}</b> explanation ${n === 1 ? 'drill' : 'drills'}, <b>${smooth}</b> of them smooth`,
-    startMock: 'Start a session',
   },
 
   charts: {
@@ -1100,6 +1098,34 @@ const en: Messages = {
     dayCards: (day) => `${day}: flashcards only`,
     less: 'Less',
     more: 'More',
+    explainLabel: (n) => `Explanation scores over ${count(n, 'session')}. Values are in the table below.`,
+    explainPoint: (day, pct, source) => `${day}: ${pct}% (${source})`,
+    explainSource: { ai: 'AI score', self: 'Points you ticked' },
+    explainAverage: 'Average of the last three',
+    dayColumn: 'Date',
+    scoreColumn: 'Score',
+    sourceColumn: 'Source',
+  },
+
+  explainProgress: {
+    title: 'Explaining',
+    note: 'Each explanation is scored by the AI when it has feedback, and otherwise by the five points you ticked.',
+    drills: (n) => `<b>${n}</b> explanation ${n === 1 ? 'drill' : 'drills'}`,
+    start: 'Do an explanation drill',
+    empty: 'No explanation drills yet. Pick a problem you have solved, explain it to yourself in two minutes, then tick the points you covered. Your curve starts here.',
+    recent: (n) => `average of the last ${count(n, 'session')}`,
+    previous: (pct) => `, ${pct}% before that`,
+    pointsTitle: (n) => `How well you cover the five points (last ${count(n, 'session')})`,
+    points: { insight: 'Key insight', structure: 'Data structure', walkthrough: 'Walkthrough', complexity: 'Complexity', edge: 'Edge cases' },
+    pointLabel: (name) => `${name} coverage`,
+    delta: (diff) => ` (${diff > 0 ? '+' : ''}${diff})`,
+    weakest: (name) => `Lately you skip “${name}” the most. Make that part clear in your next explanation.`,
+    smooth: (recent, of, previous, previousOf) =>
+      previousOf > 0
+        ? `Felt smooth: ${recent} of the last ${of}, and ${previous} of the ${previousOf} before.`
+        : `Felt smooth: ${recent} of the last ${of}.`,
+    followUps: (pct, n) => `Follow-up questions: recent answers average ${pct}% (${count(n, 'answer')} so far).`,
+    hardestKind: (kind) => ` The hardest kind is “${kind}”.`,
   },
 
   reminderCard: {

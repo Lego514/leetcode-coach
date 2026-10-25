@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { demoData } from '../lib/demo';
 import type { Day } from '../lib/dates';
-import { db, type AttemptRecord, type CardReviewRecord, type SettingsRecord } from './db';
+import { db, type AttemptRecord, type CardReviewRecord, type MockRecord, type SettingsRecord } from './db';
 import { wipeLocalData } from './sync';
 import { rebuildAllProgress } from './tracking';
 
@@ -46,9 +46,10 @@ export function useDemo(): boolean {
 
 export async function loadDemoData(today: Day): Promise<void> {
   const demo = demoData(today);
-  await db.transaction('rw', [db.attempts, db.cardReviews, db.settings, db.progress], async () => {
+  await db.transaction('rw', [db.attempts, db.cardReviews, db.mocks, db.settings, db.progress], async () => {
     await db.attempts.bulkPut(demo.attempts as unknown as AttemptRecord[]);
     await db.cardReviews.bulkPut(demo.cardReviews as unknown as CardReviewRecord[]);
+    await db.mocks.bulkPut(demo.mocks as unknown as MockRecord[]);
     await db.settings.bulkPut(demo.settings as unknown as SettingsRecord[]);
     await rebuildAllProgress(db);
   });

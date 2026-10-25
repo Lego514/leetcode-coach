@@ -6,6 +6,7 @@ import { addDays, type Day } from './dates';
 export interface DemoData {
   attempts: Record<string, unknown>[];
   cardReviews: Record<string, unknown>[];
+  mocks: Record<string, unknown>[];
   settings: Record<string, unknown>[];
 }
 
@@ -54,9 +55,38 @@ export function demoData(today: Day, uuid: () => string = () => crypto.randomUUI
     cardReviews.push({ uid: uuid(), cardId: `pattern:${ORDER[(offset + 40) % ORDER.length]}`, day, at: `${day}T07:30:00.000Z`, result: 'good' });
   }
 
+  // 講解練習：大約一週一次，自己勾的重點越來越多，邊界情況最常漏；自評從講不出來到講得很順
+  const mocks: Record<string, unknown>[] = (
+    [
+      [-38, 1, ['insight', 'structure'], 3],
+      [-33, 217, ['insight', 'structure', 'complexity'], 2],
+      [-27, 49, ['insight', 'structure', 'walkthrough'], 2],
+      [-22, 125, ['insight', 'structure', 'complexity'], 2],
+      [-16, 121, ['insight', 'structure', 'walkthrough', 'complexity'], 2],
+      [-11, 3, ['insight', 'structure', 'walkthrough', 'complexity'], 1],
+      [-6, 20, ['insight', 'structure', 'walkthrough', 'complexity', 'edge'], 1],
+      [-2, 155, ['insight', 'structure', 'walkthrough', 'complexity'], 1],
+    ] as const
+  ).map(([offset, problemId, steps, clarity]) => {
+    const day = addDays(today, offset);
+    return {
+      uid: uuid(),
+      problemId,
+      kind: 'explain',
+      day,
+      startedAt: `${day}T20:10:00.000Z`,
+      limitSec: 120,
+      usedSec: 150 - offset,
+      steps: [...steps],
+      clarity,
+      reflection: '',
+    };
+  });
+
   return {
     attempts,
     cardReviews,
+    mocks,
     settings: [{ key: 'app', activeList: 'neetcode150', dailyNew: 3, language: 'python', targetDate: addDays(today, 45) }],
   };
 }
