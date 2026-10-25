@@ -1,33 +1,37 @@
 # LeetCode Coach（刷題教練）
 
-A local-first study coach for LeetCode interview prep. It decides what to practice today, schedules reviews with spaced repetition, keeps structured notes, and runs timed mock interviews with think-aloud recording. You can use it without an account; signing in syncs your data across devices.
+A local-first study coach for LeetCode interview prep. It decides what to practice today, schedules reviews with spaced repetition, keeps structured notes, and runs timed mock interviews with think-aloud recording. To keep you coming back, an algorithm tree grows from your practice and a capybara practices with you. You can use it without an account; signing in syncs your data across devices.
 
 You still solve problems on LeetCode. This app handles the parts around solving: planning, remembering, and explaining.
 
 **Live app:** https://leetcode-coach-f6q7.onrender.com — it runs on free hosting that sleeps when idle, so the first visit after a while can take about a minute to wake up. After that it's fast, and once loaded it keeps working offline.
 
-**No account needed to look around:** on the Today page, press **Try it with demo data** to fill the app with six weeks of made-up practice (reviews due, a streak, a heatmap, stuck patterns). It stays in your browser, is never synced, and **Clear demo data** removes it.
+**No account needed to look around:** on the Today page, press **Try it with demo data** to fill the app with six weeks of made-up practice (reviews due, a streak, a growing tree, explanation drills, stuck patterns). It stays in your browser, is never synced, and **Clear demo data** removes it.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/today-dark.png"><img src="docs/images/today-light.png" alt="The Today page: progress toward the target date, flashcards, and the reviews due today"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/today-dark.png"><img src="docs/images/today-light.png" alt="The Today page: today's goal with the streak and its shields, a small algorithm tree, and the capybara coding on a laptop next to a speech bubble with an encouraging line and a tip"></picture>
 
 ## Screenshots
 
 <table>
   <tr>
-    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/practice-dark.png"><img src="docs/images/practice-light.png" alt="Timed practice with one-line notes for each interview step"></picture><br><b>Timed practice</b>: a timer, one-line notes per interview step, and hints that open one layer at a time.</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/practice-dark.png"><img src="docs/images/practice-light.png" alt="Timed practice with the interview steps shown one at a time"></picture><br><b>Timed practice</b>: a timer, the interview steps one at a time with a line of notes each, and <i>I'm stuck</i> and <i>I'm done</i> always at hand.</td>
     <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/whiteboard-dark.png"><img src="docs/images/whiteboard-light.png" alt="The whiteboard with a sliding-window template on Longest Substring Without Repeating Characters"></picture><br><b>Whiteboard</b>: arrays, pointers, a window frame, and a count dict, from a template in one click.</td>
   </tr>
   <tr>
     <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/ai-feedback-dark.png"><img src="docs/images/ai-feedback-light.png" alt="AI feedback on a spoken explanation, scored on five points with a model answer"></picture><br><b>Explaining out loud</b>: a live transcript, then Claude scores it on five points and suggests a model answer.</td>
-    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/progress-dark.png"><img src="docs/images/progress-light.png" alt="The Progress page with a year of practice as a heatmap"></picture><br><b>Progress</b>: a year of practice in month blocks, streaks, and mastery by pattern.</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/explaining-dark.png"><img src="docs/images/explaining-light.png" alt="A chart of explanation scores rising over eight drills, and how often each of the five points was covered"></picture><br><b>Explaining progress</b>: every drill's score over time, how well you cover each of the five points, and the one you skip most.</td>
+  </tr>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/progress-dark.png"><img src="docs/images/progress-light.png" alt="The algorithm tree on the Progress page: patterns as branches with leaves, fruit, and flowers"></picture><br><b>Algorithm tree</b>: patterns are branches and problems you can solve are leaves. Leaves fade as you forget, conquered problems bear fruit, and mastered patterns bloom.</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/capybara-day-dark.svg"><img src="docs/images/capybara-day-light.svg" alt="The capybara's day: asleep in bed before practice, coding on a laptop after checking in, then bubble tea or a hot spring once today's goal is done"></picture><br><b>Capybara</b>: it naps until you practice, codes along until today's goal is done, then celebrates. It grows with you and collects head items.</td>
   </tr>
 </table>
 
-Screenshots use generated demo data and are regenerated with `npm run screenshots`. They follow your GitHub theme (light or dark).
+Screenshots use generated demo data and are regenerated with `npm run screenshots`. They follow your GitHub theme (light or dark). The capybara animation is an SVG drawn from the app's own component and text.
 
 ## Features
 
-- **Study lists**: NeetCode 150, Blind 75 and Grind 169 (213 unique problems), grouped into 18 patterns. You can add any other LeetCode problem.
+- **Study lists**: NeetCode 150, Blind 75 and Grind 169 (213 unique problems), grouped into 18 patterns. You can add any other LeetCode problem. Without LeetCode Premium, one switch leaves out the Premium problems you haven't started, from the daily plan, the sprint, mock interviews, and the problem list.
 - **Interview sprint**: enter the interview date, the company (optional), and how many minutes you have on weekdays and weekends. Every day until the interview gets a plan, and the last days (2 by default) are review only.
   - New problems come in priority order: problems tagged with the company, then one problem from each pattern you haven't touched, then two more from patterns you keep forgetting, then the rest of your list. Each day takes as many as fit after its reviews, using rough times (Easy 20, Medium 35, Hard 50 minutes, 10 per review). Problems that don't fit are listed instead of crammed in.
   - Reviews are forecast with FSRS, including the first reviews of problems you'll learn during the sprint. A problem you'd remember with less than 90% chance on the interview day is pulled into the review-only days.
@@ -36,10 +40,10 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
   - Nothing is stored except the settings: the plan is recalculated from your progress every day, so a missed day spreads over the days left.
 - **Timed practice with tiered hints**:
   - Starting a problem starts a timer against a target time for its difficulty. The browser tab title shows the timer, so you can see it while you write code on LeetCode.
-  - The timer survives a page reload.
-  - If you get stuck, open hints one layer at a time: which pattern to use, a hand-written key insight for each of the 213 problems, then the pattern template. A link to the LeetCode solutions comes last.
-  - When you finish, the minutes are filled in and a self-rating is suggested based on how many hints you used.
-- **Solving steps**: practice, mock interviews, and the problem page share the seven interview steps (clarify, examples, brute force, optimize, code, test, complexity), and you write one line per step. Examples split into an example and its edge cases, and Optimize asks three questions: what's slow, what's repeated, and what to keep. The lines are saved with the problem's notes and synced, so a review starts from how you thought it through, not just the code. In a mock interview they sit under each step's checklist.
+  - The timer survives a page reload. A bar at the bottom keeps the timer, **I'm stuck**, and **I'm done** in reach while you scroll.
+  - If you get stuck, open hints one layer at a time: which pattern to use, a hand-written key insight for each of the 213 problems, the edge cases to check, then the pattern template. A link to the LeetCode solutions comes last.
+  - When you finish, the minutes are filled in (you can adjust them) and a self-rating is suggested based on how many hints you used.
+- **Solving steps**: practice, mock interviews, and the problem page share the seven interview steps (clarify, examples, brute force, optimize, code, test, complexity), and you write one line per step. On the practice page the steps open one at a time, and you can jump to any of them. Examples split into an example and its edge cases, and Optimize asks three questions: what's slow, what's repeated, and what to keep. The lines are saved with the problem's notes and synced, so a review starts from how you thought it through, not just the code. In a mock interview they sit under each step's checklist.
   - **Write the script from your steps**: a dialog lays out the five sentences of the English explanation script, each with the step notes that feed it (for example, the edge-case sentence shows your edge cases). You write each sentence yourself, which is the practice, and save it as the problem's script.
   - **Hints that start from where you're stuck**: pick the step you're stuck on to see how to think about it, next to what you wrote in the step before. This doesn't count as a hint. Optimize and Code can jump straight to the key insight or the template.
 - **Spaced repetition with FSRS**: after each attempt you rate yourself (solved alone / needed a hint / read the solution / still stuck), and FSRS, the scheduler Anki uses, picks the next review date.
@@ -49,8 +53,18 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
   - The scheduler is written from the FSRS-6 formulas with the default parameters, and the tests compare it with the official `ts-fsrs` (a test-only dependency) on hundreds of random review histories.
 - **Daily plan**: the Today page lists the reviews that are due plus N new problems. By default the new problems are *interleaved*: mostly the pattern you're learning, plus one from another pattern so you practice recognizing which approach fits, and a pattern you've been stuck on lately (solutions read, still stuck, or stuck reasons ticked) gets an extra, easier problem. The pattern isn't shown until you ask, as in an interview. Settings can switch to strict roadmap order or to focusing on one pattern, and the day's list is planned from the morning's state so it doesn't reshuffle as you work. At the top, a progress bar and three numbers show how much of the list is left, your daily pace, and when you'll finish the first pass. With a target date set, they show the days left and how many new problems a day you need, flagged when your daily goal is too low.
   - Any new problem you start counts toward the daily goal, wherever you start it. **One more problem** adds the next one in roadmap order.
+  - Settings can cap how many Medium and Hard problems and how many reviews come each day; the review page lists what's up next beyond today's cap.
+  - **Adjust difficulty automatically** (on by default, off during a sprint): when most recent Mediums needed a hint, new problems include fewer Mediums and no Hards until you solve them on your own again.
+  - A review whose last attempt needed a hint or the solution is marked **Rewrite**: write it from scratch, without your notes, until it passes.
   - **Record another problem** finds a problem by number, title, or LeetCode URL. If it isn't in your lists yet, you add its details and record it in the same dialog.
   - **Mark problems I solved before** (on Problems) schedules problems you solved before using the app for review in one go. A big batch is spread out so no more than five problems come due on any day, counting reviews already scheduled. They don't count toward streaks or session totals.
+- **Staying motivated**: everything here is calculated from your practice records, so nothing extra is stored or synced.
+  - **Today's goal**: one problem or one round of flashcards checks you in, and new problems and reviews are counted separately. Every day you practice earns a streak shield (up to two); miss a day and one is used automatically, so the streak doesn't break.
+  - **Algorithm tree**: each pattern is a branch and each problem you can solve now is a leaf, colored by how likely you still remember it (FSRS): yellow when it's fading, dry when it's probably forgotten. A problem that needed a hint or the solution is a sprout until you rewrite it on your own. Conquered problems bear fruit, and patterns where 80% of the problems are solid bloom. The tree grows from a seed: it sprouts at the first problem and becomes a sapling at 5, a young tree at 20, and a grown tree at 60. Today shows a small one, Progress the whole tree, and **Share as image** draws it with this week's numbers.
+  - **Capybara**: it grows from a baby to a young (7 days of practice) and a grown-up capybara (21 days), and collects ten head items for goals like a 7-day streak, 100 flashcards, or 10 explanation drills. On Today it naps in bed until you practice, codes on a laptop until today's goal is done, then drinks bubble tea or soaks in a hot spring (one or the other each day). On wide screens a speech bubble next to it has an encouraging line, a daily tip (a Python tip or a pattern summary), and the head item you're closest to.
+  - **Wins and next goals**: a message celebrates conquering a problem, a pattern leveling up, a new personal best time, the tree's next stage, and new head items. Today names the next goal, such as "3 more problems and Binary Search reaches Got it".
+  - Progress also shows your interview readiness (problems you can solve now, overall, by difficulty, and by company tag), a pattern map with each pattern's level, and a weekly recap compared with last week.
+- **Daily reminders**: when signed in, pick an hour in Settings, and on days you haven't practiced by then you get a notification (Web Push). Today walks you through turning it on, including adding the app to the home screen on iPhone.
 - **Notes**: for each problem you can keep a one-line idea, an English explanation script, time and space complexity, pitfalls, and your code. Notes save automatically.
 - **Pattern cards**: each pattern has recognition signals, common mistakes, and a Python template you can edit.
 - **Reference explanations**: a hand-written model answer in English for each of the 213 problems, in five sentences (key insight, data structure, example, complexity, edge case). It stays collapsed until you've tried explaining it yourself, and it's shown next to your own attempt after an explanation drill.
@@ -61,12 +75,13 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
     - an "explain it out loud, then flip" card
     - the pattern signals
     - 59 Python tips whose answers were checked by running the code
+  - Problem cards start with a one-line reminder of what the problem asks, written so it doesn't give away the technique.
   - **I don't know** shows the answer instead of rewarding a lucky guess.
   - Missed cards come back at the end of the round with reshuffled options until you get them right, and the summary lists them with their answers.
   - Practice everything, only problems you've done, only clues, only Python tips, or one pattern.
   - A **rest timer** (60–180 seconds) counts down between sets. When it ends it beeps, vibrates where supported, and shows an alert, and it asks the browser to keep the screen on while it runs.
   - Answers save one at a time, sync like attempts, and count toward the streak.
-- **Whiteboard**: [DSA Whiteboard](https://github.com/Lego514/dsa-whiteboard), which I built from scratch for this app and later split into its own open-source package ([try it standalone](https://lego514.github.io/dsa-whiteboard/)). Drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, recursion trees, DP tables, intervals, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand. It has templates for common patterns, Build from text (paste a problem's example), range frames for sliding windows, a LeetCode-style code box with line-by-line tracing, step-by-step playback, and PNG export. See its README for the full list.
+- **Whiteboard**: [DSA Whiteboard](https://github.com/Lego514/dsa-whiteboard), which I built from scratch for this app and later split into its own open-source package ([try it standalone](https://lego514.github.io/dsa-whiteboard/)). Drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, union-find, tries, bits, recursion trees, DP tables, intervals, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand. It has templates for common patterns, Build from text (paste a problem's example), range frames for sliding windows, a LeetCode-style code box with line-by-line tracing, step-by-step playback, and PNG export. See its README for the full list.
   - **Explain mode** (this app only): walk through your steps out loud in English. The current step's note shows as a prompt while a timer, audio recording, and live transcript run. Afterwards you see how long you spent on each step (the slow one is usually the part you can't explain smoothly yet), play back the audio, and fix the transcript. On a problem's whiteboard you can also tick which of the five points you covered, get AI feedback, save the transcript as the problem's script, and save the run as an explanation drill, marked "Whiteboard" in the mock interview history.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - **Share** a board for a mock interview or study session: everyone who opens the link edits it together, with each person's cursor and name. Joining doesn't need an account. Your own board isn't touched, and "Save a copy to my board" keeps the shared one. Rooms run on the package's Cloudflare Worker.
@@ -86,16 +101,18 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
   - Optional audio recording (MediaRecorder) and a self-review after you finish.
   - A two-minute explanation drill.
   - An optional live English transcript (Web Speech API). Afterwards you can fix it, see your word count, speaking pace, and filler words, and save it as the problem's explanation script.
-  - **AI feedback (Claude)** on the transcript: a 0–2 score for each of the five explanation points with comments, strengths, concrete rewrites of unclear phrases, and a model answer you can save as your script. Requires an account; the server holds the API key and enforces a daily limit per user. In the live app it is on for allow-listed accounts only (`AI_ALLOWED_EMAILS`), so a public sign-up can't run up the API bill.
+  - **AI feedback (Claude)** on the transcript: a 0–2 score for each of the five explanation points with comments, strengths, concrete rewrites of unclear phrases, and a model answer you can save as your script. Requires an account (or your own API key, below); the server holds the API key and enforces a daily limit per user. In the live app it is on for allow-listed accounts only (`AI_ALLOWED_EMAILS`), so a public sign-up can't run up the API bill.
   - **Use your own ChatGPT or Claude**: no account or AI requests needed. Copy a ready-made prompt (feedback on the explanation, or an interviewer who asks follow-ups one at a time and then grades them) and paste it into a new chat. The scoring points are the same ones the built-in AI feedback uses, shared from `shared/prompts.ts`. Paste the reply back and it's saved with the session. Behavioral practice has the same option.
+  - **Your own AI key**: add an Anthropic, OpenAI, or OpenRouter API key in Settings to use explanation feedback, interviewer follow-ups, and behavioral feedback with no sign-in and no daily limit. The key stays in that browser's local storage: the browser calls the provider directly, so it never reaches the server and isn't synced. It also turns on **Think it through with AI** in the practice hints, a chat that asks one question at a time so you work it out yourself, and never gives code. The prompts and output schemas are shared with the server (`shared/ai.ts`).
   - **Interviewer follow-ups (Claude)**: after you explain, Claude plays the interviewer and asks two or three follow-up questions aimed at what your explanation left vague or got wrong (edge cases, can you do better, why that complexity, another approach). The browser reads each question aloud, and you answer by speaking (a live English transcript) or typing. Then each answer gets a 0–2 score, a comment, and a stronger spoken answer. The questions and answers are saved with the drill. Asking and grading each count as one request toward the daily limit.
-- **Progress**: a year-long activity heatmap like LeetCode's (darker squares mean more problems that day; flashcard-only days show the lightest shade) with active days and the longest streak, a per-pattern mastery grid, a weekly practice chart, and a breakdown by difficulty.
+- **Progress**: the algorithm tree and the capybara's collection at the top, then interview readiness, the pattern map, and the weekly recap. Below them are a year-long activity heatmap like LeetCode's (darker squares mean more problems that day; flashcard-only days show the lightest shade) with active days and the longest streak, a per-pattern mastery grid, a weekly practice chart, and a breakdown by difficulty.
+  - **Explaining**: every explanation drill on a chart, scored by the AI when it gave feedback and otherwise by the five points you ticked, with a rolling average. It shows how well you cover each point over the last five drills compared with the five before, which point you skip most, how often it felt smooth, and your average score on interviewer follow-ups.
 - **Where you get stuck**: when you record a problem (or finish a full mock), you can tick what went wrong: didn't see the pattern, couldn't optimize, couldn't code it, missed an edge case, had a bug, or ran out of time. Progress counts the last 90 days by reason, shows which patterns each one happens in most, and links to what to practice. Problem history shows the reasons, and the interview sprint adds two extra problems from patterns you got stuck in at least twice in the last 30 days.
 - **Accounts and offline-first sync**: sign up with email and password, or with GitHub, to sync attempts, notes, settings, flashcard answers, whiteboards, and behavioral stories between devices. Everything keeps working offline and without an account. Sign-in has its own page, linked from the sidebar, the More tab, and a dismissible banner on Today on phones. Passwords can be reset by email, and the password fields have a show/hide toggle.
 - **Bug reports and suggestions**: a "Report a problem" page, a Report button on every flashcard once it's answered, and a link on the error screen. Reports work without an account; the form shows exactly what gets attached (page, card, version, browser). Signed-in users can follow the status of their own reports, and admin accounts (`ADMIN_EMAILS`) get an inbox to mark them resolved.
   - A reset link works once, expires in an hour, and signs you out on other devices. It needs `BREVO_API_KEY` and `MAIL_FROM`; without them the feature is hidden.
 - **English and Traditional Chinese**: the whole app is translated, including the pattern cards, all 213 hints, and the interview flow. It follows the browser language by default, and you can switch from the sidebar or Settings.
-- **Installable PWA** that works offline, with light and dark themes (it follows the system by default; a sun/moon button next to the language switch flips it, and pressing it again goes back to following the system) and JSON backup/restore. New versions install themselves and reload the page, but wait while a timed practice or mock session, a flashcard round, or a whiteboard is open.
+- **Installable PWA** that works offline, with light and dark themes (it follows the system by default; a sun/moon button next to the language switch flips it, and pressing it again goes back to following the system), a choice of app icon (grid, grid tree, sprout, or acorn), and JSON backup/restore. New versions install themselves and reload the page, but wait while a timed practice or mock session, a flashcard round, or a whiteboard is open.
 
 ## Tech stack
 
@@ -109,6 +126,7 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
 | API | Node 24, Hono, zod validation shared with the client |
 | Database | PostgreSQL through Drizzle ORM; embedded PGlite for local development and tests |
 | Whiteboard | [dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard), my own package in a separate repo: a custom editor with no drawing library (HTML elements in a CSS-transformed world, arrows and ink in SVG, pointer capture and pinch), with all geometry and editing logic as unit-tested pure functions |
+| Illustrations | Drawn in code as SVG React components (the algorithm tree, the capybara and its poses, empty-state art), colored with CSS variables for both themes; the README's capybara animation is generated from the same component |
 | Quality | Vitest (unit, API, and two-device sync tests), Playwright end-to-end tests against the production build and a real PostgreSQL on Chromium and iPhone WebKit, ESLint, GitHub Actions CI |
 | AI | Claude Opus 5.5 through the Anthropic TypeScript SDK, JSON-schema structured output, server-side refusal fallback, per-user daily quota stored in PostgreSQL |
 | Hosting | Render (one Node service for the API and the web app), Neon PostgreSQL |
@@ -123,29 +141,36 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
 ```
 src/                 Web app
   data/                Static content: problems, lists, patterns, hints, interview steps
-  lib/                 Pure logic: scheduler, dates, stats, catalog, practice session
+  lib/                 Pure logic: scheduler (FSRS), dates, stats, catalog, practice session
     cards.ts             Flashcards: deck, Leitner boxes, picking and dealing a round
+    motivation.ts        Today's goal, readiness, pattern levels, wins, weekly recap
+    tree.ts              Algorithm tree: shape, growth stages, and how each problem looks
+    companion.ts         Capybara: growth, head items, today's pose
+    explainProgress.ts   Explanation scores over time
   store/               Data layer
-    db.ts                Dexie schema (v2: sync ids, outbox, sync state; v3: flashcard answers; v4: whiteboards)
+    db.ts                Dexie schema (v2: sync ids, outbox, sync state; v3: flashcard answers; v4: whiteboards; v5: FSRS rebuild; v6–7: behavioral stories and practice)
     actions.ts           Every local write; each one also records a change in the outbox
     queries.ts           Every read, as React hooks
     tracking.ts          Local record ⇄ sync payload conversion, schedule replay
     progress.ts          Rebuilds a problem's FSRS state from its attempts
     sync.ts              Sync engine (push outbox, pull changes, apply)
     cloud.ts             Account state and automatic sync scheduling
+    ownAi.ts             Your own AI key, in local storage only (never synced)
   i18n/                Locale detection, typed dictionaries (zh-TW, en), date formatting
   components/, pages/  UI (components/board/ wires the dsa-whiteboard package to storage, sync, and explain mode)
-shared/              Code used by both sides: ids and the zod request/response schemas
+shared/              Code used by both sides: ids, the zod request/response schemas, streak rules, AI prompts and output schemas
 server/              API
   src/app.ts           Hono app: security middleware, routes, static files
-  src/auth/            Password hashing, sessions, password reset, rate limiting, auth routes
+  src/auth/            Password hashing, sessions, password reset, Sign in with GitHub, rate limiting, auth routes
   src/mail/            Brevo email client and the reset message
+  src/push/            Daily reminders: Web Push subscriptions and the hourly send
   src/sync/            Sync endpoint and last-write-wins upserts
-  src/ai/              Explanation feedback: Claude prompt and output schema, quota-limited route
+  src/ai/              Explanation, follow-up, and behavioral feedback through Claude, quota-limited routes
   src/db/              Drizzle schema, database client (PostgreSQL or PGlite), migration runner
   migrations/          Plain SQL migrations, applied in order at startup
   test/                API tests and two-device end-to-end sync tests
 e2e/                 Playwright tests: practice and review, mock interview with a transcript, flashcards, whiteboard, language, sync between two browsers
+scripts/screenshots/ README screenshots from demo data, and the capybara animation
 ```
 
 In production a single Node service serves both `/api` and the built web app. The browser only talks to its own origin, so the session cookie can be `SameSite=Lax` and the API needs no CORS. In development, Vite proxies `/api` to the API server.
@@ -179,15 +204,18 @@ Known limitation: conflicts are decided by each device's clock.
 
 ### Review scheduling
 
-| Self-rating | Next interval | Ease |
-| --- | --- | --- |
-| Solved alone | 4 days, then 10 days, then previous × ease | +0.10 |
-| Needed a hint | 2 days, then max(previous + 1, previous × 1.2) | −0.15 |
-| Read the solution | 1 day (streak resets) | −0.20 |
-| Still stuck | 1 day (streak resets) | −0.30 |
+Problems are scheduled with FSRS-6 and its default parameters. Each self-rating maps to an FSRS grade:
 
-- Ease stays between 1.3 and 3.0, and no interval is longer than 120 days.
-- Intervals of 30 days or more count as "mastered".
+| Self-rating | FSRS grade |
+| --- | --- |
+| Solved alone | Good |
+| Needed a hint | Hard |
+| Read the solution | Again |
+| Still stuck | Again |
+
+- The next review falls on the day your chance of remembering drops to the target retention (90% by default, 80–95% in Settings), at least 1 day and at most 120 days later.
+- The interval sets the stage: under 7 days is learning, under 30 is reviewing, and 30 or more counts as "mastered".
+- A problem's schedule is rebuilt by replaying its attempts in time order, which is why schedules don't need to be synced.
 - Problems marked as solved before are spread so that at most five come due per day. The extra days are stored on the attempt (`delayDays`), so every device replays the same date.
 - Flashcards use separate Leitner boxes (1, 3, 7, 14, then 30 days). A wrong answer sends a card back to box 0, so it returns in a later round the same day. Flashcards never move a problem's review date: recognizing a pattern is not the same as solving the problem. Cards answered today aren't used to pad a round, so a small topic gives a shorter round (or says it's done for today and offers Everything) instead of repeating the same cards. In Everything, at most 3 of the 5 cards are about problems, leaving room for pattern clues and Python tips.
 
@@ -267,16 +295,17 @@ Notes:
 - **Transcripts** are optional and use the browser's speech recognition. Chrome sends the audio to Google's servers to turn it into text.
 - **AI feedback** sends the transcript text and the problem's title to Anthropic's API only when you press the button. The server stores daily request and token counts per user, not the transcript itself.
   - Deleting the account removes it and all of its server data.
+- **Your own AI key** stays in the browser. With it, requests go straight from the browser to the provider you picked, never through the server.
 - **Reports** you send store the message, the optional contact you typed (only when signed out), and the details listed on the form. They are linked to your account when you're signed in and deleted along with it.
 - **Signing out** can either keep the local copy or clear it (for shared computers).
 - **Problem statements are not included.** The app stores only titles and links to leetcode.com.
 
 ## Roadmap
 
+- **Mock interviews with a friend**: an interviewer view with the problem and a scoring sheet, on a shared whiteboard.
+- **Job application tracker**: each company's stage and dates, linked to the interview sprint.
 - **Whiteboard**: flashcards that show a recorded step and ask what happens next. Whiteboard features themselves are tracked in [dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard).
-- **More AI assistance (Claude API)**: hints that react to your own code, code review, and an AI interviewer that asks follow-ups. These would run through the API so the key never reaches the browser.
-- **Behavioral prep**: a STAR story bank, system design notes, and a job application tracker.
-- **Signing in with GitHub.**
+- **More AI assistance**: hints that react to your own code, and code review.
 
 ---
 
@@ -290,7 +319,21 @@ Notes:
 
 介面有繁體中文和英文，預設跟著瀏覽器語言，可以在側邊欄或「設定」切換，每台裝置各自記住。模板卡、213 題的提示和面試流程都有英文版，適合練習用英文思考。
 
-今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。
+今天頁會算進所有開始的新題，不管是從哪裡開始的；做完每日目標還可以「再來一題」，清單以外的題目用「記錄其他題目」輸入題號或網址就能記錄。以前刷過的題目可以在題庫用「標記以前刷過的題」一次排進複習，不會算進連續天數和練習次數。設定可以限制每天最多幾題 Medium、幾題 Hard 和最多複習幾題，複習頁會列出接下來的題目；「自動調整難度」（預設開，衝刺時關）會在最近的 Medium 大多要看提示時，先少排 Medium、不排 Hard，自己解得出來之後再調回去。上次看了提示或解答的複習題會標成「重寫」：不看筆記從頭寫到通過。沒有 LeetCode Premium 的話，可以「跳過要 LeetCode Premium 的題目」。
+
+**練習頁**：解題步驟一次只露出一步，也可以直接跳到任何一步；下面一列固定放計時、「我卡住了」和「寫完了」。提示一層一層打開：方向（模式）、關鍵觀察、要檢查的邊界情況、模板。寫完會自動填好花了幾分鐘，也可以自己改。
+
+**今天的目標和連續天數**：做 1 題或一回合微複習就算打卡，新題和複習分開算。每練習一天存一個「保護」（最多 2 個），漏掉一天會自動用掉一個，連續天數不會斷。征服一題、題型升級、刷新最快的紀錄、樹長到下一個階段、收集到頭飾時都會跳出慶祝訊息；今天頁也會寫出下一個目標，例如「再會 3 題，二分搜尋就升到『會了』」。這些都從練習紀錄算出來，不另外存。
+
+**演算法樹**：每個題型是一根樹枝，現在會的題目是葉子，顏色跟著還記得的機率（FSRS）變：快忘了變黃、大概忘了變枯。看了提示或解答的題目先是小芽，自己重寫一次才長成葉子；征服的題目會結果實，八成題目都穩的題型會開花。樹從一顆種子開始長：做 1 題發芽，5 題小樹苗，20 題小樹，60 題大樹。今天頁有小的，進度頁有完整的，也可以分享成圖片。進度頁還有面試準備度（現在解得出來的題數，可以看難度和自己標的公司）、題型地圖和每週回顧。
+
+**卡皮巴拉**：陪你刷題的小夥伴。一起練習 7 天長成小時候、21 天長大，達成目標（連續 7 天、100 張卡片、10 次講解練習……）會收集到頭上的道具，在進度頁換著戴。在今天頁，還沒練習時牠在床上睡覺，打卡了陪你用電腦，今天的目標做完就喝珍奶或泡溫泉（每天輪流）；寬的畫面旁邊有對話框，有一句鼓勵的話、一則小知識（Python 小知識或題型重點）和最快能拿到的下一個頭飾。
+
+**講解能力的進步曲線**：進度頁把每次講解練習畫成曲線（有 AI 回饋就用 AI 的分數，沒有就用自己勾的重點），列出最近五次五個重點各講到幾成、跟再之前比進步多少、最常漏掉哪一個，還有講起來順不順、面試官追問的平均分數。
+
+**用自己的 AI 金鑰**：在設定填 Anthropic、OpenAI 或 OpenRouter 的 API 金鑰，不用登入、沒有每天的次數限制，就能用講解回饋、面試官追問和行為面試回饋；練習頁的提示也會多一個「AI 陪你想」，一次只問一個問題讓你自己想出來，不會給程式碼。金鑰只存在這個瀏覽器，由瀏覽器直接呼叫 AI，不會經過我們的伺服器，也不會同步。
+
+App 的圖示可以在設定換（方格、方格樹、小芽、橡實）。
 
 **卡住原因**：記錄一題（或完整模擬面試結束）時，可以勾「卡在哪」：沒看出模式、想不到優化、寫不出來、漏了邊界情況、有 bug、時間不夠，可以複選、也可以不勾。進度頁統計最近 90 天最常卡在哪、各自最常出現在哪些模式，並附上該怎麼練的連結；題目的練習紀錄也看得到當時卡在哪。面試衝刺會把最近 30 天卡住兩次以上的模式多排兩題。
 
@@ -306,6 +349,7 @@ Notes:
 
 **微複習**是給健身組間、排隊這種零碎時間用的。一回合 5 張卡，只要點不用打字，大約 1 分鐘：
 - 卡片內容：做過的題目用哪個模式、關鍵觀察、複雜度、口頭講解翻面卡、看線索想模式、59 張 Python 小知識（每一題都實際跑過程式確認答案）。
+- 題目卡會先用一句話提醒這題在問什麼，寫法不會洩漏要用的技巧。
 - 不會就按「我不知道」直接看答案，不用亂猜。答錯的卡會在回合最後重考，選項重新洗牌，答對才過關。
 - 可以只練某個範圍：做過的題目、看線索、Python 小知識，或某一個模式。
 - 上方有組間休息計時器，時間到會響、會跳出提醒；倒數時會請瀏覽器讓螢幕保持亮著。
@@ -313,7 +357,7 @@ Notes:
 - 今天答過的卡不會拿來補滿一回合：範圍太小時這一回合就少幾張，做完了會提示換成「全部」。範圍是「全部」時，5 張裡最多 3 張是題目卡，其他留給模式線索和 Python 小知識，做過的題目少時也不會一直繞著那幾題。
 
 **白板**是我為這個 App 從頭寫的，後來拆成獨立的開源專案 [DSA Whiteboard](https://github.com/Lego514/dsa-whiteboard)（[直接試用](https://lego514.github.io/dsa-whiteboard/)）：
-- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、遞迴樹、DP 表、區間、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。有常見模式的模板、貼上題目範例就能建立、滑動視窗的範圍框、LeetCode 風格的程式碼框和逐行追蹤、逐步播放、匯出圖片。完整功能請看那邊的 README。
+- 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、併查集、字典樹、位元、遞迴樹、DP 表、區間、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。有常見模式的模板、貼上題目範例就能建立、滑動視窗的範圍框、LeetCode 風格的程式碼框和逐行追蹤、逐步播放、匯出圖片。完整功能請看那邊的 README。
 - **講解模式**（只有這個 App 有）：照著記好的步驟用英文講出來。這一步的說明會當作提詞，同時計時、錄音、顯示即時逐字稿。講完看每一步講了多久（特別久的那步通常就是還講不順的地方）、聽錄音、修正逐字稿；在題目的白板上還可以勾有講到哪幾個重點、拿 AI 回饋、把逐字稿存成講解稿，並存成一筆講解練習，在模擬面試的紀錄裡標成「白板」。
 - 每一題有自己的白板，另外有一張自由白板；在「我的白板」可以看到全部。白板存在這台裝置，登入後會同步到雲端。
 - **共用**：模擬面試或一起讀書時，把白板的連結傳給對方，打開的人都能一起編輯，看得到每個人的游標和名字，對方不用帳號。自己的白板不會被改到，想留下共用的內容就按「存一份到我的白板」。房間在 dsa-whiteboard 的 Cloudflare Worker 上。

@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { demoData } from '../../src/lib/demo';
 
 // README 的截圖，淺色和深色各一張。資料是 src/lib/demo.ts 的示範紀錄（約六週的練習），不是任何人的真實資料。
-// 執行：npm run screenshots
+// 執行：npm run screenshots（最後再跑 capybara.ts 畫卡皮巴拉的動畫）
 
 const OUT = path.resolve('docs/images');
 const VIEWPORT = { width: 1280, height: 800 };
@@ -28,7 +28,8 @@ function demoBackup() {
       notes: [],
       meta: [],
       patternNotes: [],
-      mocks: [],
+      // 講解練習：進度頁的講解曲線用
+      mocks: demo.mocks,
       customProblems: [],
       settings: demo.settings,
       cardReviews: demo.cardReviews,
@@ -120,20 +121,25 @@ test('README screenshots', async ({ page }) => {
 
   mkdirSync(OUT, { recursive: true });
 
-  // 1. 今天頁：複習、新題、進度
+  // 1. 今天頁：今天的目標、演算法樹、右上角的卡皮巴拉和對話框，下面是複習和新題
   await shoot(page, 'today', async () => {
     await page.goto('/');
     await expect(page.getByRole('region', { name: /^New problems for today/ })).toBeVisible();
+    await expect(page.locator('.today-card-pet')).toBeVisible();
+    // 登入後會出現每日提醒的引導卡，先關掉，今天的目標才完整露出來
+    await page.getByRole('button', { name: 'No thanks' }).click();
     await page.evaluate(() => window.scrollTo(0, 0));
   });
 
-  // 2. 計時練習：提示一層一層打開
+  // 2. 計時練習：解題步驟一次一步，計時、卡住了、寫完了在下面
   await shoot(page, 'practice', async () => {
     await page.goto('/#/practice/15');
-    // 一打開就開始計時；寫下前兩步的筆記
-    await page.getByRole('textbox', { name: 'What the problem asks' }).fill('Return unique triplets that sum to 0; the input can have duplicates.');
-    await page.getByRole('textbox', { name: 'Example', exact: true }).fill('[-1, 0, 1, 2, -1, -4] gives [-1, -1, 2] and [-1, 0, 1].');
-    await page.getByRole('textbox', { name: 'Edge cases' }).fill('All zeros; fewer than three numbers.');
+    // 一打開就開始計時；寫第一步，再到第二步寫例子和邊界情況
+    const steps = page.getByRole('region', { name: 'Solving steps' });
+    await steps.getByLabel('What the problem asks').fill('Return unique triplets that sum to 0; the input can have duplicates.');
+    await steps.getByRole('button', { name: 'Next' }).click();
+    await steps.getByRole('textbox', { name: 'Example', exact: true }).fill('[-1, 0, 1, 2, -1, -4] gives [-1, -1, 2] and [-1, 0, 1].');
+    await steps.getByLabel('Edge cases').fill('All zeros; fewer than three numbers.');
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await expect(page.getByText('Saving…')).toHaveCount(0, { timeout: 5000 });
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -175,11 +181,24 @@ test('README screenshots', async ({ page }) => {
     },
   );
 
-  // 5. 進度：一年的熱度圖和各模式的熟練度
+  // 5. 進度頁的演算法樹
   await shoot(page, 'progress', async () => {
     await page.goto('/#/progress');
-    await expect(page.getByRole('region', { name: /practice sessions? in the past year/ })).toBeVisible();
-    // 同一頁換網址（hash）不會回到頂端
-    await page.evaluate(() => window.scrollTo(0, 0));
+    const tree = page.getByRole('region', { name: 'Algorithm tree' });
+    await expect(tree).toBeVisible();
+    // 捲到樹的那一張（同一頁換網址不會自己捲）
+    await tree.evaluate((el) => {
+      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 24);
+    });
+  });
+
+  // 6. 講解能力的進步曲線（示範資料有 8 次講解練習）
+  await shoot(page, 'explaining', async () => {
+    await page.goto('/#/progress');
+    const sheet = page.getByRole('region', { name: 'Explaining' });
+    await expect(sheet).toContainText('8 explanation drills');
+    await sheet.evaluate((el) => {
+      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 24);
+    });
   });
 });
