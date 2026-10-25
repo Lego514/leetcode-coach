@@ -65,15 +65,14 @@
   --flower-dark: #e27ba0;
   --pen-lit: #4466c2;
   --water: #8fb3e8;
-  --capy-fur: #cf9b63;
-  --capy-shade: #b5804b;
-  --capy-light: #e6bb87;
-  --capy-snout: #a8703f;
-  --capy-ear: #c48d57;
-  --capy-ear-in: #8a5a30;
-  --capy-foot-back: #b07a46;
-  --capy-line: #4a2e1b;
-  --capy-blush: #f29bb2;
+  --capy-fur: #f5c98d;
+  --capy-shade: #e8b475;
+  --capy-light: #fbe0b8;
+  --capy-snout: #a5877b;
+  --capy-ear-in: #d9978a;
+  --capy-ear-hole: #8f6a5c;
+  --capy-line: #3d2414;
+  --capy-blush: #f7b0b6;
   color-scheme: light;
 }
 
@@ -131,15 +130,14 @@
     --flower-dark: #e889ab;
     --pen-lit: #b7cbff;
     --water: #6f97e0;
-    --capy-fur: #cf9b63;
-    --capy-shade: #b5804b;
-    --capy-light: #e6bb87;
-    --capy-snout: #a8703f;
-    --capy-ear: #c48d57;
-    --capy-ear-in: #8a5a30;
-    --capy-foot-back: #b07a46;
-    --capy-line: #4a2e1b;
-    --capy-blush: #f29bb2;
+    --capy-fur: #f5c98d;
+    --capy-shade: #e8b475;
+    --capy-light: #fbe0b8;
+    --capy-snout: #a5877b;
+    --capy-ear-in: #d9978a;
+    --capy-ear-hole: #8f6a5c;
+    --capy-line: #3d2414;
+    --capy-blush: #f7b0b6;
     color-scheme: dark;
   }
 }
@@ -197,15 +195,14 @@
   --flower-dark: #e889ab;
   --pen-lit: #b7cbff;
   --water: #6f97e0;
-  --capy-fur: #cf9b63;
-  --capy-shade: #b5804b;
-  --capy-light: #e6bb87;
-  --capy-snout: #a8703f;
-  --capy-ear: #c48d57;
-  --capy-ear-in: #8a5a30;
-  --capy-foot-back: #b07a46;
-  --capy-line: #4a2e1b;
-  --capy-blush: #f29bb2;
+  --capy-fur: #f5c98d;
+  --capy-shade: #e8b475;
+  --capy-light: #fbe0b8;
+  --capy-snout: #a5877b;
+  --capy-ear-in: #d9978a;
+  --capy-ear-hole: #8f6a5c;
+  --capy-line: #3d2414;
+  --capy-blush: #f7b0b6;
   color-scheme: dark;
 }
 
@@ -4680,22 +4677,26 @@ a.more-account:hover {
   fill: var(--capy-snout);
 }
 
-.capy-ear,
-.capy-foot {
-  fill: var(--capy-ear);
+/* 耳朵外圈跟身體同色 */
+.capy-ear {
+  fill: var(--capy-fur);
 }
 
 .capy-ear-in {
   fill: var(--capy-ear-in);
 }
 
-.capy-foot-back {
-  fill: var(--capy-foot-back);
+.capy-ear-hole {
+  fill: var(--capy-ear-hole);
+}
+
+.capy-nostril {
+  fill: var(--capy-line);
 }
 
 .capy-blush {
   fill: var(--capy-blush);
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* 粗的深色外框：卡皮巴拉和頭上的道具都有 */
