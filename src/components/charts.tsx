@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
+import type { ExplainSession } from '../lib/explainProgress';
 import { monthBlocks, type WeekCount } from '../lib/stats';
 
 const WIDTH = 640;
@@ -115,6 +116,116 @@ export function WeeklyChart({ weeks }: { weeks: WeekCount[] }) {
               <tr key={w.start}>
                 <td>{fmt.day(w.start)}</td>
                 <td className="num">{w.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+    </figure>
+  );
+}
+
+const EXPLAIN_PAD = { top: 16, right: 16, bottom: 26, left: 44 };
+
+/**
+ * 講解分數的變化：每一次講解一個點（AI 評的實心、自己勾的空心），
+ * 加上一條最近三次平均的線，看得出是不是越講越好
+ */
+export function ExplainChart({ sessions, rolling }: { sessions: readonly ExplainSession[]; rolling: readonly number[] }) {
+  const { t, fmt } = useI18n();
+  const [active, setActive] = useState<number | null>(null);
+  const plotW = WIDTH - EXPLAIN_PAD.left - EXPLAIN_PAD.right;
+  const plotH = HEIGHT - EXPLAIN_PAD.top - EXPLAIN_PAD.bottom;
+  const n = sessions.length;
+  const step = n > 1 ? (plotW - 24) / (n - 1) : plotW;
+  const x = (i: number) => EXPLAIN_PAD.left + (n > 1 ? 12 + step * i : plotW / 2);
+  const y = (v: number) => EXPLAIN_PAD.top + plotH - v * plotH;
+  const pct = (v: number) => Math.round(v * 100);
+  // 日期最多標六個，最後一次一定標
+  const every = Math.max(1, Math.ceil(n / 6));
+  const line = rolling.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(v)}`).join(' ');
+
+  return (
+    <figure className="chart">
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={t.charts.explainLabel(n)}>
+        {[0, 0.5, 1].map((tick) => (
+          <g key={tick}>
+            <line className="chart-grid" x1={EXPLAIN_PAD.left} x2={WIDTH - EXPLAIN_PAD.right} y1={y(tick)} y2={y(tick)} />
+            <text className="chart-axis" x={EXPLAIN_PAD.left - 8} y={y(tick)} textAnchor="end" dominantBaseline="middle">
+              {pct(tick)}%
+            </text>
+          </g>
+        ))}
+        {n > 1 && <path className="chart-line" d={line} />}
+        {sessions.map((s, i) => (
+          <g key={i}>
+            <rect
+              className="chart-hit"
+              x={x(i) - Math.min(step, 48) / 2}
+              y={EXPLAIN_PAD.top}
+              width={Math.min(step, 48)}
+              height={plotH}
+              tabIndex={0}
+              aria-label={t.charts.explainPoint(fmt.day(s.day, false), pct(s.score), t.charts.explainSource[s.source])}
+              onPointerEnter={() => setActive(i)}
+              onPointerLeave={() => setActive(null)}
+              onFocus={() => setActive(i)}
+              onBlur={() => setActive(null)}
+            />
+            <circle
+              className="chart-dot"
+              data-source={s.source}
+              cx={x(i)}
+              cy={y(s.score)}
+              r={active === i ? 6 : 4.5}
+              pointerEvents="none"
+            />
+            {i % every === (n - 1) % every && (
+              <text className="chart-axis" x={x(i)} y={HEIGHT - 8} textAnchor="middle">
+                {fmt.day(s.day, false)}
+              </text>
+            )}
+          </g>
+        ))}
+      </svg>
+      {active !== null && (
+        <div className="tooltip" style={{ left: `${(x(active) / WIDTH) * 100}%`, top: `${(y(sessions[active].score) / HEIGHT) * 100}%` }}>
+          <strong>{pct(sessions[active].score)}%</strong>
+          {fmt.day(sessions[active].day, false)} · {t.charts.explainSource[sessions[active].source]}
+        </div>
+      )}
+      <ul className="chart-legend" aria-hidden>
+        <li>
+          <span className="chart-key" data-source="ai" />
+          {t.charts.explainSource.ai}
+        </li>
+        <li>
+          <span className="chart-key" data-source="self" />
+          {t.charts.explainSource.self}
+        </li>
+        <li>
+          <span className="chart-key chart-key-line" />
+          {t.charts.explainAverage}
+        </li>
+      </ul>
+      <details className="table-toggle">
+        <summary>{t.charts.showTable}</summary>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th scope="col">{t.charts.dayColumn}</th>
+              <th scope="col" className="num">
+                {t.charts.scoreColumn}
+              </th>
+              <th scope="col">{t.charts.sourceColumn}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sessions.map((s, i) => (
+              <tr key={i}>
+                <td>{fmt.day(s.day)}</td>
+                <td className="num">{pct(s.score)}%</td>
+                <td>{t.charts.explainSource[s.source]}</td>
               </tr>
             ))}
           </tbody>

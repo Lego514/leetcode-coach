@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { AlgorithmTree } from '../components/AlgorithmTree';
+import { ExplainProgressSheet } from '../components/ExplainProgress';
 import { ActivityHeatmap, WeeklyChart } from '../components/charts';
 import { PatternMap, ReadinessSheet, useRecapNumbers, WeeklyRecap } from '../components/Motivation';
 import { StuckSummary } from '../components/StuckSummary';
 import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
-import { CLARITY_OPTIONS } from '../data/interview';
 import { getPattern } from '../data/patterns';
 import { useI18n } from '../i18n';
-import { bold, rich } from '../i18n/rich';
+import { rich } from '../i18n/rich';
 import { LIST_FILTERS, problemsInList, type ListFilter } from '../lib/catalog';
 import { addDays, startOfWeek } from '../lib/dates';
 import { stageOf } from '../lib/srs';
@@ -27,6 +27,7 @@ import { retentionOf } from '../store/progress';
 import { useAttempts, useCardReviews, useCatalog, useMetaMap, useMocks, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
 
 const NO_ATTEMPTS: never[] = [];
+const NO_MOCKS: never[] = [];
 
 /** 熱度圖顯示一整年（含本週共 53 週） */
 const HEATMAP_WEEKS = 53;
@@ -84,9 +85,6 @@ export function ProgressPage() {
     [attempts, catalog, day],
   );
 
-  const fullMocks = (mocks ?? []).filter((m) => m.kind === 'full');
-  const explainMocks = (mocks ?? []).filter((m) => m.kind === 'explain');
-  const smoothExplains = explainMocks.filter((m) => m.clarity === CLARITY_OPTIONS[0]).length;
 
   return (
     <div className="page">
@@ -237,13 +235,7 @@ export function ProgressPage() {
           </Sheet>
         </div>
 
-        <Sheet title={t.progress.mockTitle} id="mock-stats">
-          <div className="sheet-body inline-stats">
-            <span>{rich(t.progress.mockFull(fullMocks.length), { b: bold })}</span>
-            <span>{rich(t.progress.mockExplain(explainMocks.length, smoothExplains), { b: bold })}</span>
-            <Link to="/mock">{t.progress.startMock}</Link>
-          </div>
-        </Sheet>
+        <ExplainProgressSheet mocks={mocks ?? NO_MOCKS} />
       </div>
     </div>
   );

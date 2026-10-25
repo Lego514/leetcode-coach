@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { EXPLAIN_POINTS } from '../../shared/constants';
 import { BUILTIN_PROBLEMS } from '../data/problems';
 import { progressFromAttempts } from '../store/progress';
 import type { AttemptRecord } from '../store/db';
 import { demoData } from './demo';
+import { explainProgress, explainSessions, type MockLike } from './explainProgress';
 
 const today = '2026-10-16';
 let n = 0;
@@ -32,5 +34,16 @@ describe('demo data', () => {
     });
     expect(due.length).toBeGreaterThan(0);
     expect(due.length).toBeLessThanOrEqual(10);
+  });
+
+  it('has a few explanation drills that get more complete, with edge cases missed the most', () => {
+    const mocks = demo.mocks as unknown as (MockLike & { problemId: number; uid: string })[];
+    const ids = new Set(BUILTIN_PROBLEMS.map((p) => p.id));
+    expect(mocks.length).toBeGreaterThanOrEqual(5);
+    expect(mocks.every((m) => ids.has(m.problemId) && m.day <= today && m.steps.every((s) => (EXPLAIN_POINTS as readonly string[]).includes(s)))).toBe(true);
+    expect(new Set([...attempts, ...mocks].map((r) => r.uid)).size).toBe(attempts.length + mocks.length);
+    const result = explainProgress(explainSessions(mocks));
+    expect(result.recent).toBeGreaterThan(result.previous!);
+    expect(result.weakest).toBe('edge');
   });
 });
