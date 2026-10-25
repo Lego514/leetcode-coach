@@ -539,6 +539,7 @@ const en: Messages = {
 
   detail: {
     notFoundLede: (id) => `There is no problem #${id}. You can add it from Problems with “Add problem”.`,
+    onTree: 'On your tree',
     startPractice: 'Start practice',
     recordDirectly: 'Record without timer',
     mockThis: 'Mock interview',

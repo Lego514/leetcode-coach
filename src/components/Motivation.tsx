@@ -18,14 +18,13 @@ import {
   readiness,
   weekSummary,
   winsFor,
-  type PatternLevel,
   type WeekSummary,
 } from '../lib/motivation';
 import type { AttemptRecord, MetaRecord, ProgressRecord } from '../store/db';
 import { loadAttemptsFor, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 import { nextStage, TREE_STAGES, treeStage } from '../lib/tree';
 import { TreeSvg, useTree, type TreeProps } from './AlgorithmTree';
-import { ArtIcon, type Art } from './TreeArt';
+import { ArtIcon, LEVEL_ART } from './TreeArt';
 import { useToast } from './toast';
 import { Sheet } from './ui';
 
@@ -305,9 +304,6 @@ function Meter({ label, value, max, children }: { label: string; value: number; 
     </div>
   );
 }
-
-/** 題型地圖每一格的小圖，跟樹上同一套：還沒開始是藍圖的一個點、入門是小芽、會了是葉子、精通開花 */
-const LEVEL_ART: Record<PatternLevel, Art> = { 0: 'bud', 1: 'seedling', 2: 'leaf', 3: 'flower' };
 
 /** 題型地圖：照學習路線排，每個題型一格，等級越高顏色越深 */
 export function PatternMap({ problems, progress, today }: { problems: readonly Problem[]; progress: ReadonlyMap<number, ProgressRecord>; today: Day }) {

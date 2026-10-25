@@ -64,6 +64,7 @@
   --fruit-dark: #a8321d;
   --flower-dark: #e27ba0;
   --pen-lit: #4466c2;
+  --water: #8fb3e8;
   color-scheme: light;
 }
 
@@ -120,6 +121,7 @@
     --fruit-dark: #d4472d;
     --flower-dark: #e889ab;
     --pen-lit: #b7cbff;
+    --water: #6f97e0;
     color-scheme: dark;
   }
 }
@@ -176,6 +178,7 @@
   --fruit-dark: #d4472d;
   --flower-dark: #e889ab;
   --pen-lit: #b7cbff;
+  --water: #6f97e0;
   color-scheme: dark;
 }
 
@@ -4464,6 +4467,255 @@ a.more-account:hover {
 
   .algo-leaf {
     transition: none;
+  }
+}
+
+/* ---------- 空白和做完的時候的小插畫（components/SpotArt.tsx） ---------- */
+.spot-art {
+  display: block;
+  width: 120px;
+  height: 90px;
+  flex: none;
+}
+
+.spot-stem {
+  fill: none;
+  stroke: var(--leaf-2);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+.spot-can {
+  fill: var(--pen);
+}
+
+.spot-can-lit {
+  fill: var(--pen-lit);
+}
+
+.spot-can-handle,
+.spot-can-spout {
+  fill: none;
+  stroke: var(--pen);
+  stroke-linecap: round;
+}
+
+.spot-can-handle {
+  stroke-width: 3.4;
+}
+
+.spot-can-spout {
+  stroke-width: 4.6;
+}
+
+.spot-water {
+  fill: var(--water);
+}
+
+.spot-star {
+  fill: var(--flower-c);
+}
+
+.spot-shadow {
+  fill: var(--rule);
+  opacity: 0.7;
+}
+
+.spot-card {
+  fill: var(--sheet-2);
+  stroke: var(--rule-strong);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.spot-line {
+  fill: none;
+  stroke: var(--rule-strong);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.spot-check,
+.spot-arrow {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spot-check {
+  stroke: var(--pen);
+}
+
+/* 白板上的指標用紅筆 */
+.spot-arrow {
+  stroke: var(--fruit);
+  stroke-width: 2.4;
+}
+
+.spot-pen {
+  fill: var(--pen);
+}
+
+.spot-nib {
+  fill: var(--ink-2);
+}
+
+.spot-bubble {
+  fill: var(--pen-soft);
+  stroke: var(--pen);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.spot-bubble-dot {
+  fill: var(--pen);
+}
+
+.spot-leg,
+.spot-post {
+  fill: none;
+  stroke: var(--wood);
+  stroke-width: 3.4;
+  stroke-linecap: round;
+}
+
+.spot-board {
+  fill: var(--sheet-2);
+  stroke: var(--wood);
+  stroke-width: 3;
+}
+
+.spot-tray {
+  fill: var(--wood-dark);
+}
+
+.spot-cell {
+  fill: var(--sheet);
+  stroke: var(--pen);
+  stroke-width: 1.6;
+}
+
+.spot-cell-on {
+  fill: var(--pen-soft);
+}
+
+/* 還沒長出來的東西：跟演算法樹一樣是藍色虛線 */
+.spot-blueprint {
+  fill: none;
+  stroke: var(--blueprint);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 4;
+  stroke-linecap: round;
+}
+
+.spot-sign {
+  fill: var(--seed);
+}
+
+.spot-sign-text {
+  fill: var(--wood-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.spot-device {
+  fill: var(--ink-3);
+}
+
+.spot-screen {
+  fill: var(--canopy);
+}
+
+.spot-sync {
+  fill: none;
+  stroke: var(--pen);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 找不到頁面的插畫大一點 */
+.spot-art-big {
+  width: 200px;
+  height: 150px;
+  margin-bottom: 8px;
+}
+
+/* 微複習做完一回合：卡片疊在標題上面，置中 */
+.flash-done .spot-art {
+  margin: 0 auto;
+}
+
+/* 帳號：登入前的說明旁邊畫電腦和手機 */
+.account-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+.account-intro p {
+  flex: 1 1 240px;
+  margin: 0;
+}
+
+/* 題目頁：這一題在演算法樹上的樣子，排在複習排程的最上面 */
+.tree-node-fact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tree-node-fact p {
+  margin: 0;
+}
+
+.node-icon {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+
+.tree-node-label,
+.tree-node-fruit {
+  display: block;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.tree-node-fruit {
+  color: var(--ink-2);
+}
+
+/* 模板卡：題型名稱前面的等級小圖 */
+.pattern-art {
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  vertical-align: -5px;
+}
+
+/* 空白的卡片：左邊插畫、右邊文字和按鈕；手機上插畫在上面、置中 */
+.sheet-empty-art {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 20px;
+}
+
+@media (max-width: 560px) {
+  .sheet-empty-art {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+  }
+
+  .sheet-empty-art .btn-row {
+    justify-content: center;
   }
 }
 

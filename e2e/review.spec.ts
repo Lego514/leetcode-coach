@@ -40,6 +40,8 @@ test('caps reviews per day, lists what is next, and lets me pick one or do more'
     await page.getByRole('button', { name: /^Solved alone/ }).click();
   }
   await expect(page.getByRole('heading', { name: 'Done with today’s 5 reviews' })).toBeVisible();
+  // 做完今天的份：澆水壺在幫小芽澆水
+  await expect(page.locator('[data-spot="watered"]')).toBeVisible();
   await page.getByRole('button', { name: 'Review 5 more' }).click();
   await expect(page.locator('#review-title')).toBeVisible();
 });

@@ -8,6 +8,7 @@ import {
   GROUND,
   grownBetween,
   nextStage,
+  nodeFor,
   pointOn,
   shadeOf,
   sproutHeight,
@@ -94,6 +95,17 @@ describe('treeState', () => {
 
   it('shades leaves from fresh to faded', () => {
     expect([0.95, 0.85, 0.72, 0.6, 0.5].map(shadeOf)).toEqual(['fresh', 'good', 'ok', 'fading', 'faded']);
+  });
+});
+
+describe('nodeFor', () => {
+  it('draws one problem the same way the tree and the problem page do', () => {
+    expect(nodeFor(undefined, false, '2026-10-21')).toEqual({ kind: 'bud' });
+    expect(nodeFor(stateAfter([['hint', '2026-10-20']]), false, '2026-10-21')).toEqual({ kind: 'sprout' });
+    const leaf = nodeFor(stateAfter([['solo', '2026-10-20']]), true, '2026-10-21');
+    expect(leaf).toMatchObject({ kind: 'leaf', shade: 'fresh', fruit: true });
+    // 一年沒碰的題目，葉子枯了
+    expect(nodeFor(stateAfter([['solo', '2025-10-20']]), false, '2026-10-21')).toMatchObject({ kind: 'leaf', shade: 'faded' });
   });
 });
 

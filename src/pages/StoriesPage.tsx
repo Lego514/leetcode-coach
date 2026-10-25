@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { SaveStatus, useAutosave } from '../components/autosave';
+import { SpotArt } from '../components/SpotArt';
 import { ChatReply } from '../components/ChatPromptPanel';
 import { useToast } from '../components/toast';
 import { Dialog, PageHead, Sheet } from '../components/ui';
@@ -98,7 +99,10 @@ export function StoriesPage() {
           }
         >
           {stories === undefined ? null : stories.length === 0 ? (
-            <p className="sheet-empty">{s.emptyList}</p>
+            <div className="sheet-empty sheet-empty-art">
+              <SpotArt spot="notebook" />
+              <p>{s.emptyList}</p>
+            </div>
           ) : (
             <ul className="story-list">
               {stories.map((story) => (

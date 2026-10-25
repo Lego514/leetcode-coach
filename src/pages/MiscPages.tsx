@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
 import { syncStatusText } from '../components/AccountSection';
+import { SpotArt } from '../components/SpotArt';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { NavIcon } from '../components/NavIcon';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -98,6 +99,8 @@ export function NotFoundPage() {
   const { t } = useI18n();
   return (
     <div className="page">
+      {/* 還沒長出來的樹（藍圖）和一個問號路標 */}
+      <SpotArt spot="lost" className="spot-art spot-art-big" />
       <PageHead title={t.notFound.title} lede={t.notFound.lede}>
         <div className="btn-row" style={{ marginTop: 16 }}>
           <Link className="btn btn-primary" to="/">

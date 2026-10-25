@@ -19,6 +19,7 @@ import {
 } from '../store/cloud';
 import { db } from '../store/db';
 import { useToast } from './toast';
+import { SpotArt } from './SpotArt';
 import { Dialog, Sheet } from './ui';
 
 const GITHUB_ICON = (
@@ -196,7 +197,10 @@ function SignInForm({ expiredEmail, github }: { expiredEmail?: string; github: b
   return (
     <>
       {expiredEmail && <p className="form-error">{t.account.expired(expiredEmail)}</p>}
-      <p>{t.account.intro}</p>
+      <div className="account-intro">
+        <SpotArt spot="sync" />
+        <p>{t.account.intro}</p>
+      </div>
 
       {github && (
         <>

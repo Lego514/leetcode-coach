@@ -132,6 +132,14 @@ export function shadeOf(recall: number): LeafShade {
   return 'faded';
 }
 
+/** 一題在樹上的樣子：還沒做是空位，上次靠提示是小芽，自己解出是葉子（依現在還記得的機率上色），征服的結果實 */
+export function nodeFor(state: StateLike | undefined, conquered: boolean, today: Day): TreeNode {
+  if (!state) return { kind: 'bud' };
+  if (state.lastRating !== 'solo') return { kind: 'sprout' };
+  const recall = recallOn(state, today) ?? 1;
+  return { kind: 'leaf', shade: shadeOf(recall), recall, fruit: conquered };
+}
+
 export interface TreeState {
   nodes: Map<number, TreeNode>;
   levels: Map<PatternId, PatternLevel>;
@@ -160,16 +168,12 @@ export function treeState(
   for (const p of problems) {
     const state = progress.get(p.id);
     if (state) started += 1;
-    if (!state) nodes.set(p.id, { kind: 'bud' });
-    else if (state.lastRating !== 'solo') nodes.set(p.id, { kind: 'sprout' });
-    else {
-      const recall = recallOn(state, today) ?? 1;
-      const shade = shadeOf(recall);
-      const fruit = conquered.has(p.id);
-      nodes.set(p.id, { kind: 'leaf', shade, recall, fruit });
-      if (recall >= READY_RECALL) ready += 1;
+    const node = nodeFor(state, conquered.has(p.id), today);
+    nodes.set(p.id, node);
+    if (node.kind === 'leaf') {
+      if (node.recall >= READY_RECALL) ready += 1;
       else fading.push(p.id);
-      if (fruit) fruits += 1;
+      if (node.fruit) fruits += 1;
     }
   }
   const levels = new Map(patternLevels(problems, progress, today).map((p) => [p.pattern, p.level]));

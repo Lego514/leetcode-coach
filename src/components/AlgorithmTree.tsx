@@ -224,7 +224,7 @@ export function AlgorithmTree({ share, ...props }: TreeProps & { share?: { strea
                 <DifficultyTag difficulty={problem.difficulty} />
                 <span>{getPattern(problem.pattern, locale).name}</span>
               </p>
-              <p>{describe(t.tree.nodes, node)}</p>
+              <p>{describeNode(t.tree.nodes, node)}</p>
             </>
           ) : (
             <p>{t.tree.hint}</p>
@@ -260,7 +260,7 @@ export function AlgorithmTree({ share, ...props }: TreeProps & { share?: { strea
   );
 }
 
-function describe(nodes: ReturnType<typeof useI18n>['t']['tree']['nodes'], node: TreeNode): string {
+export function describeNode(nodes: ReturnType<typeof useI18n>['t']['tree']['nodes'], node: TreeNode): string {
   if (node.kind === 'bud') return nodes.bud;
   if (node.kind === 'sprout') return nodes.sprout;
   const pct = Math.round(node.recall * 100);
