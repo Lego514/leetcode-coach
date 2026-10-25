@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
-import type { CompanionStage, HeadItem } from '../lib/companion';
+import type { CompanionPose, CompanionStage, HeadItem } from '../lib/companion';
 import type { Day } from '../lib/dates';
 import {
   branchOutline,
@@ -75,7 +75,7 @@ export function TreeSvg({
   onPick?: (id: number) => void;
   ariaLabel: string;
   /** 坐在樹右下角的卡皮巴拉（今天卡用） */
-  companion?: { stage: CompanionStage; mood: CompanionMood; item: HeadItem | null };
+  companion?: { stage: CompanionStage; mood: CompanionMood; item: HeadItem | null; pose?: CompanionPose };
 }) {
   const { locale } = useI18n();
   const grown = useGrown(state);
@@ -174,7 +174,16 @@ export function TreeSvg({
 }
 
 /** 樹右下角的卡皮巴拉：站在樹的地面上；樹還小的時候畫面框得小，卡皮巴拉也跟著小 */
-function TreeCompanion({ view, ...look }: { view: { x: number; y: number; width: number; height: number }; stage: CompanionStage; mood: CompanionMood; item: HeadItem | null }) {
+function TreeCompanion({
+  view,
+  ...look
+}: {
+  view: { x: number; y: number; width: number; height: number };
+  stage: CompanionStage;
+  mood: CompanionMood;
+  item: HeadItem | null;
+  pose?: CompanionPose;
+}) {
   const width = Math.min(Math.max(view.width * 0.3, 34), 96);
   const height = (width * 134) / 120;
   // 卡皮巴拉的腳底在它自己畫面高度的 97% 的地方

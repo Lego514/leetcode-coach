@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { PatternId } from '../data/patterns';
 import {
   companionFacts,
+  companionPose,
   companionStage,
+  dailyPick,
   HEAD_ITEMS,
   itemProgress,
   newItems,
   nextCompanionStage,
+  nextItem,
   unlockedItems,
   wornItem,
   type CompanionFacts,
@@ -70,6 +73,31 @@ describe('companion', () => {
     expect(itemProgress(some, 'bird')).toEqual({ have: 40, goal: 100, done: false });
     const all = { practiceDays: 90, solo: 200, longestStreak: 100, conquests: 9, cards: 500, topPattern: 12, explainDrills: 30, problems: 150 };
     expect(unlockedItems(all)).toEqual([...HEAD_ITEMS]);
+  });
+
+  it('sleeps in bed until I practice, codes until today is done, then relaxes', () => {
+    expect(companionPose(false, false, '2026-10-24')).toBe('bed');
+    expect(companionPose(true, false, '2026-10-24')).toBe('laptop');
+    // 做完了：一天喝珍奶、一天泡溫泉
+    const done = [companionPose(true, true, '2026-10-24'), companionPose(true, true, '2026-10-25')];
+    expect([...done].sort()).toEqual(['boba', 'onsen']);
+  });
+
+  it('picks a different tip each day and wraps around', () => {
+    expect(dailyPick('2026-01-01', 5)).toBe(0);
+    expect(dailyPick('2026-01-03', 5)).toBe(2);
+    expect(dailyPick('2026-01-06', 5)).toBe(0);
+    expect(dailyPick('2026-01-01', 5, 7)).toBe(2);
+    // 2026 年以前也是 0 到 4
+    expect(dailyPick('2025-12-31', 5)).toBe(4);
+  });
+
+  it('points to the head item I am closest to collecting', () => {
+    expect(nextItem(none)).toEqual({ item: 'yuzu', have: 0, goal: 1 });
+    // 柚子、小芽拿到了；毛帽 5 / 7 比小鳥 40 / 100 近
+    expect(nextItem({ ...none, practiceDays: 5, solo: 3, longestStreak: 5, cards: 40 })).toEqual({ item: 'beanie', have: 5, goal: 7 });
+    const all = { practiceDays: 90, solo: 200, longestStreak: 100, conquests: 9, cards: 500, topPattern: 12, explainDrills: 30, problems: 150 };
+    expect(nextItem(all)).toBeNull();
   });
 
   it('wears what I picked if I have it, nothing if I took it off, and the first item otherwise', () => {

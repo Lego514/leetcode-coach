@@ -4699,19 +4699,29 @@ a.more-account:hover {
   opacity: 0.8;
 }
 
-/* 粗的深色外框：卡皮巴拉和頭上的道具都有 */
+/*
+ * 粗的深色外框：卡皮巴拉和頭上的道具都有。
+ * CSS 會蓋過 SVG 元素上的 stroke、stroke-width 屬性，所以預設的顏色和粗細只給沒寫的元素，
+ * 自己寫了顏色（耳機的藍、吸管的粉紅、熱氣）或比較細的外框（手、小東西）才看得到
+ */
 .capy-ol {
-  stroke: var(--capy-line);
-  stroke-width: 3.2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
+.capy-ol:not([stroke-width]) {
+  stroke-width: 3.2;
+}
+
 .capy-ln {
   fill: none;
-  stroke: var(--capy-line);
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.capy-ol:not([stroke]),
+.capy-ln:not([stroke]) {
+  stroke: var(--capy-line);
 }
 
 /* 打瞌睡的 z */
@@ -5102,6 +5112,93 @@ button.head-item-slot:hover {
       'goal goal'
       'actions actions';
   }
+}
+
+/* 寬的畫面（1100px 以上）右上角是空的：卡皮巴拉和對話框放在那裡，樹下就不再放一隻 */
+.today-card-pet {
+  grid-area: pet;
+  display: none;
+  align-items: center;
+  justify-self: end;
+  align-self: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (min-width: 1100px) {
+  .today-card {
+    grid-template-columns: minmax(96px, 170px) minmax(0, 1fr) minmax(260px, 340px);
+    grid-template-areas:
+      'tasks tasks pet'
+      'tree stats pet'
+      'tree week pet'
+      'tree goal goal'
+      'tree actions actions';
+  }
+
+  .today-card-pet {
+    display: flex;
+  }
+
+  .today-card-tree .capybara {
+    display: none;
+  }
+}
+
+/* 對話框，尾巴指向右邊的卡皮巴拉 */
+.pet-bubble {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  max-width: 230px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 14px;
+  background: var(--sheet-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pet-bubble::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -7px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid var(--rule-strong);
+  border-right: 1px solid var(--rule-strong);
+  background: var(--sheet-2);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.pet-bubble p {
+  margin: 0;
+}
+
+.pet-tip {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.pet-tip strong {
+  color: var(--ink);
+}
+
+/* 「再一則」和下一個頭飾 */
+.pet-bubble-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.pet-capybara {
+  width: 104px;
+  height: 116px;
+  flex: none;
 }
 
 .today-card-tree {

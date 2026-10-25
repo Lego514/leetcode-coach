@@ -22,9 +22,10 @@ import {
 } from '../lib/motivation';
 import type { AttemptRecord, MetaRecord, ProgressRecord } from '../store/db';
 import { loadAttemptsFor, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
+import { companionPose } from '../lib/companion';
 import { nextStage, TREE_STAGES, treeStage } from '../lib/tree';
 import { TreeSvg, useTree, type TreeProps } from './AlgorithmTree';
-import { useCompanion } from './Companion';
+import { CompanionPet, useCompanion } from './Companion';
 import { ArtIcon, LEVEL_ART } from './TreeArt';
 import { useToast } from './toast';
 import { Sheet } from './ui';
@@ -69,6 +70,9 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
   const { ready, fading, fruits } = model.state;
   const next = nextStage(model.state.started);
   const status = todayStatus({ ...tasks, checkedIn: state.practicedToday });
+  // 卡皮巴拉今天的樣子：還沒練在床上睡、還沒做完在用電腦、做完了喝珍奶或泡溫泉
+  const pose = companion && companionPose(companion.mood === 'happy', status === 'allDone', today);
+  const left = Math.max(0, tasks.newGoal - tasks.newDone) + Math.max(0, tasks.reviewGoal - tasks.reviewDone);
   const pill = (done: boolean, text: string) => (
     <li className="today-task" data-done={done || undefined}>
       {text}
@@ -94,7 +98,7 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
         {tree.problems.length > 0 && (
           <div className="today-card-tree">
             <Link to="/progress#algorithm-tree" aria-label={t.tree.seeFull}>
-              <TreeSvg {...model} labels={false} ariaLabel={t.tree.label(ready, tree.problems.length)} companion={companion ?? undefined} />
+              <TreeSvg {...model} labels={false} ariaLabel={t.tree.label(ready, tree.problems.length)} companion={companion && pose ? { ...companion, pose } : undefined} />
             </Link>
             <p className="today-card-caption">
               <strong>{t.tree.stages[model.stage]}</strong>
@@ -102,6 +106,8 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
             </p>
           </div>
         )}
+        {/* 寬的畫面右上角是空的：放一隻大一點的卡皮巴拉和對話框；窄的畫面牠在樹下（見 styles.css） */}
+        {companion && pose && <CompanionPet companion={companion} pose={pose} left={left} />}
         <div className="today-card-stats">
           {frozen.has(addDays(today, -1)) && (
             <p className="streak-saved">

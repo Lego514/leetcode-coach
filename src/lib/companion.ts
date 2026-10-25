@@ -1,5 +1,5 @@
 import type { PatternId } from '../data/patterns';
-import type { Day } from './dates';
+import { diffDays, type Day } from './dates';
 import { conquests } from './motivation';
 import type { Rating } from './srs';
 import { longestStreak } from './stats';
@@ -24,6 +24,29 @@ export function companionStage(days: number): CompanionStage {
 export function nextCompanionStage(days: number): { stage: CompanionStage; needed: number } | null {
   const next = COMPANION_STAGES[COMPANION_STAGES.indexOf(companionStage(days)) + 1];
   return next ? { stage: next, needed: COMPANION_STAGE_START[next] - days } : null;
+}
+
+/**
+ * 今天卡上的樣子：還沒練習在床上睡覺，練了但今天的目標還沒做完在用電腦，
+ * 都做完了就喝珍奶或泡溫泉（一天一種，輪流）
+ */
+export const POSES = ['bed', 'laptop', 'boba', 'onsen'] as const;
+export type CompanionPose = (typeof POSES)[number];
+
+export function companionPose(practicedToday: boolean, allDone: boolean, day: Day): CompanionPose {
+  if (!practicedToday) return 'bed';
+  if (!allDone) return 'laptop';
+  return dayIndex(day) % 2 === 0 ? 'boba' : 'onsen';
+}
+
+/** 從某天起算的第幾天，拿來每天換一則話、一則小知識 */
+export function dayIndex(day: Day): number {
+  return diffDays('2026-01-01', day);
+}
+
+/** 每天挑一個（第 offset 則是往後再數幾個），負的日子也不會出錯 */
+export function dailyPick(day: Day, count: number, offset = 0): number {
+  return (((dayIndex(day) + offset) % count) + count) % count;
 }
 
 /** 頭上的收藏，照拿到的難易排 */
@@ -111,6 +134,17 @@ export function itemProgress(facts: CompanionFacts, item: HeadItem): { have: num
 
 export function unlockedItems(facts: CompanionFacts): HeadItem[] {
   return HEAD_ITEMS.filter((item) => itemProgress(facts, item).done);
+}
+
+/** 最快能收集到的下一個頭飾：還沒拿到的裡面，進度比例最高的（一樣高就照收藏的順序）；全部拿到是 null */
+export function nextItem(facts: CompanionFacts): { item: HeadItem; have: number; goal: number } | null {
+  let best: { item: HeadItem; have: number; goal: number } | null = null;
+  for (const item of HEAD_ITEMS) {
+    const { have, goal, done } = itemProgress(facts, item);
+    if (done) continue;
+    if (!best || have / goal > best.have / best.goal) best = { item, have, goal };
+  }
+  return best;
 }
 
 /**
