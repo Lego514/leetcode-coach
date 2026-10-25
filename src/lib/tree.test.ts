@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PATTERN_ORDER } from '../data/patterns';
+import { getPattern, PATTERN_ORDER, type PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { schedule, type Rating } from './srs';
 import {
@@ -12,6 +12,7 @@ import {
   pointOn,
   shadeOf,
   sproutHeight,
+  labelWidth,
   stageView,
   taperedPath,
   TREE_VIEW,
@@ -163,29 +164,45 @@ describe('growth stages', () => {
     expect(stageView('seed', []).width).toBeLessThan(stageView('sprout', []).width);
     // 發芽的莖每長一片葉子就高一截，畫面也跟著框高一點，上面不留一大片空白
     expect(sproutHeight(3)).toBeGreaterThan(sproutHeight(1));
-    expect(stageView('sprout', [], false, 3).height).toBeGreaterThan(stageView('sprout', [], false, 1).height);
+    expect(stageView('sprout', [], undefined, 3).height).toBeGreaterThan(stageView('sprout', [], undefined, 1).height);
     // 莖頂端的新芽（高 11）也要在畫面裡
-    expect(stageView('sprout', [], false, 4).y).toBeLessThan(GROUND - sproutHeight(4) - 11);
+    expect(stageView('sprout', [], undefined, 4).y).toBeLessThan(GROUND - sproutHeight(4) - 11);
     const few = treeLayout([problem(1, 'arrays'), problem(2, 'two-pointers')]);
     const all = treeLayout(PATTERN_ORDER.map((pattern, i) => problem(i + 1, pattern)));
     // 樹枝少，樹幹就短：最上面那根樹枝比完整的樹低很多
     expect(Math.min(...few.map((b) => b.start.y))).toBeGreaterThan(Math.min(...all.map((b) => b.start.y)) + 200);
     // 小樹苗框得比較扁，上面不留一大片空白；沒有題型名稱（今天卡）時左右不用留名稱的位置
-    expect(stageView('sapling', few).height / stageView('sapling', few).width).toBeLessThan(ratio);
-    expect(stageView('sapling', few, false).width).toBeLessThan(stageView('sapling', few).width);
+    const english = (pattern: PatternId) => getPattern(pattern, 'en').name;
+    const chinese = (pattern: PatternId) => getPattern(pattern, 'zh-TW').name;
+    expect(stageView('sapling', few, english).height / stageView('sapling', few, english).width).toBeLessThan(ratio);
+    expect(stageView('sapling', few).width).toBeLessThan(stageView('sapling', few, english).width);
     const half = treeLayout(PATTERN_ORDER.slice(0, 9).map((pattern, i) => problem(i + 1, pattern)));
-    for (const labels of [true, false]) {
+    for (const labelOf of [english, chinese, undefined]) {
       for (const [stage, branches] of [['sapling', few], ['young', half], ['grown', all]] as const) {
-        const view = stageView(stage, branches, labels);
+        const view = stageView(stage, branches, labelOf);
         expect(view.height / view.width).toBeGreaterThanOrEqual(0.6 - 1e-9);
         expect(view.height / view.width).toBeLessThanOrEqual(ratio + 1e-9);
         for (const b of branches) {
           expect(b.end.y).toBeGreaterThan(view.y);
           expect(b.end.x).toBeGreaterThan(view.x);
           expect(b.end.x).toBeLessThan(view.x + view.width);
+          // 題型名稱（從樹枝末端往外，開花的離 10）整個在畫面裡
+          if (labelOf) {
+            const far = b.end.x + b.side * (10 + labelWidth(labelOf(b.pattern)));
+            expect(far).toBeGreaterThan(view.x);
+            expect(far).toBeLessThan(view.x + view.width);
+          }
         }
       }
     }
+  });
+
+  it('estimates how wide a pattern name is, wider for long English names', () => {
+    // 以前左右固定留 80，「Arrays & Hashing」放不下
+    expect(labelWidth(getPattern('arrays', 'en').name) + 4).toBeGreaterThan(80);
+    expect(labelWidth(getPattern('dp-1d', 'en').name)).toBeGreaterThan(labelWidth(getPattern('stack', 'en').name));
+    // 中文一個字比英文字母寬
+    expect(labelWidth(getPattern('stack', 'zh-TW').name) / [...getPattern('stack', 'zh-TW').name].length).toBeGreaterThan(labelWidth('Stack') / 5);
   });
 
   it('counts every problem you have done toward the stage', () => {

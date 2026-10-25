@@ -235,13 +235,24 @@ const STAGE_FRAME: Record<TreeStage, { width: number; height: number; flat: numb
 };
 
 /**
+ * 題型名稱大約多寬（11px 的字，見 styles.css 的 .algo-label）：中文一個字約 1em，英文、數字和符號平均不到 0.6em。
+ * 只用來框畫面，寧可估寬一點
+ */
+export function labelWidth(name: string): number {
+  let width = 0;
+  for (const ch of name) width += ch.codePointAt(0)! >= 0x2e80 ? 11 : 6.4;
+  return width;
+}
+
+/**
  * 畫面範圍：依樹現在的大小框起來，樹還小的時候拉近，不會縮成一個點，上面也不會留一大片空白。
- * 有題型名稱時左右要留名稱的位置；最高跟完整的樹一樣
+ * 有題型名稱（labelOf）時左右要留名稱的位置，名稱長就留多一點（英文的「1-D Dynamic Programming」很長）；
+ * 最高跟完整的樹一樣
  */
 export function stageView(
   stage: TreeStage,
   branches: readonly Branch[],
-  labels = true,
+  labelOf?: (pattern: PatternId) => string,
   seedlings = 0,
 ): { x: number; y: number; width: number; height: number } {
   const bottom = GROUND + 35;
@@ -249,7 +260,9 @@ export function stageView(
   let width = STAGE_FRAME[stage].width;
   let top = GROUND - (stage === 'sprout' ? sproutHeight(seedlings) + 28 : STAGE_FRAME[stage].height);
   for (const b of branches) {
-    width = Math.max(width, 2 * (Math.abs(b.end.x - TRUNK_X) + (labels ? 80 : 30)));
+    // 名稱離樹枝末端 4（開花的 10），再留一點空
+    const room = labelOf ? Math.max(80, 16 + labelWidth(labelOf(b.pattern))) : 30;
+    width = Math.max(width, 2 * (Math.abs(b.end.x - TRUNK_X) + room));
     // 樹幹會長到最上面那根樹枝再高一點（見 TreeSvg）
     top = Math.min(top, b.end.y - 30, b.start.y - 40);
   }

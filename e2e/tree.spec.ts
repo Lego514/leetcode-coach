@@ -18,6 +18,17 @@ test('grows the algorithm tree from practice, small on Today and in full on Prog
   const tree = page.getByRole('region', { name: 'Algorithm tree' });
   await expect(tree).toBeVisible();
   await expect(tree.locator('.algo-label')).toContainText(['Arrays & Hashing']);
+  // 題型名稱整個在畫面裡（英文名稱比較長，以前左邊的「Arrays & Hashing」會被切掉）
+  const clipped = await tree.locator('svg.algo-tree').evaluate((svg) => {
+    const view = (svg as SVGSVGElement).viewBox.baseVal;
+    return [...svg.querySelectorAll<SVGTextElement>('text.algo-label')]
+      .filter((label) => {
+        const box = label.getBBox();
+        return box.x < view.x || box.x + box.width > view.x + view.width;
+      })
+      .map((label) => label.textContent);
+  });
+  expect(clipped).toEqual([]);
   // 示範資料做過的題目長了葉子，征服的結了果實，還沒做的是虛線上的小點
   expect(await tree.locator('.algo-leaf').count()).toBeGreaterThan(10);
   expect(await tree.locator('.algo-fruit').count()).toBeGreaterThan(0);
