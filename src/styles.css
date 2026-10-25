@@ -307,6 +307,14 @@ kbd,
   color: var(--ink);
 }
 
+/* 自己選的圖示（方格以外）：檔案本身有圓角的底 */
+.wordmark-logo {
+  display: block;
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+
 .wordmark-glyph {
   display: grid;
   grid-template-columns: repeat(3, 6px);
@@ -4468,6 +4476,46 @@ a.more-account:hover {
   .algo-leaf {
     transition: none;
   }
+}
+
+/* ---------- 設定頁：選 App 的圖示 ---------- */
+.logo-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.logo-choice {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 84px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--sheet);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.logo-choice img {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+
+.logo-choice:hover {
+  border-color: var(--pen);
+}
+
+.logo-choice[aria-pressed='true'] {
+  border-color: var(--pen);
+  box-shadow: 0 0 0 1px var(--pen);
+  background: var(--pen-soft);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* ---------- 空白和做完的時候的小插畫（components/SpotArt.tsx） ---------- */

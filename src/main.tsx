@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { applyLocaleToDocument } from './i18n';
 import { initMonitoring } from './lib/monitoring';
+import { applyLogo } from './lib/logo';
 import { applyTheme } from './lib/theme';
 import { initPwaUpdates } from './pwa';
 import { initCloud } from './store/cloud';
@@ -15,6 +16,7 @@ import './styles.css';
 void initMonitoring();
 initInstallPrompt();
 applyTheme();
+applyLogo();
 applyLocaleToDocument();
 
 createRoot(document.getElementById('root')!).render(

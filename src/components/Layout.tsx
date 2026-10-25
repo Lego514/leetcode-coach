@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router';
 import { useI18n, type Messages } from '../i18n';
 import { applyUpdate, canReloadNow, useUpdateReady } from '../lib/appUpdate';
+import { LOGO_URLS, useLogo } from '../lib/logo';
 import { useCloud } from '../store/cloud';
 import { clearDemoData, useDemo } from '../store/demo';
 import { rememberPage } from '../store/reports';
@@ -137,6 +138,7 @@ export function Layout() {
   const { pathname } = useLocation();
   const safeToReload = canReloadNow(pathname);
 
+  const [logo] = useLogo();
   // 回報問題時附上是從哪個頁面來的
   useEffect(() => rememberPage(pathname), [pathname]);
 
@@ -149,11 +151,16 @@ export function Layout() {
     <div className="app">
       <nav className="nav" aria-label={t.nav.main}>
         <NavLink to="/" className="wordmark" aria-label={t.app.homeLabel}>
-          <span className="wordmark-glyph" aria-hidden>
-            {Array.from({ length: 9 }, (_, i) => (
-              <span key={i} />
-            ))}
-          </span>
+          {/* 圖示可以在設定裡換；方格是原本的，跟著深色模式換顏色 */}
+          {logo === 'grid' ? (
+            <span className="wordmark-glyph" aria-hidden>
+              {Array.from({ length: 9 }, (_, i) => (
+                <span key={i} />
+              ))}
+            </span>
+          ) : (
+            <img className="wordmark-logo" src={LOGO_URLS[logo]} alt="" data-logo={logo} />
+          )}
           {t.app.name}
         </NavLink>
         <div className="nav-groups">
