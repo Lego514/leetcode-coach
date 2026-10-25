@@ -3,10 +3,12 @@ import { Link } from 'react-router';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
+import type { CompanionStage, HeadItem } from '../lib/companion';
 import type { Day } from '../lib/dates';
 import {
   branchOutline,
   canopyBlobs,
+  GROUND,
   grownBetween,
   nextStage,
   pointOn,
@@ -22,6 +24,7 @@ import {
 import type { AttemptRecord, ProgressRecord } from '../store/db';
 import type { RecapNumbers } from './Motivation';
 import { ShareTreeButton } from './ShareCard';
+import { Capybara, type CompanionMood } from './Capybara';
 import { Flower, Fruit, Ground, LEAF, LeafIcon, Seed, Seedling, Sprout, Trunk, VEIN } from './TreeArt';
 import { DifficultyTag, Sheet } from './ui';
 
@@ -65,7 +68,15 @@ export function TreeSvg({
   picked,
   onPick,
   ariaLabel,
-}: ReturnType<typeof useTree> & { labels: boolean; picked?: number | null; onPick?: (id: number) => void; ariaLabel: string }) {
+  companion,
+}: ReturnType<typeof useTree> & {
+  labels: boolean;
+  picked?: number | null;
+  onPick?: (id: number) => void;
+  ariaLabel: string;
+  /** 坐在樹右下角的卡皮巴拉（今天卡用） */
+  companion?: { stage: CompanionStage; mood: CompanionMood; item: HeadItem | null };
+}) {
   const { locale } = useI18n();
   const grown = useGrown(state);
   const view = stageView(stage, branches, labels, seedlings.length);
@@ -140,6 +151,7 @@ export function TreeSvg({
           {branches.map((b) => (state.levels.get(b.pattern) === 3 ? <Flower key={b.pattern} x={b.end.x} y={b.end.y} /> : null))}
         </g>
       )}
+      {companion && <TreeCompanion view={view} {...companion} />}
       {labels &&
         branches.map((b) => {
           const level = state.levels.get(b.pattern) ?? 0;
@@ -159,6 +171,14 @@ export function TreeSvg({
         })}
     </svg>
   );
+}
+
+/** 樹右下角的卡皮巴拉：站在樹的地面上；樹還小的時候畫面框得小，卡皮巴拉也跟著小 */
+function TreeCompanion({ view, ...look }: { view: { x: number; y: number; width: number; height: number }; stage: CompanionStage; mood: CompanionMood; item: HeadItem | null }) {
+  const width = Math.min(Math.max(view.width * 0.3, 34), 96);
+  const height = (width * 134) / 120;
+  // 卡皮巴拉的腳底在它自己畫面高度的 97% 的地方
+  return <Capybara {...look} ground={false} x={view.x + view.width * 0.97 - width} y={GROUND + 12 - height * 0.97} width={width} height={height} />;
 }
 
 /** 進度頁：完整的樹，有題型名稱，點一片葉子看是哪一題 */

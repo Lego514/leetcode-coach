@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { AlgorithmTree } from '../components/AlgorithmTree';
+import { CompanionSheet } from '../components/Companion';
 import { ExplainProgressSheet } from '../components/ExplainProgress';
 import { ActivityHeatmap, WeeklyChart } from '../components/charts';
 import { PatternMap, ReadinessSheet, useRecapNumbers, WeeklyRecap } from '../components/Motivation';
@@ -138,6 +139,7 @@ export function ProgressPage() {
         {attempts && problems.length > 0 && (
           <AlgorithmTree problems={problems} progress={progress} attempts={attempts} today={day} share={{ streak, recap }} />
         )}
+        <CompanionSheet />
         <ReadinessSheet problems={problems} all={catalog.problems} progress={progress} meta={meta} today={day} />
         <PatternMap problems={problems} progress={progress} today={day} />
         <WeeklyRecap recap={recap} />
