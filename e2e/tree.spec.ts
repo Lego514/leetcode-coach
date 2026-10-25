@@ -6,7 +6,9 @@ test('grows the algorithm tree from practice, small on Today and in full on Prog
   await page.getByRole('button', { name: 'Try it with demo data' }).click();
 
   const card = page.getByRole('region', { name: 'Today’s goal' });
-  await expect(card).toContainText(/\d+ problems solvable now/);
+  // 示範資料做過 25 題：小樹，再做 35 題長成大樹
+  await expect(card).toContainText('Young tree');
+  await expect(card).toContainText('35 more problems and it is fully grown');
   await expect(card.getByRole('img', { name: /^Algorithm tree: \d+ of 150 problems solvable now$/ })).toBeVisible();
   await expect(card).toContainText(/Next goal: \d+ more problems? and /);
   // 小樹沒有題型名稱，也不能點葉子
@@ -19,7 +21,13 @@ test('grows the algorithm tree from practice, small on Today and in full on Prog
   // 示範資料做過的題目長了葉子，征服的結了果實，還沒做的是虛線上的小點
   expect(await tree.locator('.algo-leaf').count()).toBeGreaterThan(10);
   expect(await tree.locator('.algo-fruit').count()).toBeGreaterThan(0);
-  expect(await tree.locator('.algo-bud').count()).toBeGreaterThan(100);
+  // 還沒長成大樹：只畫做過的題型和接下來兩根，還沒做的題目是虛線上的小點
+  await expect(tree).toContainText('Young tree');
+  expect(await tree.locator('.algo-bud').count()).toBeGreaterThan(10);
+  // 做過的題型有一團樹冠，樹幹有陰影，樹梢有新芽
+  expect(await tree.locator('.algo-canopy').count()).toBeGreaterThan(0);
+  await expect(tree.locator('.algo-trunk-shade')).toHaveCount(1);
+  await expect(tree.locator('.algo-shoot')).toHaveCount(1);
 
   await expect(tree).toContainText('Tap a leaf, fruit, or sprout to see which problem it is.');
   await tree.locator('.algo-fruit').first().dispatchEvent('click');
@@ -81,4 +89,60 @@ test('schedules fewer Mediums after recent Mediums needed help, unless turned of
   await expect(adaptive).not.toBeChecked();
   await page.goto('/');
   await expect(page.getByRole('region', { name: /^New problems/ })).not.toContainText('fewer Mediums');
+});
+
+// 新使用者：今天頁一開始就是一顆種子；做一題就發芽，跳出慶祝
+test('starts as a seed and sprouts after the first problem', async ({ page }) => {
+  await page.goto('/');
+  const card = page.getByRole('region', { name: 'Today’s goal' });
+  await expect(card).toContainText('A seed');
+  await expect(card).toContainText('1 more problem and it sprouts');
+  await expect(card.locator('svg.algo-tree')).toHaveAttribute('data-stage', 'seed');
+  // 一顆橡實半埋在土裡
+  await expect(card.locator('.algo-nut')).toBeVisible();
+
+  await page.goto('/#/practice/1');
+  await page.getByRole('group', { name: 'While solving' }).getByRole('button', { name: 'I’m done' }).click();
+  await page.getByRole('region', { name: 'Record this attempt' }).getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.locator('.toast-win')).toContainText('Your algorithm tree sprouted!');
+  // 慶祝訊息旁邊畫一根發芽的小莖
+  await expect(page.locator('.toast-win .win-icon .algo-stem-sprout')).toBeVisible();
+
+  await page.goto('/');
+  await expect(card).toContainText('Sprouted');
+  await expect(card).toContainText('4 more problems and it becomes a sapling');
+  await expect(card.locator('svg.algo-tree')).toHaveAttribute('data-stage', 'sprout');
+  await expect(card.locator('.algo-leaf')).toHaveCount(1);
+  // 莖頂端是還在長的新芽，橡實的帽子還留在土上
+  await expect(card.locator('.algo-shoot')).toHaveCount(1);
+  await expect(card.locator('.algo-cap')).toHaveCount(1);
+});
+
+test('a problem you conquer bears fruit even while the tree is a sprout', async ({ page }) => {
+  // 第一次看了提示才做出來
+  await page.goto('/#/practice/1');
+  await page.getByRole('button', { name: /Give me a hint/ }).click();
+  await page.getByRole('group', { name: 'While solving' }).getByRole('button', { name: 'I’m done' }).click();
+  await expect(page.getByRole('button', { name: /Needed a hint/ })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('region', { name: 'Record this attempt' }).getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Saved. Next review');
+
+  const card = page.getByRole('region', { name: 'Today’s goal' });
+  await page.goto('/');
+  await expect(card.locator('svg.algo-tree')).toHaveAttribute('data-stage', 'sprout');
+  await expect(card.locator('.algo-sprout')).toHaveCount(1);
+  await expect(card.locator('.algo-fruit')).toHaveCount(0);
+
+  // 幾天後複習時自己寫出來：征服，結一顆果實
+  await page.clock.setFixedTime(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000));
+  await page.goto('/#/review');
+  await page.getByRole('button', { name: 'Just recall it' }).click();
+  await page.getByRole('button', { name: 'Show my notes' }).click();
+  await page.getByRole('button', { name: /Solved alone/ }).click();
+  await expect(page.getByRole('heading', { name: 'Reviewed 1 problem today' })).toBeVisible();
+
+  await page.goto('/');
+  await expect(card.locator('svg.algo-tree')).toHaveAttribute('data-stage', 'sprout');
+  await expect(card.locator('.algo-leaf')).toHaveCount(1);
+  await expect(card.locator('.algo-fruit')).toHaveCount(1);
 });

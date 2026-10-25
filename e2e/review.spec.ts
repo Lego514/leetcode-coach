@@ -6,8 +6,8 @@ test('caps reviews per day, lists what is next, and lets me pick one or do more'
   await page.getByRole('button', { name: 'Try it with demo data' }).click();
   await expect(page.getByText('You’re looking at demo data')).toBeVisible();
   const dueList = page.getByRole('region', { name: /^Due for review/ });
-  const dueCount = await dueList.getByRole('listitem').count();
-  expect(dueCount).toBeGreaterThan(5);
+  // 示範資料寫進去之後清單才排出來，等清單有題目再數（count() 不會等）
+  await expect.poll(() => dueList.getByRole('listitem').count()).toBeGreaterThan(5);
 
   // 上限 5 題：今天頁只列 5 題，其他的留到之後
   await page.goto('/#/settings');

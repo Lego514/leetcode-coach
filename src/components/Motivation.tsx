@@ -7,10 +7,25 @@ import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { problemsInList } from '../lib/catalog';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
-import { nextMilestone, paceOf, todayStatus, type TodayTasks, patternLevels, percent, progressBefore, readiness, weekSummary, winsFor, type WeekSummary } from '../lib/motivation';
+import {
+  nextMilestone,
+  paceOf,
+  todayStatus,
+  type TodayTasks,
+  patternLevels,
+  percent,
+  progressBefore,
+  readiness,
+  weekSummary,
+  winsFor,
+  type PatternLevel,
+  type WeekSummary,
+} from '../lib/motivation';
 import type { AttemptRecord, MetaRecord, ProgressRecord } from '../store/db';
 import { loadAttemptsFor, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
+import { nextStage, TREE_STAGES, treeStage } from '../lib/tree';
 import { TreeSvg, useTree, type TreeProps } from './AlgorithmTree';
+import { ArtIcon, type Art } from './TreeArt';
 import { useToast } from './toast';
 import { Sheet } from './ui';
 
@@ -18,12 +33,17 @@ import { Sheet } from './ui';
 
 type DayState = 'done' | 'frozen' | 'missed' | 'today' | 'later';
 
-/** 連續天數的保護畫成盾牌：存著的是實心打勾，空位是虛線 */
+/** 連續天數的保護畫成盾牌：存著的是上色、打勾的盾牌（光從左上方來，左半邊亮一點），空位是虛線的藍圖 */
 function ShieldIcon({ filled }: { filled: boolean }) {
   return (
     <svg className="shield-icon" data-filled={filled || undefined} viewBox="0 0 24 24" aria-hidden>
       <path className="shield-body" d="M12 2.5 4.5 5.4v5.8c0 4.7 3.1 8.8 7.5 10.3 4.4-1.5 7.5-5.6 7.5-10.3V5.4L12 2.5Z" />
-      {filled && <path className="shield-check" d="m8.6 12.2 2.4 2.4 4.4-4.6" />}
+      {filled && (
+        <>
+          <path className="shield-lit" d="M12 2.5 4.5 5.4v5.8c0 4.7 3.1 8.8 7.5 10.3Z" />
+          <path className="shield-check" d="m8.6 12.2 2.4 2.4 4.4-4.6" />
+        </>
+      )}
     </svg>
   );
 }
@@ -46,6 +66,7 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
   const stateOf = (day: Day): DayState =>
     day > today ? 'later' : practiced.has(day) ? 'done' : frozen.has(day) ? 'frozen' : day === today ? 'today' : 'missed';
   const { ready, fading, fruits } = model.state;
+  const next = nextStage(model.state.started);
   const status = todayStatus({ ...tasks, checkedIn: state.practicedToday });
   const pill = (done: boolean, text: string) => (
     <li className="today-task" data-done={done || undefined}>
@@ -74,7 +95,10 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
             <Link to="/progress#algorithm-tree" aria-label={t.tree.seeFull}>
               <TreeSvg {...model} labels={false} ariaLabel={t.tree.label(ready, tree.problems.length)} />
             </Link>
-            <p className="today-card-caption">{t.tree.summary(ready, fading.length, fruits)}</p>
+            <p className="today-card-caption">
+              <strong>{t.tree.stages[model.stage]}</strong>
+              <span>{next ? t.tree.nextStage(next.needed, t.tree.stageGoals[next.stage]) : t.tree.summary(ready, fading.length, fruits)}</span>
+            </p>
           </div>
         )}
         <div className="today-card-stats">
@@ -103,6 +127,11 @@ export function TodayCard({ days, tasks, ...tree }: TreeProps & { days: readonly
               <li key={day} className="streak-day" data-state={s} aria-label={m.dayLabel(m.weekdays[i], m.dayStates[s])}>
                 <span className="streak-dot" aria-hidden>
                   {s === 'frozen' && <ShieldIcon filled />}
+                  {s === 'done' && (
+                    <svg className="streak-check" viewBox="0 0 24 24">
+                      <path d="m7.5 12.5 3 3 6-6.5" />
+                    </svg>
+                  )}
                 </span>
                 <span className="streak-weekday" aria-hidden>
                   {m.weekdays[i]}
@@ -160,7 +189,14 @@ export function WinWatcher() {
     if (record.attempts !== (before.get(record.problemId)?.attempts ?? 0) + 1 || record.lastDay !== day) return;
     const problem = catalog.byId.get(record.problemId);
     if (!problem) return;
-    const wins = winsFor(problem, problemsInList(catalog, activeList), before, progress, day);
+    const list = problemsInList(catalog, activeList);
+    const wins = winsFor(problem, list, before, progress, day);
+    // 樹長到下一個階段（例如發芽、長成小樹苗）
+    const stageBefore = treeStage(list.filter((p) => before.has(p.id)).length);
+    const stageAfter = treeStage(list.filter((p) => progress.has(p.id)).length);
+    if (stageAfter !== stageBefore && TREE_STAGES.indexOf(stageAfter) > TREE_STAGES.indexOf(stageBefore)) {
+      toast(t.tree.stageUp[stageAfter], 'win', <ArtIcon art={stageAfter} />);
+    }
     // 時間要看這題的所有紀錄：征服時比第一次，自己解出時比之前最快的一次
     void loadAttemptsFor(problem.id).then((attempts) => {
       const pace = paceOf(attempts);
@@ -172,9 +208,15 @@ export function WinWatcher() {
               ? t.motivation.conqueredTime(problem.title, pace.first, pace.now)
               : t.motivation.conquered(problem.title, t.ratings[win.lastRating].label),
             'win',
+            <ArtIcon art="fruit" />,
           );
         } else {
-          toast(t.motivation.levelUp(getPattern(win.pattern, locale).name, t.motivation.levels[win.level]), 'win');
+          // 精通的題型開花，升到「會了」長出葉子
+          toast(
+            t.motivation.levelUp(getPattern(win.pattern, locale).name, t.motivation.levels[win.level]),
+            'win',
+            <ArtIcon art={win.level === 3 ? 'flower' : 'leaf'} />,
+          );
         }
       }
       if (!conquered && record.lastRating === 'solo' && pace.now && pace.previousBest && pace.now < pace.previousBest) {
@@ -264,6 +306,9 @@ function Meter({ label, value, max, children }: { label: string; value: number; 
   );
 }
 
+/** 題型地圖每一格的小圖，跟樹上同一套：還沒開始是藍圖的一個點、入門是小芽、會了是葉子、精通開花 */
+const LEVEL_ART: Record<PatternLevel, Art> = { 0: 'bud', 1: 'seedling', 2: 'leaf', 3: 'flower' };
+
 /** 題型地圖：照學習路線排，每個題型一格，等級越高顏色越深 */
 export function PatternMap({ problems, progress, today }: { problems: readonly Problem[]; progress: ReadonlyMap<number, ProgressRecord>; today: Day }) {
   const { t, locale } = useI18n();
@@ -283,6 +328,7 @@ export function PatternMap({ problems, progress, today }: { problems: readonly P
                 to={`/patterns/${p.pattern}`}
                 aria-label={m.mapTile(name, m.levels[p.level], p.ready, p.total)}
               >
+                <ArtIcon art={LEVEL_ART[p.level]} className="pattern-tile-art" />
                 <span className="pattern-tile-name">{name}</span>
                 <span className="pattern-tile-level">
                   {m.levels[p.level]} · {p.ready} / {p.total}

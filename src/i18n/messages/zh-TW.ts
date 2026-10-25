@@ -1587,6 +1587,16 @@ const zhTW = {
 
   tree: {
     title: '演算法樹',
+    stages: { seed: '一顆種子', sprout: '發芽了', sapling: '小樹苗', young: '小樹', grown: '大樹' },
+    stageGoals: { seed: '播種', sprout: '發芽', sapling: '長成小樹苗', young: '長成小樹', grown: '長成大樹' },
+    nextStage: (n: number, goal: string) => `再做 ${n} 題就${goal}`,
+    stageUp: {
+      seed: '你種下了一顆種子。',
+      sprout: '你的演算法樹發芽了！每做一題，就會多長一片葉子。',
+      sapling: '你的樹長成小樹苗了！做過的題型都長出了樹枝。',
+      young: '你的樹長成小樹了！',
+      grown: '你的樹長成大樹了！',
+    },
     todayTitle: '我的演算法樹',
     note: '題型是樹枝，現在會的題目是葉子。快忘的葉子會變黃，複習就變回綠色；征服的題目結果實，精通的題型開花。',
     summary: (ready: number, fading: number, fruits: number) =>
@@ -1616,6 +1626,7 @@ const zhTW = {
       faded: '枯葉：很可能已經忘了',
       sprout: '小芽：靠提示做的，重寫出來才長葉',
       fruit: '果實：征服（看過提示，後來自己寫出）',
+      flower: '花：精通的題型（八成的題目都穩定會了）',
       bud: '虛線：還沒長出來的題型和題目',
     },
   },

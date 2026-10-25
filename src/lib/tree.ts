@@ -5,11 +5,11 @@ import { conquests, patternLevels, READY_RECALL, type PatternLevel } from './mot
 import { recallOn, type Rating, type ReviewState } from './srs';
 
 // 演算法樹：題型是樹枝（照學習路線由下往上長），會的題目是葉子，快忘的葉子變黃，征服的題目結果實，精通的題型開花。
-// 這裡只算樹形和每一題的樣子，畫圖在 components/AlgorithmTree.tsx
+// 這裡只算樹形、每一題的樣子和生長階段，畫圖在 components/AlgorithmTree.tsx（插畫零件在 components/TreeArt.tsx）
 
 type StateLike = Pick<ReviewState, 'interval'> & Partial<Pick<ReviewState, 'stability' | 'lastReview'>> & { lastRating: Rating };
 
-interface Point {
+export interface Point {
   x: number;
   y: number;
 }
@@ -42,7 +42,8 @@ function seeded(seed: number) {
 /** 題型照路線由下往上接在樹幹上，左右交錯；題目多的樹枝長，越上面越短、越往上翹 */
 export function treeLayout(problems: readonly Problem[]): Branch[] {
   const patterns = PATTERN_ORDER.filter((id) => problems.some((p) => p.pattern === id));
-  const last = Math.max(1, patterns.length - 1);
+  // 樹枝的間距固定（照完整的樹算）：還小的時候樹枝少，樹幹就短，長出新的題型才往上長
+  const last = Math.max(1, PATTERN_ORDER.length - 1);
   return patterns.map((pattern, i) => {
     const list = problems.filter((p) => p.pattern === pattern);
     const random = seeded(i + 7);
@@ -67,6 +68,51 @@ export function pointOn(b: Branch, t: number): Point & { angle: number } {
     y: u * u * b.start.y + 2 * u * t * b.control.y + t * t * b.end.y,
     angle: Math.atan2(dy, dx),
   };
+}
+
+const round = (n: number) => Math.round(n * 10) / 10;
+
+/** 沿著中心線畫一條由粗變細的形狀（樹枝、小莖）：起點寬 from，終點寬 to */
+export function taperedPath(points: readonly Point[], from: number, to: number): string {
+  const left: string[] = [];
+  const right: string[] = [];
+  points.forEach((p, i) => {
+    const prev = points[Math.max(0, i - 1)];
+    const next = points[Math.min(points.length - 1, i + 1)];
+    const angle = Math.atan2(next.y - prev.y, next.x - prev.x);
+    const half = (from + ((to - from) * i) / (points.length - 1)) / 2;
+    const dx = -Math.sin(angle) * half;
+    const dy = Math.cos(angle) * half;
+    left.push(`${round(p.x + dx)} ${round(p.y + dy)}`);
+    right.push(`${round(p.x - dx)} ${round(p.y - dy)}`);
+  });
+  return `M${left.join(' L')} L${right.reverse().join(' L')}Z`;
+}
+
+/** 樹枝的形狀：接樹幹的地方粗，越往外越細 */
+export function branchOutline(b: Branch, width: number): string {
+  return taperedPath(
+    Array.from({ length: 13 }, (_, i) => pointOn(b, i / 12)),
+    width,
+    width * 0.3,
+  );
+}
+
+/**
+ * 樹冠：做過的題型，樹枝周圍一團淡淡的綠（幾個圓疊成一朵雲），長出來的題目越多這團越大；
+ * 還沒做過的題型（藍色虛線）沒有。讓樹看起來是茂密的樹，不是一副骨架
+ */
+export function canopyBlobs(branches: readonly Branch[], nodes: ReadonlyMap<number, TreeNode>): { x: number; y: number; r: number }[] {
+  return branches.flatMap((b) => {
+    const grown = b.problems.filter((p) => (nodes.get(p.id)?.kind ?? 'bud') !== 'bud').length;
+    if (grown === 0) return [];
+    const r = 11 + Math.min(grown, 12);
+    return [0.3, 0.55, 0.8, 1].map((t, i) => {
+      const p = pointOn(b, t);
+      const size = r * [0.8, 1, 0.92, 0.78][i];
+      return { x: round(p.x), y: round(p.y - size * 0.25), r: round(size) };
+    });
+  });
 }
 
 /**
@@ -95,6 +141,8 @@ export interface TreeState {
   fading: number[];
   fruits: number;
   blooms: number;
+  /** 做過幾題（看提示的也算），決定樹長到哪個階段 */
+  started: number;
 }
 
 export function treeState(
@@ -107,9 +155,11 @@ export function treeState(
   const nodes = new Map<number, TreeNode>();
   let ready = 0;
   let fruits = 0;
+  let started = 0;
   const fading: number[] = [];
   for (const p of problems) {
     const state = progress.get(p.id);
+    if (state) started += 1;
     if (!state) nodes.set(p.id, { kind: 'bud' });
     else if (state.lastRating !== 'solo') nodes.set(p.id, { kind: 'sprout' });
     else {
@@ -123,7 +173,7 @@ export function treeState(
     }
   }
   const levels = new Map(patternLevels(problems, progress, today).map((p) => [p.pattern, p.level]));
-  return { nodes, levels, ready, fading, fruits, blooms: [...levels.values()].filter((l) => l === 3).length };
+  return { nodes, levels, ready, fading, fruits, blooms: [...levels.values()].filter((l) => l === 3).length, started };
 }
 
 /** 從 before 到 after 剛長出來的題目：空位變小芽或葉子、小芽變葉子 */
@@ -134,4 +184,74 @@ export function grownBetween(before: ReadonlyMap<number, TreeNode>, after: Reado
     if ((was === 'bud' && node.kind !== 'bud') || (was === 'sprout' && node.kind === 'leaf')) grown.add(id);
   }
   return grown;
+}
+
+// ---------- 生長階段：從種子開始，做越多題長得越大 ----------
+
+export const TREE_STAGES = ['seed', 'sprout', 'sapling', 'young', 'grown'] as const;
+export type TreeStage = (typeof TREE_STAGES)[number];
+
+/** 做過幾題就到這個階段 */
+export const STAGE_START: Record<TreeStage, number> = { seed: 0, sprout: 1, sapling: 5, young: 20, grown: 60 };
+
+export function treeStage(started: number): TreeStage {
+  return [...TREE_STAGES].reverse().find((stage) => started >= STAGE_START[stage]) ?? 'seed';
+}
+
+/** 下一個階段，和還要再做幾題；已經是大樹時是 null */
+export function nextStage(started: number): { stage: TreeStage; needed: number } | null {
+  const next = TREE_STAGES[TREE_STAGES.indexOf(treeStage(started)) + 1];
+  return next ? { stage: next, needed: STAGE_START[next] - started } : null;
+}
+
+/** 小樹苗和小樹還沒長完整：只畫做過的題型，再加上接下來幾根淡淡的虛線，不會一開始就是一整副空骨架 */
+const UPCOMING: Record<TreeStage, number> = { seed: 0, sprout: 0, sapling: 1, young: 2, grown: Infinity };
+
+export function visibleProblems(problems: readonly Problem[], levels: ReadonlyMap<PatternId, PatternLevel>, stage: TreeStage): Problem[] {
+  if (stage === 'grown') return [...problems];
+  if (stage === 'seed' || stage === 'sprout') return [];
+  const patterns = PATTERN_ORDER.filter((id) => problems.some((p) => p.pattern === id));
+  const upcoming = patterns.filter((id) => (levels.get(id) ?? 0) === 0).slice(0, UPCOMING[stage]);
+  const shown = new Set(patterns.filter((id) => (levels.get(id) ?? 0) > 0 || upcoming.includes(id)));
+  return problems.filter((p) => shown.has(p.pattern));
+}
+
+/** 發芽階段的莖有多高：每長一片葉子高一截 */
+export function sproutHeight(leaves: number): number {
+  return 46 + leaves * 22;
+}
+
+/** 各階段最少框多寬、地面以上最少要留多高（發芽看莖有多高），和最扁可以到多扁（高 / 寬） */
+const STAGE_FRAME: Record<TreeStage, { width: number; height: number; flat: number }> = {
+  seed: { width: 120, height: 40, flat: 0.55 },
+  sprout: { width: 170, height: 0, flat: 0.6 },
+  sapling: { width: 220, height: 0, flat: 0.6 },
+  young: { width: 220, height: 0, flat: 0.6 },
+  grown: { width: TREE_VIEW.width, height: 0, flat: 0.6 },
+};
+
+/**
+ * 畫面範圍：依樹現在的大小框起來，樹還小的時候拉近，不會縮成一個點，上面也不會留一大片空白。
+ * 有題型名稱時左右要留名稱的位置；最高跟完整的樹一樣
+ */
+export function stageView(
+  stage: TreeStage,
+  branches: readonly Branch[],
+  labels = true,
+  seedlings = 0,
+): { x: number; y: number; width: number; height: number } {
+  const bottom = GROUND + 35;
+  const { flat } = STAGE_FRAME[stage];
+  let width = STAGE_FRAME[stage].width;
+  let top = GROUND - (stage === 'sprout' ? sproutHeight(seedlings) + 28 : STAGE_FRAME[stage].height);
+  for (const b of branches) {
+    width = Math.max(width, 2 * (Math.abs(b.end.x - TRUNK_X) + (labels ? 80 : 30)));
+    // 樹幹會長到最上面那根樹枝再高一點（見 TreeSvg）
+    top = Math.min(top, b.end.y - 30, b.start.y - 40);
+  }
+  const ratio = TREE_VIEW.height / TREE_VIEW.width;
+  let height = Math.max(bottom - top, width * flat);
+  width = Math.max(width, height / ratio);
+  height = Math.max(height, width * flat);
+  return { x: TRUNK_X - width / 2, y: bottom - height, width, height };
 }

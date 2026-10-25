@@ -55,6 +55,15 @@
   --flower: #f2a2bd;
   --flower-c: #ffe45c;
   --ground: #cfdcc4;
+  --wood-dark: #5b3c23;
+  --wood-light: #a67b52;
+  --seed: #c58b4f;
+  --soil: #b89779;
+  --grass: #a3c191;
+  --canopy: #e3efda;
+  --fruit-dark: #a8321d;
+  --flower-dark: #e27ba0;
+  --pen-lit: #4466c2;
   color-scheme: light;
 }
 
@@ -102,6 +111,15 @@
     --flower: #f6b3cb;
     --flower-c: #ffe45c;
     --ground: #24382c;
+    --wood-dark: #8a6240;
+    --wood-light: #dcb58c;
+    --seed: #d8a56d;
+    --soil: #5c4636;
+    --grass: #34553f;
+    --canopy: #1b3429;
+    --fruit-dark: #d4472d;
+    --flower-dark: #e889ab;
+    --pen-lit: #b7cbff;
     color-scheme: dark;
   }
 }
@@ -149,6 +167,15 @@
   --flower: #f6b3cb;
   --flower-c: #ffe45c;
   --ground: #24382c;
+  --wood-dark: #8a6240;
+  --wood-light: #dcb58c;
+  --seed: #d8a56d;
+  --soil: #5c4636;
+  --grass: #34553f;
+  --canopy: #1b3429;
+  --fruit-dark: #d4472d;
+  --flower-dark: #e889ab;
+  --pen-lit: #b7cbff;
   color-scheme: dark;
 }
 
@@ -4014,8 +4041,21 @@ a.more-account:hover {
 }
 
 .streak-day[data-state='done'] .streak-dot {
+  display: grid;
+  place-items: center;
   border-color: var(--level-4);
   background: var(--level-4);
+}
+
+/* 有練習的日子打勾 */
+.streak-check {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--on-pen);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* 用了保護的日子：圓點換成盾牌 */
@@ -4051,6 +4091,19 @@ a.more-account:hover {
   color: var(--marker-ink);
   border-color: var(--marker);
   font-weight: 600;
+}
+
+/* 慶祝訊息左邊的小圖：果實、花、樹長到的階段 */
+.toast-with-art {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.win-icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
 }
 
 /* ---------- 面試準備度 ---------- */
@@ -4098,7 +4151,9 @@ a.more-account:hover {
 
 .pattern-tile {
   display: grid;
-  gap: 2px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  align-items: center;
   height: 100%;
   padding: 8px 12px;
   border: 1px solid var(--rule);
@@ -4131,6 +4186,19 @@ a.more-account:hover {
   font-size: 14px;
 }
 
+/* 每一格右邊的等級小圖（components/TreeArt.tsx 的 ArtIcon） */
+.pattern-tile-art {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 26px;
+  height: 26px;
+}
+
+.pattern-tile-name,
+.pattern-tile-level {
+  grid-column: 1;
+}
+
 .pattern-tile-level {
   font-size: 12px;
   opacity: 0.85;
@@ -4158,14 +4226,107 @@ a.more-account:hover {
   fill: var(--ground);
 }
 
-.algo-trunk {
+/* 插畫（components/TreeArt.tsx）：草地、橡實、樹幹、樹冠；光從左上方來，右半邊是陰影。.algo-grass 是樹底下的影子 */
+.algo-grass {
+  fill: var(--grass);
+  opacity: 0.7;
+}
+
+.algo-tuft {
+  fill: none;
+  stroke: var(--grass);
+  stroke-linecap: round;
+}
+
+.algo-soil {
+  fill: var(--soil);
+}
+
+.algo-nut {
+  fill: var(--seed);
+}
+
+.algo-cap,
+.algo-trunk,
+.algo-branch {
   fill: var(--wood);
 }
 
-.algo-wood {
+.algo-cap-dot {
+  fill: var(--wood-light);
+}
+
+.algo-stalk {
   fill: none;
   stroke: var(--wood);
+  stroke-width: 1.6;
   stroke-linecap: round;
+}
+
+.algo-trunk-shade {
+  fill: var(--wood-dark);
+}
+
+.algo-bark {
+  fill: none;
+  stroke: var(--wood-dark);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+/* 亮面和葉脈：半透明的白，深色模式也一樣 */
+.algo-shine,
+.algo-vein {
+  fill: none;
+  stroke: #ffffff;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.algo-shine {
+  stroke-width: 1.3;
+  opacity: 0.5;
+}
+
+.algo-vein {
+  stroke-width: 0.7;
+  opacity: 0.45;
+}
+
+.algo-stem-sprout {
+  fill: var(--leaf-2);
+}
+
+/* 樹梢和莖頂端的新芽 */
+.algo-shoot {
+  fill: var(--leaf-3);
+}
+
+.algo-canopy {
+  fill: var(--canopy);
+}
+
+/* 小圖示的樹冠（慶祝訊息）：右下一圈深綠當陰影 */
+.algo-crown {
+  fill: var(--leaf-2);
+}
+
+.algo-crown-shade {
+  fill: var(--leaf-1);
+}
+
+.algo-stage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.algo-stage strong {
+  color: var(--ink);
+  font-size: 18px;
 }
 
 /* 還沒長出來的題型：藍色虛線的藍圖 */
@@ -4185,6 +4346,12 @@ a.more-account:hover {
   fill: var(--sprout);
   stroke: var(--leaf-2);
   stroke-width: 0.8;
+}
+
+.algo-sprout-stem {
+  fill: none;
+  stroke-width: 1.3;
+  stroke-linecap: round;
 }
 
 .algo-leaf {
@@ -4222,12 +4389,32 @@ a.more-account:hover {
   pointer-events: none;
 }
 
+/* 果實右下的陰影、頂上的小葉子：點擊要落在果實本身 */
+.algo-fruit-shade {
+  fill: var(--fruit-dark);
+  pointer-events: none;
+}
+
+.algo-fruit-leaf {
+  fill: var(--leaf-2);
+  pointer-events: none;
+}
+
 .algo-petal {
   fill: var(--flower);
 }
 
+.algo-petal-in {
+  fill: var(--flower-dark);
+}
+
 .algo-flower {
   fill: var(--flower-c);
+}
+
+.algo-flower-hi {
+  fill: #ffffff;
+  opacity: 0.7;
 }
 
 .algo-label {
@@ -4319,8 +4506,14 @@ a.more-account:hover {
 
 .today-card-caption {
   margin: 0;
+  text-wrap: balance;
   font-size: 12px;
   color: var(--ink-3);
+}
+
+/* 階段名稱一行、下一步一行；下一步太長時兩行一樣長，不會剩一個字掉到下一行 */
+.today-card-caption :is(strong, span) {
+  display: block;
 }
 
 .today-card-stats {
@@ -4367,6 +4560,11 @@ a.more-account:hover {
 .algo-full .algo-tree {
   max-width: 560px;
   margin: 0 auto;
+}
+
+/* 種子和小芽在大螢幕上不要放得太大 */
+.algo-full .algo-tree:is([data-stage='seed'], [data-stage='sprout']) {
+  max-width: 300px;
 }
 
 .algo-stats {
@@ -4703,6 +4901,10 @@ a.more-account:hover {
   fill: var(--pen);
   stroke: var(--pen);
   stroke-dasharray: none;
+}
+
+.shield-lit {
+  fill: var(--pen-lit);
 }
 
 .shield-check {

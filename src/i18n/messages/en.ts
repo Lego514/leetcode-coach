@@ -1610,6 +1610,16 @@ const en: Messages = {
 
   tree: {
     title: 'Algorithm tree',
+    stages: { seed: 'A seed', sprout: 'Sprouted', sapling: 'Sapling', young: 'Young tree', grown: 'Grown tree' },
+    stageGoals: { seed: 'is planted', sprout: 'sprouts', sapling: 'becomes a sapling', young: 'becomes a young tree', grown: 'is fully grown' },
+    nextStage: (n, goal) => `${count(n, 'more problem')} and it ${goal}`,
+    stageUp: {
+      seed: 'You planted a seed.',
+      sprout: 'Your algorithm tree sprouted! Every problem you do adds a leaf.',
+      sapling: 'Your tree is a sapling now! Every pattern you’ve practiced has a branch.',
+      young: 'Your tree is a young tree now!',
+      grown: 'Your tree is fully grown!',
+    },
     todayTitle: 'My algorithm tree',
     note: 'Patterns are branches and problems you can solve now are leaves. Leaves you’re about to forget turn yellow, and reviewing turns them green again. Conquered problems bear fruit, and mastered patterns bloom.',
     summary: (ready, fading, fruits) =>
@@ -1639,6 +1649,7 @@ const en: Messages = {
       faded: 'Dry leaf: probably forgotten',
       sprout: 'Sprout: needed help, rewrite it to grow a leaf',
       fruit: 'Fruit: conquered (needed help, later solved alone)',
+      flower: 'Flower: a mastered pattern (80% of its problems are solid)',
       bud: 'Dashed: patterns and problems not grown yet',
     },
   },
