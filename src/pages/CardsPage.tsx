@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import type { ReportKind } from '../../shared/constants';
 import type { ReportContext } from '../../shared/protocol';
 import { emptyDraft, ReportForm } from '../components/ReportForm';
+import { SpotArt } from '../components/SpotArt';
 import { useToast } from '../components/toast';
 import { Dialog, DifficultyTag, LeetCodeLink } from '../components/ui';
 import { summaryFor } from '../data/summaries';
@@ -659,6 +660,7 @@ function Summary({ topBar, settings, results, missed, forgotExplain, problems, t
     <div className="flash">
       {topBar}
       <section className="flash-card flash-done" aria-labelledby="flash-done-title">
+        <SpotArt spot="cards" />
         <h2 className="flash-question" id="flash-done-title" tabIndex={-1} ref={headingRef}>
           {t.cards.doneTitle}
         </h2>

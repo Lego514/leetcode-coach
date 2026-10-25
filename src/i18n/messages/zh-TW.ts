@@ -531,6 +531,7 @@ const zhTW = {
 
   detail: {
     notFoundLede: (id: string) => `題庫裡沒有第 ${id} 題。可以到題庫用「新增題目」把它加進來。`,
+    onTree: '在演算法樹上',
     startPractice: '開始練習',
     recordDirectly: '直接記錄',
     mockThis: '模擬面試這題',

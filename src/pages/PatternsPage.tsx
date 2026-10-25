@@ -3,10 +3,12 @@ import { Link, useParams } from 'react-router';
 import { SaveStatus, useAutosave } from '../components/autosave';
 import { CodeTextarea } from '../components/CodeTextarea';
 import { ProblemRow } from '../components/ProblemRow';
+import { ArtIcon, LEVEL_ART } from '../components/TreeArt';
 import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
 import { getPattern, getPatterns, isPatternId, type Pattern } from '../data/patterns';
 import { useI18n } from '../i18n';
 import { problemsInList } from '../lib/catalog';
+import { patternLevels } from '../lib/motivation';
 import { summarizePatterns } from '../lib/stats';
 import { savePatternNote } from '../store/actions';
 import type { PatternNoteRecord } from '../store/db';
@@ -22,6 +24,9 @@ export function PatternsPage() {
     () => new Map(summarizePatterns(listProblems, progress).map((s) => [s.pattern, s])),
     [listProblems, progress],
   );
+  // 每個題型的等級，畫成跟演算法樹一樣的小圖
+  const day = useToday();
+  const levels = useMemo(() => new Map(patternLevels(listProblems, progress, day).map((p) => [p.pattern, p.level])), [listProblems, progress, day]);
 
   return (
     <div className="page">
@@ -38,6 +43,7 @@ export function PatternsPage() {
               <li key={p.id}>
                 <Link className="pattern-link" to={`/patterns/${p.id}`}>
                   <span className="pattern-name">
+                    <ArtIcon art={LEVEL_ART[levels.get(p.id) ?? 0]} className="pattern-art" />
                     {p.name}
                     {locale !== 'en' && (
                       <span className="pattern-english" lang="en">

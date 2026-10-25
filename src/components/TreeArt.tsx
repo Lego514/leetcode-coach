@@ -1,6 +1,7 @@
 import type { ReactNode, SVGProps } from 'react';
 import type { Problem } from '../data/problems';
-import { GROUND, sproutHeight, taperedPath, TRUNK_X, type Point, type TreeStage, type TreeState } from '../lib/tree';
+import type { PatternLevel } from '../lib/motivation';
+import { GROUND, sproutHeight, taperedPath, TRUNK_X, type Point, type TreeNode, type TreeStage, type TreeState } from '../lib/tree';
 
 // 演算法樹的插畫零件：地面、橡實、發芽的小莖、樹幹、果實、花，和慶祝訊息旁邊的小圖。
 // 做到的東西上色，光從左上方照過來，右半邊（右下）是陰影；還沒做到的是藍色虛線的藍圖。
@@ -377,6 +378,22 @@ export function ArtIcon({ art, className = 'win-icon' }: { art: Art; className?:
   return (
     <svg className={className} viewBox={viewBox} aria-hidden>
       {content}
+    </svg>
+  );
+}
+
+/** 題型等級的小圖，跟樹上同一套：還沒開始是藍圖的一個點、入門是小芽、會了是葉子、精通開花 */
+export const LEVEL_ART: Record<PatternLevel, Art> = { 0: 'bud', 1: 'seedling', 2: 'leaf', 3: 'flower' };
+
+/** 一題在樹上的樣子（題目頁用）：空位、小芽、依記得多少上色的葉子，征服的再加一顆果實 */
+export function NodeIcon({ node }: { node: TreeNode }) {
+  if (node.kind === 'bud') return <ArtIcon art="bud" className="node-icon" />;
+  if (node.kind === 'sprout') return <ArtIcon art="seedling" className="node-icon" />;
+  const shade = node.shade === 'fading' || node.shade === 'faded' ? node.shade : node.shade === 'fresh' ? 'fresh' : 'good';
+  return (
+    <svg className="node-icon" viewBox={node.fruit ? '-1 -13 21 26' : '-1 -13 21 19'} aria-hidden>
+      <LeafIcon shade={shade} transform="translate(1.5 3) rotate(-38)" />
+      {node.fruit && <Fruit stem={{ x: 8, y: 2 }} at={{ x: 8, y: 7.5 }} />}
     </svg>
   );
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useToast } from '../components/toast';
+import { SpotArt } from '../components/SpotArt';
 import { ReferenceExplanation } from '../components/ReferenceExplanation';
 import { DifficultyTag, PageHead, Sheet } from '../components/ui';
 import { getPattern } from '../data/patterns';
@@ -68,35 +69,42 @@ export function ReviewPage() {
           />
         ) : later > 0 && settings.maxReviews !== undefined ? (
           <Sheet title={t.review.capTitle(settings.maxReviews + extra)} id="review-cap">
-            <div className="sheet-empty">
-              <p>{t.review.capBody(later)}</p>
-              <div className="btn-row" style={{ marginTop: 12 }}>
-                <button type="button" className="btn btn-primary" onClick={() => setExtra((n) => n + 5)}>
-                  {t.review.more}
-                </button>
-                <Link className="btn" to="/">
-                  {t.common.backToToday}
-                </Link>
+            <div className="sheet-empty sheet-empty-art">
+              <SpotArt spot="watered" />
+              <div>
+                <p>{t.review.capBody(later)}</p>
+                <div className="btn-row" style={{ marginTop: 12 }}>
+                  <button type="button" className="btn btn-primary" onClick={() => setExtra((n) => n + 5)}>
+                    {t.review.more}
+                  </button>
+                  <Link className="btn" to="/">
+                    {t.common.backToToday}
+                  </Link>
+                </div>
               </div>
             </div>
           </Sheet>
         ) : (
           <Sheet title={doneCount > 0 ? t.review.doneTitle(doneCount) : t.review.emptyTitle} id="review-empty">
-            <div className="sheet-empty">
-              <p>
-                {progress.size === 0
-                  ? t.review.emptyFirstRun
-                  : nextDue
-                    ? t.review.nextDue(fmt.day(nextDue), t.date.relative(diffDays(day, nextDue)))
-                    : t.review.nothingDue}
-              </p>
-              <div className="btn-row" style={{ marginTop: 12 }}>
-                <Link className="btn" to="/">
-                  {t.common.backToToday}
-                </Link>
-                <Link className="btn" to="/mock">
-                  {t.review.doMock}
-                </Link>
+            {/* 做完了：澆水壺在澆水；本來就沒有要複習的：澆水壺放在一旁 */}
+            <div className="sheet-empty sheet-empty-art">
+              <SpotArt spot={doneCount > 0 ? 'watered' : 'watering'} />
+              <div>
+                <p>
+                  {progress.size === 0
+                    ? t.review.emptyFirstRun
+                    : nextDue
+                      ? t.review.nextDue(fmt.day(nextDue), t.date.relative(diffDays(day, nextDue)))
+                      : t.review.nothingDue}
+                </p>
+                <div className="btn-row" style={{ marginTop: 12 }}>
+                  <Link className="btn" to="/">
+                    {t.common.backToToday}
+                  </Link>
+                  <Link className="btn" to="/mock">
+                    {t.review.doMock}
+                  </Link>
+                </div>
               </div>
             </div>
           </Sheet>

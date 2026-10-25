@@ -7,6 +7,7 @@ import { CodeTextarea } from '../components/CodeTextarea';
 import { EditAttemptDialog } from '../components/EditAttemptDialog';
 import { RecordDialog } from '../components/RecordDialog';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
+import { NodeIcon } from '../components/TreeArt';
 import { useToast } from '../components/toast';
 import { DifficultyTag, Dialog, LeetCodeLink, MasteryCell, PageHead, Sheet } from '../components/ui';
 import { EXPLANATION_SCAFFOLD } from '../data/interview';
@@ -16,7 +17,9 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays } from '../lib/dates';
 import { LANGUAGES } from '../lib/languages';
+import { conquests } from '../lib/motivation';
 import { recallOn, stageOf } from '../lib/srs';
+import { nodeFor } from '../lib/tree';
 import { deleteCustomProblem, resetProgress, saveNote, setCompanies } from '../store/actions';
 import type { AttemptRecord, NoteRecord } from '../store/db';
 import {
@@ -54,9 +57,13 @@ function ProblemDetail({ problem }: { problem: Problem }) {
   const { t, fmt, locale } = useI18n();
   const day = useToday();
   const progress = useProgress(problem.id);
+  const attempts = useAttemptsFor(problem.id);
   const [recording, setRecording] = useState(false);
   const pattern = getPattern(problem.pattern, locale);
   const lists = STUDY_LISTS.filter((l) => l.problemIds.includes(problem.id));
+
+  // 在演算法樹上的樣子：征服過的題目結果實
+  const node = nodeFor(progress ?? undefined, conquests(attempts ?? []).length > 0, day);
 
   return (
     <div className="page">
@@ -106,15 +113,29 @@ function ProblemDetail({ problem }: { problem: Problem }) {
           <Sheet title={t.detail.scheduleTitle} id="schedule">
             <div className="sheet-body">
               {progress ? (
-                <dl className="facts">
-                  <dt>{t.detail.stage}</dt>
-                  <dd>{t.stages[stageOf(progress)]}</dd>
-                  {recallOn(progress, day) !== undefined && (
-                    <>
-                      <dt>{t.detail.recallNow}</dt>
-                      <dd>{Math.round(recallOn(progress, day)! * 100)}%</dd>
-                      <dt>{t.detail.memory}</dt>
-                      <dd>{t.detail.memoryValue(Math.round(progress.stability), Math.round(progress.difficulty * 10) / 10)}</dd>
+                <>
+                  {/* 這一題在演算法樹上的樣子，跟樹上和圖例畫的一樣 */}
+                  <div className="tree-node-fact">
+                    <NodeIcon node={node} />
+                    <p>
+                      <span className="tree-node-label">{t.detail.onTree}</span>
+                      {node.kind === 'sprout'
+                        ? t.tree.legend.sprout
+                        : node.kind === 'leaf' && (node.shade === 'fading' || node.shade === 'faded')
+                          ? t.tree.legend[node.shade]
+                          : t.tree.legend.leaf}
+                      {node.kind === 'leaf' && node.fruit && <span className="tree-node-fruit">{t.tree.legend.fruit}</span>}
+                    </p>
+                  </div>
+                  <dl className="facts">
+                    <dt>{t.detail.stage}</dt>
+                    <dd>{t.stages[stageOf(progress)]}</dd>
+                    {recallOn(progress, day) !== undefined && (
+                      <>
+                        <dt>{t.detail.recallNow}</dt>
+                        <dd>{Math.round(recallOn(progress, day)! * 100)}%</dd>
+                        <dt>{t.detail.memory}</dt>
+                        <dd>{t.detail.memoryValue(Math.round(progress.stability), Math.round(progress.difficulty * 10) / 10)}</dd>
                     </>
                   )}
                   <dt>{t.detail.nextReview}</dt>
@@ -130,6 +151,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
                   <dt>{t.detail.firstDone}</dt>
                   <dd>{fmt.day(progress.firstDay)}</dd>
                 </dl>
+                </>
               ) : (
                 <p className="sheet-note">{t.detail.notStarted}</p>
               )}

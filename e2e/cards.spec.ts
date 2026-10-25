@@ -53,6 +53,8 @@ test('does a round, retries the missed card, and counts it toward the streak', a
   }
   await expect(page.getByText(/^Retry: \d+ left$/)).toBeVisible();
   await finishRound(page, known);
+  // 做完一回合：三張卡片，最上面那張打勾
+  await expect(page.locator('.flash-done [data-spot="cards"]')).toBeVisible();
 
   const missed = page.getByRole('region', { name: 'Cards you missed this round' });
   await expect(missed).toContainText('Correct answer:');

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { BoardEditor } from '../components/board/BoardEditor';
+import { SpotArt } from '../components/SpotArt';
 import { Dialog, PageHead, Sheet } from '../components/ui';
 import { useI18n } from '../i18n';
 import { deleteBoard } from '../store/actions';
@@ -98,7 +99,10 @@ export function BoardListPage() {
 
         <Sheet title={t.board.problemBoards} count={problemBoards.length} id="problem-boards">
           {problemBoards.length === 0 ? (
-            <p className="sheet-empty">{t.board.noProblemBoards}</p>
+            <div className="sheet-empty sheet-empty-art">
+              <SpotArt spot="easel" />
+              <p>{t.board.noProblemBoards}</p>
+            </div>
           ) : (
             <ul className="board-list">
               {problemBoards.map((b) => (
