@@ -1,70 +1,65 @@
 import { useId, type ReactNode } from 'react';
 import type { CompanionStage, HeadItem } from '../lib/companion';
 
-// 陪刷題的卡皮巴拉（正面）：頭和身體是同一塊、沒有脖子，粗的深色外框；鼻子是臉中間下面那一大塊。
+// 陪刷題的卡皮巴拉（正面）：頭和身體是同一塊、沒有脖子，粗的深色外框；臉頰和身體兩邊有幾撮毛。
+// 鼻子是臉中間那一大塊（裡面有兩個鼻孔和微笑），兩隻小手抱在肚子前面。
 // 還沒練習的日子在打瞌睡（閉眼、旁邊有 z），練習了就很開心（瞇眼笑）。
+// 寶寶、小時候、長大是同一個畫法，越小縮得越小。
 // 頭上可以戴收集到的道具。身體的顏色是 CSS 變數（--capy-*），道具的顏色是固定的。
 
 export type CompanionMood = 'sleepy' | 'happy';
 
-const GROWN = 'M60 25 C87 25 103 41 103 66 V92 C103 106 91 113 73 113 H47 C29 113 17 106 17 92 V66 C17 41 33 25 60 25Z';
-const BABY = 'M60 44 C83 44 96 57 96 76 V95 C96 107 86 113 71 113 H49 C34 113 24 107 24 95 V76 C24 57 37 44 60 44Z';
+/** 輪廓：頭頂圓圓的，臉頰最寬、有兩撮毛，腰稍微收一點，身體兩邊各一撮毛 */
+const BODY =
+  'M60 26 C82 26 97 38 101 54 L106 57 L102 60 L107 64 L102 67 C104 74 101 79 97 82 L101 86 L98 88 ' +
+  'C101 96 102 103 100 108 C97 113 88 115 76 115 H44 C32 115 23 113 20 108 C18 103 19 96 22 88 ' +
+  'L19 86 L23 82 C19 79 16 74 18 67 L13 64 L18 60 L14 57 L19 54 C23 38 38 26 60 26Z';
 
-/** 道具放在頭頂的哪裡（各階段的頭頂不一樣高） */
-const ITEM_AT: Record<CompanionStage, number> = { baby: 48, young: 41, grown: 29 };
+/** 各階段縮多小（以腳底為中心） */
+const SCALE: Record<CompanionStage, number> = { baby: 0.8, young: 0.9, grown: 1 };
+const FEET = 115;
 
-function Grown({ mood, clip }: { mood: CompanionMood; clip: string }) {
+function Body({ mood, clip }: { mood: CompanionMood; clip: string }) {
   return (
     <>
-      <circle className="capy-ear capy-ol" cx={31} cy={33} r={7.5} />
-      <circle className="capy-ear-in" cx={31} cy={33} r={3.4} />
-      <circle className="capy-ear capy-ol" cx={89} cy={33} r={7.5} />
-      <circle className="capy-ear-in" cx={89} cy={33} r={3.4} />
+      {/* 耳朵在頭的後面：外圈是毛的顏色，裡面一圈粉粉的，再裡面是耳洞 */}
+      {[31, 89].map((x) => (
+        <g key={x}>
+          <circle className="capy-ear capy-ol" cx={x} cy={29} r={10} />
+          <circle className="capy-ear-in" cx={x + (x < 60 ? 0.8 : -0.8)} cy={27.5} r={6} />
+          <circle className="capy-ear-hole" cx={x + (x < 60 ? 1.6 : -1.6)} cy={28} r={2.6} />
+        </g>
+      ))}
       <clipPath id={clip}>
-        <path d={GROWN} />
+        <path d={BODY} />
       </clipPath>
-      <path className="capy-fur" d={GROWN} />
+      <path className="capy-fur" d={BODY} />
       <g clipPath={`url(#${clip})`}>
-        <path className="capy-shade" d="M104 44 C100 82 88 104 58 116 H110 V44Z" />
-        <path className="capy-light" d="M24 52 C28 37 42 29 58 28 C44 34 34 42 29 56Z" />
+        <path className="capy-shade" d="M106 50 C104 84 96 106 66 118 H112 V50Z" />
+        <path className="capy-light" d="M24 54 C27 40 40 31 56 30 C43 35 33 43 29 56Z" />
       </g>
-      <path className="capy-ol" fill="none" d={GROWN} />
-      <rect className="capy-snout" x={35} y={57} width={50} height={33} rx={16.5} />
-      <path className="capy-ln" strokeWidth={2.8} d="M52 64 L49 70 M68 64 L71 70" />
-      <path className="capy-ln" strokeWidth={2.6} d="M53 80 Q56.5 83.5 60 80 Q63.5 83.5 67 80" />
-      <path className="capy-ln" strokeWidth={3.8} d={mood === 'happy' ? 'M36 50 Q40.5 44.5 45 50 M75 50 Q79.5 44.5 84 50' : 'M36 47 Q40.5 51.5 45 47 M75 47 Q79.5 51.5 84 47'} />
-      <ellipse className="capy-blush" cx={27} cy={72} rx={5.5} ry={3.4} />
-      <ellipse className="capy-blush" cx={93} cy={72} rx={5.5} ry={3.4} />
-      <ellipse className="capy-foot capy-ol" cx={45} cy={111} rx={8.5} ry={5.5} />
-      <ellipse className="capy-foot-back capy-ol" cx={75} cy={111} rx={8.5} ry={5.5} />
-    </>
-  );
-}
-
-function Baby({ mood, clip }: { mood: CompanionMood; clip: string }) {
-  return (
-    <>
-      <circle className="capy-ear capy-ol" cx={36} cy={51} r={6.5} />
-      <circle className="capy-ear-in" cx={36} cy={51} r={3} />
-      <circle className="capy-ear capy-ol" cx={84} cy={51} r={6.5} />
-      <circle className="capy-ear-in" cx={84} cy={51} r={3} />
-      <clipPath id={clip}>
-        <path d={BABY} />
-      </clipPath>
-      <path className="capy-fur" d={BABY} />
-      <g clipPath={`url(#${clip})`}>
-        <path className="capy-shade" d="M97 62 C94 90 84 106 58 116 H104 V62Z" />
-        <path className="capy-light" d="M30 68 C34 56 45 49 58 48 C46 53 37 60 33 71Z" />
-      </g>
-      <path className="capy-ol" fill="none" d={BABY} />
-      <rect className="capy-snout" x={40} y={76} width={40} height={27} rx={13.5} />
-      <path className="capy-ln" strokeWidth={2.6} d="M54 82 L52 87 M66 82 L68 87" />
-      <path className="capy-ln" strokeWidth={2.4} d="M55 95 Q57.5 97.5 60 95 Q62.5 97.5 65 95" />
-      <path className="capy-ln" strokeWidth={3.6} d={mood === 'happy' ? 'M38 69 Q42.5 63.5 47 69 M73 69 Q77.5 63.5 82 69' : 'M38 67 Q42.5 71 47 67 M73 67 Q77.5 71 82 67'} />
-      <ellipse className="capy-blush" cx={33} cy={86} rx={5} ry={3} />
-      <ellipse className="capy-blush" cx={87} cy={86} rx={5} ry={3} />
-      <ellipse className="capy-foot capy-ol" cx={48} cy={111} rx={7.5} ry={5} />
-      <ellipse className="capy-foot-back capy-ol" cx={72} cy={111} rx={7.5} ry={5} />
+      <path className="capy-ol" fill="none" d={BODY} />
+      <path
+        className="capy-ln"
+        strokeWidth={3.4}
+        d={mood === 'happy' ? 'M38 58 Q43.5 52.5 49 58 M71 58 Q76.5 52.5 82 58' : 'M38 56 Q43.5 60 49 56 M71 56 Q76.5 60 82 56'}
+      />
+      <ellipse className="capy-blush" cx={29} cy={70} rx={7} ry={4.5} />
+      <ellipse className="capy-blush" cx={91} cy={70} rx={7} ry={4.5} />
+      {/* 鼻子那一大塊：兩個鼻孔、一個微笑 */}
+      <rect className="capy-snout" x={42} y={60} width={36} height={30} rx={14} />
+      <ellipse className="capy-nostril" cx={53} cy={68} rx={2.8} ry={2.2} />
+      <ellipse className="capy-nostril" cx={67} cy={68} rx={2.8} ry={2.2} />
+      <path className="capy-ln" strokeWidth={2.8} d="M54 77 Q60 83 66 77" />
+      {/* 兩隻小手抱在肚子前面 */}
+      <path className="capy-ln" strokeWidth={2.6} d="M33 90 Q41 99 48 98 M87 90 Q79 99 72 98" />
+      <ellipse className="capy-fur capy-ol" strokeWidth={2.4} cx={51} cy={97} rx={6} ry={4.6} />
+      <ellipse className="capy-fur capy-ol" strokeWidth={2.4} cx={69} cy={97} rx={6} ry={4.6} />
+      <path className="capy-ln" strokeWidth={1.6} d="M50 94.5 V97.5 M53 94.5 V97.5 M67 94.5 V97.5 M70 94.5 V97.5" />
+      {/* 腳，上面有腳趾的線 */}
+      <ellipse className="capy-snout capy-ol" cx={44} cy={112} rx={10} ry={6.5} />
+      <ellipse className="capy-snout capy-ol" cx={76} cy={112} rx={10} ry={6.5} />
+      <path className="capy-ln" strokeWidth={1.8} d="M41 109.5 V113.5 M46 109.5 V113.5 M74 109.5 V113.5 M79 109.5 V113.5" />
     </>
   );
 }
@@ -173,19 +168,17 @@ interface CapybaraProps {
 export function Capybara({ stage, mood, item, className = 'capybara', ground = true, ...place }: CapybaraProps) {
   // 同一頁可能有好幾隻（今天卡、進度頁），clipPath 的 id 不能重複
   const clip = useId().replace(/[^\w-]/g, '');
-  const itemY = ITEM_AT[stage];
+  const scale = SCALE[stage];
+  // 縮小之後頭頂的高度：道具放在那裡，打瞌睡的 z 放在頭頂右邊
+  const top = FEET - (FEET - 28) * scale;
   return (
     <svg className={className} viewBox="0 -14 120 134" aria-hidden data-stage={stage} data-mood={mood} data-item={item ?? undefined} {...place}>
-      {ground && <ellipse className="algo-ground" cx={60} cy={114} rx={stage === 'baby' ? 36 : 46} ry={5} />}
-      {stage === 'baby' ? (
-        <Baby mood={mood} clip={`capy-${clip}`} />
-      ) : (
-        <g transform={stage === 'young' ? 'translate(60 113) scale(0.86) translate(-60 -113)' : undefined}>
-          <Grown mood={mood} clip={`capy-${clip}`} />
-        </g>
-      )}
-      {item && <g transform={`translate(${item === 'bird' ? 64 : 60} ${itemY})`}>{ITEMS[item]()}</g>}
-      {mood === 'sleepy' && <path className="capy-z" d={stage === 'baby' ? 'M98 36 H106 L98 44 H106' : 'M98 16 H106 L98 24 H106'} />}
+      {ground && <ellipse className="algo-ground" cx={60} cy={114} rx={40 + 8 * scale} ry={5} />}
+      <g transform={scale === 1 ? undefined : `translate(60 ${FEET}) scale(${scale}) translate(-60 -${FEET})`}>
+        <Body mood={mood} clip={`capy-${clip}`} />
+      </g>
+      {item && <g transform={`translate(${item === 'bird' ? 64 : 60} ${top})`}>{ITEMS[item]()}</g>}
+      {mood === 'sleepy' && <path className="capy-z" d={`M98 ${top - 12} H106 L98 ${top - 4} H106`} />}
     </svg>
   );
 }
