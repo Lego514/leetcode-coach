@@ -162,7 +162,6 @@ const en: Messages = {
     minutesOptional: 'Minutes spent (optional)',
     idea: 'Key idea in one line',
     ideaPlaceholder: 'e.g. Store seen values in a hash map and look up the complement',
-    more: 'More (optional): where you got stuck',
     minusMinutes: (n) => `${count(n, 'minute')} less`,
     plusMinutes: (n) => `${count(n, 'minute')} more`,
     timerMeasured: (n) => `The timer measured ${count(n, 'minute')}. If you stepped away or forgot to pause, change it to your actual time.`,

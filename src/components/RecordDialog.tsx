@@ -197,13 +197,9 @@ export function RecordForm({
         </div>
       </fieldset>
 
+      {/* 卡在哪直接列出來：點一下就好，不用再打開 */}
       {insightFirst ? (
-        <details className="record-more">
-          <summary>{t.record.more}</summary>
-          <div className="stack" style={{ gap: 16, marginTop: 12 }}>
-            <StuckPicker value={stuck} onChange={setStuck} />
-          </div>
-        </details>
+        <StuckPicker value={stuck} onChange={setStuck} />
       ) : (
         <>
           <StuckPicker value={stuck} onChange={setStuck} />
