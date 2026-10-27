@@ -139,10 +139,8 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
 
   await dock.getByRole('button', { name: 'I’m done' }).click();
   const record = page.getByRole('region', { name: 'Record this attempt' });
-  // 關鍵洞察放第一個；卡在哪收起來
+  // 關鍵洞察放第一個；卡在哪直接列出來，不用打開
   await expect(record.getByLabel('Key idea in one line')).toBeFocused();
-  await expect(record.getByRole('button', { name: 'Couldn’t optimize', exact: true })).toBeHidden();
-  await record.getByText('More (optional)').click();
   await expect(record.getByRole('button', { name: 'Couldn’t optimize', exact: true })).toBeVisible();
 
   // 時間可以調：計時器量到的是起點，按鈕加減、改回計時器的時間，也可以直接打

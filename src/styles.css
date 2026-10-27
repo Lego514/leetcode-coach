@@ -5501,12 +5501,6 @@ button.head-item-slot:hover {
   color: var(--danger);
 }
 
-.record-more summary {
-  cursor: pointer;
-  color: var(--ink-2);
-  font-size: 14px;
-}
-
 /* ---------- 自己的 AI 金鑰、AI 陪你想 ---------- */
 .own-ai-current {
   margin: 0;

@@ -154,7 +154,6 @@ const zhTW = {
     minutesOptional: '花了幾分鐘（選填）',
     idea: '一句話的核心思路',
     ideaPlaceholder: '例如：用 hash map 記錄看過的值，邊走邊查補數',
-    more: '更多（選填）：卡在哪',
     minusMinutes: (n: number) => `少 ${n} 分鐘`,
     plusMinutes: (n: number) => `多 ${n} 分鐘`,
     timerMeasured: (n: number) => `計時器量到 ${n} 分鐘。中途離開或忘了暫停，可以改成實際寫題的時間。`,
