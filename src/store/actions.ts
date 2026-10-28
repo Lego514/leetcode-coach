@@ -47,7 +47,8 @@ export async function recordAttempt(
   return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, db.customProblems, async () => {
     const prev = await db.progress.get(problemId);
     const target = (await practiceTargets(db)).get(problemId);
-    const state = schedule(prev, rating, attemptDay, delayDays, retentionOf(await db.settings.get('app')), paceOf(minutes, target));
+    const evidence = { pace: paceOf(minutes, target), hintLayers: hints, stuck };
+    const state = schedule(prev, rating, attemptDay, delayDays, retentionOf(await db.settings.get('app')), evidence);
     const record: ProgressRecord = {
       problemId,
       ...state,

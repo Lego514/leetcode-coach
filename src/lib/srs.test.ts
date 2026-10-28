@@ -1,8 +1,10 @@
 import { FSRSAlgorithm, generatorParameters } from 'ts-fsrs';
 import { describe, expect, it } from 'vitest';
+import type { StuckReason } from '../../shared/constants';
 import {
   CONFIRM_DAYS,
   DEFAULT_RETENTION,
+  evidenceWeight,
   intervalFor,
   MAX_INTERVAL,
   masteryOf,
@@ -156,16 +158,16 @@ describe('time spent and shaky solves', () => {
   });
 
   it('remembers a slow solve less firmly, more so the slower it was', () => {
-    const first = (pace?: number) => schedule(undefined, 'solo', DAY, 0, DEFAULT_RETENTION, pace).stability;
+    const first = (pace?: number) => schedule(undefined, 'solo', DAY, 0, DEFAULT_RETENTION, { pace: pace }).stability;
     expect(first(1.5)).toBeLessThan(first(1));
     expect(first(2)).toBeLessThan(first(1.5));
     const prev = schedule(undefined, 'solo', DAY);
     const later = '2026-09-26';
-    const again = (pace?: number) => schedule(prev, 'solo', later, 0, DEFAULT_RETENTION, pace);
+    const again = (pace?: number) => schedule(prev, 'solo', later, 0, DEFAULT_RETENTION, { pace: pace });
     expect(again(1.3).stability).toBeLessThan(again(1).stability);
     expect(again(1.3).interval).toBeLessThanOrEqual(again(1).interval);
     // 忘了就是忘了，時間不影響
-    expect(schedule(prev, 'fail', later, 0, DEFAULT_RETENTION, 3)).toEqual(schedule(prev, 'fail', later));
+    expect(schedule(prev, 'fail', later, 0, DEFAULT_RETENTION, { pace: 3 })).toEqual(schedule(prev, 'fail', later));
   });
 
   it('brings a shaky solve back within a week to confirm, without throwing away what was learned', () => {
@@ -178,8 +180,8 @@ describe('time spent and shaky solves', () => {
     expect(hint.interval).toBe(CONFIRM_DAYS);
     expect(hint.stability).toBeGreaterThan(CONFIRM_DAYS);
     // 沒看提示但花了兩倍以上的時間，也一樣先確認
-    expect(schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, 2).interval).toBe(CONFIRM_DAYS);
-    expect(schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, 1.5).interval).toBeGreaterThan(CONFIRM_DAYS);
+    expect(schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { pace: 2 }).interval).toBe(CONFIRM_DAYS);
+    expect(schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { pace: 1.5 }).interval).toBeGreaterThan(CONFIRM_DAYS);
     // 確認那次準時自己寫出來，就不再卡在一週
     expect(schedule(hint, 'solo', '2026-09-23').interval).toBeGreaterThan(CONFIRM_DAYS);
   });
@@ -190,6 +192,43 @@ describe('time spent and shaky solves', () => {
     expect(replay(slow, DEFAULT_RETENTION, 15)!.stability).toBeLessThan(replay(quick, DEFAULT_RETENTION, 15)!.stability);
     // 不知道目標時間（或沒有時間）就不看時間
     expect(replay(slow)).toEqual(replay(quick));
+  });
+});
+
+describe('hint depth and where you got stuck', () => {
+  // 很久以前做過、當時不太熟（穩定度約 1 天），隔了半年再寫
+  const prev: ReviewState = { stability: 1, difficulty: 5, reps: 1, lapses: 0, interval: 1, lastReview: '2026-03-01', due: '2026-03-02' };
+
+  it('remembers less the deeper the hints went, and ignores hint depth when you rated it solved alone', () => {
+    const layers = [1, 2, 3, 4].map((hintLayers) => schedule(prev, 'hint', DAY, 0, DEFAULT_RETENTION, { hintLayers }).stability);
+    expect(layers.every((s, i) => i === 0 || s < layers[i - 1])).toBe(true);
+    // 第 2 層（關鍵觀察）就是 FSRS 原本的 Hard
+    expect(layers[1]).toBe(schedule(prev, 'hint', DAY).stability);
+    // 只看了題型還是比自己解出少，看到模板也比忘了多
+    expect(layers[0]).toBeLessThan(schedule(prev, 'solo', DAY).stability);
+    expect(evidenceWeight('solo', { hintLayers: 4 })).toBe(1);
+    // 看了提示都先在一週內確認
+    for (const hintLayers of [1, 4]) expect(schedule(prev, 'hint', DAY, 0, DEFAULT_RETENTION, { hintLayers }).interval).toBe(CONFIRM_DAYS);
+  });
+
+  it('counts forgetting the idea more than slips in execution, and leaves running out of time to the time weight', () => {
+    const solo = (stuck: StuckReason[]) => schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { stuck });
+    const plain = solo([]);
+    // 沒看出模式：記憶度扣比較多，而且一週內確認
+    expect(solo(['pattern']).stability).toBeLessThan(solo(['bug']).stability);
+    expect(solo(['pattern']).interval).toBe(CONFIRM_DAYS);
+    expect(solo(['implement']).interval).toBe(CONFIRM_DAYS);
+    // 有 bug、漏了邊界情況：小扣，不提早確認
+    expect(solo(['edge']).stability).toBeLessThan(plain.stability);
+    expect(solo(['edge']).interval).toBeGreaterThan(CONFIRM_DAYS);
+    // 時間不夠：時間權重已經算了
+    expect(solo(['time'])).toEqual(plain);
+  });
+
+  it('multiplies the weights', () => {
+    expect(evidenceWeight('hint', { pace: 1.5, hintLayers: 2, stuck: ['bug'] })).toBeCloseTo(0.8 * 0.9);
+    // 最壞的情況：兩倍時間、看到模板、沒看出模式
+    expect(evidenceWeight('hint', { pace: 3, hintLayers: 4, stuck: ['pattern'] })).toBeCloseTo(0.6 * 0.7 * 0.75);
   });
 });
 
