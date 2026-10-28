@@ -46,7 +46,7 @@ export function useDemo(): boolean {
 
 export async function loadDemoData(today: Day): Promise<void> {
   const demo = demoData(today);
-  await db.transaction('rw', [db.attempts, db.cardReviews, db.mocks, db.settings, db.progress], async () => {
+  await db.transaction('rw', [db.attempts, db.cardReviews, db.mocks, db.settings, db.progress, db.customProblems], async () => {
     await db.attempts.bulkPut(demo.attempts as unknown as AttemptRecord[]);
     await db.cardReviews.bulkPut(demo.cardReviews as unknown as CardReviewRecord[]);
     await db.mocks.bulkPut(demo.mocks as unknown as MockRecord[]);

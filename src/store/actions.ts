@@ -3,7 +3,7 @@ import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { toDay, type Day } from '../lib/dates';
 import { parseSlug } from '../lib/catalog';
-import { schedule, spreadDelays, type Rating } from '../lib/srs';
+import { paceOf, schedule, spreadDelays, type Rating } from '../lib/srs';
 import type { BehavioralTheme, CardResult } from '../../shared/constants';
 import type { BoardDoc } from '../../shared/protocol';
 import {
@@ -21,7 +21,7 @@ import {
   type StoryRecord,
 } from './db';
 import { retentionOf } from './progress';
-import { rebuildAllProgress, rebuildProgress, track } from './tracking';
+import { practiceTargets, rebuildAllProgress, rebuildProgress, track } from './tracking';
 
 // 所有寫入都集中在這裡。每次修改都會記進待上傳清單，登入後由同步程式上傳。
 
@@ -44,9 +44,10 @@ export async function recordAttempt(
   { mode = 'practice', minutes, hints, sawSolution, delayDays, stuck, day, at = new Date() }: RecordAttemptOptions = {},
 ): Promise<ProgressRecord> {
   const attemptDay = day ?? toDay(at);
-  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
+  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, db.customProblems, async () => {
     const prev = await db.progress.get(problemId);
-    const state = schedule(prev, rating, attemptDay, delayDays, retentionOf(await db.settings.get('app')));
+    const target = (await practiceTargets(db)).get(problemId);
+    const state = schedule(prev, rating, attemptDay, delayDays, retentionOf(await db.settings.get('app')), paceOf(minutes, target));
     const record: ProgressRecord = {
       problemId,
       ...state,
@@ -88,7 +89,7 @@ export interface MarkResult {
  * 免得幾十題同一天到期。
  */
 export async function markSolvedBefore(problemIds: readonly number[], rating: Rating, at = new Date()): Promise<MarkResult> {
-  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
+  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, db.customProblems, async () => {
     const fresh: number[] = [];
     for (const problemId of new Set(problemIds)) {
       if (!(await db.progress.get(problemId))) fresh.push(problemId);
@@ -124,7 +125,7 @@ export interface AttemptEdit {
  * 這題的複習排程照全部紀錄重算；回傳重算後的排程。
  */
 export async function updateAttempt(uid: string, edit: AttemptEdit, at = new Date()): Promise<ProgressRecord | undefined> {
-  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
+  return db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, db.customProblems, async () => {
     const attempt = await db.attempts.where('uid').equals(uid).first();
     if (!attempt) return undefined;
     // 時間和卡在哪整個換掉：清空的就拿掉，不留舊的
@@ -144,7 +145,7 @@ export async function updateAttempt(uid: string, edit: AttemptEdit, at = new Dat
 
 /** 刪掉一筆記錯的練習紀錄；這題沒有其他紀錄時就回到還沒做過 */
 export async function deleteAttempt(uid: string, at = new Date()): Promise<void> {
-  await db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, async () => {
+  await db.transaction('rw', db.progress, db.attempts, db.outbox, db.settings, db.customProblems, async () => {
     const attempt = await db.attempts.where('uid').equals(uid).first();
     if (!attempt) return;
     await db.attempts.where('uid').equals(uid).delete();
@@ -284,7 +285,7 @@ export async function savePatternNote(
 
 export async function updateSettings(patch: Partial<Omit<SettingsRecord, 'key'>>): Promise<void> {
   // 只有改目標記憶率時才需要重算排程；其他設定不要卡住練習紀錄的資料表
-  const tables = 'retention' in patch ? [db.settings, db.outbox, db.progress, db.attempts] : [db.settings, db.outbox];
+  const tables = 'retention' in patch ? [db.settings, db.outbox, db.progress, db.attempts, db.customProblems] : [db.settings, db.outbox];
   await db.transaction('rw', tables, async () => {
     const prev = (await db.settings.get('app')) ?? DEFAULT_SETTINGS;
     const next: SettingsRecord = { ...prev, ...patch, key: 'app' };

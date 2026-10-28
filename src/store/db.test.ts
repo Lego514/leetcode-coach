@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import { describe, expect, it } from 'vitest';
+import { CONFIRM_DAYS, replay } from '../lib/srs';
 import { CoachDB } from './db';
 
 describe('database upgrade to FSRS', () => {
@@ -40,6 +41,54 @@ describe('database upgrade to FSRS', () => {
     expect(progress[0]).not.toHaveProperty('ease');
     expect(progress[1]).toMatchObject({ lapses: 1, reps: 0 });
     expect(await upgraded.attempts.count()).toBe(3);
+    upgraded.close();
+  });
+});
+
+describe('database upgrade that weighs time and confirms shaky solves', () => {
+  it('reschedules from the attempts with their minutes, and brings hinted problems back within a week', async () => {
+    const name = `upgrade-time-${crypto.randomUUID()}`;
+    // 第 7 版的資料庫：排程沒有看寫題時間，看了提示也可能排到很久以後
+    const old = new Dexie(name);
+    old.version(7).stores({
+      progress: 'problemId, due',
+      attempts: '++id, problemId, day, &uid',
+      notes: 'problemId',
+      meta: 'problemId, *companies',
+      patternNotes: 'patternId',
+      mocks: '++id, problemId, day, &uid',
+      customProblems: 'id',
+      settings: 'key',
+      outbox: 'id',
+      syncState: 'key',
+      cardReviews: '++id, cardId, day, &uid',
+      boards: 'id',
+      stories: 'id',
+      rehearsals: '++id, day, &uid',
+    });
+    const slow = [
+      // Two Sum 是 Easy，目標 15 分鐘：第二次花了 30 分鐘
+      { uid: 'a', problemId: 1, day: '2026-09-01', at: '2026-09-01T10:00:00.000Z', rating: 'solo', mode: 'practice', minutes: 10 },
+      { uid: 'b', problemId: 1, day: '2026-09-20', at: '2026-09-20T10:00:00.000Z', rating: 'solo', mode: 'review', minutes: 30 },
+    ];
+    const hinted = [
+      { uid: 'c', problemId: 20, day: '2026-03-01', at: '2026-03-01T10:00:00.000Z', rating: 'solo', mode: 'import' },
+      { uid: 'd', problemId: 20, day: '2026-10-20', at: '2026-10-20T10:00:00.000Z', rating: 'hint', mode: 'review', minutes: 12 },
+    ];
+    await old.table('attempts').bulkAdd([...slow, ...hinted]);
+    // 舊的排程：沒有看時間、也沒有一週確認
+    const before = replay(slow as never)!;
+    await old.table('progress').bulkPut([
+      { problemId: 1, ...before, lastRating: 'solo', lastDay: '2026-09-20', firstDay: '2026-09-01', attempts: 2 },
+      { problemId: 20, ...replay(hinted as never)!, lastRating: 'hint', lastDay: '2026-10-20', firstDay: '2026-03-01', attempts: 2 },
+    ]);
+    old.close();
+
+    const upgraded = new CoachDB(name);
+    const [twoSum, parentheses] = await upgraded.progress.orderBy('problemId').toArray();
+    expect(twoSum.stability).toBeLessThan(before.stability);
+    expect(parentheses.interval).toBeLessThanOrEqual(CONFIRM_DAYS);
+    expect(await upgraded.attempts.count()).toBe(4);
     upgraded.close();
   });
 });

@@ -21,6 +21,7 @@ import {
   type WeekSummary,
 } from '../lib/motivation';
 import type { AttemptRecord, MetaRecord, ProgressRecord } from '../store/db';
+import { targetMinutesOf } from '../store/progress';
 import { loadAttemptsFor, useCatalog, useProgressMap, useSettings, useToday } from '../store/queries';
 import { companionPose } from '../lib/companion';
 import { nextStage, TREE_STAGES, treeStage } from '../lib/tree';
@@ -357,7 +358,7 @@ interface RecapInput {
 
 /** 準備度在某一天開始時是多少 */
 function readinessAt(input: RecapInput, day: Day): number {
-  const result = readiness(input.problems, progressBefore(input.attempts, day, input.retention), day);
+  const result = readiness(input.problems, progressBefore(input.attempts, day, input.retention, targetMinutesOf(input.problems)), day);
   return percent(result.ready, result.total);
 }
 

@@ -8,7 +8,8 @@ import type { NewProblemMode } from '../lib/daily';
 import type { Day } from '../lib/dates';
 import type { SprintSettings } from '../lib/sprint';
 import type { Rating, ReviewState } from '../lib/srs';
-import { groupByProblem, progressFromAttempts, retentionOf } from './progress';
+import { BUILTIN_PROBLEMS } from '../data/problems';
+import { groupByProblem, progressFromAttempts, retentionOf, targetMinutesOf } from './progress';
 
 export type { AttemptMode, MockKind };
 
@@ -294,6 +295,19 @@ export class CoachDB extends Dexie {
     this.version(7).stores({
       rehearsals: '++id, day, &uid',
     });
+    // 第 8 版：寫題時間算進記憶度、寫得不順先在一週內確認；依練習紀錄重算每一題（練習紀錄本身不動）
+    this.version(8)
+      .stores({})
+      .upgrade(async (tx) => {
+        const retention = retentionOf(await tx.table('settings').get('app'));
+        const targets = targetMinutesOf([...BUILTIN_PROBLEMS, ...(await tx.table('customProblems').toArray())]);
+        const progress = tx.table('progress');
+        await progress.clear();
+        for (const [problemId, attempts] of groupByProblem(await tx.table('attempts').toArray())) {
+          const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId));
+          if (record) await progress.put(record);
+        }
+      });
   }
 
   /** 會同步的資料表，依集合名稱查 */
