@@ -1,4 +1,4 @@
-import type { Rating } from '../../shared/constants';
+import type { Rating, StuckReason } from '../../shared/constants';
 import { addDays, diffDays, type Day } from './dates';
 
 export type { Rating };
@@ -139,14 +139,52 @@ export function timeWeight(pace: number | undefined): number {
 }
 
 /**
- * 寫得不順（看了提示，或花了兩倍以上的時間）：下次最多隔這幾天就先確認一次，穩定度照 FSRS 算。
+ * 提示看到第幾層（1 方向、2 關鍵觀察、3 邊界情況、4 模板）：選「看了提示」時乘在 FSRS 的 Hard 上。
+ * 跟「自己解出」比，記憶度長多少大約是 0.8、0.6、0.5、0.4：只看了題型幾乎還記得，看到模板等於忘了大半
+ */
+export const HINT_LAYER_WEIGHT: Record<number, number> = { 1: 1.3, 2: 1, 3: 0.85, 4: 0.7 };
+
+/**
+ * 卡在哪：沒看出模式、想不到優化、寫不出來是「記憶」沒了，扣多一點，也算寫得不順；
+ * 漏了邊界情況、有 bug 比較像執行的問題，只小扣；時間不夠已經算在寫題時間裡，不再扣
+ */
+export const MEMORY_STUCK: readonly StuckReason[] = ['pattern', 'optimize', 'implement'];
+export const MEMORY_STUCK_WEIGHT = 0.75;
+export const EXECUTION_STUCK: readonly StuckReason[] = ['edge', 'bug'];
+export const EXECUTION_STUCK_WEIGHT = 0.9;
+
+/** 這一次除了自評之外的證據：花的時間、提示看到第幾層、卡在哪 */
+export interface Evidence {
+  /** 花的時間 ÷ 這題的目標時間 */
+  pace?: number;
+  /** 提示看到第幾層；0 或沒有是沒看 */
+  hintLayers?: number;
+  stuck?: readonly StuckReason[];
+}
+
+/** 記得時，記憶度（穩定度）長多少的權重：時間、提示的深度、卡在哪的種類乘起來（最低約 0.6 × 0.7 × 0.75） */
+export function evidenceWeight(rating: Rating, { pace, hintLayers, stuck }: Evidence = {}): number {
+  let weight = timeWeight(pace);
+  if (rating === 'hint' && hintLayers) weight *= HINT_LAYER_WEIGHT[Math.min(hintLayers, 4)];
+  if (stuck?.some((r) => MEMORY_STUCK.includes(r))) weight *= MEMORY_STUCK_WEIGHT;
+  else if (stuck?.some((r) => EXECUTION_STUCK.includes(r))) weight *= EXECUTION_STUCK_WEIGHT;
+  return round8(weight);
+}
+
+/** 寫得不順：看了提示、花了兩倍以上的時間，或卡在記憶類的地方 */
+export function isShaky(rating: Rating, { pace, stuck }: Evidence = {}): boolean {
+  return rating === 'hint' || (pace ?? 0) >= 2 || (stuck?.some((r) => MEMORY_STUCK.includes(r)) ?? false);
+}
+
+/**
+ * 寫得不順（看了提示、花了兩倍以上的時間，或卡在記憶類的地方）：下次最多隔這幾天就先確認一次，穩定度照 FSRS 算。
  * FSRS 的預設參數是從背卡片的資料訓練的，「勉強想起來」在寫程式題通常代表忘了一部分，
  * 隔太久再見很容易又卡住；確認那次寫得順，就從已經長好的穩定度接著排
  */
 export const CONFIRM_DAYS = 7;
 
 /**
- * 做完一題後排下次複習：把自評換成 FSRS 的等級，依寫題時間（pace）調整穩定度和難度，
+ * 做完一題後排下次複習：把自評換成 FSRS 的等級，依這次的證據（時間、提示、卡在哪）調整穩定度和難度，
  * 排在記得的機率掉到目標記憶率的那天。delayDays 只把到期日往後挪（批次標記時用來分散複習日）。
  */
 export function schedule(
@@ -155,15 +193,15 @@ export function schedule(
   day: Day,
   delayDays = 0,
   retention = DEFAULT_RETENTION,
-  pace?: number,
+  evidence: Evidence = {},
 ): ReviewState {
   const g = GRADES[rating];
   // 舊版留下的紀錄沒有穩定度，當成第一次
   const known = prev && prev.stability > 0 ? prev : undefined;
   const days = known ? Math.max(0, diffDays(known.lastReview, day)) : 0;
-  const memory = nextMemory(known, days, g, timeWeight(pace));
+  const memory = nextMemory(known, days, g, evidenceWeight(rating, evidence));
   let interval = intervalFor(memory.stability, retention);
-  if (g >= 2 && (rating === 'hint' || (pace ?? 0) >= 2)) interval = Math.min(interval, CONFIRM_DAYS);
+  if (g >= 2 && isShaky(rating, evidence)) interval = Math.min(interval, CONFIRM_DAYS);
   return {
     ...memory,
     reps: g === 1 ? 0 : (prev?.reps ?? 0) + 1,
@@ -181,13 +219,14 @@ export function paceOf(minutes: number | undefined, targetMinutes: number | unde
 
 /** 依時間順序重播做過的紀錄，得到現在的狀態；沒有紀錄是 undefined。targetMinutes 是這題的目標時間 */
 export function replay(
-  attempts: readonly { rating: Rating; day: Day; delayDays?: number; minutes?: number }[],
+  attempts: readonly { rating: Rating; day: Day; delayDays?: number; minutes?: number; hints?: number; stuck?: readonly StuckReason[] }[],
   retention = DEFAULT_RETENTION,
   targetMinutes?: number,
 ): ReviewState | undefined {
   let state: ReviewState | undefined;
-  for (const attempt of attempts) {
-    state = schedule(state, attempt.rating, attempt.day, attempt.delayDays, retention, paceOf(attempt.minutes, targetMinutes));
+  for (const a of attempts) {
+    const evidence = { pace: paceOf(a.minutes, targetMinutes), hintLayers: a.hints, stuck: a.stuck };
+    state = schedule(state, a.rating, a.day, a.delayDays, retention, evidence);
   }
   return state;
 }

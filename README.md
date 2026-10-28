@@ -50,7 +50,8 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
   - Each problem has a stability (days until your chance of remembering it drops to 90%) and a difficulty from 1 to 10. Solved alone counts as Good, a hint as Hard, and reading the solution or still being stuck as Again. A review that came late but still went well grows the interval more.
   - Problems come back when you're about as likely to remember them as the target retention in Settings (90% by default; 80–95%). Changing it reschedules every problem.
   - **Time counts too.** Each attempt's minutes are compared with the problem's target time. Within the target it counts fully; past it, the memory gain shrinks steadily, down to 0.6 at twice the target (about what FSRS gives Hard). Finishing early adds nothing extra.
-  - **Shaky solves come back within a week.** After needing a hint, or taking twice the target or longer, the next review is at most 7 days away, so you confirm it before the interval grows. FSRS's memory estimate is kept, so solving it on time then stretches the next interval out again.
+  - **So do hints and where you got stuck.** The deeper the hints went, the less the attempt counts: compared with solving alone, about 0.8 after the pattern hint, 0.6 after the key insight, 0.5 after the edge cases, and 0.4 after the template. Missing the pattern, the optimization, or how to code it means part of it is forgotten (×0.75); missing an edge case or having a bug is more of a slip (×0.9). These weights multiply.
+  - **Shaky solves come back within a week.** After needing a hint, taking twice the target or longer, or getting stuck on the pattern, the optimization, or the code, the next review is at most 7 days away, so you confirm it before the interval grows. FSRS's memory estimate is kept, so solving it on time then stretches the next interval out again.
   - The review queue puts the problem you're most likely to have forgotten first. Problem pages show how likely you are to remember it now, how long it holds, its difficulty, and where it sits on the algorithm tree.
   - Past records can be edited or deleted, from **Done today** on Today or the problem's history, and the schedule is rebuilt from what's left.
   - The scheduler is written from the FSRS-6 formulas with the default parameters, and the tests compare it with the official `ts-fsrs` (a test-only dependency) on hundreds of random review histories.
@@ -222,7 +223,8 @@ Problems are scheduled with FSRS-6 and its default parameters. Each self-rating 
 
 - The next review falls on the day your chance of remembering drops to the target retention (90% by default, 80–95% in Settings), at least 1 day and at most 120 days later.
 - **Time weight**: when an attempt has minutes, its pace is minutes ÷ the problem's target (Easy 15, Medium 25, Hard 40). The weight is 1 up to the target, falls linearly to 0.6 at twice the target, and stays there. It multiplies how much stability grows on a successful review, or the starting stability on a first attempt. Attempts without minutes (like problems marked as solved before) use 1.
-- **One-week confirmation**: after Needed a hint, or a successful solve at twice the target or slower, the interval is capped at 7 days while the stability stays as FSRS computed it. FSRS's default parameters come from flashcard reviews, where a hard recall still means you know it; on a coding problem, needing help usually means part of it is gone.
+- **Hint depth and stuck reasons**: with Needed a hint, the deepest hint layer scales FSRS's Hard by 1.3, 1, 0.85, or 0.7 (pattern, key insight, edge cases, template), about 0.8, 0.6, 0.5, and 0.4 of a solo solve. A memory stuck reason (pattern, optimize, can't code it) multiplies by 0.75, an execution one (edge case, bug) by 0.9, and running out of time adds nothing because the time weight covers it. All weights multiply.
+- **One-week confirmation**: after Needed a hint, a memory stuck reason, or a successful solve at twice the target or slower, the interval is capped at 7 days while the stability stays as FSRS computed it. FSRS's default parameters come from flashcard reviews, where a hard recall still means you know it; on a coding problem, needing help usually means part of it is gone.
 - With no minutes and no hint, the result is plain FSRS-6, which the tests check against `ts-fsrs`.
 - The interval sets the stage: under 7 days is learning, under 30 is reviewing, and 30 or more counts as "mastered".
 - A problem's schedule is rebuilt by replaying its attempts in time order, which is why schedules don't need to be synced.
@@ -352,7 +354,8 @@ Notes:
 
 **複習排程（FSRS）**：每次練完自評（自己解出、看了提示、看了解答、看完還不懂），FSRS 排下一次複習。每一題有「穩定度」（隔幾天之後，記得的機率會掉到 90%）和 1 到 10 的難度。自己解出算 Good、看提示算 Hard、看解答或看完還不懂算 Again；晚了才複習但還記得，下次的間隔會拉得更長。題目會在你大概還記得「目標記憶率」那麼多的時候再出現（設定可以選 80%–95%，預設 90%），改了之後每一題都會重新排程；間隔最少 1 天、最多 120 天。
 - **寫題時間也算進去**：每次花的時間跟這題的目標時間比，在目標以內照算；超過就打折，越慢折越多，到兩倍時間是 0.6（跟 FSRS 給 Hard 的差不多）。寫得比目標快不另外加分。
-- **寫得不順先在一週內確認**：看了提示，或花了兩倍以上的時間，下次最多 7 天後再複習；穩定度照 FSRS 算，確認那次準時寫出來，下一次就會拉長。
+- **提示看到第幾層、卡在哪也算進去**：看的提示越深，這次算得越少；跟自己解出比，看到題型約 0.8、關鍵觀察 0.6、邊界情況 0.5、模板 0.4。沒看出模式、想不到優化、寫不出來代表忘了一部分（× 0.75）；漏了邊界情況、有 bug 比較像失誤（× 0.9）。幾個權重相乘。
+- **寫得不順先在一週內確認**：看了提示、花了兩倍以上的時間，或卡在沒看出模式、想不到優化、寫不出來，下次最多 7 天後再複習；穩定度照 FSRS 算，確認那次準時寫出來，下一次就會拉長。
 - 複習頁把最可能已經忘了的題目排在最前面；題目頁顯示現在還記得的機率、大約記得住幾天、難度，和它在演算法樹上的位置。
 - 練習紀錄可以修改或刪除（今天頁的「今天做過的」，或題目頁的紀錄），排程會依剩下的紀錄重算。
 - 排程是照 FSRS-6 的公式自己寫的，測試裡拿官方的 `ts-fsrs` 在幾百組隨機的複習紀錄上逐一比對。

@@ -159,6 +159,7 @@ const en: Messages = {
     title: 'Record this attempt',
     question: 'How did it go?',
     suggested: 'Pre-selected from your hint usage. Change it if it doesn’t fit.',
+    memoryStuckNote: 'Missing the pattern, the optimization, or how to code it means part of it is forgotten, so this problem comes back within a week to confirm.',
     slowNote: (target) => `Longer than the ${target}-minute target, so this attempt counts for less and the problem comes back sooner.`,
     minutes: 'Minutes spent',
     minutesOptional: 'Minutes spent (optional)',

@@ -92,3 +92,44 @@ describe('database upgrade that weighs time and confirms shaky solves', () => {
     upgraded.close();
   });
 });
+
+describe('database upgrade that weighs hint depth and where you got stuck', () => {
+  it('brings a problem back within a week when you could not see the pattern', async () => {
+    const name = `upgrade-stuck-${crypto.randomUUID()}`;
+    // 第 8 版的資料庫：排程還沒看卡在哪
+    const old = new Dexie(name);
+    const stores = {
+      progress: 'problemId, due',
+      attempts: '++id, problemId, day, &uid',
+      notes: 'problemId',
+      meta: 'problemId, *companies',
+      patternNotes: 'patternId',
+      mocks: '++id, problemId, day, &uid',
+      customProblems: 'id',
+      settings: 'key',
+      outbox: 'id',
+      syncState: 'key',
+      cardReviews: '++id, cardId, day, &uid',
+      boards: 'id',
+      stories: 'id',
+      rehearsals: '++id, day, &uid',
+    };
+    old.version(7).stores(stores);
+    old.version(8).stores({});
+    const attempts = [
+      { uid: 'a', problemId: 20, day: '2026-03-01', at: '2026-03-01T10:00:00.000Z', rating: 'solo', mode: 'import' },
+      { uid: 'b', problemId: 20, day: '2026-10-20', at: '2026-10-20T10:00:00.000Z', rating: 'solo', mode: 'review', minutes: 12, stuck: ['pattern'] },
+    ];
+    await old.table('attempts').bulkAdd(attempts);
+    // 舊的排程：只看時間，排到很久以後
+    const before = replay(attempts.map((a) => ({ ...a, stuck: undefined })) as never)!;
+    await old.table('progress').put({ problemId: 20, ...before, lastRating: 'solo', lastDay: '2026-10-20', firstDay: '2026-03-01', attempts: 2 });
+    old.close();
+    expect(before.interval).toBeGreaterThan(CONFIRM_DAYS);
+
+    const upgraded = new CoachDB(name);
+    const progress = await upgraded.progress.get(20);
+    expect(progress?.interval).toBe(CONFIRM_DAYS);
+    upgraded.close();
+  });
+});
