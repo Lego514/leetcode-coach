@@ -45,11 +45,12 @@ export function MasteryLegend() {
       <span className="legend-item">
         <span className="cell" data-level={0} aria-hidden /> {t.legend.notStarted}
       </span>
+      {/* 深色模式裡最熟的是最亮的，所以寫「較弱 → 較熟」，不寫「越深越熟」 */}
       <span className="legend-item">
-        <span className="cell" data-level={1} aria-hidden />
+        {t.legend.weaker} <span className="cell" data-level={1} aria-hidden />
         <span className="cell" data-level={2} aria-hidden />
         <span className="cell" data-level={3} aria-hidden />
-        <span className="cell" data-level={4} aria-hidden /> {t.legend.darker}
+        <span className="cell" data-level={4} aria-hidden /> {t.legend.stronger}
       </span>
       <span className="legend-item">
         <span className="cell" data-level={1} data-lapsed="true" aria-hidden /> {t.legend.lapsed}

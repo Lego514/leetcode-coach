@@ -126,7 +126,8 @@ const en: Messages = {
   legend: {
     label: 'Legend',
     notStarted: 'Not started',
-    darker: 'Darker means stronger',
+    weaker: 'Weaker',
+    stronger: 'Stronger',
     lapsed: 'Missed last time',
   },
 
@@ -1062,7 +1063,7 @@ const en: Messages = {
 
   progress: {
     title: 'Progress',
-    lede: 'Each square is a problem. Darker squares have longer review intervals, which means you remember them better.',
+    lede: 'Each square is a problem. The stronger the blue, the longer its review interval, which means you remember it better.',
     list: 'List',
     overview: 'Overview',
     started: 'Attempted',

@@ -118,7 +118,8 @@ const zhTW = {
   legend: {
     label: '方格說明',
     notStarted: '還沒做',
-    darker: '越深越熟',
+    weaker: '較弱',
+    stronger: '較熟',
     lapsed: '上次沒解出來',
   },
 
@@ -1041,7 +1042,7 @@ const zhTW = {
 
   progress: {
     title: '進度',
-    lede: '每個方格是一題，顏色越深代表複習間隔越長、記得越牢。',
+    lede: '每個方格是一題，藍色越飽滿代表複習間隔越長、記得越牢。',
     list: '清單',
     overview: '總覽',
     started: '做過的題目',
