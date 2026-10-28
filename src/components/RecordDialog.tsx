@@ -3,7 +3,7 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays } from '../lib/dates';
 import { MOCK_MINUTES } from '../data/interview';
-import { paceOf, RATINGS, schedule, type Rating } from '../lib/srs';
+import { MEMORY_STUCK, paceOf, RATINGS, schedule, type Rating } from '../lib/srs';
 import { recordAttempt, saveNote } from '../store/actions';
 import type { AttemptMode, ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
@@ -82,6 +82,7 @@ export function RecordForm({
   // 寫題時間算進記憶度：超過這題的目標時間，記得的那幾個選項會排得早一點
   const target = MOCK_MINUTES[problem.difficulty];
   const pace = paceOf(Number(minutes) || undefined, target);
+  const memoryStuck = stuck.some((r) => MEMORY_STUCK.includes(r));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -194,7 +195,7 @@ export function RecordForm({
         )}
         <div className="rating-grid">
           {RATINGS.map((id) => {
-            const next = progress !== undefined ? schedule(progress ?? undefined, id, day, 0, retention, pace) : null;
+            const next = progress !== undefined ? schedule(progress ?? undefined, id, day, 0, retention, { pace, hintLayers: hints, stuck }) : null;
             return (
               <button key={id} type="button" className="rating-option" aria-pressed={rating === id} onClick={() => setRating(id)}>
                 <span className="rating-label">{t.ratings[id].label}</span>
@@ -206,12 +207,16 @@ export function RecordForm({
         </div>
       </fieldset>
 
-      {/* 卡在哪直接列出來：點一下就好，不用再打開 */}
+      {/* 卡在哪直接列出來：點一下就好，不用再打開；勾了記憶類的，上面的複習天數會跟著變 */}
       {insightFirst ? (
-        <StuckPicker value={stuck} onChange={setStuck} />
+        <>
+          <StuckPicker value={stuck} onChange={setStuck} />
+          {memoryStuck && <p className="field-hint">{t.record.memoryStuckNote}</p>}
+        </>
       ) : (
         <>
           <StuckPicker value={stuck} onChange={setStuck} />
+          {memoryStuck && <p className="field-hint">{t.record.memoryStuckNote}</p>}
           <div className="form-grid">
             {minutesField}
             {askIdea && ideaField(false)}

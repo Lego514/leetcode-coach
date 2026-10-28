@@ -1,4 +1,4 @@
-import Dexie, { type EntityTable, type Table } from 'dexie';
+import Dexie, { type EntityTable, type Table, type Transaction } from 'dexie';
 import type { AttemptMode, BehavioralPoint, BehavioralTheme, CardResult, Collection, MockKind, StepNoteKey, StuckReason } from '../../shared/constants';
 import type { BehavioralFeedback, BoardDoc, ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
@@ -224,6 +224,18 @@ export interface SyncStateRecord {
   lastSyncedAt?: number;
 }
 
+/** 資料庫升級時用新的排程算法重算每一題（練習紀錄本身不動） */
+async function rebuildInUpgrade(tx: Transaction): Promise<void> {
+  const retention = retentionOf(await tx.table('settings').get('app'));
+  const targets = targetMinutesOf([...BUILTIN_PROBLEMS, ...(await tx.table('customProblems').toArray())]);
+  const progress = tx.table('progress');
+  await progress.clear();
+  for (const [problemId, attempts] of groupByProblem(await tx.table('attempts').toArray())) {
+    const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId));
+    if (record) await progress.put(record);
+  }
+}
+
 export class CoachDB extends Dexie {
   progress!: EntityTable<ProgressRecord, 'problemId'>;
   attempts!: EntityTable<AttemptRecord, 'id'>;
@@ -296,18 +308,9 @@ export class CoachDB extends Dexie {
       rehearsals: '++id, day, &uid',
     });
     // 第 8 版：寫題時間算進記憶度、寫得不順先在一週內確認；依練習紀錄重算每一題（練習紀錄本身不動）
-    this.version(8)
-      .stores({})
-      .upgrade(async (tx) => {
-        const retention = retentionOf(await tx.table('settings').get('app'));
-        const targets = targetMinutesOf([...BUILTIN_PROBLEMS, ...(await tx.table('customProblems').toArray())]);
-        const progress = tx.table('progress');
-        await progress.clear();
-        for (const [problemId, attempts] of groupByProblem(await tx.table('attempts').toArray())) {
-          const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId));
-          if (record) await progress.put(record);
-        }
-      });
+    this.version(8).stores({}).upgrade(rebuildInUpgrade);
+    // 第 9 版：提示看到第幾層、卡在哪的種類也算進記憶度；一樣重算每一題
+    this.version(9).stores({}).upgrade(rebuildInUpgrade);
   }
 
   /** 會同步的資料表，依集合名稱查 */

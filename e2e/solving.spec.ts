@@ -168,6 +168,13 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
   await minutes.fill('15');
   await expect(solo).toContainText('Review in 2 days');
   await expect(record).not.toContainText('Longer than the 15-minute target');
+
+  // 卡在記憶類的地方（沒看出模式）：說明這題一週內會回來確認；取消就收起來
+  const pattern = record.getByRole('button', { name: 'Didn’t see the pattern', exact: true });
+  await pattern.click();
+  await expect(record).toContainText('comes back within a week to confirm');
+  await pattern.click();
+  await expect(record).not.toContainText('comes back within a week to confirm');
   await minutes.fill('25');
   // 做完之後步驟變成選填，下方的工具列也收起來
   await expect(page.getByRole('region', { name: 'Solving steps (optional)' })).toBeVisible();
