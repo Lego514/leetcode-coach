@@ -1,6 +1,7 @@
 import { FSRSAlgorithm, generatorParameters } from 'ts-fsrs';
 import { describe, expect, it } from 'vitest';
 import {
+  CONFIRM_DAYS,
   DEFAULT_RETENTION,
   intervalFor,
   MAX_INTERVAL,
@@ -9,8 +10,10 @@ import {
   recallOn,
   replay,
   schedule,
+  SLOW_WEIGHT,
   spreadDelays,
   stageOf,
+  timeWeight,
   type Grade,
   type Memory,
   type ReviewState,
@@ -139,6 +142,54 @@ describe('schedule', () => {
     expect(recallOn({ stability: 10, lastReview: DAY }, '2026-09-26')).toBeCloseTo(0.9, 6);
     expect(recallOn(state, '2026-10-30')!).toBeLessThan(0.7);
     expect(recallOn(undefined, DAY)).toBeUndefined();
+  });
+});
+
+describe('time spent and shaky solves', () => {
+  it('weighs the time spent: full weight within the target, down to Hard-like 0.6 at twice the target', () => {
+    expect(timeWeight(undefined)).toBe(1);
+    expect(timeWeight(0.5)).toBe(1);
+    expect(timeWeight(1)).toBe(1);
+    expect(timeWeight(1.5)).toBeCloseTo(0.8);
+    expect(timeWeight(2)).toBeCloseTo(SLOW_WEIGHT);
+    expect(timeWeight(4)).toBeCloseTo(SLOW_WEIGHT);
+  });
+
+  it('remembers a slow solve less firmly, more so the slower it was', () => {
+    const first = (pace?: number) => schedule(undefined, 'solo', DAY, 0, DEFAULT_RETENTION, pace).stability;
+    expect(first(1.5)).toBeLessThan(first(1));
+    expect(first(2)).toBeLessThan(first(1.5));
+    const prev = schedule(undefined, 'solo', DAY);
+    const later = '2026-09-26';
+    const again = (pace?: number) => schedule(prev, 'solo', later, 0, DEFAULT_RETENTION, pace);
+    expect(again(1.3).stability).toBeLessThan(again(1).stability);
+    expect(again(1.3).interval).toBeLessThanOrEqual(again(1).interval);
+    // 忘了就是忘了，時間不影響
+    expect(schedule(prev, 'fail', later, 0, DEFAULT_RETENTION, 3)).toEqual(schedule(prev, 'fail', later));
+  });
+
+  it('brings a shaky solve back within a week to confirm, without throwing away what was learned', () => {
+    // 很久以前做過、當時不太熟（穩定度約 1 天），隔了半年再寫：FSRS 會讓穩定度一口氣長很多
+    const prev: ReviewState = { stability: 1, difficulty: 5, reps: 1, lapses: 0, interval: 1, lastReview: '2026-03-01', due: '2026-03-02' };
+    const solo = schedule(prev, 'solo', DAY);
+    const hint = schedule(prev, 'hint', DAY);
+    expect(solo.interval).toBeGreaterThan(2 * CONFIRM_DAYS);
+    // 看了提示：一週內先確認一次，但穩定度照 FSRS 算，確認寫得順就接著拉長
+    expect(hint.interval).toBe(CONFIRM_DAYS);
+    expect(hint.stability).toBeGreaterThan(CONFIRM_DAYS);
+    // 沒看提示但花了兩倍以上的時間，也一樣先確認
+    expect(schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, 2).interval).toBe(CONFIRM_DAYS);
+    expect(schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, 1.5).interval).toBeGreaterThan(CONFIRM_DAYS);
+    // 確認那次準時自己寫出來，就不再卡在一週
+    expect(schedule(hint, 'solo', '2026-09-23').interval).toBeGreaterThan(CONFIRM_DAYS);
+  });
+
+  it('uses the minutes of each attempt against the target when replaying', () => {
+    const quick = [{ rating: 'solo' as const, day: DAY, minutes: 10 }];
+    const slow = [{ rating: 'solo' as const, day: DAY, minutes: 40 }];
+    expect(replay(slow, DEFAULT_RETENTION, 15)!.stability).toBeLessThan(replay(quick, DEFAULT_RETENTION, 15)!.stability);
+    // 不知道目標時間（或沒有時間）就不看時間
+    expect(replay(slow)).toEqual(replay(quick));
   });
 });
 

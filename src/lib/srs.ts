@@ -81,11 +81,11 @@ function nextDifficulty(d: number, g: Grade): number {
   return clamp(round8(W[7] * initDifficulty(4) + (1 - W[7]) * next), 1, 10);
 }
 
-/** 記得時穩定度變大：越難的題長得越慢，越接近忘記才複習（R 越低）長得越多 */
-function recallStability(d: number, s: number, r: number, g: Grade): number {
+/** 記得時穩定度變大：越難的題長得越慢，越接近忘記才複習（R 越低）長得越多；weight 是寫題時間的權重 */
+function recallStability(d: number, s: number, r: number, g: Grade, weight = 1): number {
   const hard = g === 2 ? W[15] : 1;
   const easy = g === 4 ? W[16] : 1;
-  const growth = Math.exp(W[8]) * (11 - d) * s ** -W[9] * (Math.exp((1 - r) * W[10]) - 1) * hard * easy;
+  const growth = Math.exp(W[8]) * (11 - d) * s ** -W[9] * (Math.exp((1 - r) * W[10]) - 1) * hard * easy * weight;
   return round8(clamp(s * (1 + growth), S_MIN, S_MAX));
 }
 
@@ -106,14 +106,18 @@ export interface Memory {
   difficulty: number;
 }
 
-/** 做完一次之後的記憶狀態；prev 是之前的，days 是隔了幾天（跟 ts-fsrs 的 next_state 一樣） */
-export function nextMemory(prev: Memory | undefined, days: number, g: Grade): Memory {
-  if (!prev) return { difficulty: clamp(initDifficulty(g), 1, 10), stability: Math.max(W[g - 1], 0.1) };
+/**
+ * 做完一次之後的記憶狀態；prev 是之前的，days 是隔了幾天（weight 是 1 時跟 ts-fsrs 的 next_state 一樣）。
+ * weight 是寫題時間的權重（timeWeight），只用在記得的時候：第一次做乘在起始穩定度上，之後乘在穩定度長多少上
+ */
+export function nextMemory(prev: Memory | undefined, days: number, g: Grade, weight = 1): Memory {
+  const w = g >= 2 ? weight : 1;
+  if (!prev) return { difficulty: clamp(initDifficulty(g), 1, 10), stability: Math.max(round8(W[g - 1] * w), 0.1) };
   const { stability: s, difficulty: d } = prev;
   let stability: number;
   if (days === 0) stability = sameDayStability(s, g);
   else if (g === 1) stability = forgetStability(d, s, recallProbability(s, days));
-  else stability = recallStability(d, s, recallProbability(s, days), g);
+  else stability = recallStability(d, s, recallProbability(s, days), g, w);
   return { difficulty: nextDifficulty(d, g), stability };
 }
 
@@ -124,16 +128,42 @@ export function intervalFor(stability: number, retention = DEFAULT_RETENTION): n
 }
 
 /**
- * 做完一題後排下次複習：把自評換成 FSRS 的等級，更新穩定度和難度，
+ * 寫題時間的權重：pace 是花的時間 ÷ 這題的目標時間。在目標以內是 1；超過就線性往下，
+ * 兩倍以上是 SLOW_WEIGHT（0.6，跟 FSRS 給 Hard 的打折差不多）。沒有時間（例如標記以前刷過）是 1。
+ * 寫得快不加分：FSRS 的預設參數沒有這個訊號，只扣不加比較保守
+ */
+export const SLOW_WEIGHT = 0.6;
+export function timeWeight(pace: number | undefined): number {
+  if (pace === undefined || !(pace > 1)) return 1;
+  return round8(1 - (1 - SLOW_WEIGHT) * Math.min(pace - 1, 1));
+}
+
+/**
+ * 寫得不順（看了提示，或花了兩倍以上的時間）：下次最多隔這幾天就先確認一次，穩定度照 FSRS 算。
+ * FSRS 的預設參數是從背卡片的資料訓練的，「勉強想起來」在寫程式題通常代表忘了一部分，
+ * 隔太久再見很容易又卡住；確認那次寫得順，就從已經長好的穩定度接著排
+ */
+export const CONFIRM_DAYS = 7;
+
+/**
+ * 做完一題後排下次複習：把自評換成 FSRS 的等級，依寫題時間（pace）調整穩定度和難度，
  * 排在記得的機率掉到目標記憶率的那天。delayDays 只把到期日往後挪（批次標記時用來分散複習日）。
  */
-export function schedule(prev: ReviewState | undefined, rating: Rating, day: Day, delayDays = 0, retention = DEFAULT_RETENTION): ReviewState {
+export function schedule(
+  prev: ReviewState | undefined,
+  rating: Rating,
+  day: Day,
+  delayDays = 0,
+  retention = DEFAULT_RETENTION,
+  pace?: number,
+): ReviewState {
   const g = GRADES[rating];
   // 舊版留下的紀錄沒有穩定度，當成第一次
   const known = prev && prev.stability > 0 ? prev : undefined;
   const days = known ? Math.max(0, diffDays(known.lastReview, day)) : 0;
-  const memory = nextMemory(known, days, g);
-  const interval = intervalFor(memory.stability, retention);
+  const memory = nextMemory(known, days, g, timeWeight(pace));
+  let interval = intervalFor(memory.stability, retention);
+  if (g >= 2 && (rating === 'hint' || (pace ?? 0) >= 2)) interval = Math.min(interval, CONFIRM_DAYS);
   return {
     ...memory,
     reps: g === 1 ? 0 : (prev?.reps ?? 0) + 1,
@@ -144,13 +174,21 @@ export function schedule(prev: ReviewState | undefined, rating: Rating, day: Day
   };
 }
 
-/** 依時間順序重播做過的紀錄，得到現在的狀態；沒有紀錄是 undefined */
+/** 花的時間 ÷ 目標時間；不知道其中一個就是 undefined（不打折） */
+export function paceOf(minutes: number | undefined, targetMinutes: number | undefined): number | undefined {
+  return minutes && targetMinutes ? minutes / targetMinutes : undefined;
+}
+
+/** 依時間順序重播做過的紀錄，得到現在的狀態；沒有紀錄是 undefined。targetMinutes 是這題的目標時間 */
 export function replay(
-  attempts: readonly { rating: Rating; day: Day; delayDays?: number }[],
+  attempts: readonly { rating: Rating; day: Day; delayDays?: number; minutes?: number }[],
   retention = DEFAULT_RETENTION,
+  targetMinutes?: number,
 ): ReviewState | undefined {
   let state: ReviewState | undefined;
-  for (const attempt of attempts) state = schedule(state, attempt.rating, attempt.day, attempt.delayDays, retention);
+  for (const attempt of attempts) {
+    state = schedule(state, attempt.rating, attempt.day, attempt.delayDays, retention, paceOf(attempt.minutes, targetMinutes));
+  }
   return state;
 }
 

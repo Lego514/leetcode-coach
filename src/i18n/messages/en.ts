@@ -158,6 +158,7 @@ const en: Messages = {
     title: 'Record this attempt',
     question: 'How did it go?',
     suggested: 'Pre-selected from your hint usage. Change it if it doesn’t fit.',
+    slowNote: (target) => `Longer than the ${target}-minute target, so this attempt counts for less and the problem comes back sooner.`,
     minutes: 'Minutes spent',
     minutesOptional: 'Minutes spent (optional)',
     idea: 'Key idea in one line',

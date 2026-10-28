@@ -150,6 +150,7 @@ const zhTW = {
     title: '記錄這次練習',
     question: '這次做得怎麼樣？',
     suggested: '已依提示的使用情況先幫你選好，不對可以改。',
+    slowNote: (target: number) => `超過目標的 ${target} 分鐘，這次的記憶度打折，會早一點回來複習。`,
     minutes: '花了幾分鐘',
     minutesOptional: '花了幾分鐘（選填）',
     idea: '一句話的核心思路',

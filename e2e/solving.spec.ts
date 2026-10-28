@@ -158,6 +158,16 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
   // 不會少於 1 分鐘
   await record.getByRole('button', { name: '5 minutes less' }).click();
   await expect(minutes).toHaveValue('1');
+
+  // 寫題時間算進記憶度：在目標（Easy 15 分鐘）以內不影響，超過就打折，下次早一點回來
+  const solo = record.getByRole('button', { name: /^Solved alone/ });
+  await expect(solo).toContainText('Review in 2 days');
+  await minutes.fill('30');
+  await expect(solo).toContainText('Review in 1 day');
+  await expect(record).toContainText('Longer than the 15-minute target, so this attempt counts for less');
+  await minutes.fill('15');
+  await expect(solo).toContainText('Review in 2 days');
+  await expect(record).not.toContainText('Longer than the 15-minute target');
   await minutes.fill('25');
   // 做完之後步驟變成選填，下方的工具列也收起來
   await expect(page.getByRole('region', { name: 'Solving steps (optional)' })).toBeVisible();

@@ -1,3 +1,5 @@
+import { MOCK_MINUTES } from '../data/interview';
+import type { Problem } from '../data/problems';
 import { DEFAULT_RETENTION, replay } from '../lib/srs';
 import type { AttemptRecord, ProgressRecord, SettingsRecord } from './db';
 
@@ -8,11 +10,23 @@ export function retentionOf(settings: Pick<SettingsRecord, 'retention'> | undefi
   return settings?.retention ?? DEFAULT_RETENTION;
 }
 
-/** 依時間順序重播一題的練習紀錄；沒有紀錄是 null */
-export function progressFromAttempts(problemId: number, attempts: readonly AttemptRecord[], retention: number): ProgressRecord | null {
+/** 每一題的目標時間（看難度，跟練習頁的計時目標一樣）：寫題時間的權重用它來比 */
+export function targetMinutesOf(problems: Iterable<Pick<Problem, 'id' | 'difficulty'>>): Map<number, number> {
+  const map = new Map<number, number>();
+  for (const p of problems) map.set(p.id, MOCK_MINUTES[p.difficulty]);
+  return map;
+}
+
+/** 依時間順序重播一題的練習紀錄；沒有紀錄是 null。targetMinutes 是這題的目標時間（不知道就不看時間） */
+export function progressFromAttempts(
+  problemId: number,
+  attempts: readonly AttemptRecord[],
+  retention: number,
+  targetMinutes?: number,
+): ProgressRecord | null {
   if (attempts.length === 0) return null;
   const sorted = [...attempts].sort((a, b) => a.at.localeCompare(b.at) || (a.id ?? 0) - (b.id ?? 0));
-  const state = replay(sorted, retention)!;
+  const state = replay(sorted, retention, targetMinutes)!;
   const last = sorted[sorted.length - 1];
   return {
     problemId,

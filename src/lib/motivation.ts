@@ -58,7 +58,12 @@ export function readiness(problems: readonly Problem[], progress: StateMap, toda
 export const percent = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 100));
 
 /** 某一天開始之前的排程：只重播那天以前的紀錄，用來跟過去比較準備度 */
-export function progressBefore(attempts: readonly AttemptLike[], day: Day, retention: number): Map<number, StateLike> {
+export function progressBefore(
+  attempts: readonly AttemptLike[],
+  day: Day,
+  retention: number,
+  targets?: ReadonlyMap<number, number>,
+): Map<number, StateLike> {
   const groups = new Map<number, AttemptLike[]>();
   for (const a of attempts) {
     if (a.day >= day) continue;
@@ -67,7 +72,7 @@ export function progressBefore(attempts: readonly AttemptLike[], day: Day, reten
   const map = new Map<number, StateLike>();
   for (const [id, list] of groups) {
     const sorted = [...list].sort((a, b) => a.at.localeCompare(b.at));
-    map.set(id, { ...replay(sorted, retention)!, lastRating: sorted[sorted.length - 1].rating });
+    map.set(id, { ...replay(sorted, retention, targets?.get(id))!, lastRating: sorted[sorted.length - 1].rating });
   }
   return map;
 }

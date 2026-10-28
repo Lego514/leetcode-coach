@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays } from '../lib/dates';
-import { RATINGS, schedule, type Rating } from '../lib/srs';
+import { MOCK_MINUTES } from '../data/interview';
+import { paceOf, RATINGS, schedule, type Rating } from '../lib/srs';
 import { recordAttempt, saveNote } from '../store/actions';
 import type { AttemptMode, ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
@@ -78,6 +79,9 @@ export function RecordForm({
   const [saving, setSaving] = useState(false);
 
   const currentIdea = idea ?? note?.idea ?? '';
+  // 寫題時間算進記憶度：超過這題的目標時間，記得的那幾個選項會排得早一點
+  const target = MOCK_MINUTES[problem.difficulty];
+  const pace = paceOf(Number(minutes) || undefined, target);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -183,9 +187,14 @@ export function RecordForm({
             {t.record.suggested}
           </p>
         )}
+        {pace !== undefined && pace > 1 && (
+          <p className="field-hint" style={{ marginTop: -4, marginBottom: 8 }}>
+            {t.record.slowNote(target)}
+          </p>
+        )}
         <div className="rating-grid">
           {RATINGS.map((id) => {
-            const next = progress !== undefined ? schedule(progress ?? undefined, id, day, 0, retention) : null;
+            const next = progress !== undefined ? schedule(progress ?? undefined, id, day, 0, retention, pace) : null;
             return (
               <button key={id} type="button" className="rating-option" aria-pressed={rating === id} onClick={() => setRating(id)}>
                 <span className="rating-label">{t.ratings[id].label}</span>
