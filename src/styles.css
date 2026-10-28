@@ -30,6 +30,12 @@
   --level-2: #a9bdee;
   --level-3: #6788da;
   --level-4: #2346a0;
+  /* 熟練度和熱度圖的小方格：四級差距比 --level-* 大，加一圈邊，白底上最淺的一級也看得到 */
+  --cell-1: #c4d3f4;
+  --cell-2: #8faae8;
+  --cell-3: #5276d0;
+  --cell-4: #2346a0;
+  --cell-edge: rgba(35, 70, 160, 0.22);
 
   --toast-bg: #16233a;
   --toast-ink: #f3f5f8;
@@ -105,6 +111,11 @@
     --level-2: #2f4f93;
     --level-3: #5078d0;
     --level-4: #8fb0ff;
+    --cell-1: #2b4677;
+    --cell-2: #3d64b3;
+    --cell-3: #6c93ec;
+    --cell-4: #b0c8ff;
+    --cell-edge: rgba(176, 200, 255, 0.28);
     --toast-bg: #e8eef8;
     --toast-ink: #0e1829;
     --wood: #b88a5e;
@@ -170,6 +181,11 @@
   --level-2: #2f4f93;
   --level-3: #5078d0;
   --level-4: #8fb0ff;
+  --cell-1: #2b4677;
+  --cell-2: #3d64b3;
+  --cell-3: #6c93ec;
+  --cell-4: #b0c8ff;
+  --cell-edge: rgba(176, 200, 255, 0.28);
   --toast-bg: #e8eef8;
   --toast-ink: #0e1829;
   --wood: #b88a5e;
@@ -746,23 +762,23 @@ kbd,
 }
 
 .cell[data-level='1'] {
-  background: var(--level-1);
-  box-shadow: none;
+  background: var(--cell-1);
+  box-shadow: inset 0 0 0 1px var(--cell-edge);
 }
 
 .cell[data-level='2'] {
-  background: var(--level-2);
-  box-shadow: none;
+  background: var(--cell-2);
+  box-shadow: inset 0 0 0 1px var(--cell-edge);
 }
 
 .cell[data-level='3'] {
-  background: var(--level-3);
-  box-shadow: none;
+  background: var(--cell-3);
+  box-shadow: inset 0 0 0 1px var(--cell-edge);
 }
 
 .cell[data-level='4'] {
-  background: var(--level-4);
-  box-shadow: none;
+  background: var(--cell-4);
+  box-shadow: inset 0 0 0 1px var(--cell-edge);
 }
 
 .cell[data-lapsed='true'] {

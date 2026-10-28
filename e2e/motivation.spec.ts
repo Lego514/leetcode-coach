@@ -48,6 +48,11 @@ test('celebrates conquering a problem, and shows readiness, the pattern map, and
   await expect(page.locator('.toast-win .win-icon .algo-fruit')).toBeVisible();
 
   await page.goto('/#/progress');
+  // 熟練度方格的圖例寫「較弱 → 較熟」：深色模式裡最熟的是最亮的，不能寫「越深越熟」
+  const legend = page.locator('.sheet:has(#mastery)').getByLabel('Legend');
+  await expect(legend).toContainText('Weaker');
+  await expect(legend).toContainText('Stronger');
+  await expect(legend).not.toContainText('Darker');
   const readiness = page.getByRole('region', { name: 'Interview readiness' });
   await expect(readiness).toContainText(/\d+%/);
   await expect(readiness.getByRole('meter', { name: 'Easy problems you can solve now' })).toBeVisible();
