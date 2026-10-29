@@ -893,6 +893,15 @@ const zhTW = {
 
   solving: {
     title: '解題步驟',
+    stepShort: {
+      clarify: '題意',
+      examples: '舉例',
+      brute: '暴力解',
+      optimize: '優化',
+      code: '寫程式',
+      test: '驗證',
+      complexity: '複雜度',
+    },
     detailTitle: '解題思路',
     lede: '一步寫一句，想不出來就先跳過。寫的內容會存在這題的筆記裡，複習時回來看就想得起當時怎麼想的。',
     empty: '還沒寫下這題的解題思路。練習或模擬面試時也可以一步一步寫。',

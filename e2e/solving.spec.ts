@@ -124,6 +124,8 @@ test('points the hints at the step you are stuck on', async ({ page }) => {
 test('keeps I’m stuck and I’m done at hand, and asks for one key insight at the end', async ({ page }) => {
   await page.goto('/#/practice/1');
   const steps = page.getByRole('region', { name: 'Solving steps' });
+  // 每個圈圈下面寫短的名字，不用記第幾步是什麼
+  await expect(steps.locator('.wizard-dot-label')).toHaveText(['Clarify', 'Examples', 'Brute', 'Optimize', 'Code', 'Test', 'Big-O']);
   await steps.getByRole('button', { name: 'Optimize', exact: true }).click();
   await expect(steps).toContainText('Step 4 of 7');
 

@@ -914,6 +914,15 @@ const en: Messages = {
 
   solving: {
     title: 'Solving steps',
+    stepShort: {
+      clarify: 'Clarify',
+      examples: 'Examples',
+      brute: 'Brute',
+      optimize: 'Optimize',
+      code: 'Code',
+      test: 'Test',
+      complexity: 'Big-O',
+    },
     detailTitle: 'How I solved it',
     lede: 'Write one line per step, and skip any you can’t answer yet. It’s saved with this problem’s notes, so you can see how you thought it through when you review.',
     empty: 'You haven’t written down how you solved this one yet. You can also fill in the steps during practice or a mock interview.',

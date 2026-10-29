@@ -229,7 +229,13 @@ export function StepWizard({ problemId, onStepChange, onOpenBoard, onFinish }: S
                   aria-current={i === current ? 'step' : undefined}
                   onClick={() => go(i)}
                 >
-                  <span aria-hidden>{i + 1}</span>
+                  {/* 圈圈裡是第幾步，下面寫短短的名字：不是每一步都會寫，一眼看出要點哪一個 */}
+                  <span className="wizard-dot-num" aria-hidden>
+                    {i + 1}
+                  </span>
+                  <span className="wizard-dot-label" aria-hidden>
+                    {s.stepShort[item.id]}
+                  </span>
                   <span className="visually-hidden">{t.interview.steps[item.id].name}</span>
                 </button>
               </li>
