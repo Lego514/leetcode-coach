@@ -64,8 +64,8 @@ describe('weeklyCounts', () => {
 
 describe('summaries and queues', () => {
   const [a, b, c] = BUILTIN_PROBLEMS;
-  const progress = new Map([
-    [a.id, { interval: 30, due: '2026-10-01' }],
+  const progress = new Map<number, { interval: number; due: string; explained?: boolean }>([
+    [a.id, { interval: 30, due: '2026-10-01', explained: true }],
     [b.id, { interval: 1, due: '2026-09-10' }],
     [c.id, { interval: 4, due: '2026-09-16' }],
   ]);
@@ -75,6 +75,9 @@ describe('summaries and queues', () => {
     expect(first.pattern).toBe('arrays');
     expect(first.started).toBe(3);
     expect(first.mastered).toBe(1);
+    // 記得住 30 天以上、但最近一次沒講清楚的，不算已熟練
+    const unexplained = new Map(progress).set(a.id, { interval: 30, due: '2026-10-01' });
+    expect(summarizePatterns(BUILTIN_PROBLEMS, unexplained)[0].mastered).toBe(0);
     expect(first.mastery).toBeGreaterThan(0);
     expect(first.mastery).toBeLessThan(1);
     expect(first.startedMastery).toBeGreaterThan(first.mastery);

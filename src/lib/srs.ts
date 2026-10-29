@@ -160,6 +160,8 @@ export interface Evidence {
   /** 提示看到第幾層；0 或沒有是沒看 */
   hintLayers?: number;
   stuck?: readonly StuckReason[];
+  /** 這次練習前後 EXPLAIN_WINDOW_DAYS 天內，這題有一次講得清楚的講解 */
+  explained?: boolean;
 }
 
 /** 一個權重和它從哪來：寫太久（pace 是幾倍的目標時間）、提示看到第幾層、卡在記憶或執行 */
@@ -194,6 +196,31 @@ export function isShaky(rating: Rating, { pace, stuck }: Evidence = {}): boolean
 }
 
 /**
+ * 最熟的情況：很快解出（目標時間的一半以內、沒看提示、沒卡住），而且講得清楚，才算 FSRS 的 Easy（很輕鬆）。
+ * 寫得快可能只是把程式碼背起來，講得出來才代表真的懂；面試也是兩個都考
+ */
+export const EASY_PACE = 0.5;
+/** 講解和練習隔幾天內算同一次：先講再寫、寫完隔幾天才講都算 */
+export const EXPLAIN_WINDOW_DAYS = 3;
+export function isFast(rating: Rating, { pace, hintLayers, stuck }: Evidence = {}): boolean {
+  return rating === 'solo' && pace !== undefined && pace <= EASY_PACE && !hintLayers && !stuck?.length;
+}
+export function isEasy(rating: Rating, evidence: Evidence = {}): boolean {
+  return isFast(rating, evidence) && !!evidence.explained;
+}
+
+/** 這一題的講解紀錄：哪天講的、講得清不清楚 */
+export interface ExplanationMark {
+  day: Day;
+  clear: boolean;
+}
+
+/** 這次練習前後 EXPLAIN_WINDOW_DAYS 天內有沒有講得清楚的講解 */
+export function explainedAround(explanations: readonly ExplanationMark[] | undefined, day: Day): boolean {
+  return !!explanations?.some((e) => e.clear && Math.abs(diffDays(e.day, day)) <= EXPLAIN_WINDOW_DAYS);
+}
+
+/**
  * 寫得不順（看了提示、花了兩倍以上的時間，或卡在記憶類的地方）：下次最多隔這幾天就先確認一次，穩定度照 FSRS 算。
  * FSRS 的預設參數是從背卡片的資料訓練的，「勉強想起來」在寫程式題通常代表忘了一部分，
  * 隔太久再見很容易又卡住；確認那次寫得順，就從已經長好的穩定度接著排
@@ -212,7 +239,7 @@ export function schedule(
   retention = DEFAULT_RETENTION,
   evidence: Evidence = {},
 ): ReviewState {
-  const g = GRADES[rating];
+  const g: Grade = isEasy(rating, evidence) ? 4 : GRADES[rating];
   // 舊版留下的紀錄沒有穩定度，當成第一次
   const known = prev && prev.stability > 0 ? prev : undefined;
   const days = known ? Math.max(0, diffDays(known.lastReview, day)) : 0;
@@ -232,6 +259,10 @@ export function schedule(
 /** 為什麼排這天：schedule 每一步的數字，畫面照順序說明 */
 export interface ScheduleExplanation {
   rating: Rating;
+  /** 很快解出又講得清楚，算 FSRS 的 Easy */
+  easy: boolean;
+  /** 很快解出，但前後幾天沒有講得清楚的講解（講一次就能算 Easy） */
+  fastNotExplained: boolean;
   /** 第一次做（或舊版沒有穩定度的紀錄） */
   first: boolean;
   /** 隔了幾天；第一次是 0 */
@@ -264,7 +295,7 @@ export function explainSchedule(
   retention = DEFAULT_RETENTION,
   evidence: Evidence = {},
 ): ScheduleExplanation {
-  const g = GRADES[rating];
+  const g: Grade = isEasy(rating, evidence) ? 4 : GRADES[rating];
   const known = prev && prev.stability > 0 ? prev : undefined;
   const gapDays = known ? Math.max(0, diffDays(known.lastReview, day)) : 0;
   const state = schedule(prev, rating, day, delayDays, retention, evidence);
@@ -273,6 +304,8 @@ export function explainSchedule(
   const fsrsDays = intervalFor(state.stability, retention);
   return {
     rating,
+    easy: g === 4,
+    fastNotExplained: isFast(rating, evidence) && !evidence.explained,
     first: !known,
     gapDays,
     recall: known ? recallProbability(known.stability, gapDays) : undefined,
@@ -293,15 +326,24 @@ export function paceOf(minutes: number | undefined, targetMinutes: number | unde
   return minutes && targetMinutes ? minutes / targetMinutes : undefined;
 }
 
-/** 依時間順序重播做過的紀錄，得到現在的狀態；沒有紀錄是 undefined。targetMinutes 是這題的目標時間 */
+/**
+ * 依時間順序重播做過的紀錄，得到現在的狀態；沒有紀錄是 undefined。
+ * targetMinutes 是這題的目標時間，explanations 是這題的講解紀錄（判斷 Easy 用）
+ */
 export function replay(
   attempts: readonly { rating: Rating; day: Day; delayDays?: number; minutes?: number; hints?: number; stuck?: readonly StuckReason[] }[],
   retention = DEFAULT_RETENTION,
   targetMinutes?: number,
+  explanations?: readonly ExplanationMark[],
 ): ReviewState | undefined {
   let state: ReviewState | undefined;
   for (const a of attempts) {
-    const evidence = { pace: paceOf(a.minutes, targetMinutes), hintLayers: a.hints, stuck: a.stuck };
+    const evidence = {
+      pace: paceOf(a.minutes, targetMinutes),
+      hintLayers: a.hints,
+      stuck: a.stuck,
+      explained: explainedAround(explanations, a.day),
+    };
     state = schedule(state, a.rating, a.day, a.delayDays, retention, evidence);
   }
   return state;
@@ -338,19 +380,33 @@ export function spreadDelays(
   return delays;
 }
 
-export type Stage = 'new' | 'learning' | 'reviewing' | 'mastered';
+/**
+ * 熟練度的階段，熟練度方格的四格也照這個：
+ * 學習中（不到 7 天）→ 複習中（7–29 天）→ 記得住（30 天以上）→ 已熟練（30 天以上，而且最近一次講解講得清楚）。
+ * 沒講清楚就不算最熟：面試要寫得出來也講得出來
+ */
+export type Stage = 'new' | 'learning' | 'reviewing' | 'remembered' | 'mastered';
 
-export const STAGES: Stage[] = ['new', 'learning', 'reviewing', 'mastered'];
+export const STAGES: Stage[] = ['new', 'learning', 'reviewing', 'remembered', 'mastered'];
+export const REVIEWING_DAYS = 7;
+export const REMEMBERED_DAYS = 30;
 
-export function stageOf(state: Pick<ReviewState, 'interval'> | undefined): Stage {
+/** explained：這題最近一次講解講得清楚（ProgressRecord 重算時一起算好） */
+export type StageInput = Pick<ReviewState, 'interval'> & { explained?: boolean };
+
+export function stageOf(state: StageInput | undefined): Stage {
   if (!state) return 'new';
-  if (state.interval < 7) return 'learning';
-  if (state.interval < 30) return 'reviewing';
-  return 'mastered';
+  if (state.interval < REVIEWING_DAYS) return 'learning';
+  if (state.interval < REMEMBERED_DAYS) return 'reviewing';
+  return state.explained ? 'mastered' : 'remembered';
 }
 
-/** 0 到 1 的熟練度：間隔 1 天約 0.2，7 天約 0.6，30 天以上為 1 */
-export function masteryOf(state: Pick<ReviewState, 'interval'> | undefined): number {
+/** 沒講清楚的題目，熟練度最多到這裡（記得住，但還不是最熟） */
+export const UNEXPLAINED_MASTERY = 0.85;
+
+/** 0 到 1 的熟練度：間隔 1 天約 0.2，7 天約 0.6，30 天以上為 1；沒講清楚最多 UNEXPLAINED_MASTERY */
+export function masteryOf(state: StageInput | undefined): number {
   if (!state) return 0;
-  return Math.min(1, Math.log2(state.interval + 1) / Math.log2(31));
+  const memory = Math.min(1, Math.log2(state.interval + 1) / Math.log2(31));
+  return state.explained ? memory : Math.min(memory, UNEXPLAINED_MASTERY);
 }

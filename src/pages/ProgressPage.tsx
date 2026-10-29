@@ -192,6 +192,9 @@ export function ProgressPage() {
                 </div>
                 <div style={{ marginTop: 14 }}>
                   <MasteryLegend />
+                  <p className="field-hint" style={{ marginTop: 6 }}>
+                    {t.legend.hint}
+                  </p>
                 </div>
                 {weakest && (
                   <p className="sheet-note" style={{ marginTop: 10 }}>

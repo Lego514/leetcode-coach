@@ -3,11 +3,11 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays } from '../lib/dates';
 import { MOCK_MINUTES } from '../data/interview';
-import { explainSchedule, MEMORY_STUCK, paceOf, RATINGS, schedule, type Rating } from '../lib/srs';
+import { explainedAround, explainSchedule, MEMORY_STUCK, paceOf, RATINGS, schedule, type Rating } from '../lib/srs';
 import { recordAttempt, saveNote } from '../store/actions';
 import type { AttemptMode, ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
-import { useNote, useProgress, useSettings, useToday } from '../store/queries';
+import { useExplanationsFor, useNote, useProgress, useSettings, useToday } from '../store/queries';
 import type { StuckReason } from '../../shared/constants';
 import { ScheduleWhy } from './ScheduleWhy';
 import { StuckPicker } from './StuckPicker';
@@ -70,6 +70,7 @@ export function RecordForm({
   const { t, fmt } = useI18n();
   const day = useToday();
   const progress = useProgress(problem.id);
+  const explanations = useExplanationsFor(problem.id);
   const retention = retentionOf(useSettings());
   const note = useNote(problem.id);
   const toast = useToast();
@@ -84,7 +85,8 @@ export function RecordForm({
   const target = MOCK_MINUTES[problem.difficulty];
   const pace = paceOf(Number(minutes) || undefined, target);
   const memoryStuck = stuck.some((r) => MEMORY_STUCK.includes(r));
-  const evidence = { pace, hintLayers: hints, stuck };
+  // 很快解出又在前後幾天講清楚過，算 Easy
+  const evidence = { pace, hintLayers: hints, stuck, explained: explainedAround(explanations, day) };
   // 選了評分就看得到為什麼是這幾天；勾卡在哪、改時間都會跟著變
   const why = rating && progress !== undefined ? explainSchedule(progress ?? undefined, rating, day, 0, retention, evidence) : null;
 

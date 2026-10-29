@@ -2,6 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useState } from 'react';
 import type { PatternId } from '../data/patterns';
 import { buildCatalog, type Catalog } from '../lib/catalog';
+import { explanationsByProblem } from '../lib/explainProgress';
+import type { ExplanationMark } from '../lib/srs';
 import { today, type Day } from '../lib/dates';
 import {
   db,
@@ -128,6 +130,14 @@ export function usePatternNote(patternId: PatternId): PatternNoteRecord | null |
 
 export function usePendingChanges(): number {
   return useLiveQuery(() => db.outbox.count(), []) ?? 0;
+}
+
+/** 這一題的講解紀錄（講得清不清楚），照時間排；排程判斷 Easy 用 */
+export function useExplanationsFor(problemId: number): ExplanationMark[] | undefined {
+  return useLiveQuery(
+    async () => explanationsByProblem(await db.mocks.where('problemId').equals(problemId).toArray()).get(problemId) ?? [],
+    [problemId],
+  );
 }
 
 export function useMocks(): MockRecord[] | undefined {

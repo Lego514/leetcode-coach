@@ -1,3 +1,4 @@
+import { EXPLAIN_POINTS } from '../../shared/constants';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   addCustomProblem,
@@ -203,6 +204,22 @@ describe('custom problems', () => {
 });
 
 describe('mocks', () => {
+  it('reschedules the problem when a clear explanation is saved or deleted', async () => {
+    // Two Sum 目標 15 分鐘：5 分鐘自己解出，很快
+    await recordAttempt(1, 'solo', { minutes: 5, day: '2026-09-16', at: new Date('2026-09-16T09:00:00Z') });
+    const before = (await db.progress.get(1))!;
+    expect(before.explained).toBeUndefined();
+    await saveMock({ ...mock, kind: 'explain', steps: [...EXPLAIN_POINTS], clarity: 1 });
+    const after = (await db.progress.get(1))!;
+    expect(after.explained).toBe(true);
+    expect(after.interval).toBeGreaterThan(before.interval);
+    const [saved] = await db.mocks.toArray();
+    await deleteMock(saved.id!);
+    const restored = (await db.progress.get(1))!;
+    expect(restored.interval).toBe(before.interval);
+    expect(restored.explained).toBeUndefined();
+  });
+
   it('gives each mock a uid and tracks deletion', async () => {
     await saveMock(mock);
     const [saved] = await db.mocks.toArray();

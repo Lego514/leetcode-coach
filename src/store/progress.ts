@@ -1,6 +1,6 @@
 import { MOCK_MINUTES } from '../data/interview';
 import type { Problem } from '../data/problems';
-import { DEFAULT_RETENTION, explainSchedule, paceOf, replay, type ScheduleExplanation } from '../lib/srs';
+import { DEFAULT_RETENTION, explainedAround, explainSchedule, paceOf, replay, type ExplanationMark, type ScheduleExplanation } from '../lib/srs';
 import type { AttemptRecord, ProgressRecord, SettingsRecord } from './db';
 
 // 一題的複習排程是把它的練習紀錄依時間重播算出來的，不另外同步；
@@ -17,18 +17,22 @@ export function targetMinutesOf(problems: Iterable<Pick<Problem, 'id' | 'difficu
   return map;
 }
 
-/** 依時間順序重播一題的練習紀錄；沒有紀錄是 null。targetMinutes 是這題的目標時間（不知道就不看時間） */
+/**
+ * 依時間順序重播一題的練習紀錄；沒有紀錄是 null。targetMinutes 是這題的目標時間（不知道就不看時間），
+ * explanations 是這題的講解紀錄（照時間排）：很快解出又講得清楚算 Easy，最近一次講得清楚才可能「已熟練」
+ */
 export function progressFromAttempts(
   problemId: number,
   attempts: readonly AttemptRecord[],
   retention: number,
   targetMinutes?: number,
+  explanations: readonly ExplanationMark[] = [],
 ): ProgressRecord | null {
   if (attempts.length === 0) return null;
   const sorted = [...attempts].sort((a, b) => a.at.localeCompare(b.at) || (a.id ?? 0) - (b.id ?? 0));
-  const state = replay(sorted, retention, targetMinutes)!;
+  const state = replay(sorted, retention, targetMinutes, explanations)!;
   const last = sorted[sorted.length - 1];
-  return {
+  const record: ProgressRecord = {
     problemId,
     ...state,
     lastRating: last.rating,
@@ -36,6 +40,8 @@ export function progressFromAttempts(
     firstDay: sorted[0].day,
     attempts: sorted.length,
   };
+  if (explanations.at(-1)?.clear) record.explained = true;
+  return record;
 }
 
 /** 為什麼現在排這天：重播到最後一次之前，再照 schedule 的步驟算最後一次；沒有紀錄是 null */
@@ -43,15 +49,17 @@ export function explainLatest(
   attempts: readonly AttemptRecord[],
   retention: number,
   targetMinutes?: number,
+  explanations: readonly ExplanationMark[] = [],
 ): ScheduleExplanation | null {
   if (attempts.length === 0) return null;
   const sorted = [...attempts].sort((a, b) => a.at.localeCompare(b.at) || (a.id ?? 0) - (b.id ?? 0));
   const last = sorted[sorted.length - 1];
-  const prev = replay(sorted.slice(0, -1), retention, targetMinutes);
+  const prev = replay(sorted.slice(0, -1), retention, targetMinutes, explanations);
   return explainSchedule(prev, last.rating, last.day, last.delayDays, retention, {
     pace: paceOf(last.minutes, targetMinutes),
     hintLayers: last.hints,
     stuck: last.stuck,
+    explained: explainedAround(explanations, last.day),
   });
 }
 

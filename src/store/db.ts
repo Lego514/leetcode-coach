@@ -9,6 +9,7 @@ import type { Day } from '../lib/dates';
 import type { SprintSettings } from '../lib/sprint';
 import type { Rating, ReviewState } from '../lib/srs';
 import { BUILTIN_PROBLEMS } from '../data/problems';
+import { explanationsByProblem } from '../lib/explainProgress';
 import { groupByProblem, progressFromAttempts, retentionOf, targetMinutesOf } from './progress';
 
 export type { AttemptMode, MockKind };
@@ -20,6 +21,8 @@ export interface ProgressRecord extends ReviewState {
   lastDay: Day;
   firstDay: Day;
   attempts: number;
+  /** 這題最近一次講解講得清楚（「已熟練」要有這個）；從模擬面試的紀錄算出來 */
+  explained?: boolean;
 }
 
 export interface AttemptRecord {
@@ -228,10 +231,11 @@ export interface SyncStateRecord {
 async function rebuildInUpgrade(tx: Transaction): Promise<void> {
   const retention = retentionOf(await tx.table('settings').get('app'));
   const targets = targetMinutesOf([...BUILTIN_PROBLEMS, ...(await tx.table('customProblems').toArray())]);
+  const explanations = explanationsByProblem(await tx.table('mocks').toArray());
   const progress = tx.table('progress');
   await progress.clear();
   for (const [problemId, attempts] of groupByProblem(await tx.table('attempts').toArray())) {
-    const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId));
+    const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId), explanations.get(problemId));
     if (record) await progress.put(record);
   }
 }
@@ -311,6 +315,8 @@ export class CoachDB extends Dexie {
     this.version(8).stores({}).upgrade(rebuildInUpgrade);
     // 第 9 版：提示看到第幾層、卡在哪的種類也算進記憶度；一樣重算每一題
     this.version(9).stores({}).upgrade(rebuildInUpgrade);
+    // 第 10 版：很快解出又講得清楚算 Easy、「已熟練」要講得清楚，重算一次
+    this.version(10).stores({}).upgrade(rebuildInUpgrade);
   }
 
   /** 會同步的資料表，依集合名稱查 */

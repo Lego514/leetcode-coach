@@ -27,6 +27,7 @@ import { explainLatest, retentionOf } from '../store/progress';
 import {
   useAttemptsFor,
   useCatalog,
+  useExplanationsFor,
   useCompanies,
   useMetaMap,
   useNote,
@@ -60,6 +61,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
   const day = useToday();
   const progress = useProgress(problem.id);
   const attempts = useAttemptsFor(problem.id);
+  const explanations = useExplanationsFor(problem.id);
   const retention = retentionOf(useSettings());
   const [recording, setRecording] = useState(false);
   const pattern = getPattern(problem.pattern, locale);
@@ -69,7 +71,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
   const node = nodeFor(progress ?? undefined, conquests(attempts ?? []).length > 0, day);
   // 為什麼下次複習排這天：照最後一次的評分、時間、提示、卡在哪算給你看
   const target = MOCK_MINUTES[problem.difficulty];
-  const why = attempts ? explainLatest(attempts, retention, target) : null;
+  const why = attempts && explanations ? explainLatest(attempts, retention, target, explanations) : null;
 
   return (
     <div className="page">
@@ -135,7 +137,16 @@ function ProblemDetail({ problem }: { problem: Problem }) {
                   </div>
                   <dl className="facts">
                     <dt>{t.detail.stage}</dt>
-                    <dd>{t.stages[stageOf(progress)]}</dd>
+                    <dd>
+                    {t.stages[stageOf(progress)]}
+                    {/* 記得住但還沒講清楚：只差講解就是已熟練 */}
+                    {stageOf(progress) === 'remembered' && (
+                      <span className="stage-next">
+                        {t.detail.explainToMaster}{' '}
+                        <Link to={`/mock?problem=${problem.id}&kind=explain`}>{t.detail.explainThis}</Link>
+                      </span>
+                    )}
+                  </dd>
                     {recallOn(progress, day) !== undefined && (
                       <>
                         <dt>{t.detail.recallNow}</dt>

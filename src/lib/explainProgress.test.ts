@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { explainProgress, explainSessions, type MockLike } from './explainProgress';
+import { EXPLAIN_POINTS } from '../../shared/constants';
+import { explainProgress, explainSessions, explanationMark, explanationsByProblem, type MockLike } from './explainProgress';
 
 let n = 0;
 /** 一次講解練習：自己勾了哪些重點 */
@@ -84,5 +85,43 @@ describe('explainProgress', () => {
     expect(result.followUps.recent).toBeCloseTo(0.5);
     // 複雜度只答過一題，不夠判斷；能不能更好平均最低
     expect(result.followUps.weakestKind).toBe('optimize');
+  });
+});
+
+const markBase: MockLike = { kind: 'explain', day: '2026-10-01', startedAt: '2026-10-01T10:00:00Z', steps: [] };
+const ai = (score: 0 | 1 | 2, n = 5) => ({ points: EXPLAIN_POINTS.slice(0, n).map((id) => ({ id, score, note: '' })) });
+
+describe('explanationMark', () => {
+  it('uses the AI score when there is one: clear from 80% of the five points', () => {
+    expect(explanationMark({ ...markBase, feedback: ai(2) as never })).toEqual({ day: '2026-10-01', clear: true });
+    // 四個 2 分、一個沒講到：0.8，剛好算
+    expect(explanationMark({ ...markBase, feedback: ai(2, 4) as never })?.clear).toBe(true);
+    expect(explanationMark({ ...markBase, feedback: ai(1) as never })?.clear).toBe(false);
+    // 有 AI 分數時，自己勾的不算
+    expect(explanationMark({ ...markBase, steps: [...EXPLAIN_POINTS], clarity: 1, feedback: ai(1) as never })?.clear).toBe(false);
+  });
+
+  it('without AI, needs all five points ticked and “went smoothly”', () => {
+    expect(explanationMark({ ...markBase, steps: [...EXPLAIN_POINTS], clarity: 1 })?.clear).toBe(true);
+    expect(explanationMark({ ...markBase, steps: [...EXPLAIN_POINTS], clarity: 2 })?.clear).toBe(false);
+    expect(explanationMark({ ...markBase, steps: EXPLAIN_POINTS.slice(0, 4), clarity: 1 })?.clear).toBe(false);
+  });
+
+  it('skips full mocks without AI feedback, since they tick interview steps, not explanation points', () => {
+    expect(explanationMark({ ...markBase, kind: 'full', steps: ['clarify'] })).toBeNull();
+    expect(explanationMark({ ...markBase, kind: 'full', feedback: ai(2) as never })?.clear).toBe(true);
+  });
+
+  it('groups by problem in time order', () => {
+    const marks = explanationsByProblem([
+      { ...markBase, problemId: 1, day: '2026-10-05', startedAt: '2026-10-05T10:00:00Z', steps: [...EXPLAIN_POINTS], clarity: 1 },
+      { ...markBase, problemId: 1, steps: [] },
+      { ...markBase, problemId: 2, kind: 'full', steps: ['clarify'] },
+    ]);
+    expect(marks.get(1)).toEqual([
+      { day: '2026-10-01', clear: false },
+      { day: '2026-10-05', clear: true },
+    ]);
+    expect(marks.has(2)).toBe(false);
   });
 });

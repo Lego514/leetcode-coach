@@ -56,7 +56,8 @@ export function demoData(today: Day, uuid: () => string = () => crypto.randomUUI
     cardReviews.push({ uid: uuid(), cardId: `pattern:${ORDER[(offset + 40) % ORDER.length]}`, day, at: `${day}T07:30:00.000Z`, result: 'good' });
   }
 
-  // 講解練習：大約一週一次，自己勾的重點越來越多，邊界情況最常漏；自評從講不出來到講得很順
+  // 講解練習：大約一週一次，自己勾的重點越來越多，邊界情況最常漏；自評從講不出來到講得很順。
+  // 238 記得住很久又講得清楚，是示範資料裡「已熟練」的那一題
   const mocks: Record<string, unknown>[] = (
     [
       [-38, 1, ['insight', 'structure'], 3],
@@ -65,7 +66,7 @@ export function demoData(today: Day, uuid: () => string = () => crypto.randomUUI
       [-22, 125, ['insight', 'structure', 'complexity'], 2],
       [-16, 121, ['insight', 'structure', 'walkthrough', 'complexity'], 2],
       [-11, 3, ['insight', 'structure', 'walkthrough', 'complexity'], 1],
-      [-6, 20, ['insight', 'structure', 'walkthrough', 'complexity', 'edge'], 1],
+      [-6, 238, ['insight', 'structure', 'walkthrough', 'complexity', 'edge'], 1],
       [-2, 155, ['insight', 'structure', 'walkthrough', 'complexity'], 1],
     ] as const
   ).map(([offset, problemId, steps, clarity]) => {

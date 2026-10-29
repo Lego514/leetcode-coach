@@ -88,6 +88,7 @@ const zhTW = {
     new: '還沒做',
     learning: '學習中',
     reviewing: '複習中',
+    remembered: '記得住',
     mastered: '已熟練',
   },
 
@@ -118,8 +119,8 @@ const zhTW = {
   legend: {
     label: '方格說明',
     notStarted: '還沒做',
-    weaker: '較弱',
-    stronger: '較熟',
+    mastered: '已熟練（也講得清楚）',
+    hint: '學習中不到 7 天，複習中 7–29 天，記得住 30 天以上；最近一次講解講得清楚才是已熟練。',
     lapsed: '上次沒解出來',
   },
 
@@ -158,6 +159,8 @@ const zhTW = {
       solution: '看了解答：算是忘了，記憶度變短。',
       fail: '看完還不懂：算是忘了，記憶度變短。',
     },
+    easy: '很快解出，而且講得清楚（FSRS 的「很輕鬆」）：記憶度長得最多。',
+    fastNotExplained: (days: number) => `解得很快！${days} 天內用英文講清楚一次，就算「很輕鬆」，下次隔更久。`,
     time: (pace: string, target: number) => `花的時間是目標 ${target} 分鐘的 ${pace} 倍`,
     hint: (layer: number) => `提示看到${['', '方向', '關鍵觀察', '邊界情況', '模板'][layer]}`,
     memoryStuck: '卡在模式、優化或寫不出來',
@@ -567,6 +570,7 @@ const zhTW = {
     memory: '記憶',
     memoryValue: (days: number, difficulty: number) => `大約記得住 ${days} 天 · 難度 ${difficulty}/10`,
     nextReview: '下次複習',
+    explainToMaster: '只差講解：用英文講清楚一次，就是已熟練。',
     nextReviewValue: (day: string, relative: string) => `${day}，${relative}`,
     lastResult: '上次結果',
     attempts: '做過',

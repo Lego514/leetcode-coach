@@ -34,3 +34,39 @@ test('schedules reviews with FSRS and reschedules them when the target retention
   await expect(schedule.locator('.why-steps')).toContainText('Recall drops to 80% in 8 days.');
   await expect(schedule).toContainText('Holds for about 2 days');
 });
+
+// 最熟的情況：很快解出，而且講得清楚。很快但還沒講，說明會提示去講一次；講清楚之後這題重排、隔更久
+test('counts a fast solve as Easy once it is explained clearly', async ({ page }) => {
+  await page.goto('/#/problems/1');
+  await page.getByRole('button', { name: 'Record without timer' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel(/Minutes spent/).fill('5');
+  await dialog.getByRole('button', { name: /^Solved alone/ }).click();
+  await dialog.getByText(/^Why \d+ days?\?$/).click();
+  await expect(dialog.locator('.why-steps')).toContainText('Fast solve! Explain it clearly in English within 3 days');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  const schedule = page.getByRole('region', { name: 'Review schedule' });
+  await expect(schedule).toContainText('in 2 days');
+
+  // 用英文講一次：五個重點都講到、講得很順
+  await page.goto('/#/mock?problem=1&kind=explain');
+  await page.getByLabel('Record my explanation').uncheck();
+  await page.getByRole('button', { name: 'Start timer' }).click();
+  for (const label of [
+    'The key insight, i.e. why the approach works',
+    'Which data structure you used, and why',
+    'A walk through a small example',
+    'Time and space complexity',
+    'At least one edge case',
+  ]) {
+    await page.getByLabel(label).check();
+  }
+  await page.getByRole('button', { name: 'Finish and review' }).click();
+  await page.getByRole('button', { name: /^Smooth/ }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await page.goto('/#/problems/1');
+  await expect(schedule).toContainText('in 8 days');
+  await schedule.getByText('Why 8 days?').click();
+  await expect(schedule.locator('.why-steps')).toContainText('Solved fast and explained clearly (FSRS “Easy”)');
+});

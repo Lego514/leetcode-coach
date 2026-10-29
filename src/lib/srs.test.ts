@@ -5,6 +5,9 @@ import {
   CONFIRM_DAYS,
   DEFAULT_RETENTION,
   evidenceWeight,
+  EXPLAIN_WINDOW_DAYS,
+  explainedAround,
+  isEasy,
   explainSchedule,
   intervalFor,
   MAX_INTERVAL,
@@ -18,6 +21,7 @@ import {
   stageOf,
   timeWeight,
   type Evidence,
+  UNEXPLAINED_MASTERY,
   type Grade,
   type Memory,
   type ReviewState,
@@ -234,6 +238,50 @@ describe('hint depth and where you got stuck', () => {
   });
 });
 
+describe('fast and explained clearly: FSRS Easy', () => {
+  const prev: ReviewState = { stability: 10, difficulty: 5, reps: 2, lapses: 0, interval: 10, lastReview: '2026-09-06', due: '2026-09-16' };
+  const fast = { pace: 0.4 };
+
+  it('needs both a fast clean solve and a clear explanation', () => {
+    const solo = schedule(prev, 'solo', DAY);
+    const easy = schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { ...fast, explained: true });
+    expect(isEasy('solo', { ...fast, explained: true })).toBe(true);
+    expect(easy.stability).toBeGreaterThan(solo.stability * 1.5);
+    expect(easy.difficulty).toBeLessThan(solo.difficulty);
+    // 很快但沒講清楚、講清楚但不夠快、看了提示或卡住：都只是一般的自己解出
+    expect(schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, fast)).toEqual(solo);
+    expect(schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { pace: 0.8, explained: true })).toEqual(solo);
+    expect(isEasy('solo', { ...fast, explained: true, hintLayers: 1 })).toBe(false);
+    expect(isEasy('solo', { ...fast, explained: true, stuck: ['bug'] })).toBe(false);
+    expect(isEasy('hint', { ...fast, explained: true })).toBe(false);
+    // 沒有時間（例如標記以前刷過）不算很快
+    expect(isEasy('solo', { explained: true })).toBe(false);
+  });
+
+  it('counts an explanation a few days before or after the solve', () => {
+    const marks = [{ day: '2026-09-10', clear: true }];
+    expect(explainedAround(marks, '2026-09-10')).toBe(true);
+    expect(explainedAround(marks, `2026-09-1${EXPLAIN_WINDOW_DAYS}`)).toBe(true);
+    expect(explainedAround(marks, '2026-09-14')).toBe(false);
+    expect(explainedAround(marks, '2026-09-07')).toBe(true);
+    expect(explainedAround([{ day: '2026-09-10', clear: false }], '2026-09-10')).toBe(false);
+    expect(explainedAround(undefined, '2026-09-10')).toBe(false);
+  });
+
+  it('replays with the explanations, and the breakdown says why', () => {
+    const attempts = [{ rating: 'solo' as const, day: '2026-09-10', minutes: 5 }];
+    const plain = replay(attempts, DEFAULT_RETENTION, 15)!;
+    const explained = replay(attempts, DEFAULT_RETENTION, 15, [{ day: '2026-09-12', clear: true }])!;
+    expect(explained.interval).toBeGreaterThan(plain.interval);
+    expect(explainSchedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { ...fast, explained: true })).toMatchObject({
+      easy: true,
+      fastNotExplained: false,
+    });
+    expect(explainSchedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, fast)).toMatchObject({ easy: false, fastNotExplained: true });
+    expect(explainSchedule(prev, 'solo', DAY)).toMatchObject({ easy: false, fastNotExplained: false });
+  });
+});
+
 describe('explainSchedule', () => {
   const prev: ReviewState = { stability: 10, difficulty: 5, reps: 2, lapses: 0, interval: 10, lastReview: '2026-09-06', due: '2026-09-16' };
 
@@ -316,13 +364,20 @@ describe('stageOf / masteryOf', () => {
     expect(stageOf(undefined)).toBe('new');
     expect(stageOf({ interval: 1 })).toBe('learning');
     expect(stageOf({ interval: 10 })).toBe('reviewing');
-    expect(stageOf({ interval: 30 })).toBe('mastered');
+    // 記得住 30 天以上還不夠：最近一次講解講得清楚才是已熟練
+    expect(stageOf({ interval: 30 })).toBe('remembered');
+    expect(stageOf({ interval: 120, explained: false })).toBe('remembered');
+    expect(stageOf({ interval: 30, explained: true })).toBe('mastered');
+    expect(stageOf({ interval: 20, explained: true })).toBe('reviewing');
   });
 
   it('keeps mastery between 0 and 1 and increasing', () => {
     expect(masteryOf(undefined)).toBe(0);
-    const values = [1, 4, 10, 30, 120].map((interval) => masteryOf({ interval }));
+    const values = [1, 4, 10, 30, 120].map((interval) => masteryOf({ interval, explained: true }));
     expect(values.every((v, i) => i === 0 || v >= values[i - 1])).toBe(true);
     expect(values.at(-1)).toBe(1);
+    // 沒講清楚最多到 UNEXPLAINED_MASTERY
+    expect(masteryOf({ interval: 120 })).toBe(UNEXPLAINED_MASTERY);
+    expect(masteryOf({ interval: 1 })).toBe(masteryOf({ interval: 1, explained: true }));
   });
 });
