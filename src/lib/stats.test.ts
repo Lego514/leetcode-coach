@@ -8,6 +8,7 @@ import {
   longestStreak,
   monthBlocks,
   needsRewrite,
+  reviewForecast,
   newProblemsStartedOn,
   planToTarget,
   practiceAttempts,
@@ -180,6 +181,28 @@ describe('daily review limit', () => {
     expect(capDue(due, 3, 2)).toEqual({ shown: ['a'], later: 4 });
     expect(capDue(due, 3, 5)).toEqual({ shown: [], later: 5 });
     expect(capDue(['a'], 3, 0)).toEqual({ shown: ['a'], later: 0 });
+  });
+});
+
+describe('reviewForecast', () => {
+  const states = (...dues: string[]) => dues.map((due) => ({ due }));
+
+  it('counts what comes due each day, with anything overdue landing today', () => {
+    const days = reviewForecast(states('2026-09-10', '2026-09-16', '2026-09-17', '2026-09-17', '2026-09-30'), '2026-09-16', undefined, 0);
+    expect(days.map((d) => d.day)).toEqual(['2026-09-16', '2026-09-17', '2026-09-18', '2026-09-19', '2026-09-20', '2026-09-21', '2026-09-22']);
+    expect(days.map((d) => d.load)).toEqual([2, 2, 0, 0, 0, 0, 0]);
+    expect(days.every((d) => d.waiting === 0)).toBe(true);
+  });
+
+  it('moves anything over the daily limit to later days, counting reviews already done today', () => {
+    const days = reviewForecast(states('2026-09-16', '2026-09-16', '2026-09-16', '2026-09-17', '2026-09-17'), '2026-09-16', 2, 1);
+    // 今天只剩一題的空間；剩下的兩題加上明天的兩題，每天兩題慢慢消化
+    expect(days.slice(0, 4).map(({ due, load, waiting }) => ({ due, load, waiting }))).toEqual([
+      { due: 3, load: 1, waiting: 2 },
+      { due: 2, load: 2, waiting: 2 },
+      { due: 0, load: 2, waiting: 0 },
+      { due: 0, load: 0, waiting: 0 },
+    ]);
   });
 });
 

@@ -129,6 +129,11 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
 
   const dock = page.getByRole('group', { name: 'While solving' });
   await expect(dock).toContainText(/^\d+:\d{2}/);
+  // 暫停和繼續的按鈕有影音播放器的小圖示
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await expect(page.getByRole('button', { name: 'Resume' }).locator('.play-pause-icon')).toBeVisible();
+  await page.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.getByRole('button', { name: 'Pause' }).locator('.play-pause-icon')).toBeVisible();
   await dock.getByRole('button', { name: 'I’m stuck' }).click();
   const hints = page.getByRole('region', { name: 'Hints' });
   await expect(hints.getByRole('group', { name: 'Where are you stuck?' }).getByRole('button', { name: 'Optimize' })).toHaveAttribute(
@@ -176,6 +181,17 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
   await pattern.click();
   await expect(record).not.toContainText('comes back within a week to confirm');
   await minutes.fill('25');
+  // 選了評分就看得到為什麼是這幾天：第一次做、自己解出、花了目標的 1.7 倍
+  await solo.click();
+  await record.getByText(/^Why \d+ days?\?$/).click();
+  const why = record.locator('.why-steps');
+  await expect(why).toContainText('First attempt');
+  await expect(why).toContainText('Took 1.7× the 15-minute target');
+  await expect(why.locator('.why-weight')).toHaveText('×0.73');
+  // 再勾「沒看出模式」：多一個權重，改成一週內確認
+  await pattern.click();
+  await expect(why.locator('.why-weight')).toHaveText(['×0.73', '×0.75']);
+  await pattern.click();
   // 做完之後步驟變成選填，下方的工具列也收起來
   await expect(page.getByRole('region', { name: 'Solving steps (optional)' })).toBeVisible();
   await expect(dock).toHaveCount(0);

@@ -171,6 +171,46 @@ export function capDue<T>(due: readonly T[], cap: number | undefined, doneToday:
   return { shown: due.slice(0, room), later: Math.max(0, due.length - room) };
 }
 
+export interface ForecastDay {
+  day: Day;
+  /** 這天新到期的題數（今天包括之前逾期的） */
+  due: number;
+  /** 這天要複習的題數：有每天上限時最多到上限 */
+  load: number;
+  /** 做完這天之後還在排隊的題數（超過上限、留到之後的） */
+  waiting: number;
+}
+
+/**
+ * 接下來幾天每天要複習幾題：照現在的到期日數，有上限就把超過的往後排（跟 capDue 一樣）。
+ * 不算之後複習完又排回來的題目（例如寫得不順，一週內再確認），所以實際會再多一點
+ */
+export function reviewForecast(
+  states: Iterable<{ due: Day }>,
+  today: Day,
+  cap: number | undefined,
+  doneToday: number,
+  days = 7,
+): ForecastDay[] {
+  const counts = new Map<Day, number>();
+  for (const { due } of states) {
+    const day = due < today ? today : due;
+    counts.set(day, (counts.get(day) ?? 0) + 1);
+  }
+  const result: ForecastDay[] = [];
+  let backlog = 0;
+  for (let i = 0; i < days; i++) {
+    const day = addDays(today, i);
+    const due = counts.get(day) ?? 0;
+    backlog += due;
+    const room = cap === undefined ? backlog : Math.max(0, cap - (i === 0 ? doneToday : 0));
+    const load = Math.min(backlog, room);
+    backlog -= load;
+    result.push({ day, due, load, waiting: backlog });
+  }
+  return result;
+}
+
 /**
  * 上次看了提示、看了解答或還不懂的題目，複習時要「重寫」：不看筆記，在 LeetCode 從頭寫到通過。
  * 只是回想思路很容易覺得自己會了，自己寫得出來才算真的會；自己解出一次之後就回到一般的複習

@@ -14,7 +14,7 @@ import { LeaveGuard } from '../components/LeaveGuard';
 import { StepFields, useStepNotes } from '../components/SolvingSteps';
 import { SaveStatus } from '../components/autosave';
 import { useToast } from '../components/toast';
-import { DifficultyTag, Dialog, LeetCodeLink, PageHead, Sheet } from '../components/ui';
+import { DifficultyTag, Dialog, LeetCodeLink, PageHead, PlayPauseIcon, Sheet } from '../components/ui';
 import {
   CLARITY_OPTIONS,
   EXPLAIN_CHECKS,
@@ -437,6 +437,7 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
             </p>
             <div className="btn-row" style={{ marginTop: 16 }}>
               <button className="btn" onClick={togglePause} disabled={finishing}>
+                <PlayPauseIcon running={running} />
                 {running ? t.common.pause : t.mock.resume}
               </button>
               <button className="btn btn-primary" onClick={() => void finish()} disabled={finishing}>

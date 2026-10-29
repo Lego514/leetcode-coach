@@ -52,6 +52,8 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
   - **Time counts too.** Each attempt's minutes are compared with the problem's target time. Within the target it counts fully; past it, the memory gain shrinks steadily, down to 0.6 at twice the target (about what FSRS gives Hard). Finishing early adds nothing extra.
   - **So do hints and where you got stuck.** The deeper the hints went, the less the attempt counts: compared with solving alone, about 0.8 after the pattern hint, 0.6 after the key insight, 0.5 after the edge cases, and 0.4 after the template. Missing the pattern, the optimization, or how to code it means part of it is forgotten (×0.75); missing an edge case or having a bug is more of a slip (×0.9). These weights multiply.
   - **Shaky solves come back within a week.** After needing a hint, taking twice the target or longer, or getting stuck on the pattern, the optimization, or the code, the next review is at most 7 days away, so you confirm it before the interval grows. FSRS's memory estimate is kept, so solving it on time then stretches the next interval out again.
+  - **Why this many days?** The record form (once you pick a rating) and the problem page open a step-by-step breakdown: how long since last time and how much you'd still remember, what the rating means in FSRS, each weight with its number, memory before and after, the days at the target retention, and the one-week check if it applies.
+  - The review page shows the **next 7 days**: how many reviews come due each day, with anything over the daily cap drawn dashed on top as it moves to later days.
   - The review queue puts the problem you're most likely to have forgotten first. Problem pages show how likely you are to remember it now, how long it holds, its difficulty, and where it sits on the algorithm tree.
   - Past records can be edited or deleted, from **Done today** on Today or the problem's history, and the schedule is rebuilt from what's left.
   - The scheduler is written from the FSRS-6 formulas with the default parameters, and the tests compare it with the official `ts-fsrs` (a test-only dependency) on hundreds of random review histories.
@@ -356,6 +358,8 @@ Notes:
 - **寫題時間也算進去**：每次花的時間跟這題的目標時間比，在目標以內照算；超過就打折，越慢折越多，到兩倍時間是 0.6（跟 FSRS 給 Hard 的差不多）。寫得比目標快不另外加分。
 - **提示看到第幾層、卡在哪也算進去**：看的提示越深，這次算得越少；跟自己解出比，看到題型約 0.8、關鍵觀察 0.6、邊界情況 0.5、模板 0.4。沒看出模式、想不到優化、寫不出來代表忘了一部分（× 0.75）；漏了邊界情況、有 bug 比較像失誤（× 0.9）。幾個權重相乘。
 - **寫得不順先在一週內確認**：看了提示、花了兩倍以上的時間，或卡在沒看出模式、想不到優化、寫不出來，下次最多 7 天後再複習；穩定度照 FSRS 算，確認那次準時寫出來，下一次就會拉長。
+- **為什麼隔這幾天**：記錄表單選了評分之後，和題目頁，都可以打開一步一步的算法：隔了幾天、還記得多少、評分在 FSRS 算什麼、每個權重和它的數字、記憶度前後、照目標記憶率的天數，以及要不要一週內確認。
+- 複習頁有**接下來 7 天**：每天有幾題到期；超過每天上限、往後排的用虛線疊在上面。
 - 複習頁把最可能已經忘了的題目排在最前面；題目頁顯示現在還記得的機率、大約記得住幾天、難度，和它在演算法樹上的位置。
 - 練習紀錄可以修改或刪除（今天頁的「今天做過的」，或題目頁的紀錄），排程會依剩下的紀錄重算。
 - 排程是照 FSRS-6 的公式自己寫的，測試裡拿官方的 `ts-fsrs` 在幾百組隨機的複習紀錄上逐一比對。

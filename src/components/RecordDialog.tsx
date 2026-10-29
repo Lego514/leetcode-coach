@@ -3,12 +3,13 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays } from '../lib/dates';
 import { MOCK_MINUTES } from '../data/interview';
-import { MEMORY_STUCK, paceOf, RATINGS, schedule, type Rating } from '../lib/srs';
+import { explainSchedule, MEMORY_STUCK, paceOf, RATINGS, schedule, type Rating } from '../lib/srs';
 import { recordAttempt, saveNote } from '../store/actions';
 import type { AttemptMode, ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
 import { useNote, useProgress, useSettings, useToday } from '../store/queries';
 import type { StuckReason } from '../../shared/constants';
+import { ScheduleWhy } from './ScheduleWhy';
 import { StuckPicker } from './StuckPicker';
 import { useToast } from './toast';
 import { Dialog } from './ui';
@@ -83,6 +84,9 @@ export function RecordForm({
   const target = MOCK_MINUTES[problem.difficulty];
   const pace = paceOf(Number(minutes) || undefined, target);
   const memoryStuck = stuck.some((r) => MEMORY_STUCK.includes(r));
+  const evidence = { pace, hintLayers: hints, stuck };
+  // 選了評分就看得到為什麼是這幾天；勾卡在哪、改時間都會跟著變
+  const why = rating && progress !== undefined ? explainSchedule(progress ?? undefined, rating, day, 0, retention, evidence) : null;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -195,7 +199,7 @@ export function RecordForm({
         )}
         <div className="rating-grid">
           {RATINGS.map((id) => {
-            const next = progress !== undefined ? schedule(progress ?? undefined, id, day, 0, retention, { pace, hintLayers: hints, stuck }) : null;
+            const next = progress !== undefined ? schedule(progress ?? undefined, id, day, 0, retention, evidence) : null;
             return (
               <button key={id} type="button" className="rating-option" aria-pressed={rating === id} onClick={() => setRating(id)}>
                 <span className="rating-label">{t.ratings[id].label}</span>
@@ -205,6 +209,7 @@ export function RecordForm({
             );
           })}
         </div>
+        {why && <ScheduleWhy explanation={why} target={target} />}
       </fieldset>
 
       {/* 卡在哪直接列出來：點一下就好，不用再打開；勾了記憶類的，上面的複習天數會跟著變 */}

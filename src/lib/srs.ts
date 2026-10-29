@@ -162,13 +162,30 @@ export interface Evidence {
   stuck?: readonly StuckReason[];
 }
 
+/** 一個權重和它從哪來：寫太久（pace 是幾倍的目標時間）、提示看到第幾層、卡在記憶或執行 */
+export type WeightFactor =
+  | { kind: 'time'; pace: number; weight: number }
+  | { kind: 'hint'; layers: number; weight: number }
+  | { kind: 'memoryStuck'; weight: number }
+  | { kind: 'executionStuck'; weight: number };
+
+/** 這次有哪些權重（是 1 的不列）；排程和「為什麼排這天」的說明都從這裡來 */
+export function evidenceFactors(rating: Rating, { pace, hintLayers, stuck }: Evidence = {}): WeightFactor[] {
+  const factors: WeightFactor[] = [];
+  const time = timeWeight(pace);
+  if (time !== 1) factors.push({ kind: 'time', pace: pace!, weight: time });
+  if (rating === 'hint' && hintLayers) {
+    const layers = Math.min(hintLayers, 4);
+    if (HINT_LAYER_WEIGHT[layers] !== 1) factors.push({ kind: 'hint', layers, weight: HINT_LAYER_WEIGHT[layers] });
+  }
+  if (stuck?.some((r) => MEMORY_STUCK.includes(r))) factors.push({ kind: 'memoryStuck', weight: MEMORY_STUCK_WEIGHT });
+  else if (stuck?.some((r) => EXECUTION_STUCK.includes(r))) factors.push({ kind: 'executionStuck', weight: EXECUTION_STUCK_WEIGHT });
+  return factors;
+}
+
 /** 記得時，記憶度（穩定度）長多少的權重：時間、提示的深度、卡在哪的種類乘起來（最低約 0.6 × 0.7 × 0.75） */
-export function evidenceWeight(rating: Rating, { pace, hintLayers, stuck }: Evidence = {}): number {
-  let weight = timeWeight(pace);
-  if (rating === 'hint' && hintLayers) weight *= HINT_LAYER_WEIGHT[Math.min(hintLayers, 4)];
-  if (stuck?.some((r) => MEMORY_STUCK.includes(r))) weight *= MEMORY_STUCK_WEIGHT;
-  else if (stuck?.some((r) => EXECUTION_STUCK.includes(r))) weight *= EXECUTION_STUCK_WEIGHT;
-  return round8(weight);
+export function evidenceWeight(rating: Rating, evidence: Evidence = {}): number {
+  return round8(evidenceFactors(rating, evidence).reduce((w, f) => w * f.weight, 1));
 }
 
 /** 寫得不順：看了提示、花了兩倍以上的時間，或卡在記憶類的地方 */
@@ -209,6 +226,65 @@ export function schedule(
     interval,
     lastReview: day,
     due: addDays(day, interval + delayDays),
+  };
+}
+
+/** 為什麼排這天：schedule 每一步的數字，畫面照順序說明 */
+export interface ScheduleExplanation {
+  rating: Rating;
+  /** 第一次做（或舊版沒有穩定度的紀錄） */
+  first: boolean;
+  /** 隔了幾天；第一次是 0 */
+  gapDays: number;
+  /** 這次寫的時候，照上次的記憶度還記得的機率；第一次沒有 */
+  recall?: number;
+  stabilityBefore?: number;
+  stabilityAfter: number;
+  /** 有乘上的權重：只有記得、而且不是同一天再做一次的時候 */
+  factors: WeightFactor[];
+  retention: number;
+  /** 照目標記憶率算出來的天數（已經套上最長 MAX_INTERVAL） */
+  fsrsDays: number;
+  /** 照目標記憶率會超過 MAX_INTERVAL，被限在最長 */
+  maxed: boolean;
+  /** 寫得不順，一週內先確認（只有 fsrsDays 比 CONFIRM_DAYS 長才會縮短） */
+  confirm: boolean;
+  /** 批次標記時分散到期日，往後挪的天數 */
+  delayDays: number;
+  /** 最後的間隔，跟 schedule(...).interval 一樣 */
+  days: number;
+}
+
+/** 照 schedule 的步驟算一遍，留下每一步的數字 */
+export function explainSchedule(
+  prev: ReviewState | undefined,
+  rating: Rating,
+  day: Day,
+  delayDays = 0,
+  retention = DEFAULT_RETENTION,
+  evidence: Evidence = {},
+): ScheduleExplanation {
+  const g = GRADES[rating];
+  const known = prev && prev.stability > 0 ? prev : undefined;
+  const gapDays = known ? Math.max(0, diffDays(known.lastReview, day)) : 0;
+  const state = schedule(prev, rating, day, delayDays, retention, evidence);
+  const weighted = g >= 2 && !(known && gapDays === 0);
+  const modifier = round8((retention ** (1 / DECAY) - 1) / FACTOR);
+  const fsrsDays = intervalFor(state.stability, retention);
+  return {
+    rating,
+    first: !known,
+    gapDays,
+    recall: known ? recallProbability(known.stability, gapDays) : undefined,
+    stabilityBefore: known?.stability,
+    stabilityAfter: state.stability,
+    factors: weighted ? evidenceFactors(rating, evidence) : [],
+    retention,
+    fsrsDays,
+    maxed: Math.round(state.stability * modifier) > MAX_INTERVAL,
+    confirm: state.interval < fsrsDays,
+    delayDays,
+    days: state.interval,
   };
 }
 

@@ -24,6 +24,11 @@ test('caps reviews per day, lists what is next, and lets me pick one or do more'
   await page.goto('/#/review');
   const queue = page.getByRole('region', { name: /^Up next/ });
   await expect(queue.getByRole('button')).toHaveCount(left);
+  // 接下來 7 天：今天做到上限，超過的寫「延後」，往後排
+  const forecast = page.getByRole('region', { name: 'Next 7 days' });
+  await expect(forecast.getByRole('listitem')).toHaveCount(7);
+  await expect(forecast).toContainText('At most 5 a day');
+  await expect(forecast.getByRole('listitem').first()).toContainText(new RegExp(`^Today: ${left} reviews?, \\d+ waiting`));
   const third = queue.getByRole('button').nth(2);
   const title = (await third.locator('.review-queue-title').textContent())!.trim();
   await third.click();

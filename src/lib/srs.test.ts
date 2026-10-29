@@ -5,6 +5,7 @@ import {
   CONFIRM_DAYS,
   DEFAULT_RETENTION,
   evidenceWeight,
+  explainSchedule,
   intervalFor,
   MAX_INTERVAL,
   masteryOf,
@@ -16,6 +17,7 @@ import {
   spreadDelays,
   stageOf,
   timeWeight,
+  type Evidence,
   type Grade,
   type Memory,
   type ReviewState,
@@ -229,6 +231,64 @@ describe('hint depth and where you got stuck', () => {
     expect(evidenceWeight('hint', { pace: 1.5, hintLayers: 2, stuck: ['bug'] })).toBeCloseTo(0.8 * 0.9);
     // 最壞的情況：兩倍時間、看到模板、沒看出模式
     expect(evidenceWeight('hint', { pace: 3, hintLayers: 4, stuck: ['pattern'] })).toBeCloseTo(0.6 * 0.7 * 0.75);
+  });
+});
+
+describe('explainSchedule', () => {
+  const prev: ReviewState = { stability: 10, difficulty: 5, reps: 2, lapses: 0, interval: 10, lastReview: '2026-09-06', due: '2026-09-16' };
+
+  it('always lands on the same days as schedule', () => {
+    const next = random(7);
+    const ratings = ['solo', 'hint', 'solution', 'fail'] as const;
+    for (let i = 0; i < 300; i++) {
+      const before: ReviewState | undefined =
+        next() < 0.2 ? undefined : { ...prev, stability: 0.5 + next() * 200, lastReview: '2026-01-01', due: '2026-01-02' };
+      const day = `2026-${String(1 + Math.floor(next() * 9)).padStart(2, '0')}-1${Math.floor(next() * 9)}`;
+      const rating = ratings[Math.floor(next() * 4)];
+      const evidence: Evidence = {
+        pace: next() < 0.5 ? undefined : next() * 3,
+        hintLayers: Math.floor(next() * 5),
+        stuck: next() < 0.5 ? [] : [(['pattern', 'bug', 'time'] as const)[Math.floor(next() * 3)]],
+      };
+      const retention = [0.8, 0.9, 0.95][Math.floor(next() * 3)];
+      const e = explainSchedule(before, rating, day, 0, retention, evidence);
+      const s = schedule(before, rating, day, 0, retention, evidence);
+      expect(e.days).toBe(s.interval);
+      expect(e.stabilityAfter).toBe(s.stability);
+      // 權重乘起來就是 schedule 用的那個
+      if (e.factors.length > 0) expect(e.factors.reduce((w, f) => w * f.weight, 1)).toBeCloseTo(evidenceWeight(rating, evidence));
+    }
+  });
+
+  it('lists each weight with where it came from', () => {
+    const e = explainSchedule(prev, 'hint', DAY, 0, DEFAULT_RETENTION, { pace: 1.5, hintLayers: 4, stuck: ['pattern'] });
+    expect(e).toMatchObject({ first: false, gapDays: 10, stabilityBefore: 10, confirm: true, days: CONFIRM_DAYS });
+    expect(e.recall).toBeCloseTo(0.9);
+    expect(e.factors).toEqual([
+      { kind: 'time', pace: 1.5, weight: 0.8 },
+      { kind: 'hint', layers: 4, weight: 0.7 },
+      { kind: 'memoryStuck', weight: 0.75 },
+    ]);
+    expect(e.fsrsDays).toBeGreaterThan(CONFIRM_DAYS);
+    // 第 2 層提示的權重是 1，不列；在目標時間內也不列
+    expect(explainSchedule(prev, 'hint', DAY, 0, DEFAULT_RETENTION, { pace: 0.8, hintLayers: 2 }).factors).toEqual([]);
+    expect(explainSchedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { stuck: ['edge'] }).factors).toEqual([
+      { kind: 'executionStuck', weight: 0.9 },
+    ]);
+  });
+
+  it('skips the weights when they don’t apply: forgetting, and the same day again', () => {
+    const evidence = { pace: 3, stuck: ['pattern'] as const };
+    expect(explainSchedule(prev, 'solution', DAY, 0, DEFAULT_RETENTION, evidence)).toMatchObject({ factors: [], confirm: false });
+    const sameDay = explainSchedule({ ...prev, lastReview: DAY }, 'solo', DAY, 0, DEFAULT_RETENTION, evidence);
+    expect(sameDay).toMatchObject({ gapDays: 0, factors: [] });
+  });
+
+  it('marks the first attempt, the longest interval, and days moved to spread out a batch', () => {
+    expect(explainSchedule(undefined, 'solo', DAY)).toMatchObject({ first: true, gapDays: 0, recall: undefined, stabilityBefore: undefined });
+    const long = explainSchedule({ ...prev, stability: 200, lastReview: '2026-01-01' }, 'solo', DAY);
+    expect(long).toMatchObject({ maxed: true, fsrsDays: MAX_INTERVAL, days: MAX_INTERVAL });
+    expect(explainSchedule(undefined, 'solo', DAY, 3)).toMatchObject({ delayDays: 3 });
   });
 });
 

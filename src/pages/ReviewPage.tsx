@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useToast } from '../components/toast';
+import { ReviewForecast } from '../components/ReviewForecast';
 import { SpotArt } from '../components/SpotArt';
 import { ReferenceExplanation } from '../components/ReferenceExplanation';
 import { DifficultyTag, PageHead, Sheet } from '../components/ui';
@@ -11,7 +12,7 @@ import { rich } from '../i18n/rich';
 import { diffDays } from '../lib/dates';
 import { languageLabel } from '../lib/languages';
 import { RATINGS, recallOn, schedule, type Rating } from '../lib/srs';
-import { capDue, dueProblems, needsRewrite, reviewsDoneOn } from '../lib/stats';
+import { capDue, dueProblems, needsRewrite, reviewForecast, reviewsDoneOn } from '../lib/stats';
 import { recordAttempt } from '../store/actions';
 import type { ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
@@ -33,7 +34,15 @@ export function ReviewPage() {
 
   const due = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
   const cap = settings.maxReviews === undefined ? undefined : settings.maxReviews + extra;
-  const { shown, later } = capDue(due, cap, reviewsDoneOn(attempts ?? [], day));
+  const doneToday = reviewsDoneOn(attempts ?? [], day);
+  const { shown, later } = capDue(due, cap, doneToday);
+  // 接下來 7 天：只算題庫裡還有的題目（刪掉的自訂題不算）
+  const forecast = reviewForecast(
+    catalog.problems.flatMap((p) => progress.get(p.id) ?? []),
+    day,
+    cap,
+    doneToday,
+  );
   // 評分後題目的到期日會往後移，自動離開佇列；跳過的題目排到最後；點了清單上的題目就排到最前面
   const ordered = [...shown.filter((p) => !skipped.includes(p.id)), ...shown.filter((p) => skipped.includes(p.id))];
   const first = ordered.find((p) => p.id === picked);
@@ -120,6 +129,7 @@ export function ReviewPage() {
             }}
           />
         )}
+        {loaded && progress.size > 0 && <ReviewForecast days={forecast} cap={cap} />}
       </div>
     </div>
   );

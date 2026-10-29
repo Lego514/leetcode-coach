@@ -8,6 +8,8 @@ export interface Formatters {
   day: (day: Day, withWeekday?: boolean) => string;
   /** 2026 年 9 月 16 日（三） 或 Wednesday, September 16, 2026 */
   fullDay: (day: Day) => string;
+  /** 星期幾：週三 或 Wed */
+  weekday: (day: Day) => string;
   /** 時:分 */
   time: (ms: number) => string;
   /** 日期加時間，用在備份時間這類地方 */
@@ -24,9 +26,11 @@ export function createFormatters(locale: Locale): Formatters {
     const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
     const dateTime = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
     const month = new Intl.DateTimeFormat('en-US', { month: 'short' });
+    const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
     return {
       day: (day, withWeekday = true) => (withWeekday ? shortWithWeekday : short).format(parseDay(day)),
       fullDay: (day) => full.format(parseDay(day)),
+      weekday: (day) => weekday.format(parseDay(day)),
       time: (ms) => time.format(ms),
       dateTime: (iso) => dateTime.format(new Date(iso)),
       month: (day) => month.format(parseDay(day)),
@@ -45,6 +49,7 @@ export function createFormatters(locale: Locale): Formatters {
       const date = parseDay(day);
       return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日（${ZH_WEEKDAYS[date.getDay()]}）`;
     },
+    weekday: (day) => `週${ZH_WEEKDAYS[parseDay(day).getDay()]}`,
     time: (ms) => time.format(ms),
     dateTime: (iso) => dateTime.format(new Date(iso)),
     month: (day) => `${parseDay(day).getMonth() + 1}月`,
