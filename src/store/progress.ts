@@ -1,6 +1,6 @@
 import { MOCK_MINUTES } from '../data/interview';
 import type { Problem } from '../data/problems';
-import { DEFAULT_RETENTION, replay } from '../lib/srs';
+import { DEFAULT_RETENTION, explainSchedule, paceOf, replay, type ScheduleExplanation } from '../lib/srs';
 import type { AttemptRecord, ProgressRecord, SettingsRecord } from './db';
 
 // 一題的複習排程是把它的練習紀錄依時間重播算出來的，不另外同步；
@@ -36,6 +36,23 @@ export function progressFromAttempts(
     firstDay: sorted[0].day,
     attempts: sorted.length,
   };
+}
+
+/** 為什麼現在排這天：重播到最後一次之前，再照 schedule 的步驟算最後一次；沒有紀錄是 null */
+export function explainLatest(
+  attempts: readonly AttemptRecord[],
+  retention: number,
+  targetMinutes?: number,
+): ScheduleExplanation | null {
+  if (attempts.length === 0) return null;
+  const sorted = [...attempts].sort((a, b) => a.at.localeCompare(b.at) || (a.id ?? 0) - (b.id ?? 0));
+  const last = sorted[sorted.length - 1];
+  const prev = replay(sorted.slice(0, -1), retention, targetMinutes);
+  return explainSchedule(prev, last.rating, last.day, last.delayDays, retention, {
+    pace: paceOf(last.minutes, targetMinutes),
+    hintLayers: last.hints,
+    stuck: last.stuck,
+  });
 }
 
 /** 全部的練習紀錄依題目分組 */

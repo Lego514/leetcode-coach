@@ -67,6 +67,19 @@ export function ExternalIcon() {
   );
 }
 
+/** 計時器的暫停／繼續：計時中顯示暫停（兩條直線），暫停時顯示播放（三角形），跟影音播放器一樣 */
+export function PlayPauseIcon({ running }: { running: boolean }) {
+  return (
+    <svg className="play-pause-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      {running ? (
+        <path d="M4 2.5h2.5v11H4zM9.5 2.5H12v11H9.5z" />
+      ) : (
+        <path d="M4.5 2.2v11.6a.6.6 0 0 0 .9.5l8.8-5.8a.6.6 0 0 0 0-1L5.4 1.7a.6.6 0 0 0-.9.5z" />
+      )}
+    </svg>
+  );
+}
+
 export function LeetCodeLink({
   slug,
   children = 'LeetCode',

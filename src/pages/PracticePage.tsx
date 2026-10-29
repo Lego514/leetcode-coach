@@ -4,7 +4,7 @@ import { HintPanel } from '../components/HintPanel';
 import { LeaveGuard } from '../components/LeaveGuard';
 import { RecordForm } from '../components/RecordDialog';
 import { SolvingStepsSheet, StepWizard } from '../components/SolvingSteps';
-import { DifficultyTag, LeetCodeLink, PageHead, Sheet } from '../components/ui';
+import { DifficultyTag, LeetCodeLink, PageHead, PlayPauseIcon, Sheet } from '../components/ui';
 import { MOCK_MINUTES, type StepId } from '../data/interview';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -182,6 +182,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
           {!finished && (
             <div className="btn-row" style={{ marginTop: 16 }}>
               <button className="btn" onClick={togglePause}>
+                <PlayPauseIcon running={running} />
                 {running ? t.common.pause : t.practice.resume}
               </button>
             </div>

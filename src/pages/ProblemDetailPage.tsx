@@ -6,11 +6,12 @@ import { hasStepNotes, SolvingStepsSheet } from '../components/SolvingSteps';
 import { CodeTextarea } from '../components/CodeTextarea';
 import { EditAttemptDialog } from '../components/EditAttemptDialog';
 import { RecordDialog } from '../components/RecordDialog';
+import { ScheduleWhy } from '../components/ScheduleWhy';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
 import { NodeIcon } from '../components/TreeArt';
 import { useToast } from '../components/toast';
 import { DifficultyTag, Dialog, LeetCodeLink, MasteryCell, PageHead, Sheet } from '../components/ui';
-import { EXPLANATION_SCAFFOLD } from '../data/interview';
+import { EXPLANATION_SCAFFOLD, MOCK_MINUTES } from '../data/interview';
 import { STUDY_LISTS } from '../data/lists';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -22,6 +23,7 @@ import { recallOn, stageOf } from '../lib/srs';
 import { nodeFor } from '../lib/tree';
 import { deleteCustomProblem, resetProgress, saveNote, setCompanies } from '../store/actions';
 import type { AttemptRecord, NoteRecord } from '../store/db';
+import { explainLatest, retentionOf } from '../store/progress';
 import {
   useAttemptsFor,
   useCatalog,
@@ -58,12 +60,16 @@ function ProblemDetail({ problem }: { problem: Problem }) {
   const day = useToday();
   const progress = useProgress(problem.id);
   const attempts = useAttemptsFor(problem.id);
+  const retention = retentionOf(useSettings());
   const [recording, setRecording] = useState(false);
   const pattern = getPattern(problem.pattern, locale);
   const lists = STUDY_LISTS.filter((l) => l.problemIds.includes(problem.id));
 
   // 在演算法樹上的樣子：征服過的題目結果實
   const node = nodeFor(progress ?? undefined, conquests(attempts ?? []).length > 0, day);
+  // 為什麼下次複習排這天：照最後一次的評分、時間、提示、卡在哪算給你看
+  const target = MOCK_MINUTES[problem.difficulty];
+  const why = attempts ? explainLatest(attempts, retention, target) : null;
 
   return (
     <div className="page">
@@ -151,6 +157,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
                   <dt>{t.detail.firstDone}</dt>
                   <dd>{fmt.day(progress.firstDay)}</dd>
                 </dl>
+                {why && <ScheduleWhy explanation={why} target={target} />}
                 </>
               ) : (
                 <p className="sheet-note">{t.detail.notStarted}</p>
