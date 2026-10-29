@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n';
-import { CONFIRM_DAYS, MAX_INTERVAL, type ScheduleExplanation, type WeightFactor } from '../lib/srs';
+import { CONFIRM_DAYS, EXPLAIN_WINDOW_DAYS, MAX_INTERVAL, type ScheduleExplanation, type WeightFactor } from '../lib/srs';
 
 /** 記憶度（穩定度）的天數：短的留一位小數，看得出 1.3 跟 2.3 的差別 */
 const daysText = (stability: number) => String(stability < 10 ? Math.round(stability * 10) / 10 : Math.round(stability));
@@ -27,7 +27,7 @@ export function ScheduleWhy({ explanation: e, target }: { explanation: ScheduleE
               ? t.why.sameDay
               : t.why.gap(e.gapDays, Math.round((e.recall ?? 1) * 100))}
         </li>
-        <li>{t.why.rating[e.rating]}</li>
+        <li>{e.easy ? t.why.easy : t.why.rating[e.rating]}</li>
         {e.factors.map((f) => (
           <li key={f.kind}>
             <span>{factorText(f)}</span>
@@ -41,6 +41,7 @@ export function ScheduleWhy({ explanation: e, target }: { explanation: ScheduleE
         </li>
         {e.confirm && <li className="why-result">{t.why.confirm(CONFIRM_DAYS)}</li>}
         {e.delayDays > 0 && <li>{t.why.delay(e.delayDays)}</li>}
+        {e.fastNotExplained && <li className="why-result">{t.why.fastNotExplained(EXPLAIN_WINDOW_DAYS)}</li>}
       </ol>
     </details>
   );

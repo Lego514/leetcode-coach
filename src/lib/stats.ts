@@ -4,7 +4,10 @@ import { streakState } from '../../shared/streak';
 import { addDays, diffDays, startOfWeek, type Day } from './dates';
 import { masteryOf, recallOn, stageOf, type Rating, type ReviewState } from './srs';
 
-type StateMap = ReadonlyMap<number, Pick<ReviewState, 'interval' | 'due'> & Partial<Pick<ReviewState, 'stability' | 'lastReview'>>>;
+type StateMap = ReadonlyMap<
+  number,
+  Pick<ReviewState, 'interval' | 'due'> & Partial<Pick<ReviewState, 'stability' | 'lastReview'>> & { explained?: boolean }
+>;
 
 interface AttemptLike {
   problemId: number;

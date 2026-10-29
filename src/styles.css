@@ -1706,6 +1706,15 @@ kbd,
   font-variant-numeric: tabular-nums;
 }
 
+/* 記得住但還沒講清楚：在狀態下面提示只差講解 */
+.stage-next {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: normal;
+}
+
 .history li {
   display: flex;
   justify-content: space-between;

@@ -48,11 +48,22 @@ test('celebrates conquering a problem, and shows readiness, the pattern map, and
   await expect(page.locator('.toast-win .win-icon .algo-fruit')).toBeVisible();
 
   await page.goto('/#/progress');
-  // 熟練度方格的圖例寫「較弱 → 較熟」：深色模式裡最熟的是最亮的，不能寫「越深越熟」
+  // 熟練度方格的圖例每一格寫名字（深色模式裡最熟的是最亮的，不能寫「越深越熟」）；最深一格要講得清楚
   const legend = page.locator('.sheet:has(#mastery)').getByLabel('Legend');
-  await expect(legend).toContainText('Weaker');
-  await expect(legend).toContainText('Stronger');
+  await expect(legend).toContainText('Learning');
+  await expect(legend).toContainText('Remembered');
+  await expect(legend).toContainText('Mastered (explained clearly too)');
   await expect(legend).not.toContainText('Darker');
+  // 記得住很久但還沒講清楚：題目頁提示只差講解；示範資料裡講清楚過的那一題是已熟練
+  await page.goto('/#/problems/49');
+  const status = page.getByRole('region', { name: 'Review schedule' });
+  await expect(status).toContainText('Remembered');
+  await expect(status).toContainText('Only the explanation is left');
+  await expect(status.getByRole('link', { name: 'Explanation drill' })).toHaveAttribute('href', '#/mock?problem=49&kind=explain');
+  await page.goto('/#/problems/238');
+  await expect(status).toContainText('Mastered');
+  await expect(status).not.toContainText('Only the explanation is left');
+  await page.goto('/#/progress');
   const readiness = page.getByRole('region', { name: 'Interview readiness' });
   await expect(readiness).toContainText(/\d+%/);
   await expect(readiness.getByRole('meter', { name: 'Easy problems you can solve now' })).toBeVisible();

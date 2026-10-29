@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Difficulty } from '../data/problems';
-import { masteryOf } from '../lib/srs';
+import { stageOf, type StageInput } from '../lib/srs';
 import { useI18n } from '../i18n';
 import type { ProgressRecord } from '../store/db';
 
@@ -14,13 +14,11 @@ export function DifficultyTag({ difficulty }: { difficulty: Difficulty }) {
   );
 }
 
-export function masteryLevel(progress: ProgressRecord | undefined | null): 0 | 1 | 2 | 3 | 4 {
-  if (!progress) return 0;
-  const m = masteryOf(progress);
-  if (m < 0.35) return 1;
-  if (m < 0.6) return 2;
-  if (m < 0.85) return 3;
-  return 4;
+/** 方格的四格跟階段一一對應：學習中、複習中、記得住、已熟練（最深一格要講得清楚） */
+const LEVELS = { new: 0, learning: 1, reviewing: 2, remembered: 3, mastered: 4 } as const;
+
+export function masteryLevel(progress: StageInput | undefined | null): 0 | 1 | 2 | 3 | 4 {
+  return LEVELS[stageOf(progress ?? undefined)];
 }
 
 export function MasteryCell({ progress, label }: { progress: ProgressRecord | undefined | null; label?: string }) {
@@ -45,12 +43,18 @@ export function MasteryLegend() {
       <span className="legend-item">
         <span className="cell" data-level={0} aria-hidden /> {t.legend.notStarted}
       </span>
-      {/* 深色模式裡最熟的是最亮的，所以寫「較弱 → 較熟」，不寫「越深越熟」 */}
+      {/* 每一格寫名字，不寫「越深越熟」：深色模式裡最熟的是最亮的 */}
       <span className="legend-item">
-        {t.legend.weaker} <span className="cell" data-level={1} aria-hidden />
-        <span className="cell" data-level={2} aria-hidden />
-        <span className="cell" data-level={3} aria-hidden />
-        <span className="cell" data-level={4} aria-hidden /> {t.legend.stronger}
+        <span className="cell" data-level={1} aria-hidden /> {t.stages.learning}
+      </span>
+      <span className="legend-item">
+        <span className="cell" data-level={2} aria-hidden /> {t.stages.reviewing}
+      </span>
+      <span className="legend-item">
+        <span className="cell" data-level={3} aria-hidden /> {t.stages.remembered}
+      </span>
+      <span className="legend-item">
+        <span className="cell" data-level={4} aria-hidden /> {t.legend.mastered}
       </span>
       <span className="legend-item">
         <span className="cell" data-level={1} data-lapsed="true" aria-hidden /> {t.legend.lapsed}

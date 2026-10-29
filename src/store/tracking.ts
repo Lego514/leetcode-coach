@@ -1,6 +1,7 @@
 import { COLLECTIONS, type Collection } from '../../shared/constants';
 import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS } from '../data/problems';
+import { explanationsByProblem } from '../lib/explainProgress';
 import { groupByProblem, progressFromAttempts, retentionOf, targetMinutesOf } from './progress';
 import type {
   AttemptRecord,
@@ -155,7 +156,7 @@ export async function applyRemote(
       const local = existing as MockRecord | undefined;
       if (deleted) {
         if (local?.id !== undefined) await database.mocks.delete(local.id);
-        return undefined;
+        return local?.problemId;
       }
       await database.mocks.put({
         ...(data as Omit<MockRecord, 'id' | 'uid' | 'audio'>),
@@ -163,7 +164,8 @@ export async function applyRemote(
         ...(local?.id !== undefined ? { id: local.id } : {}),
         ...(local?.audio ? { audio: local.audio } : {}),
       });
-      return undefined;
+      // 講解會影響排程（很快解出又講得清楚算 Easy）和「已熟練」，這題要重算
+      return (data as MockRecord).problemId;
     }
     case 'notes':
       if (deleted) await database.notes.delete(Number(key));
@@ -275,7 +277,8 @@ export async function rebuildProgress(database: CoachDB, problemIds: Iterable<nu
   const targets = await practiceTargets(database);
   for (const problemId of new Set(problemIds)) {
     const attempts = await database.attempts.where('problemId').equals(problemId).toArray();
-    const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId));
+    const explanations = explanationsByProblem(await database.mocks.where('problemId').equals(problemId).toArray()).get(problemId);
+    const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId), explanations);
     if (record) await database.progress.put(record);
     else await database.progress.delete(problemId);
   }
@@ -292,9 +295,10 @@ export async function rebuildAllProgress(database: CoachDB): Promise<void> {
   const targets = await practiceTargets(database);
   // 整張表讀出來自己分組：iOS 的 WebKit 在某些索引游標上會出錯
   const groups = groupByProblem(await database.attempts.toArray());
+  const explanations = explanationsByProblem(await database.mocks.toArray());
   await database.progress.clear();
   for (const [problemId, attempts] of groups) {
-    const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId));
+    const record = progressFromAttempts(problemId, attempts, retention, targets.get(problemId), explanations.get(problemId));
     if (record) await database.progress.put(record);
   }
 }

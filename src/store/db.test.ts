@@ -133,3 +133,51 @@ describe('database upgrade that weighs hint depth and where you got stuck', () =
     upgraded.close();
   });
 });
+
+describe('database upgrade that needs a clear explanation for Mastered', () => {
+  it('marks explained problems and counts a fast, explained solve as Easy', async () => {
+    const name = `upgrade-explained-${crypto.randomUUID()}`;
+    // 第 9 版的資料庫：排程還沒看講解
+    const old = new Dexie(name);
+    old.version(9).stores({
+      progress: 'problemId, due',
+      attempts: '++id, problemId, day, &uid',
+      notes: 'problemId',
+      meta: 'problemId, *companies',
+      patternNotes: 'patternId',
+      mocks: '++id, problemId, day, &uid',
+      customProblems: 'id',
+      settings: 'key',
+      outbox: 'id',
+      syncState: 'key',
+      cardReviews: '++id, cardId, day, &uid',
+      boards: 'id',
+      stories: 'id',
+      rehearsals: '++id, day, &uid',
+    });
+    // Two Sum 目標 15 分鐘：5 分鐘自己解出，隔天講解五個重點都講到、講得很順
+    const attempts = [{ uid: 'a', problemId: 1, day: '2026-10-01', at: '2026-10-01T10:00:00.000Z', rating: 'solo', mode: 'practice', minutes: 5 }];
+    await old.table('attempts').bulkAdd(attempts);
+    const before = replay(attempts as never, 0.9, 15)!;
+    await old.table('progress').put({ problemId: 1, ...before, lastRating: 'solo', lastDay: '2026-10-01', firstDay: '2026-10-01', attempts: 1 });
+    await old.table('mocks').add({
+      uid: 'm',
+      problemId: 1,
+      kind: 'explain',
+      day: '2026-10-02',
+      startedAt: '2026-10-02T10:00:00.000Z',
+      limitSec: 120,
+      usedSec: 110,
+      steps: ['insight', 'structure', 'walkthrough', 'complexity', 'edge'],
+      clarity: 1,
+      reflection: '',
+    });
+    old.close();
+
+    const upgraded = new CoachDB(name);
+    const progress = (await upgraded.progress.get(1))!;
+    expect(progress.explained).toBe(true);
+    expect(progress.interval).toBeGreaterThan(before.interval);
+    upgraded.close();
+  });
+});

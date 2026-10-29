@@ -96,6 +96,7 @@ const en: Messages = {
     new: 'Not started',
     learning: 'Learning',
     reviewing: 'Reviewing',
+    remembered: 'Remembered',
     mastered: 'Mastered',
   },
 
@@ -126,8 +127,8 @@ const en: Messages = {
   legend: {
     label: 'Legend',
     notStarted: 'Not started',
-    weaker: 'Weaker',
-    stronger: 'Stronger',
+    mastered: 'Mastered (explained clearly too)',
+    hint: 'Learning: under 7 days. Reviewing: 7–29 days. Remembered: 30 days or more. Mastered also needs your latest explanation to be clear.',
     lapsed: 'Missed last time',
   },
 
@@ -166,6 +167,8 @@ const en: Messages = {
       solution: 'Read the solution: counts as forgotten, so memory shrinks.',
       fail: 'Still stuck: counts as forgotten, so memory shrinks.',
     },
+    easy: 'Solved fast and explained clearly (FSRS “Easy”): memory grows the most.',
+    fastNotExplained: (days) => `Fast solve! Explain it clearly in English within ${count(days, 'day')} and it counts as Easy, so it comes back later.`,
     time: (pace, target) => `Took ${pace}× the ${target}-minute target`,
     hint: (layer) => `Hints up to ${['', 'the direction', 'the key insight', 'the edge cases', 'the template'][layer]}`,
     memoryStuck: 'Stuck on the pattern, the optimization, or the code',
@@ -575,6 +578,7 @@ const en: Messages = {
     memory: 'Memory',
     memoryValue: (days, difficulty) => `Holds for about ${count(days, 'day')} · difficulty ${difficulty}/10`,
     nextReview: 'Next review',
+    explainToMaster: 'Only the explanation is left: explain it clearly in English once to reach Mastered.',
     nextReviewValue: (day, relative) => `${day}, ${relative}`,
     lastResult: 'Last result',
     attempts: 'Attempts',

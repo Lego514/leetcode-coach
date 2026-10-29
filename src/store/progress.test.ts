@@ -13,6 +13,30 @@ const attempt = (day: string, rest: Partial<AttemptRecord> = {}): AttemptRecord 
   ...rest,
 });
 
+describe('explanations', () => {
+  it('marks a problem explained when the latest explanation was clear', () => {
+    const attempts = [attempt('2026-10-01')];
+    expect(progressFromAttempts(20, attempts, 0.9, 15)!.explained).toBeUndefined();
+    expect(progressFromAttempts(20, attempts, 0.9, 15, [{ day: '2026-10-02', clear: true }])!.explained).toBe(true);
+    // 之後又講了一次沒講好：掉回去
+    const marks = [
+      { day: '2026-10-02', clear: true },
+      { day: '2026-10-20', clear: false },
+    ];
+    expect(progressFromAttempts(20, attempts, 0.9, 15, marks)!.explained).toBeUndefined();
+  });
+
+  it('counts a fast solve as Easy when it was explained clearly around then', () => {
+    const fast = [attempt('2026-10-01', { minutes: 5 })];
+    const plain = progressFromAttempts(20, fast, 0.9, 15)!;
+    const explained = progressFromAttempts(20, fast, 0.9, 15, [{ day: '2026-10-03', clear: true }])!;
+    expect(explained.interval).toBeGreaterThan(plain.interval);
+    const why = explainLatest(fast, 0.9, 15, [{ day: '2026-10-03', clear: true }])!;
+    expect(why.easy).toBe(true);
+    expect(why.days).toBe(explained.interval);
+  });
+});
+
 describe('explainLatest', () => {
   it('explains the latest attempt from the state just before it, matching the schedule', () => {
     // 故意打亂順序：照時間重播

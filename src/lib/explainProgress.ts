@@ -1,6 +1,7 @@
 import { EXPLAIN_POINTS, type ExplainPoint, type FollowUpKind } from '../../shared/constants';
 import type { ExplanationFeedback } from '../../shared/protocol';
 import type { Day } from './dates';
+import type { ExplanationMark } from './srs';
 
 // 講解能力的進步：每一次講解（講解練習，或有 AI 評分的完整模擬）算出五個重點各講到幾成。
 // 有 AI 評分就用 AI 的分數（0、1、2 → 0、0.5、1）；沒有就用自己勾的重點（有勾 1、沒勾 0）。
@@ -56,6 +57,30 @@ export function explainSessions(mocks: readonly MockLike[]): ExplainSession[] {
         followUps: (m.followUp?.items ?? []).flatMap((item) => (item.score === undefined ? [] : [{ kind: item.kind, score: item.score / 2 }])),
       };
     });
+}
+
+/**
+ * 講得清楚的門檻：有 AI 評分時五個重點平均八成以上；
+ * 沒有 AI 時五個重點都勾了，而且自評「講得很順」
+ */
+export const CLEAR_SCORE = 0.8;
+
+/** 一次講解講得清不清楚；不是講解（沒有 AI 評分的完整模擬）是 null */
+export function explanationMark(mock: MockLike): ExplanationMark | null {
+  const [session] = explainSessions([mock]);
+  if (!session) return null;
+  const clear = session.source === 'ai' ? session.score >= CLEAR_SCORE : session.score === 1 && mock.clarity === 1;
+  return { day: mock.day, clear };
+}
+
+/** 每一題的講解紀錄，照時間排（排程判斷 Easy、「已熟練」用） */
+export function explanationsByProblem(mocks: readonly (MockLike & { problemId: number })[]): Map<number, ExplanationMark[]> {
+  const map = new Map<number, ExplanationMark[]>();
+  for (const mock of [...mocks].sort((a, b) => a.startedAt.localeCompare(b.startedAt))) {
+    const mark = explanationMark(mock);
+    if (mark) map.set(mock.problemId, [...(map.get(mock.problemId) ?? []), mark]);
+  }
+  return map;
 }
 
 function average(values: readonly number[]): number | null {
