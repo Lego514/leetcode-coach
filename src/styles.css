@@ -5550,15 +5550,30 @@ button.head-item-slot:hover {
 }
 
 .wizard-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  max-width: 560px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* 一步是一個按鈕：圈圈寫第幾步，下面寫短的名字；寫過的圈圈上色，現在這一步實心 */
 .wizard-dot {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.wizard-dot-num {
   display: grid;
   place-items: center;
   width: 32px;
@@ -5566,24 +5581,48 @@ button.head-item-slot:hover {
   border: 1px solid var(--rule-strong);
   border-radius: 50%;
   background: var(--sheet);
-  color: var(--ink-2);
-  font: inherit;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
-  cursor: pointer;
 }
 
-.wizard-dot[data-filled] {
+.wizard-dot-label {
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* 手機上七欄很窄：欄間不留空、字小一點，英文的 Examples、Optimize 才不會斷在字中間 */
+@media (max-width: 480px) {
+  .wizard-nav {
+    gap: 0;
+  }
+
+  .wizard-dot-label {
+    font-size: 11px;
+    letter-spacing: -0.01em;
+  }
+}
+
+.wizard-dot:hover .wizard-dot-num {
+  border-color: var(--ink-3);
+}
+
+.wizard-dot[data-filled] .wizard-dot-num {
   border-color: var(--level-3);
   background: var(--level-1);
   color: var(--ink);
 }
 
 .wizard-dot[aria-current] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.wizard-dot[aria-current] .wizard-dot-num {
   border-color: var(--pen);
   background: var(--pen);
   color: var(--on-pen);
-  font-weight: 700;
 }
 
 .wizard-step {
