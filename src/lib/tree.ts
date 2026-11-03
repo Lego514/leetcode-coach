@@ -5,6 +5,7 @@ import { conquests, patternLevels, READY_RECALL, type PatternLevel } from './mot
 import { recallOn, type Rating, type ReviewState } from './srs';
 
 // 演算法樹：題型是樹枝（照學習路線由下往上長），會的題目是葉子，快忘的葉子變黃，征服的題目結果實，精通的題型開花。
+// 「快忘了」的門檻（fadeOf）熟練度方格的角落小點也用，兩邊看到的一致。
 // 這裡只算樹形、每一題的樣子和生長階段，畫圖在 components/AlgorithmTree.tsx（插畫零件在 components/TreeArt.tsx）
 
 type StateLike = Pick<ReviewState, 'interval'> & Partial<Pick<ReviewState, 'stability' | 'lastReview'>> & { lastRating: Rating };
@@ -123,13 +124,28 @@ export function canopyBlobs(branches: readonly Branch[], nodes: ReadonlyMap<numb
 export type LeafShade = 'fresh' | 'good' | 'ok' | 'fading' | 'faded';
 export type TreeNode = { kind: 'bud' } | { kind: 'sprout' } | { kind: 'leaf'; shade: LeafShade; recall: number; fruit: boolean };
 
+/** FSRS 的遺忘曲線尾巴很長：只做過一次、一年沒碰大約還有 46%，所以 55% 以下就算枯葉 */
+export const FADED_RECALL = 0.55;
+
 export function shadeOf(recall: number): LeafShade {
   if (recall >= 0.9) return 'fresh';
   if (recall >= 0.8) return 'good';
   if (recall >= READY_RECALL) return 'ok';
-  // FSRS 的遺忘曲線尾巴很長：只做過一次、一年沒碰大約還有 46%，所以 55% 以下就算枯葉
-  if (recall >= 0.55) return 'fading';
+  if (recall >= FADED_RECALL) return 'fading';
   return 'faded';
+}
+
+/**
+ * 熟練度方格角落的小點：0 沒有、1 有點忘了（黃葉）、2 可能忘了（枯葉）。
+ * 跟樹葉用同一組門檻；方格的顏色（曾經練到哪）不跟著掉，只多這個提示。
+ * 跟葉子不同的是靠提示做的題也算：放久了一樣會忘
+ */
+export type Fade = 0 | 1 | 2;
+
+export function fadeOf(state: Partial<Pick<ReviewState, 'stability' | 'lastReview'>> | undefined, today: Day): Fade {
+  const recall = recallOn(state, today);
+  if (recall === undefined || recall >= READY_RECALL) return 0;
+  return recall >= FADED_RECALL ? 1 : 2;
 }
 
 /** 一題在樹上的樣子：還沒做是空位，上次靠提示是小芽，自己解出是葉子（依現在還記得的機率上色），征服的結果實 */

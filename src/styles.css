@@ -785,6 +785,30 @@ kbd,
   box-shadow: inset 0 0 0 2px var(--hard);
 }
 
+/* 很久沒碰：右上角的橘點，空心有點忘了、實心可能忘了。方格的顏色不動，外圈用紙的顏色跟方格隔開 */
+.cell[data-fade] {
+  position: relative;
+}
+
+.cell[data-fade]::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--sheet);
+  box-shadow:
+    inset 0 0 0 1.5px var(--medium),
+    0 0 0 1px var(--sheet);
+}
+
+.cell[data-fade='2']::after {
+  background: var(--medium);
+}
+
 .legend {
   display: flex;
   align-items: center;

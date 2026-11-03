@@ -1,7 +1,10 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Difficulty } from '../data/problems';
+import { diffDays, type Day } from '../lib/dates';
 import { stageOf, type StageInput } from '../lib/srs';
+import { fadeOf } from '../lib/tree';
 import { useI18n } from '../i18n';
+import type { Messages } from '../i18n/messages/zh-TW';
 import type { ProgressRecord } from '../store/db';
 
 const DIFFICULTY_LABELS: Record<Difficulty, string> = { Easy: 'Easy', Medium: 'Medium', Hard: 'Hard' };
@@ -21,13 +24,26 @@ export function masteryLevel(progress: StageInput | undefined | null): 0 | 1 | 2
   return LEVELS[stageOf(progress ?? undefined)];
 }
 
-export function MasteryCell({ progress, label }: { progress: ProgressRecord | undefined | null; label?: string }) {
+/** 方格的說明：階段的名字；很久沒碰的題目加上幾天沒碰、可能忘了 */
+export function stageLabel(t: Messages, progress: ProgressRecord | undefined | null, today: Day): string {
+  const stage = t.stages[stageOf(progress ?? undefined)];
+  const fade = fadeOf(progress ?? undefined, today);
+  return progress && fade ? t.legend.fadeLabel(stage, diffDays(progress.lastReview, today), fade) : stage;
+}
+
+/**
+ * 熟練度方格。顏色是曾經練到哪，不會因為很久沒碰就掉；
+ * 給了 today，很久沒碰的題目右上角多一個橘點（空心有點忘了、實心可能忘了，門檻跟樹葉一樣）
+ */
+export function MasteryCell({ progress, label, today }: { progress: ProgressRecord | undefined | null; label?: string; today?: Day }) {
   const lapsed = progress?.lastRating === 'fail' || progress?.lastRating === 'solution';
+  const fade = today ? fadeOf(progress ?? undefined, today) : 0;
   return (
     <span
       className="cell"
       data-level={masteryLevel(progress)}
       data-lapsed={lapsed}
+      data-fade={fade || undefined}
       role={label ? 'img' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
@@ -58,6 +74,12 @@ export function MasteryLegend() {
       </span>
       <span className="legend-item">
         <span className="cell" data-level={1} data-lapsed="true" aria-hidden /> {t.legend.lapsed}
+      </span>
+      <span className="legend-item">
+        <span className="cell" data-level={3} data-fade={1} aria-hidden /> {t.legend.fading}
+      </span>
+      <span className="legend-item">
+        <span className="cell" data-level={3} data-fade={2} aria-hidden /> {t.legend.faded}
       </span>
     </div>
   );

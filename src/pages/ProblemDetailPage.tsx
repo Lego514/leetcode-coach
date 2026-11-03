@@ -10,7 +10,7 @@ import { ScheduleWhy } from '../components/ScheduleWhy';
 import { ReferenceExplanation, useHasExplanation } from '../components/ReferenceExplanation';
 import { NodeIcon } from '../components/TreeArt';
 import { useToast } from '../components/toast';
-import { DifficultyTag, Dialog, LeetCodeLink, MasteryCell, PageHead, Sheet } from '../components/ui';
+import { DifficultyTag, Dialog, LeetCodeLink, MasteryCell, PageHead, Sheet, stageLabel } from '../components/ui';
 import { EXPLANATION_SCAFFOLD, MOCK_MINUTES } from '../data/interview';
 import { STUDY_LISTS } from '../data/lists';
 import { getPattern } from '../data/patterns';
@@ -81,7 +81,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
       </Link>
       <PageHead title={`${problem.id}. ${problem.title}`}>
         <div className="detail-meta">
-          <MasteryCell progress={progress} label={t.stages[stageOf(progress ?? undefined)]} />
+          <MasteryCell progress={progress} label={stageLabel(t, progress, day)} today={day} />
           <DifficultyTag difficulty={problem.difficulty} />
           <Link to={`/patterns/${pattern.id}`}>{pattern.name}</Link>
           {lists.map((l) => (

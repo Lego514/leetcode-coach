@@ -4,10 +4,9 @@ import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays, type Day } from '../lib/dates';
-import { stageOf } from '../lib/srs';
 import { needsRewrite } from '../lib/stats';
 import type { ProgressRecord } from '../store/db';
-import { DifficultyTag, LeetCodeLink, MasteryCell } from './ui';
+import { DifficultyTag, LeetCodeLink, MasteryCell, stageLabel } from './ui';
 
 interface ProblemRowProps {
   problem: Problem;
@@ -24,14 +23,13 @@ interface ProblemRowProps {
 
 export function ProblemRow({ problem, progress, today, marked, showPattern, companies, note, actions }: ProblemRowProps) {
   const { t, fmt, locale } = useI18n();
-  const stage = stageOf(progress);
   const overdue = progress && progress.due < today;
   // 到期而且上次靠提示或解答的題目，標成「重寫」
   const rewrite = progress && progress.due <= today && needsRewrite(progress);
 
   return (
     <div className="problem-row">
-      <MasteryCell progress={progress} label={t.stages[stage]} />
+      <MasteryCell progress={progress} label={stageLabel(t, progress, today)} today={today} />
       <div className="problem-main">
         <div className="problem-title">
           <span className="problem-num">{problem.id}</span>

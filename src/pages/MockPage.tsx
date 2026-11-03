@@ -32,10 +32,10 @@ import { formatDuration, today } from '../lib/dates';
 import { HINT_LEVELS, suggestRating } from '../lib/practice';
 import { useRecorder, useStopwatch } from '../lib/session';
 import { speechSupported, useSpeechTranscript } from '../lib/speech';
-import { masteryOf, RATINGS, type Rating } from '../lib/srs';
+import { RATINGS, strengthNow, type Rating } from '../lib/srs';
 import { deleteMock, recordAttempt, saveMock } from '../store/actions';
 import type { Clarity, MockKind, MockRecord } from '../store/db';
-import { useCatalog, useMocks, useNote, useProgressMap, useSettings } from '../store/queries';
+import { useCatalog, useMocks, useNote, useProgressMap, useSettings, useToday } from '../store/queries';
 
 interface Session {
   problem: Problem;
@@ -112,6 +112,7 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
   const settings = useSettings();
   const catalog = useCatalog();
   const { progress } = useProgressMap();
+  const day = useToday();
   const [params] = useSearchParams();
   const presetKind: MockKind = params.get('kind') === 'explain' ? 'explain' : 'full';
   const presetId = params.get('problem') ?? '';
@@ -142,11 +143,11 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
     if (source === 'weak') {
       result = result
         .slice()
-        .sort((a, b) => masteryOf(progress.get(a.id)) - masteryOf(progress.get(b.id)))
+        .sort((a, b) => strengthNow(progress.get(a.id), day) - strengthNow(progress.get(b.id), day))
         .slice(0, 10);
     }
     return result;
-  }, [listProblems, difficulty, patternId, source, progress]);
+  }, [listProblems, difficulty, patternId, source, progress, day]);
 
   const specificProblem = catalog.byId.get(Number.parseInt(specific, 10));
 
