@@ -1,17 +1,16 @@
 import { Link } from 'react-router';
-import type { StuckReason } from '../../shared/constants';
 import { getPattern } from '../data/patterns';
 import { useI18n } from '../i18n';
-import type { StuckSummary as Summary } from '../lib/stuck';
+import type { StuckKind, StuckSummary as Summary } from '../lib/stuck';
 import { Sheet } from './ui';
 
 /** 每種卡住原因去哪裡練 */
-const PRACTICE_LINKS: Record<StuckReason, string> = {
+const PRACTICE_LINKS: Record<StuckKind, string> = {
   pattern: '/cards',
   optimize: '/patterns',
   implement: '/patterns',
-  edge: '/mock',
-  bug: '/board',
+  syntax: '/cards',
+  logic: '/board',
   time: '/mock',
 };
 

@@ -85,10 +85,10 @@ describe('recordAttempt', () => {
   });
 
   it('stores where I got stuck only when I picked something', async () => {
-    await recordAttempt(1, 'hint', { day: '2026-09-16', stuck: ['optimize', 'edge'] });
+    await recordAttempt(1, 'hint', { day: '2026-09-16', stuck: ['optimize', 'logic'] });
     await recordAttempt(2, 'solo', { day: '2026-09-16', stuck: [] });
     const byProblem = new Map((await db.attempts.toArray()).map((a) => [a.problemId, a]));
-    expect(byProblem.get(1)?.stuck).toEqual(['optimize', 'edge']);
+    expect(byProblem.get(1)?.stuck).toEqual(['optimize', 'logic']);
     expect(byProblem.get(2)).not.toHaveProperty('stuck');
   });
 

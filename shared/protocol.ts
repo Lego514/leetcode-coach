@@ -16,7 +16,7 @@ import {
   PASSWORD_MIN_LENGTH,
   PATTERN_IDS,
   RATING_IDS,
-  STUCK_REASONS,
+  STORED_STUCK_REASONS,
   REPORT_KINDS,
   REPORT_MAX_LENGTH,
   STEP_NOTE_KEYS,
@@ -40,7 +40,7 @@ export const attemptDataSchema = z.object({
   sawSolution: z.boolean().optional(),
   delayDays: z.number().int().min(1).max(365).optional(),
   /** 卡在哪；沒勾就沒有 */
-  stuck: z.array(z.enum(STUCK_REASONS)).max(STUCK_REASONS.length).optional(),
+  stuck: z.array(z.enum(STORED_STUCK_REASONS)).max(STORED_STUCK_REASONS.length).optional(),
   /** 事後改過的時間（ISO）；同步時用來判斷哪一版比較新 */
   editedAt: timestamp.optional(),
 });

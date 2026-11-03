@@ -61,9 +61,20 @@ export const BEHAVIORAL_THEMES = [
 export type BehavioralTheme = (typeof BEHAVIORAL_THEMES)[number];
 
 /** 行為面試回答的五個評分重點：STAR 四段，再加上講的是「我」做了什麼 */
-/** 做完一題時勾的「卡在哪」：沒看出模式、想不到優化、知道做法但寫不出來、漏了邊界情況、有 bug、時間不夠 */
-export const STUCK_REASONS = ['pattern', 'optimize', 'implement', 'edge', 'bug', 'time'] as const;
+/**
+ * 做完一題時勾的「卡在哪」，照卡住的時間點排，每一類對到一種練法：
+ * 沒思路、不會優化、有思路寫不出來、語法／API 不熟、邏輯／邊界
+ */
+export const STUCK_REASONS = ['pattern', 'optimize', 'implement', 'syntax', 'logic'] as const;
 export type StuckReason = (typeof STUCK_REASONS)[number];
+/**
+ * 舊版的選項，舊紀錄裡還有：漏了邊界、有 bug 現在算「邏輯／邊界」；
+ * 時間不夠拿掉了（計時器已經記了花多久），舊紀錄照樣留著、統計看得到
+ */
+export const LEGACY_STUCK_REASONS = ['edge', 'bug', 'time'] as const;
+/** 紀錄裡可能出現的全部代號（同步時伺服器都要收，舊裝置傳上來的才不會被拒） */
+export const STORED_STUCK_REASONS = [...STUCK_REASONS, ...LEGACY_STUCK_REASONS] as const;
+export type StoredStuckReason = (typeof STORED_STUCK_REASONS)[number];
 
 /** 面試官追問的類型：邊界情況、複雜度、能不能更好、換個做法、正確性、實作細節 */
 export const FOLLOW_UP_KINDS = ['edge', 'complexity', 'optimize', 'alternative', 'correctness', 'implementation'] as const;

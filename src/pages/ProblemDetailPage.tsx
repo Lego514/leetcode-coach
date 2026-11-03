@@ -19,6 +19,7 @@ import { useI18n } from '../i18n';
 import { diffDays } from '../lib/dates';
 import { LANGUAGES } from '../lib/languages';
 import { conquests } from '../lib/motivation';
+import { stuckKinds } from '../lib/stuck';
 import { recallOn, stageOf } from '../lib/srs';
 import { nodeFor } from '../lib/tree';
 import { deleteCustomProblem, resetProgress, saveNote, setCompanies } from '../store/actions';
@@ -438,7 +439,8 @@ function History({ problem }: { problem: Problem }) {
                 <span>
                   {t.ratings[a.rating].label}
                   <span className="history-when">{t.detail.historyDetail(t.modes[a.mode], a.minutes, a.hints, a.sawSolution)}</span>
-                  {a.stuck?.map((reason) => (
+                  {/* 舊紀錄的「漏了邊界」「有 bug」照現在的「邏輯／邊界」顯示 */}
+                  {stuckKinds(a.stuck).map((reason) => (
                     <span key={reason} className="chip">
                       {t.stuck.reasons[reason].name}
                     </span>

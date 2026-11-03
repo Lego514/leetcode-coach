@@ -1,4 +1,4 @@
-import type { Rating, StuckReason } from '../../shared/constants';
+import type { Rating, StoredStuckReason } from '../../shared/constants';
 import { addDays, diffDays, type Day } from './dates';
 
 export type { Rating };
@@ -145,12 +145,14 @@ export function timeWeight(pace: number | undefined): number {
 export const HINT_LAYER_WEIGHT: Record<number, number> = { 1: 1.3, 2: 1, 3: 0.85, 4: 0.7 };
 
 /**
- * 卡在哪：沒看出模式、想不到優化、寫不出來是「記憶」沒了，扣多一點，也算寫得不順；
- * 漏了邊界情況、有 bug 比較像執行的問題，只小扣；時間不夠已經算在寫題時間裡，不再扣
+ * 卡在哪：沒思路、不會優化、有思路寫不出來是「記憶」沒了，扣多一點，也算寫得不順；
+ * 語法／API 不熟、邏輯／邊界比較像執行的問題，只小扣（舊紀錄的漏了邊界、有 bug 也一樣）；
+ * 舊紀錄的時間不夠已經算在寫題時間裡，不再扣
  */
-export const MEMORY_STUCK: readonly StuckReason[] = ['pattern', 'optimize', 'implement'];
+export const MEMORY_STUCK: readonly StoredStuckReason[] = ['pattern', 'optimize', 'implement'];
 export const MEMORY_STUCK_WEIGHT = 0.75;
-export const EXECUTION_STUCK: readonly StuckReason[] = ['edge', 'bug'];
+/** 語法／API 不熟、邏輯／邊界（和舊紀錄的漏了邊界、有 bug） */
+export const EXECUTION_STUCK: readonly StoredStuckReason[] = ['syntax', 'logic', 'edge', 'bug'];
 export const EXECUTION_STUCK_WEIGHT = 0.9;
 
 /** 這一次除了自評之外的證據：花的時間、提示看到第幾層、卡在哪 */
@@ -159,7 +161,7 @@ export interface Evidence {
   pace?: number;
   /** 提示看到第幾層；0 或沒有是沒看 */
   hintLayers?: number;
-  stuck?: readonly StuckReason[];
+  stuck?: readonly StoredStuckReason[];
   /** 這次練習前後 EXPLAIN_WINDOW_DAYS 天內，這題有一次講得清楚的講解 */
   explained?: boolean;
 }
@@ -331,7 +333,7 @@ export function paceOf(minutes: number | undefined, targetMinutes: number | unde
  * targetMinutes 是這題的目標時間，explanations 是這題的講解紀錄（判斷 Easy 用）
  */
 export function replay(
-  attempts: readonly { rating: Rating; day: Day; delayDays?: number; minutes?: number; hints?: number; stuck?: readonly StuckReason[] }[],
+  attempts: readonly { rating: Rating; day: Day; delayDays?: number; minutes?: number; hints?: number; stuck?: readonly StoredStuckReason[] }[],
   retention = DEFAULT_RETENTION,
   targetMinutes?: number,
   explanations?: readonly ExplanationMark[],

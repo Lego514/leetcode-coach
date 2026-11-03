@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable, type Table, type Transaction } from 'dexie';
-import type { AttemptMode, BehavioralPoint, BehavioralTheme, CardResult, Collection, MockKind, StepNoteKey, StuckReason } from '../../shared/constants';
+import type { AttemptMode, BehavioralPoint, BehavioralTheme, CardResult, Collection, MockKind, StepNoteKey, StoredStuckReason } from '../../shared/constants';
 import type { BehavioralFeedback, BoardDoc, ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
 import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
@@ -42,7 +42,7 @@ export interface AttemptRecord {
   /** 批次標記時為了分散複習日，到期日往後挪的天數 */
   delayDays?: number;
   /** 卡在哪；沒勾就沒有 */
-  stuck?: StuckReason[];
+  stuck?: StoredStuckReason[];
   /** 事後改過的時間（ISO）；同步時用來判斷哪一版比較新 */
   editedAt?: string;
 }
