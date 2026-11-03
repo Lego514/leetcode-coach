@@ -8,7 +8,7 @@ import { recordAttempt, saveNote } from '../store/actions';
 import type { AttemptMode, ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
 import { useExplanationsFor, useNote, useProgress, useSettings, useToday } from '../store/queries';
-import type { StuckReason } from '../../shared/constants';
+import type { StoredStuckReason } from '../../shared/constants';
 import { ScheduleWhy } from './ScheduleWhy';
 import { StuckPicker } from './StuckPicker';
 import { useToast } from './toast';
@@ -77,7 +77,7 @@ export function RecordForm({
   const [rating, setRating] = useState<Rating | null>(initialRating ?? null);
   const [minutes, setMinutes] = useState(initialMinutes ? String(initialMinutes) : '');
   const [idea, setIdea] = useState<string | null>(null);
-  const [stuck, setStuck] = useState<StuckReason[]>([]);
+  const [stuck, setStuck] = useState<StoredStuckReason[]>([]);
   const [saving, setSaving] = useState(false);
 
   const currentIdea = idea ?? note?.idea ?? '';

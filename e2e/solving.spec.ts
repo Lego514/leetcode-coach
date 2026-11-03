@@ -148,7 +148,15 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
   const record = page.getByRole('region', { name: 'Record this attempt' });
   // 關鍵洞察放第一個；卡在哪直接列出來，不用打開
   await expect(record.getByLabel('Key idea in one line')).toBeFocused();
-  await expect(record.getByRole('button', { name: 'Couldn’t optimize', exact: true })).toBeVisible();
+  await expect(record.getByRole('button', { name: 'Can’t optimize', exact: true })).toBeVisible();
+  // 五類，照卡住的時間點排；時間不夠拿掉了（計時器已經記了花多久）
+  await expect(record.getByRole('group', { name: /Where did you get stuck/ }).getByRole('button')).toHaveText([
+    'No approach',
+    'Can’t optimize',
+    'Can’t code it',
+    'Syntax / API',
+    'Logic / edge cases',
+  ]);
 
   // 時間可以調：計時器量到的是起點，按鈕加減、改回計時器的時間，也可以直接打
   const minutes = record.getByLabel('Minutes spent');
@@ -177,7 +185,7 @@ test('keeps I’m stuck and I’m done at hand, and asks for one key insight at 
   await expect(record).not.toContainText('Longer than the 15-minute target');
 
   // 卡在記憶類的地方（沒看出模式）：說明這題一週內會回來確認；取消就收起來
-  const pattern = record.getByRole('button', { name: 'Didn’t see the pattern', exact: true });
+  const pattern = record.getByRole('button', { name: 'No approach', exact: true });
   await pattern.click();
   await expect(record).toContainText('comes back within a week to confirm');
   await pattern.click();

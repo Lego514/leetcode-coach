@@ -1,4 +1,4 @@
-import type { StuckReason } from '../../shared/constants';
+import type { StoredStuckReason } from '../../shared/constants';
 import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { toDay, type Day } from '../lib/dates';
@@ -33,7 +33,7 @@ export interface RecordAttemptOptions {
   /** 到期日往後挪幾天，只有批次標記會用到 */
   delayDays?: number;
   /** 卡在哪 */
-  stuck?: readonly StuckReason[];
+  stuck?: readonly StoredStuckReason[];
   day?: Day;
   at?: Date;
 }
@@ -110,7 +110,7 @@ export async function markSolvedBefore(problemIds: readonly number[], rating: Ra
 export interface AttemptEdit {
   rating: Rating;
   minutes?: number;
-  stuck?: readonly StuckReason[];
+  stuck?: readonly StoredStuckReason[];
 }
 
 /**

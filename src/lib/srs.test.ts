@@ -1,6 +1,6 @@
 import { FSRSAlgorithm, generatorParameters } from 'ts-fsrs';
 import { describe, expect, it } from 'vitest';
-import type { StuckReason } from '../../shared/constants';
+import type { StoredStuckReason } from '../../shared/constants';
 import {
   CONFIRM_DAYS,
   DEFAULT_RETENTION,
@@ -218,21 +218,25 @@ describe('hint depth and where you got stuck', () => {
   });
 
   it('counts forgetting the idea more than slips in execution, and leaves running out of time to the time weight', () => {
-    const solo = (stuck: StuckReason[]) => schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { stuck });
+    const solo = (stuck: StoredStuckReason[]) => schedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { stuck });
     const plain = solo([]);
-    // 沒看出模式：記憶度扣比較多，而且一週內確認
-    expect(solo(['pattern']).stability).toBeLessThan(solo(['bug']).stability);
+    // 沒思路：記憶度扣比較多，而且一週內確認
+    expect(solo(['pattern']).stability).toBeLessThan(solo(['logic']).stability);
     expect(solo(['pattern']).interval).toBe(CONFIRM_DAYS);
     expect(solo(['implement']).interval).toBe(CONFIRM_DAYS);
-    // 有 bug、漏了邊界情況：小扣，不提早確認
-    expect(solo(['edge']).stability).toBeLessThan(plain.stability);
-    expect(solo(['edge']).interval).toBeGreaterThan(CONFIRM_DAYS);
-    // 時間不夠：時間權重已經算了
+    // 邏輯／邊界、語法／API 不熟：小扣，不提早確認
+    expect(solo(['logic']).stability).toBeLessThan(plain.stability);
+    expect(solo(['logic']).interval).toBeGreaterThan(CONFIRM_DAYS);
+    expect(solo(['syntax'])).toEqual(solo(['logic']));
+    // 舊紀錄的漏了邊界、有 bug 跟邏輯／邊界一樣算
+    expect(solo(['edge'])).toEqual(solo(['logic']));
+    expect(solo(['bug'])).toEqual(solo(['logic']));
+    // 舊紀錄的時間不夠：時間權重已經算了
     expect(solo(['time'])).toEqual(plain);
   });
 
   it('multiplies the weights', () => {
-    expect(evidenceWeight('hint', { pace: 1.5, hintLayers: 2, stuck: ['bug'] })).toBeCloseTo(0.8 * 0.9);
+    expect(evidenceWeight('hint', { pace: 1.5, hintLayers: 2, stuck: ['logic'] })).toBeCloseTo(0.8 * 0.9);
     // 最壞的情況：兩倍時間、看到模板、沒看出模式
     expect(evidenceWeight('hint', { pace: 3, hintLayers: 4, stuck: ['pattern'] })).toBeCloseTo(0.6 * 0.7 * 0.75);
   });

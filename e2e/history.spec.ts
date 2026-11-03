@@ -24,11 +24,11 @@ test('edits and deletes past records on the problem page', async ({ page }) => {
   const edit = page.getByRole('dialog', { name: 'Edit this record' });
   await expect(edit).toContainText('1. Two Sum ·');
   await edit.getByRole('button', { name: /Still stuck/ }).click();
-  await edit.getByRole('button', { name: 'Missed an edge case' }).click();
+  await edit.getByRole('button', { name: 'Logic / edge cases' }).click();
   await edit.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(edit).toBeHidden();
   await expect(history).toContainText('Still stuck');
-  await expect(history).toContainText('Missed an edge case');
+  await expect(history).toContainText('Logic / edge cases');
 
   // 刪掉一筆，剩一筆
   await history.getByRole('button', { name: /^Edit the record from/ }).last().click();

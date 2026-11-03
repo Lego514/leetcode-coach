@@ -28,8 +28,8 @@ test('records where I got stuck and shows what I get stuck on most', async ({ pa
 
   // 兩題都卡在優化，其中一題也漏了邊界情況
   for (const [id, reasons] of [
-    [70, ['Couldn’t optimize', 'Missed an edge case']],
-    [746, ['Couldn’t optimize']],
+    [70, ['Can’t optimize', 'Logic / edge cases']],
+    [746, ['Can’t optimize']],
   ] as const) {
     await page.goto(`/#/problems/${id}`);
     await page.getByRole('button', { name: 'Record without timer' }).click();
@@ -40,16 +40,16 @@ test('records where I got stuck and shows what I get stuck on most', async ({ pa
     await dialog.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(dialog).toBeHidden();
   }
-  await expect(page.getByRole('region', { name: /^History/ })).toContainText('Couldn’t optimize');
+  await expect(page.getByRole('region', { name: /^History/ })).toContainText('Can’t optimize');
 
   await page.goto('/#/progress');
   const stuck = page.getByRole('region', { name: 'Where you get stuck' });
   await expect(stuck).toContainText('Last 90 days, 2 sessions with a reason marked');
   const rows = stuck.getByRole('listitem');
-  await expect(rows.nth(0)).toContainText('Couldn’t optimize');
+  await expect(rows.nth(0)).toContainText('Can’t optimize');
   await expect(rows.nth(0)).toContainText('2 times');
   await expect(rows.nth(0)).toContainText('Most often in: 1-D Dynamic Programming');
-  await expect(rows.nth(1)).toContainText('Missed an edge case');
+  await expect(rows.nth(1)).toContainText('Logic / edge cases');
   await rows.nth(0).getByRole('link', { name: 'Open pattern cards' }).click();
   await expect(page).toHaveURL(/#\/patterns$/);
 });

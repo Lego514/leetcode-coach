@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import type { StuckReason } from '../../shared/constants';
+import type { StoredStuckReason } from '../../shared/constants';
 import type { ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
 import { FeedbackView } from '../components/AiFeedbackPanel';
 import { ChatReply } from '../components/ChatPromptPanel';
@@ -626,7 +626,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   const toast = useToast();
   const isFull = session.kind === 'full';
   const [rating, setRating] = useState<Rating | null>(isFull ? suggestRating(result.hints, result.sawSolution) : null);
-  const [stuck, setStuck] = useState<StuckReason[]>([]);
+  const [stuck, setStuck] = useState<StoredStuckReason[]>([]);
   const [clarity, setClarity] = useState<Clarity | null>(null);
   const [reflection, setReflection] = useState('');
   const [transcript, setTranscript] = useState(result.transcript ?? '');

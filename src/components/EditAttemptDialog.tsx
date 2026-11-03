@@ -6,10 +6,11 @@ import { RATINGS, type Rating } from '../lib/srs';
 import { deleteAttempt, updateAttempt } from '../store/actions';
 import type { AttemptRecord } from '../store/db';
 import { useToday } from '../store/queries';
-import type { StuckReason } from '../../shared/constants';
+import type { StoredStuckReason } from '../../shared/constants';
 import { StuckPicker } from './StuckPicker';
 import { useToast } from './toast';
 import { Dialog } from './ui';
+import { stuckKinds } from '../lib/stuck';
 
 // 改記過的一筆練習（今天頁和題目頁的紀錄）：選錯結果、時間打錯、卡在哪漏勾，或整筆記錯題目要刪掉。
 
@@ -38,7 +39,8 @@ function EditAttemptForm({ attempt, onDone }: { attempt: AttemptRecord; onDone: 
   const toast = useToast();
   const [rating, setRating] = useState<Rating>(attempt.rating);
   const [minutes, setMinutes] = useState(attempt.minutes ? String(attempt.minutes) : '');
-  const [stuck, setStuck] = useState<StuckReason[]>(attempt.stuck ?? []);
+  // 舊紀錄的「漏了邊界」「有 bug」換成現在的「邏輯／邊界」，選項上才看得到勾起來
+  const [stuck, setStuck] = useState<StoredStuckReason[]>(() => stuckKinds(attempt.stuck));
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
 

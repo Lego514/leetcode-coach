@@ -43,9 +43,9 @@ export function demoData(today: Day, uuid: () => string = () => crypto.randomUUI
     for (const gap of [3, 10, 24]) if (offset + gap < -1) add(problemId, offset + gap, gap === 3 && rating !== 'solo' ? 'hint' : 'solo', 'review');
   });
   // 看了提示的紀錄看到第 2 層（關鍵觀察），也就是 FSRS 原本的 Hard
-  add(704, -4, 'solution', 'practice', { stuck: ['edge'], hints: 3 });
+  add(704, -4, 'solution', 'practice', { stuck: ['logic'], hints: 3 });
   add(74, -3, 'hint', 'practice', { hints: 2 });
-  add(875, -2, 'fail', 'practice', { stuck: ['pattern', 'edge'], hints: 3 });
+  add(875, -2, 'fail', 'practice', { stuck: ['pattern', 'logic'], hints: 3 });
   add(153, -1, 'hint', 'practice', { hints: 2 });
   add(1, 0, 'solo', 'review');
 
