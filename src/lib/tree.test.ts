@@ -5,6 +5,8 @@ import { schedule, type Rating } from './srs';
 import {
   branchOutline,
   canopyBlobs,
+  FADED_RECALL,
+  fadeOf,
   GROUND,
   grownBetween,
   nextStage,
@@ -96,6 +98,29 @@ describe('treeState', () => {
 
   it('shades leaves from fresh to faded', () => {
     expect([0.95, 0.85, 0.72, 0.6, 0.5].map(shadeOf)).toEqual(['fresh', 'good', 'ok', 'fading', 'faded']);
+  });
+});
+
+describe('fadeOf', () => {
+  it('puts a dot on the cell exactly when the leaf turns yellow or withers', () => {
+    // 第一次自己解出：穩定度約 2.3 天
+    const state = stateAfter([['solo', '2026-10-01']]);
+    expect(fadeOf(state, '2026-10-02')).toBe(0);
+    for (const today of ['2026-10-10', '2026-10-31', '2026-12-01', '2027-03-01', '2027-10-01']) {
+      const shade = nodeFor(state, false, today);
+      const fade = fadeOf(state, today);
+      expect(shade.kind === 'leaf' && { 0: ['fresh', 'good', 'ok'], 1: ['fading'], 2: ['faded'] }[fade].includes(shade.shade)).toBe(true);
+    }
+    expect(fadeOf(state, '2026-10-31')).toBe(1);
+    expect(fadeOf(state, '2027-03-01')).toBe(2);
+    expect(FADED_RECALL).toBeLessThan(0.7);
+  });
+
+  it('also fades problems last done with a hint, and never marks unknown ones', () => {
+    expect(fadeOf(stateAfter([['hint', '2026-10-01']]), '2027-10-01')).toBe(2);
+    expect(fadeOf(undefined, '2027-10-01')).toBe(0);
+    // 舊版沒有穩定度的紀錄不知道忘了多少，不加點
+    expect(fadeOf({ lastReview: '2020-01-01' }, '2027-10-01')).toBe(0);
   });
 });
 

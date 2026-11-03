@@ -120,8 +120,11 @@ const zhTW = {
     label: '方格說明',
     notStarted: '還沒做',
     mastered: '已熟練（也講得清楚）',
-    hint: '學習中不到 7 天，複習中 7–29 天，記得住 30 天以上；最近一次講解講得清楚才是已熟練。',
+    hint: '學習中不到 7 天，複習中 7–29 天，記得住 30 天以上；最近一次講解講得清楚才是已熟練。很久沒碰的題目右上角有橘點，方格的顏色不會掉。',
     lapsed: '上次沒解出來',
+    fading: '有點忘了',
+    faded: '可能忘了',
+    fadeLabel: (stage: string, days: number, fade: number) => `${stage}，${days} 天沒碰，${fade === 2 ? '可能忘了一些' : '有點忘了'}`,
   },
 
   autosave: {

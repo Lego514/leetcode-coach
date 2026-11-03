@@ -19,6 +19,7 @@ import {
   SLOW_WEIGHT,
   spreadDelays,
   stageOf,
+  strengthNow,
   timeWeight,
   type Evidence,
   UNEXPLAINED_MASTERY,
@@ -383,5 +384,18 @@ describe('stageOf / masteryOf', () => {
     // 沒講清楚最多到 UNEXPLAINED_MASTERY
     expect(masteryOf({ interval: 120 })).toBe(UNEXPLAINED_MASTERY);
     expect(masteryOf({ interval: 1 })).toBe(masteryOf({ interval: 1, explained: true }));
+  });
+
+  it('weighs mastery by how likely you still remember it today', () => {
+    const state = { interval: 60, explained: true, stability: 60, lastReview: '2026-01-01' };
+    // 剛複習完就是熟練度本身，越久沒碰越低
+    expect(strengthNow(state, '2026-01-01')).toBe(masteryOf(state));
+    const later = ['2026-03-01', '2026-09-01', '2027-09-01'].map((day) => strengthNow(state, day));
+    expect(later.every((v, i) => v < (i === 0 ? masteryOf(state) : later[i - 1]))).toBe(true);
+    // 練很熟但兩年沒碰，排在剛練到複習中的題目前面
+    expect(strengthNow(state, '2028-01-01')).toBeLessThan(strengthNow({ interval: 10, stability: 10, lastReview: '2027-12-30' }, '2028-01-01'));
+    // 舊版沒有穩定度的紀錄就看熟練度
+    expect(strengthNow({ interval: 30 }, '2028-01-01')).toBe(masteryOf({ interval: 30 }));
+    expect(strengthNow(undefined, '2028-01-01')).toBe(0);
   });
 });

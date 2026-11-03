@@ -128,8 +128,12 @@ const en: Messages = {
     label: 'Legend',
     notStarted: 'Not started',
     mastered: 'Mastered (explained clearly too)',
-    hint: 'Learning: under 7 days. Reviewing: 7–29 days. Remembered: 30 days or more. Mastered also needs your latest explanation to be clear.',
+    hint: 'Learning: under 7 days. Reviewing: 7–29 days. Remembered: 30 days or more. Mastered also needs your latest explanation to be clear. An orange dot means you haven’t touched it in a while; the color doesn’t drop.',
     lapsed: 'Missed last time',
+    fading: 'Fading',
+    faded: 'Probably forgotten',
+    fadeLabel: (stage: string, days: number, fade: number) =>
+      `${stage}, not touched in ${days} days, ${fade === 2 ? 'probably forgotten some' : 'starting to fade'}`,
   },
 
   autosave: {

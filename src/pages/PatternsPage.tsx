@@ -57,7 +57,7 @@ export function PatternsPage() {
                   </span>
                   <span className="pattern-cells" aria-hidden>
                     {problems.map((x) => (
-                      <MasteryCell key={x.id} progress={progress.get(x.id)} />
+                      <MasteryCell key={x.id} progress={progress.get(x.id)} today={day} />
                     ))}
                   </span>
                 </Link>

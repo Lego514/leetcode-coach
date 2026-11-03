@@ -6,7 +6,7 @@ import { ExplainProgressSheet } from '../components/ExplainProgress';
 import { ActivityHeatmap, WeeklyChart } from '../components/charts';
 import { PatternMap, ReadinessSheet, useRecapNumbers, WeeklyRecap } from '../components/Motivation';
 import { StuckSummary } from '../components/StuckSummary';
-import { MasteryCell, MasteryLegend, PageHead, Sheet } from '../components/ui';
+import { MasteryCell, MasteryLegend, PageHead, Sheet, stageLabel } from '../components/ui';
 import { getPattern } from '../data/patterns';
 import { useI18n } from '../i18n';
 import { rich } from '../i18n/rich';
@@ -177,9 +177,10 @@ export function ProgressPage() {
                           .filter((p) => p.pattern === s.pattern)
                           .map((p) => {
                             const state = progress.get(p.id);
+                            const label = t.progress.cellLabel(p.title, stageLabel(t, state, day));
                             return (
-                              <Link key={p.id} to={`/problems/${p.id}`} aria-label={t.progress.cellLabel(p.title, t.stages[stageOf(state)])}>
-                                <MasteryCell progress={state} />
+                              <Link key={p.id} to={`/problems/${p.id}`} aria-label={label} title={label}>
+                                <MasteryCell progress={state} today={day} />
                               </Link>
                             );
                           })}

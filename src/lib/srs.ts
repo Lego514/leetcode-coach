@@ -357,6 +357,17 @@ export function recallOn(state: Partial<Pick<ReviewState, 'stability' | 'lastRev
   return recallProbability(state.stability, Math.max(0, diffDays(state.lastReview, today)));
 }
 
+/**
+ * 現在的把握：熟練度（曾經練到哪）乘上今天還記得的機率。
+ * 挑「做過但最不熟的題目」用：練到很熟但很久沒碰的，會排在最近剛練熟的前面
+ */
+export function strengthNow(
+  state: (StageInput & Partial<Pick<ReviewState, 'stability' | 'lastReview'>>) | undefined,
+  today: Day,
+): number {
+  return masteryOf(state) * (recallOn(state, today) ?? 1);
+}
+
 /** 批次標記時，每天最多排幾題到期 */
 export const IMPORT_DUE_PER_DAY = 5;
 
