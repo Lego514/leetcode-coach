@@ -134,6 +134,45 @@ describe('database upgrade that weighs hint depth and where you got stuck', () =
   });
 });
 
+describe('database upgrade that remembers early checks', () => {
+  it('records the day FSRS would have picked for problems brought back early', async () => {
+    const name = `upgrade-confirm-${crypto.randomUUID()}`;
+    // 第 10 版的資料庫：排程沒有記 FSRS 本來會排哪天
+    const old = new Dexie(name);
+    old.version(10).stores({
+      progress: 'problemId, due',
+      attempts: '++id, problemId, day, &uid',
+      notes: 'problemId',
+      meta: 'problemId, *companies',
+      patternNotes: 'patternId',
+      mocks: '++id, problemId, day, &uid',
+      customProblems: 'id',
+      settings: 'key',
+      outbox: 'id',
+      syncState: 'key',
+      cardReviews: '++id, cardId, day, &uid',
+      boards: 'id',
+      stories: 'id',
+      rehearsals: '++id, day, &uid',
+    });
+    const attempts = [
+      { uid: 'a', problemId: 20, day: '2026-03-01', at: '2026-03-01T10:00:00.000Z', rating: 'solo', mode: 'import' },
+      { uid: 'b', problemId: 20, day: '2026-10-20', at: '2026-10-20T10:00:00.000Z', rating: 'hint', mode: 'review', hints: 1 },
+    ];
+    await old.table('attempts').bulkAdd(attempts);
+    const { fsrsDue, ...before } = replay(attempts as never)!;
+    expect(fsrsDue).toBeDefined();
+    await old.table('progress').put({ problemId: 20, ...before, lastRating: 'hint', lastDay: '2026-10-20', firstDay: '2026-03-01', attempts: 2 });
+    old.close();
+
+    const upgraded = new CoachDB(name);
+    const progress = (await upgraded.progress.get(20))!;
+    expect(progress.interval).toBe(CONFIRM_DAYS);
+    expect(progress.fsrsDue).toBe(fsrsDue);
+    upgraded.close();
+  });
+});
+
 describe('database upgrade that needs a clear explanation for Mastered', () => {
   it('marks explained problems and counts a fast, explained solve as Easy', async () => {
     const name = `upgrade-explained-${crypto.randomUUID()}`;

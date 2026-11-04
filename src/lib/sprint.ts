@@ -28,6 +28,9 @@ export const REVIEW_MINUTES = 10;
 export const MOCK_MINUTES = 45;
 export const STORY_MINUTES = 15;
 
+/** 一天排完還剩這麼多分鐘以上，就建議拿來練講解（講一題大約 10 分鐘） */
+export const SPARE_MINUTES = 10;
+
 /** 面試那天還記得的機率低於這個，就在面試前補一次複習 */
 export const INTERVIEW_RECALL = 0.9;
 /** 平均熟練度低於這個的模式算弱，多排兩題 */
@@ -67,6 +70,8 @@ export interface SprintPlan {
   queue: SprintPick[];
   /** 排不進去的新題 */
   unscheduled: SprintPick[];
+  /** 排不進去的新題加起來要幾分鐘 */
+  unscheduledMinutes: number;
   /** 標了這家公司的題目：總數、做過幾題、計畫裡有幾題 */
   company: { total: number; started: number; planned: number } | null;
   /** 至少做過一題的模式：現在幾個、照計畫做完幾個、總共幾個 */
@@ -179,6 +184,16 @@ function forecastReviews(
   return s;
 }
 
+/**
+ * 這天排完還剩幾分鐘可以練講解；不到 SPARE_MINUTES 是 0。
+ * 新題照優先順序排、下一題放不下就停（不跳過去拿比較短的題），所以常常會剩一些時間；
+ * 講解是面試最常卡的地方，零頭拿來練剛好
+ */
+export function spareMinutes(day: Pick<SprintDay, 'budget' | 'minutes'>): number {
+  const spare = day.budget - day.minutes;
+  return spare >= SPARE_MINUTES ? spare : 0;
+}
+
 /** 依面試日、每天的時間和目前的進度，排出到面試前每一天要做什麼 */
 export function planSprint(input: SprintInput): SprintPlan {
   const { sprint, today, all, progress, companiesOf } = input;
@@ -260,6 +275,7 @@ export function planSprint(input: SprintInput): SprintPlan {
     days,
     queue,
     unscheduled: queue.slice(next),
+    unscheduledMinutes: queue.slice(next).reduce((sum, pick) => sum + NEW_MINUTES[pick.problem.difficulty], 0),
     company: companyStats,
     patterns: { covered: coveredNow.size, planned: coveredPlanned.size, total: PATTERN_ORDER.length },
   };

@@ -9,6 +9,7 @@ import {
   explainedAround,
   isEasy,
   explainSchedule,
+  hintVsSolo,
   intervalFor,
   MAX_INTERVAL,
   masteryOf,
@@ -27,6 +28,7 @@ import {
   type Memory,
   type ReviewState,
 } from './srs';
+import { addDays } from './dates';
 
 const DAY = '2026-09-16';
 
@@ -193,6 +195,21 @@ describe('time spent and shaky solves', () => {
     expect(schedule(hint, 'solo', '2026-09-23').interval).toBeGreaterThan(CONFIRM_DAYS);
   });
 
+  it('remembers the day FSRS would have picked for a problem brought back early to confirm', () => {
+    const prev: ReviewState = { stability: 1, difficulty: 5, reps: 1, lapses: 0, interval: 1, lastReview: '2026-03-01', due: '2026-03-02' };
+    const hint = schedule(prev, 'hint', DAY);
+    expect(hint.interval).toBe(CONFIRM_DAYS);
+    expect(hint.fsrsDue).toBe(addDays(DAY, intervalFor(hint.stability)));
+    // 批次標記往後挪的天數兩邊都算
+    expect(schedule(prev, 'hint', DAY, 3).fsrsDue).toBe(addDays(DAY, intervalFor(hint.stability) + 3));
+    // 沒被縮短的不記：寫得順、或本來就在一週內（第一次看提示才解出）
+    expect(schedule(prev, 'solo', DAY).fsrsDue).toBeUndefined();
+    expect(schedule(undefined, 'hint', DAY).interval).toBeLessThanOrEqual(CONFIRM_DAYS);
+    expect(schedule(undefined, 'hint', DAY).fsrsDue).toBeUndefined();
+    // 確認那次寫得順，就不再是確認
+    expect(schedule(hint, 'solo', hint.due).fsrsDue).toBeUndefined();
+  });
+
   it('uses the minutes of each attempt against the target when replaying', () => {
     const quick = [{ rating: 'solo' as const, day: DAY, minutes: 10 }];
     const slow = [{ rating: 'solo' as const, day: DAY, minutes: 40 }];
@@ -311,6 +328,29 @@ describe('explainSchedule', () => {
       // 權重乘起來就是 schedule 用的那個
       if (e.factors.length > 0) expect(e.factors.reduce((w, f) => w * f.weight, 1)).toBeCloseTo(evidenceWeight(rating, evidence));
     }
+  });
+
+  it('says how a hint compares with solving alone, matching what the schedule does', () => {
+    expect([1, 2, 3, 4].map((n) => hintVsSolo(n))).toEqual([0.8, 0.6, 0.5, 0.4]);
+    expect([1, 2, 3, 4].map((n) => hintVsSolo(n, true))).toEqual([0.7, 0.6, 0.5, 0.4]);
+    // 之後的複習：記憶度長的量跟自己解出比
+    const solo = schedule(prev, 'solo', DAY).stability - prev.stability;
+    for (const hintLayers of [1, 2, 3, 4]) {
+      const grown = schedule(prev, 'hint', DAY, 0, DEFAULT_RETENTION, { hintLayers }).stability - prev.stability;
+      expect(Math.abs(grown / solo - hintVsSolo(hintLayers))).toBeLessThan(0.1);
+    }
+    // 第一次做：起始的記憶度跟自己解出比
+    const first = schedule(undefined, 'solo', DAY).stability;
+    for (const hintLayers of [1, 2, 3, 4]) {
+      const start = schedule(undefined, 'hint', DAY, 0, DEFAULT_RETENTION, { hintLayers }).stability;
+      expect(Math.abs(start / first - hintVsSolo(hintLayers, true))).toBeLessThan(0.1);
+    }
+    // 說明裡記下看到第幾層（第 2 層的權重是 1 也記）；同一天再做一次不乘權重，就不記
+    expect(explainSchedule(prev, 'hint', DAY, 0, DEFAULT_RETENTION, { hintLayers: 2 }).hintLayers).toBe(2);
+    expect(explainSchedule(prev, 'hint', DAY, 0, DEFAULT_RETENTION, { hintLayers: 9 }).hintLayers).toBe(4);
+    expect(explainSchedule(prev, 'hint', DAY).hintLayers).toBeUndefined();
+    expect(explainSchedule(prev, 'solo', DAY, 0, DEFAULT_RETENTION, { hintLayers: 3 }).hintLayers).toBeUndefined();
+    expect(explainSchedule(prev, 'hint', prev.lastReview, 0, DEFAULT_RETENTION, { hintLayers: 1 }).hintLayers).toBeUndefined();
   });
 
   it('lists each weight with where it came from', () => {

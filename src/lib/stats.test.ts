@@ -4,6 +4,7 @@ import {
   capDue,
   reviewsDoneOn,
   dueProblems,
+  dueState,
   finishDay,
   longestStreak,
   monthBlocks,
@@ -216,5 +217,23 @@ describe('needsRewrite', () => {
     expect(needsRewrite({ lastRating: 'hint' })).toBe(true);
     expect(needsRewrite({ lastRating: 'solution' })).toBe(true);
     expect(needsRewrite({ lastRating: 'fail' })).toBe(true);
+  });
+});
+
+describe('dueState', () => {
+  it('tells later, due today and overdue apart', () => {
+    expect(dueState({ due: '2026-11-05' }, '2026-11-04')).toBe('later');
+    expect(dueState({ due: '2026-11-04' }, '2026-11-04')).toBe('due');
+    expect(dueState({ due: '2026-11-01' }, '2026-11-04')).toBe('overdue');
+  });
+
+  it('calls a problem brought back early a check, not overdue, until the day FSRS would have picked', () => {
+    const confirm = { due: '2026-11-01', fsrsDue: '2026-11-20' };
+    expect(dueState(confirm, '2026-10-30')).toBe('later');
+    expect(dueState(confirm, '2026-11-01')).toBe('confirm');
+    expect(dueState(confirm, '2026-11-09')).toBe('confirm');
+    expect(dueState(confirm, '2026-11-20')).toBe('confirm');
+    // 過了 FSRS 本來的那天，記得的機率掉到目標以下，就跟一般的逾期一樣
+    expect(dueState(confirm, '2026-11-21')).toBe('overdue');
   });
 });

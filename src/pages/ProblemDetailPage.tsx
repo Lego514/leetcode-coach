@@ -21,6 +21,7 @@ import { LANGUAGES } from '../lib/languages';
 import { conquests } from '../lib/motivation';
 import { stuckKinds } from '../lib/stuck';
 import { recallOn, stageOf } from '../lib/srs';
+import { dueState } from '../lib/stats';
 import { nodeFor, recallPercent } from '../lib/tree';
 import { deleteCustomProblem, resetProgress, saveNote, setCompanies } from '../store/actions';
 import type { AttemptRecord, NoteRecord } from '../store/db';
@@ -73,6 +74,8 @@ function ProblemDetail({ problem }: { problem: Problem }) {
   // 為什麼下次複習排這天：照最後一次的評分、時間、提示、卡在哪算給你看
   const target = MOCK_MINUTES[problem.difficulty];
   const why = attempts && explanations ? explainLatest(attempts, retention, target, explanations) : null;
+  // 寫得不順被提早拉回來確認的題：寫「該確認了」，不寫逾期、不用紅字
+  const due = progress ? dueState(progress, day) : undefined;
 
   return (
     <div className="page">
@@ -157,8 +160,9 @@ function ProblemDetail({ problem }: { problem: Problem }) {
                     </>
                   )}
                   <dt>{t.detail.nextReview}</dt>
-                  <dd className={progress.due < day ? 'overdue' : undefined}>
-                    {t.detail.nextReviewValue(fmt.day(progress.due), t.date.relative(diffDays(day, progress.due)))}
+                  <dd className={due === 'overdue' ? 'overdue' : undefined}>
+                    {t.detail.nextReviewValue(fmt.day(progress.due), due === 'confirm' ? t.detail.confirmNow : t.date.relative(diffDays(day, progress.due)))}
+                    {due === 'confirm' && <span className="stage-next">{t.detail.confirmEarly}</span>}
                   </dd>
                   <dt>{t.detail.lastResult}</dt>
                   <dd>{t.ratings[progress.lastRating].label}</dd>

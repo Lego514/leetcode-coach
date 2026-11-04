@@ -145,6 +145,7 @@ const en: Messages = {
   row: {
     dueNow: 'Due for review',
     dueOverdue: (relative) => `Due for review (${relative})`,
+    dueConfirm: 'Time to check (last try wasn’t smooth)',
     nextReview: (day) => `Next review ${day}`,
     recallTag: (pct) => `${pct}% recall`,
   },
@@ -175,7 +176,8 @@ const en: Messages = {
     easy: 'Solved fast and explained clearly (FSRS “Easy”): memory grows the most.',
     fastNotExplained: (days) => `Fast solve! Explain it clearly in English within ${count(days, 'day')} and it counts as Easy, so it comes back later.`,
     time: (pace, target) => `Took ${pace}× the ${target}-minute target`,
-    hint: (layer) => `Hints up to ${['', 'the direction', 'the key insight', 'the edge cases', 'the template'][layer]}`,
+    hintDepth: (layer, share, first) =>
+      `Needed a hint (FSRS “Hard”), up to ${['', 'the direction', 'the key insight', 'the edge cases', 'the template'][layer]}: memory ${first ? 'starts at' : 'grows'} about ${Math.round(share * 100)}% ${first ? 'of' : 'as much as'} solving it alone.`,
     memoryStuck: 'No approach, can’t optimize, or can’t code it',
     executionStuck: 'Syntax / API, or logic / edge cases',
     memory: (after, before) => (before === undefined ? `Memory: holds about ${after} days` : `Memory: ${before} → ${after} days`),
@@ -586,6 +588,8 @@ const en: Messages = {
     nextReview: 'Next review',
     explainToMaster: 'Only the explanation is left: explain it clearly in English once to reach Mastered.',
     nextReviewValue: (day, relative) => `${day}, ${relative}`,
+    confirmNow: 'time to check',
+    confirmEarly: 'The last try wasn’t smooth, so it came back early to check. By the memory curve, you should still remember most of it.',
     lastResult: 'Last result',
     attempts: 'Attempts',
     lapses: 'Not solved',
@@ -656,6 +660,8 @@ const en: Messages = {
     remaining: (n) => `${n} left`,
     doneCount: (n) => `, ${n} done`,
     thisOverdue: (relative) => `, this one is ${relative}`,
+    thisConfirm: ', this one is back early because the last try wasn’t smooth',
+    confirmTag: 'Early check',
     details: 'Problem details',
     recallTitle: 'Recall first',
     recall: [
@@ -1366,7 +1372,9 @@ const en: Messages = {
     interviewToday: 'The interview is today. Good luck! No new problems today.',
     afterNote: 'The interview is over. Note which problems came up, then end the sprint.',
     daysTitle: 'Day by day',
-    daysNote: 'Based on your progress so far, and recalculated every day.',
+    daysNote:
+      'Based on your progress so far, and recalculated every day. New problems go in priority order: when the next one doesn’t fit, it waits for the next day instead of a shorter one jumping ahead. Use the spare minutes to practice explaining.',
+    spare: (minutes) => `${minutes} min spare to practice explaining`,
     todayTag: 'Today',
     newCount: (n) => `${n} new`,
     reviewCount: (n) => `${count(n, 'review')}`,
@@ -1385,8 +1393,9 @@ const en: Messages = {
     tagged: (n, company) => `Tagged ${count(n, 'problem')} with ${company}.`,
     notFound: (items) => `Not found: ${items}`,
     unscheduledTitle: 'Problems that don’t fit',
-    unscheduledNote: (n) => `There isn’t time for these ${count(n, 'problem')}, so they’re left out. To fit more, add time per day or shorten the review-only days.`,
-    reasons: { company: 'Company', newPattern: 'New pattern', weakPattern: 'Weak pattern', list: 'List' },
+    unscheduledNote: (n, minutes) =>
+      `${n === 1 ? 'This problem needs' : `These ${n} problems need`} ${minutes < 60 ? count(minutes, 'minute') : `about ${count(Math.round(minutes / 60), 'hour')}`}. After reviews and higher-priority problems, no day has enough time left for the next one, so they’re left out. To fit more, add time per day or shorten the review-only days.`,
+    reasons: { company: 'Company', newPattern: 'New pattern', weakPattern: 'Weak pattern', list: 'Next on list' },
     more: (n) => `${count(n, 'more problem')}`,
     end: 'End the sprint',
     endTitle: 'End the sprint?',
