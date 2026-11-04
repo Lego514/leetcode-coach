@@ -29,9 +29,12 @@ test('plans a sprint to an interview, puts the company’s problems first, and e
   await tag.getByRole('button', { name: 'Tag with Acme' }).click();
   await expect(tag).toContainText('Tagged 3 problems with Acme. Not found: nope');
   await expect(summary).toContainText('Company problems');
-  // 新題照順序排、下一題放不下就留到隔天；今天剩的 20 分鐘建議練講解，連到講解練習
+  // 新題照順序排、下一題放不下就留到隔天。今天：三題公司題（15 + 25 + 25 分鐘，跟練習的目標時間一樣）和行為面試 15 分鐘，
+  // 剩的 10 分鐘建議練講解，連到講解練習
   await expect(page.getByRole('region', { name: 'Day by day' })).toContainText('instead of a shorter one jumping ahead');
-  const spare = days.first().getByRole('link', { name: '20 min spare to practice explaining' });
+  await expect(days.first()).toContainText('3 new · Behavioral');
+  await expect(days.first()).toContainText('80 / 90 min');
+  const spare = days.first().getByRole('link', { name: '10 min spare to practice explaining' });
   await expect(spare).toHaveAttribute('href', '#/mock?kind=explain');
   // 排不進去的題目：寫出加起來要多久、為什麼排不進去；清單的題目標「清單的下一題」
   const unscheduled = page.getByRole('region', { name: /^Problems that don’t fit/ });
@@ -44,11 +47,12 @@ test('plans a sprint to an interview, puts the company’s problems first, and e
   await expect(page.getByRole('link', { name: 'Practice a behavioral question' })).toBeVisible();
   const fresh = page.getByRole('region', { name: 'New problems for today' });
   await expect(fresh).toContainText('the company’s problems and untouched patterns first');
-  await expect(fresh.getByRole('listitem')).toHaveCount(2);
+  await expect(fresh.getByRole('listitem')).toHaveCount(3);
   await expect(fresh.getByRole('listitem').nth(0)).toContainText('Two Sum');
   await expect(fresh.getByRole('listitem').nth(1)).toContainText('3Sum');
-  await fresh.getByRole('button', { name: 'One more' }).click();
   await expect(fresh.getByRole('listitem').nth(2)).toContainText('LRU Cache');
+  await fresh.getByRole('button', { name: 'One more' }).click();
+  await expect(fresh.getByRole('listitem')).toHaveCount(4);
 
   // 結束衝刺，回到平常的計畫
   await page.getByRole('link', { name: 'Sprint plan' }).click();
