@@ -34,24 +34,33 @@ export function isReady(state: StateLike | undefined, today: Day): boolean {
 }
 
 export interface Readiness {
+  /** 會了：現在解得出來（isReady） */
   ready: number;
+  /** 做過：練過一次以上（會了的一定也做過） */
+  started: number;
   total: number;
-  byDifficulty: { difficulty: Difficulty; ready: number; total: number }[];
+  byDifficulty: { difficulty: Difficulty; ready: number; started: number; total: number }[];
 }
 
-/** 準備度：清單裡現在會的題目佔多少，也分難度算 */
+/** 準備度：清單裡現在會的題目佔多少，也分難度算；同時算做過幾題，畫面上兩個數字放在同一條 */
 export function readiness(problems: readonly Problem[], progress: StateMap, today: Day): Readiness {
-  const byDifficulty = DIFFICULTIES.map((difficulty) => ({ difficulty, ready: 0, total: 0 }));
+  const byDifficulty = DIFFICULTIES.map((difficulty) => ({ difficulty, ready: 0, started: 0, total: 0 }));
   let ready = 0;
+  let started = 0;
   for (const p of problems) {
     const row = byDifficulty.find((d) => d.difficulty === p.difficulty)!;
+    const state = progress.get(p.id);
     row.total += 1;
-    if (isReady(progress.get(p.id), today)) {
+    if (state) {
+      started += 1;
+      row.started += 1;
+    }
+    if (isReady(state, today)) {
       ready += 1;
       row.ready += 1;
     }
   }
-  return { ready, total: problems.length, byDifficulty };
+  return { ready, started, total: problems.length, byDifficulty };
 }
 
 /** 0 到 100 的百分比；沒有題目時是 0 */

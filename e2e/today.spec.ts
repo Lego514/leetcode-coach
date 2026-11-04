@@ -82,14 +82,18 @@ test('marks problems solved before without counting them as practice', async ({ 
   await expect(newList(page).getByRole('listitem').first()).toContainText('Two Sum');
 
   await page.goto('/#/progress');
-  await expect(page.getByRole('region', { name: 'Overview' })).toContainText('Total sessions0');
+  // 標記的題算做過，但不算練習：連續天數和一年的練習次數都還是 0
+  const overview = page.getByRole('region', { name: 'Overview' });
+  await expect(overview).toContainText(`Attempted${marked}/ 150`);
+  await expect(overview).toContainText('Streak0');
+  await expect(page.getByRole('region', { name: /^0 practice sessions in the past year/ })).toBeVisible();
 });
 
 test('shows the plan as numbers and what a target date needs', async ({ page }) => {
   await page.goto('/');
   const stat = (label: string) => page.locator('.plan-stat').filter({ hasText: label });
   const progress = page.getByRole('progressbar', { name: 'NeetCode 150 progress' });
-  await expect(progress).toHaveAttribute('aria-valuetext', '0 of 150 problems completed');
+  await expect(progress).toHaveAttribute('aria-valuetext', '0 of 150 problems attempted');
   await expect(stat('problems left').getByRole('definition')).toHaveText('150');
   await expect(stat('new a day').getByRole('definition')).toHaveText('3');
   await expect(stat('first pass done').getByRole('definition')).toHaveText(/^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}$/);

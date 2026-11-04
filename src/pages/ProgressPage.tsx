@@ -12,6 +12,7 @@ import { useI18n } from '../i18n';
 import { rich } from '../i18n/rich';
 import { LIST_FILTERS, problemsInList, type ListFilter } from '../lib/catalog';
 import { addDays, startOfWeek } from '../lib/dates';
+import { isReady } from '../lib/motivation';
 import { stageOf } from '../lib/srs';
 import {
   countByDay,
@@ -19,7 +20,6 @@ import {
   practiceAttempts,
   practiceStreak,
   streakDays,
-  summarizeDifficulty,
   summarizePatterns,
   weeklyCounts,
 } from '../lib/stats';
@@ -50,7 +50,6 @@ export function ProgressPage() {
 
   const problems = useMemo(() => problemsInList(catalog, list), [catalog, list]);
   const patterns = useMemo(() => summarizePatterns(problems, progress), [problems, progress]);
-  const difficulty = useMemo(() => summarizeDifficulty(problems, progress), [problems, progress]);
   // 批次標記的舊題不算練習次數
   const allAttempts = useMemo(() => practiceAttempts(attempts ?? []), [attempts]);
   const weeks = useMemo(() => weeklyCounts(allAttempts, day, 12), [allAttempts, day]);
@@ -58,6 +57,8 @@ export function ProgressPage() {
   const otherDays = useMemo(() => [...(cardReviews ?? []), ...(rehearsals ?? [])].map((r) => r.day), [cardReviews, rehearsals]);
 
   const started = problems.filter((p) => progress.has(p.id)).length;
+  // 整個 App 只用三個詞：做過、會了（現在解得出來）、已熟練（階段），跟準備度、題型地圖、樹的數字一樣
+  const ready = problems.filter((p) => isReady(progress.get(p.id), day)).length;
   const mastered = problems.filter((p) => stageOf(progress.get(p.id)) === 'mastered').length;
   // 有橘點（很久沒碰）的題數；複習清單本來就把最可能忘的排前面，這裡讓人看得到是哪幾題
   const fading = problems.filter((p) => fadeOf(progress.get(p.id), day) > 0).length;
@@ -108,35 +109,38 @@ export function ProgressPage() {
       </div>
 
       <div className="stack">
-        <section className="sheet stat-line" aria-label={t.progress.overview}>
-          <div className="stat">
-            <p className="stat-label">{t.progress.started}</p>
-            <p className="stat-value">
-              {started}
-              <small>/ {problems.length}</small>
-            </p>
+        <section className="sheet" aria-label={t.progress.overview}>
+          <div className="stat-line">
+            <div className="stat">
+              <p className="stat-label">{t.words.attempted}</p>
+              <p className="stat-value">
+                {started}
+                <small>/ {problems.length}</small>
+              </p>
+            </div>
+            <div className="stat">
+              <p className="stat-label">{t.words.ready}</p>
+              <p className="stat-value">
+                {ready}
+                <Unit text={t.progress.unitProblems} />
+              </p>
+            </div>
+            <div className="stat">
+              <p className="stat-label">{t.words.mastered}</p>
+              <p className="stat-value">
+                {mastered}
+                <Unit text={t.progress.unitProblems} />
+              </p>
+            </div>
+            <div className="stat">
+              <p className="stat-label">{t.progress.streak}</p>
+              <p className="stat-value">
+                {streak}
+                <Unit text={t.progress.unitDays} />
+              </p>
+            </div>
           </div>
-          <div className="stat">
-            <p className="stat-label">{t.progress.mastered}</p>
-            <p className="stat-value">
-              {mastered}
-              <Unit text={t.progress.unitProblems} />
-            </p>
-          </div>
-          <div className="stat">
-            <p className="stat-label">{t.progress.streak}</p>
-            <p className="stat-value">
-              {streak}
-              <Unit text={t.progress.unitDays} />
-            </p>
-          </div>
-          <div className="stat">
-            <p className="stat-label">{t.progress.total}</p>
-            <p className="stat-value">
-              {allAttempts.length}
-              <Unit text={t.progress.unitTimes} />
-            </p>
-          </div>
+          <p className="stat-defs">{rich(t.words.defs, { b: (text) => <b>{text}</b> })}</p>
         </section>
 
         {attempts && problems.length > 0 && (
@@ -170,6 +174,12 @@ export function ProgressPage() {
             ) : (
               <>
                 <div className="mastery-rows">
+                  {/* 右邊的數字是「做過」，寫在欄位上面一次就好 */}
+                  <div className="mastery-row mastery-head" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span className="mastery-count">{t.words.attempted}</span>
+                  </div>
                   {patterns.map((s) => (
                     <div key={s.pattern} className="mastery-row">
                       <Link className="mastery-name" to={`/patterns/${s.pattern}`}>
@@ -188,7 +198,7 @@ export function ProgressPage() {
                             );
                           })}
                       </div>
-                      <span className="mastery-count">
+                      <span className="mastery-count" aria-label={t.progress.masteryCount(s.started, s.total)}>
                         {s.started} / {s.total}
                       </span>
                     </div>
@@ -219,37 +229,11 @@ export function ProgressPage() {
 
         <StuckSummary attempts={stuck.attempts} reasons={stuck.reasons} days={STUCK_WINDOW_DAYS} />
 
-        <div className="split split-even">
-          <Sheet title={t.progress.weeklyTitle} id="weekly" note={t.progress.weeklyNote}>
-            <div className="sheet-body">
-              <WeeklyChart weeks={weeks} />
-            </div>
-          </Sheet>
-          <Sheet title={t.progress.difficultyTitle} id="difficulty">
-            <div className="sheet-body difficulty-bars">
-              {difficulty.map((d) => (
-                <div key={d.difficulty} className="meter-row">
-                  <span className="difficulty" data-level={d.difficulty}>
-                    {d.difficulty}
-                  </span>
-                  <div
-                    className="meter"
-                    role="meter"
-                    aria-label={t.progress.difficultyLabel(d.difficulty)}
-                    aria-valuemin={0}
-                    aria-valuemax={d.total}
-                    aria-valuenow={d.started}
-                  >
-                    <div className="meter-fill" style={{ width: d.total ? `${(d.started / d.total) * 100}%` : 0 }} />
-                  </div>
-                  <span className="meter-value">
-                    {d.started} / {d.total}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Sheet>
-        </div>
+        <Sheet title={t.progress.weeklyTitle} id="weekly" note={t.progress.weeklyNote}>
+          <div className="sheet-body">
+            <WeeklyChart weeks={weeks} />
+          </div>
+        </Sheet>
 
         <ExplainProgressSheet mocks={mocks ?? NO_MOCKS} />
       </div>
