@@ -11,6 +11,7 @@ import {
   NEW_MINUTES,
   REVIEW_MINUTES,
   SPRINT_MINUTE_OPTIONS,
+  spareMinutes,
   SPRINT_REVIEW_DAY_OPTIONS,
   STORY_MINUTES,
   type SprintDay,
@@ -204,7 +205,7 @@ function SprintOverview({ state, onEdit }: { state: SprintState; onEdit: () => v
       {sprint.company && <TagCompany company={sprint.company} after={daysLeft < 0} />}
 
       {daysLeft > 0 && plan.unscheduled.length > 0 && (
-        <Sheet title={s.unscheduledTitle} count={plan.unscheduled.length} id="sprint-unscheduled" note={s.unscheduledNote(plan.unscheduled.length)}>
+        <Sheet title={s.unscheduledTitle} count={plan.unscheduled.length} id="sprint-unscheduled" note={s.unscheduledNote(plan.unscheduled.length, plan.unscheduledMinutes)}>
           <ul className="sheet-body sprint-picks">
             {plan.unscheduled.slice(0, SHOWN_UNSCHEDULED).map((pick) => (
               <li key={pick.problem.id}>
@@ -271,6 +272,8 @@ function SprintDayRow({ day, today }: { day: SprintDay; today: boolean }) {
   const review = (day.reviews + day.pulled.length) * REVIEW_MINUTES;
   const other = (day.mock ? MOCK_MINUTES : 0) + (day.story ? STORY_MINUTES : 0);
   const scale = Math.max(day.budget, day.minutes, 1);
+  // 排完還剩的時間：建議練講解；今天的連到講解練習
+  const spare = spareMinutes(day);
   const parts = [
     day.newProblems.length > 0 && s.newCount(day.newProblems.length),
     day.reviews + day.pulled.length > 0 && s.reviewCount(day.reviews + day.pulled.length),
@@ -283,7 +286,15 @@ function SprintDayRow({ day, today }: { day: SprintDay; today: boolean }) {
         {fmt.day(day.day, true)}
         {today && <span className="chip">{s.todayTag}</span>}
       </span>
-      <span className="sprint-day-tasks">{parts.length > 0 ? parts.join(' · ') : s.rest}</span>
+      <span className="sprint-day-tasks">
+        {parts.length > 0 ? parts.join(' · ') : spare > 0 ? null : s.rest}
+        {spare > 0 && (
+          <>
+            {parts.length > 0 && ' · '}
+            {today ? <Link to="/mock?kind=explain">{s.spare(spare)}</Link> : s.spare(spare)}
+          </>
+        )}
+      </span>
       <span className="sprint-day-bar" aria-hidden>
         <span className="sprint-bar-new" style={{ width: `${(fresh / scale) * 100}%` }} />
         <span className="sprint-bar-review" style={{ width: `${(review / scale) * 100}%` }} />

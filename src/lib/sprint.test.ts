@@ -8,6 +8,8 @@ import {
   planSprint,
   rankNewProblems,
   REVIEW_MINUTES,
+  SPARE_MINUTES,
+  spareMinutes,
   type SprintInput,
   type SprintSettings,
 } from './sprint';
@@ -98,6 +100,25 @@ describe('planSprint', () => {
     const saturday = plan.days.find((d) => d.day === '2026-10-17')!;
     expect(saturday.budget).toBe(180);
     expect(plan.days[0].budget).toBe(90);
+  });
+
+  it('suggests explaining with the spare minutes, and adds up what doesn’t fit', () => {
+    expect(spareMinutes({ budget: 90, minutes: 65 })).toBe(25);
+    expect(spareMinutes({ budget: 90, minutes: 90 - SPARE_MINUTES })).toBe(SPARE_MINUTES);
+    // 不到 10 分鐘、或排超過的日子不建議
+    expect(spareMinutes({ budget: 90, minutes: 85 })).toBe(0);
+    expect(spareMinutes({ budget: 90, minutes: 120 })).toBe(0);
+    const plan = planSprint(input());
+    expect(plan.unscheduled.length).toBeGreaterThan(0);
+    expect(plan.unscheduledMinutes).toBe(plan.unscheduled.reduce((sum, p) => sum + NEW_MINUTES[p.problem.difficulty], 0));
+    // 學新題的日子剩下的時間，都放不下下一題（照順序排，不跳過去拿比較短的）
+    let next = 0;
+    for (const d of plan.days) {
+      next += d.newProblems.length;
+      if (d.phase === 'learn' && next < plan.queue.length) {
+        expect(d.budget - d.minutes + d.pulled.length * REVIEW_MINUTES).toBeLessThan(NEW_MINUTES[plan.queue[next].problem.difficulty]);
+      }
+    }
   });
 
   it('schedules a mock two days before and behavioral practice the day before', () => {

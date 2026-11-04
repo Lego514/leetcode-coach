@@ -205,6 +205,17 @@ export function needsRewrite(state: { lastRating: Rating } | null | undefined): 
   return !!state && state.lastRating !== 'solo';
 }
 
+/**
+ * 到期了沒：還沒到（later）、今天到期（due）、逾期（overdue），或寫得不順被提早拉回來確認（confirm）。
+ * 確認的題到了 FSRS 本來會排的那天以前，照記憶曲線都還記得很多，不寫逾期、不用紅字；過了那天就跟一般的逾期一樣
+ */
+export type DueState = 'later' | 'due' | 'overdue' | 'confirm';
+export function dueState(state: Pick<ReviewState, 'due' | 'fsrsDue'>, today: Day): DueState {
+  if (state.due > today) return 'later';
+  if (state.fsrsDue && today <= state.fsrsDue) return 'confirm';
+  return state.due < today ? 'overdue' : 'due';
+}
+
 export interface TargetPlan {
   /** 目標日前還能用來刷新題的天數（不含目標日當天） */
   daysLeft: number;

@@ -70,3 +70,54 @@ test('counts a fast solve as Easy once it is explained clearly', async ({ page }
   await schedule.getByText('Why 8 days?').click();
   await expect(schedule.locator('.why-steps')).toContainText('Solved fast and explained clearly (FSRS “Easy”)');
 });
+
+// 寫得不順被提早拉回來確認：到期後照記憶曲線還記得很多，寫「該確認了」、不用紅字；過了 FSRS 本來的那天才算逾期。
+// 「為什麼隔 N 天？」裡提示那一行跟自己解出比，不寫乘在 Hard 上的倍數
+test('calls a shaky solve that came back early a check, not overdue, and compares hints with solving alone', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 2, 1, 9, 0));
+  await page.goto('/#/problems?list=neetcode150');
+  await page.getByRole('button', { name: 'Mark problems I solved before' }).click();
+  await page.getByRole('region', { name: /^Arrays & Hashing/ }).getByRole('checkbox', { name: 'Select Two Sum' }).check();
+  await page.getByRole('region', { name: 'Mark problems you solved before' }).last().getByRole('button', { name: 'Mark 1 problem' }).click();
+  await expect(page.getByRole('status')).toContainText('Scheduled 1 problem for review');
+
+  // 半年後再寫，看了第一層提示（方向）
+  await page.clock.setFixedTime(new Date(2026, 8, 16, 9, 0));
+  await page.goto('/#/practice/1');
+  await page.reload();
+  await page.getByRole('button', { name: /Give me a hint/ }).click();
+  await page.getByRole('group', { name: 'While solving' }).getByRole('button', { name: 'I’m done' }).click();
+  const record = page.getByRole('region', { name: 'Record this attempt' });
+  await expect(record.getByRole('button', { name: /Needed a hint/ })).toHaveAttribute('aria-pressed', 'true');
+  await record.getByText('Why 7 days?').click();
+  const why = record.locator('.why-steps');
+  await expect(why).toContainText('Needed a hint (FSRS “Hard”), up to the direction: memory grows about 80% as much as solving it alone.');
+  await expect(why).not.toContainText('×1.3');
+  await expect(why).toContainText('Not smooth this time, so check again in 7 days.');
+  await record.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Saved. Next review');
+  await expect(page).not.toHaveURL(/#\/practice\//);
+
+  // 隔 8 天：已經過了到期日，但照記憶曲線還記得九成以上，寫「該確認了」，不用紅字
+  await page.clock.setFixedTime(new Date(2026, 8, 24, 9, 0));
+  await page.goto('/#/problems');
+  await page.reload();
+  const row = page.locator('.problem-row').filter({ has: page.getByRole('link', { name: 'Two Sum', exact: true }) });
+  await expect(row).toContainText('Time to check (last try wasn’t smooth)');
+  await expect(row.locator('.overdue')).toHaveCount(0);
+  await expect(row.locator('.chip-recall')).toHaveText(/^9\d% recall$/);
+  await page.goto('/#/problems/1');
+  const schedule = page.getByRole('region', { name: 'Review schedule' });
+  await expect(schedule).toContainText('came back early to check');
+  await expect(schedule).toContainText(', time to check');
+  await expect(schedule).not.toContainText('overdue');
+  await expect(schedule.locator('.overdue')).toHaveCount(0);
+  await page.goto('/#/review');
+  await expect(page.locator('.review-progress')).toContainText('this one is back early because the last try wasn’t smooth');
+
+  // 過了 FSRS 本來會排的那天，就跟一般的逾期一樣是紅字
+  await page.clock.setFixedTime(new Date(2027, 2, 1, 9, 0));
+  await page.goto('/#/problems');
+  await page.reload();
+  await expect(row.locator('.overdue')).toContainText('Due for review (');
+});

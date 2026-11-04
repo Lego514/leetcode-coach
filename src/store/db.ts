@@ -317,6 +317,8 @@ export class CoachDB extends Dexie {
     this.version(9).stores({}).upgrade(rebuildInUpgrade);
     // 第 10 版：很快解出又講得清楚算 Easy、「已熟練」要講得清楚，重算一次
     this.version(10).stores({}).upgrade(rebuildInUpgrade);
+    // 第 11 版：寫得不順被提早確認的題目記下 FSRS 本來會排的那天（畫面寫「該確認了」，不算逾期），重算一次
+    this.version(11).stores({}).upgrade(rebuildInUpgrade);
   }
 
   /** 會同步的資料表，依集合名稱查 */

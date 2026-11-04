@@ -12,7 +12,7 @@ import { rich } from '../i18n/rich';
 import { diffDays } from '../lib/dates';
 import { languageLabel } from '../lib/languages';
 import { RATINGS, recallOn, schedule, type Rating } from '../lib/srs';
-import { capDue, dueProblems, needsRewrite, reviewForecast, reviewsDoneOn } from '../lib/stats';
+import { capDue, dueProblems, dueState, needsRewrite, reviewForecast, reviewsDoneOn } from '../lib/stats';
 import { recallPercent } from '../lib/tree';
 import { recordAttempt } from '../store/actions';
 import type { ProgressRecord } from '../store/db';
@@ -164,7 +164,11 @@ function ReviewQueue({
                 <DifficultyTag difficulty={p.difficulty} />
                 {needsRewrite(state) && <span className="chip chip-rewrite">{t.common.rewriteTag}</span>}
                 {recall !== undefined && <span className="review-queue-meta">{t.common.recallChance(recallPercent(recall))}</span>}
-                {state.due < today && <span className="review-queue-meta">{t.date.relative(diffDays(today, state.due))}</span>}
+                {dueState(state, today) === 'confirm' ? (
+                  <span className="review-queue-meta">{t.review.confirmTag}</span>
+                ) : (
+                  state.due < today && <span className="review-queue-meta">{t.date.relative(diffDays(today, state.due))}</span>
+                )}
                 {i === 0 && <span className="review-queue-now">{t.review.current}</span>}
               </button>
             </li>
@@ -213,7 +217,9 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
       <p className="review-progress">
         {t.review.remaining(remaining)}
         {doneCount > 0 && t.review.doneCount(doneCount)}
-        {progress.due < today && t.review.thisOverdue(t.date.relative(diffDays(today, progress.due)))}
+        {dueState(progress, today) === 'confirm'
+          ? t.review.thisConfirm
+          : progress.due < today && t.review.thisOverdue(t.date.relative(diffDays(today, progress.due)))}
       </p>
       <h2 className="review-title" id="review-title">
         <span className="marked">

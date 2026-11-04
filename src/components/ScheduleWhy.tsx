@@ -1,5 +1,6 @@
 import { useI18n } from '../i18n';
-import { CONFIRM_DAYS, EXPLAIN_WINDOW_DAYS, MAX_INTERVAL, type ScheduleExplanation, type WeightFactor } from '../lib/srs';
+import { CONFIRM_DAYS, EXPLAIN_WINDOW_DAYS, hintVsSolo, MAX_INTERVAL, type ScheduleExplanation, type WeightFactor } from '../lib/srs';
+import { recallPercent } from '../lib/tree';
 
 /** 記憶度（穩定度）的天數：短的留一位小數，看得出 1.3 跟 2.3 的差別 */
 const daysText = (stability: number) => String(stability < 10 ? Math.round(stability * 10) / 10 : Math.round(stability));
@@ -10,12 +11,10 @@ const daysText = (stability: number) => String(stability < 10 ? Math.round(stabi
  */
 export function ScheduleWhy({ explanation: e, target }: { explanation: ScheduleExplanation; target: number }) {
   const { t } = useI18n();
-  const factorText = (f: WeightFactor) =>
-    f.kind === 'time'
-      ? t.why.time(String(Math.round(f.pace * 10) / 10), target)
-      : f.kind === 'hint'
-        ? t.why.hint(f.layers)
-        : t.why[f.kind];
+  const factorText = (f: Exclude<WeightFactor, { kind: 'hint' }>) =>
+    f.kind === 'time' ? t.why.time(String(Math.round(f.pace * 10) / 10), target) : t.why[f.kind];
+  // 提示看到第幾層跟 FSRS 的 Hard 合成一行，寫成跟自己解出比；乘在 Hard 上的 ×1.3 看起來像加分
+  const factors = e.factors.filter((f): f is Exclude<WeightFactor, { kind: 'hint' }> => f.kind !== 'hint');
   return (
     <details className="schedule-why">
       <summary>{t.why.title(e.days + e.delayDays)}</summary>
@@ -25,10 +24,16 @@ export function ScheduleWhy({ explanation: e, target }: { explanation: ScheduleE
             ? t.why.first
             : e.gapDays === 0
               ? t.why.sameDay
-              : t.why.gap(e.gapDays, Math.round((e.recall ?? 1) * 100))}
+              : t.why.gap(e.gapDays, recallPercent(e.recall ?? 1))}
         </li>
-        <li>{e.easy ? t.why.easy : t.why.rating[e.rating]}</li>
-        {e.factors.map((f) => (
+        <li>
+          {e.easy
+            ? t.why.easy
+            : e.hintLayers
+              ? t.why.hintDepth(e.hintLayers, hintVsSolo(e.hintLayers, e.first), e.first)
+              : t.why.rating[e.rating]}
+        </li>
+        {factors.map((f) => (
           <li key={f.kind}>
             <span>{factorText(f)}</span>
             <span className="why-weight">×{Math.round(f.weight * 100) / 100}</span>

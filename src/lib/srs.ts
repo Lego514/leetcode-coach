@@ -31,6 +31,11 @@ export interface ReviewState {
   /** 上次複習那天，用來算隔了幾天 */
   lastReview: Day;
   due: Day;
+  /**
+   * 寫得不順被提早拉回來確認時，FSRS 本來會排的那天（照目標記憶率）。在這天以前照記憶曲線還記得很多，
+   * 畫面上寫「該確認了」，不當成逾期
+   */
+  fsrsDue?: Day;
 }
 
 /** 目標記憶率：到期時大概還記得的機率。調高會更常複習 */
@@ -246,9 +251,10 @@ export function schedule(
   const known = prev && prev.stability > 0 ? prev : undefined;
   const days = known ? Math.max(0, diffDays(known.lastReview, day)) : 0;
   const memory = nextMemory(known, days, g, evidenceWeight(rating, evidence));
-  let interval = intervalFor(memory.stability, retention);
-  if (g >= 2 && isShaky(rating, evidence)) interval = Math.min(interval, CONFIRM_DAYS);
-  return {
+  const fsrsInterval = intervalFor(memory.stability, retention);
+  const confirm = g >= 2 && isShaky(rating, evidence) && fsrsInterval > CONFIRM_DAYS;
+  const interval = confirm ? CONFIRM_DAYS : fsrsInterval;
+  const state: ReviewState = {
     ...memory,
     reps: g === 1 ? 0 : (prev?.reps ?? 0) + 1,
     lapses: (prev?.lapses ?? 0) + (g === 1 ? 1 : 0),
@@ -256,6 +262,19 @@ export function schedule(
     lastReview: day,
     due: addDays(day, interval + delayDays),
   };
+  if (confirm) state.fsrsDue = addDays(day, fsrsInterval + delayDays);
+  return state;
+}
+
+/**
+ * 看了提示才解出時，跟自己解出比是幾倍（四捨五入到 0.1）：之後的複習是記憶度長多少，FSRS 的 Hard 本身打折（W[15]）；
+ * 第一次做是起始的記憶度（W[1] 比 W[2]）。再乘上提示看到第幾層的權重。
+ * 畫面跟自己解出比，不寫乘在 Hard 上的倍數（×1.3 看起來像加分）
+ */
+export function hintVsSolo(layers: number, first = false): number {
+  const layer = Math.min(Math.max(layers, 1), 4);
+  const hard = first ? W[1] / W[2] : W[15];
+  return Math.round(hard * HINT_LAYER_WEIGHT[layer] * 10) / 10;
 }
 
 /** 為什麼排這天：schedule 每一步的數字，畫面照順序說明 */
@@ -275,6 +294,8 @@ export interface ScheduleExplanation {
   stabilityAfter: number;
   /** 有乘上的權重：只有記得、而且不是同一天再做一次的時候 */
   factors: WeightFactor[];
+  /** 看了提示才解出、提示看到第幾層（有乘上權重時才有）：畫面把它跟 FSRS 的 Hard 合成一行，跟自己解出比 */
+  hintLayers?: number;
   retention: number;
   /** 照目標記憶率算出來的天數（已經套上最長 MAX_INTERVAL） */
   fsrsDays: number;
@@ -304,6 +325,7 @@ export function explainSchedule(
   const weighted = g >= 2 && !(known && gapDays === 0);
   const modifier = round8((retention ** (1 / DECAY) - 1) / FACTOR);
   const fsrsDays = intervalFor(state.stability, retention);
+  const hintLayers = weighted && rating === 'hint' && evidence.hintLayers ? Math.min(evidence.hintLayers, 4) : undefined;
   return {
     rating,
     easy: g === 4,
@@ -314,6 +336,7 @@ export function explainSchedule(
     stabilityBefore: known?.stability,
     stabilityAfter: state.stability,
     factors: weighted ? evidenceFactors(rating, evidence) : [],
+    ...(hintLayers ? { hintLayers } : {}),
     retention,
     fsrsDays,
     maxed: Math.round(state.stability * modifier) > MAX_INTERVAL,

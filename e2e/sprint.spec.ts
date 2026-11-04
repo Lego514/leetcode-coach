@@ -29,6 +29,14 @@ test('plans a sprint to an interview, puts the company’s problems first, and e
   await tag.getByRole('button', { name: 'Tag with Acme' }).click();
   await expect(tag).toContainText('Tagged 3 problems with Acme. Not found: nope');
   await expect(summary).toContainText('Company problems');
+  // 新題照順序排、下一題放不下就留到隔天；今天剩的 20 分鐘建議練講解，連到講解練習
+  await expect(page.getByRole('region', { name: 'Day by day' })).toContainText('instead of a shorter one jumping ahead');
+  const spare = days.first().getByRole('link', { name: '20 min spare to practice explaining' });
+  await expect(spare).toHaveAttribute('href', '#/mock?kind=explain');
+  // 排不進去的題目：寫出加起來要多久、為什麼排不進去；清單的題目標「清單的下一題」
+  const unscheduled = page.getByRole('region', { name: /^Problems that don’t fit/ });
+  await expect(unscheduled).toContainText(/These \d+ problems need about \d+ hours\. After reviews and higher-priority problems, no day has enough time left for the next one/);
+  await expect(unscheduled.locator('.chip').first()).toHaveText('Next on list');
 
   // 今天頁：倒數，新題照衝刺的順序（公司題先），數量照今天的時間
   await page.goto('/#/');

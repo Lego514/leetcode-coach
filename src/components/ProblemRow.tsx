@@ -5,7 +5,7 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays, type Day } from '../lib/dates';
 import { recallOn } from '../lib/srs';
-import { needsRewrite } from '../lib/stats';
+import { dueState, needsRewrite } from '../lib/stats';
 import { fadeOf, recallPercent } from '../lib/tree';
 import type { ProgressRecord } from '../store/db';
 import { DifficultyTag, LeetCodeLink, MasteryCell, stageLabel } from './ui';
@@ -25,7 +25,8 @@ interface ProblemRowProps {
 
 export function ProblemRow({ problem, progress, today, marked, showPattern, companies, note, actions }: ProblemRowProps) {
   const { t, fmt, locale } = useI18n();
-  const overdue = progress && progress.due < today;
+  // 寫得不順被提早拉回來確認的題寫「該確認了」，不用紅字：照記憶曲線還記得很多
+  const due = progress && dueState(progress, today);
   // 到期而且上次靠提示或解答的題目，標成「重寫」
   const rewrite = progress && progress.due <= today && needsRewrite(progress);
   // 今天還記得的機率（FSRS）；舊版沒有穩定度的紀錄算不出來就不顯示
@@ -46,12 +47,14 @@ export function ProblemRow({ problem, progress, today, marked, showPattern, comp
           <DifficultyTag difficulty={problem.difficulty} />
           {showPattern && <span>{getPattern(problem.pattern, locale).name}</span>}
           {progress ? (
-            <span className={overdue ? 'overdue' : undefined}>
-              {progress.due > today
+            <span className={due === 'overdue' ? 'overdue' : undefined}>
+              {due === 'later'
                 ? t.row.nextReview(fmt.day(progress.due, false))
-                : overdue
-                  ? t.row.dueOverdue(t.date.relative(diffDays(today, progress.due)))
-                  : t.row.dueNow}
+                : due === 'confirm'
+                  ? t.row.dueConfirm
+                  : due === 'overdue'
+                    ? t.row.dueOverdue(t.date.relative(diffDays(today, progress.due)))
+                    : t.row.dueNow}
             </span>
           ) : null}
           {progress && <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>}
