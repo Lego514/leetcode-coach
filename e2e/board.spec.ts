@@ -255,10 +255,10 @@ test('records steps and plays them back with notes', async ({ page }) => {
   await page.getByRole('button', { name: 'Pointer', exact: true }).click();
   const pointer = page.getByRole('group', { name: /^Pointer i/ });
 
-  // 每一步：記下畫面，再把指標往右移一格
+  // 每一步：記下畫面，再把指標往右移一格（指標一直選著；連點兩下會變成編輯名稱）
+  await pointer.click();
   for (let i = 0; i < 3; i += 1) {
     await page.keyboard.press('s');
-    await pointer.click();
     await page.keyboard.press('ArrowRight');
   }
   await expect(pointer).toHaveAccessibleName('Pointer i at index 3');
