@@ -1,3 +1,4 @@
+import { MOCK_MINUTES as TARGET_MINUTES } from '../data/interview';
 import { PATTERN_ORDER, type PatternId } from '../data/patterns';
 import type { Difficulty, Problem } from '../data/problems';
 import { addDays, diffDays, parseDay, type Day } from './dates';
@@ -22,8 +23,11 @@ export const SPRINT_MINUTE_OPTIONS = [30, 60, 90, 120, 180, 240, 300] as const;
 export const SPRINT_REVIEW_DAY_OPTIONS = [0, 1, 2, 3, 4, 5] as const;
 export const DEFAULT_SPRINT: Omit<SprintSettings, 'date'> = { weekdayMinutes: 90, weekendMinutes: 180, reviewDays: 2 };
 
-/** 估計的時間：一題新題依難度，複習一題，一場完整模擬，一次行為面試練習 */
-export const NEW_MINUTES: Record<Difficulty, number> = { Easy: 20, Medium: 35, Hard: 50 };
+/**
+ * 估計的時間：一題新題依難度，複習一題，一場完整模擬，一次行為面試練習。
+ * 新題用練習頁計時器的目標時間（Easy 15、Medium 25、Hard 40），兩邊說的時間才會一樣
+ */
+export const NEW_MINUTES: Record<Difficulty, number> = TARGET_MINUTES;
 export const REVIEW_MINUTES = 10;
 export const MOCK_MINUTES = 45;
 export const STORY_MINUTES = 15;

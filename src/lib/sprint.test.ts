@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MOCK_MINUTES } from '../data/interview';
 import { PATTERN_ORDER } from '../data/patterns';
 import { buildCatalog, problemsInList } from './catalog';
 import { addDays } from './dates';
@@ -78,6 +79,10 @@ describe('stuck patterns in the sprint', () => {
 });
 
 describe('planSprint', () => {
+  it('estimates a new problem with the practice timer’s target, so both pages say the same time', () => {
+    expect(NEW_MINUTES).toEqual(MOCK_MINUTES);
+  });
+
   it('plans every day until the day before the interview, and the last days are review only', () => {
     const plan = planSprint(input());
     expect(plan.days).toHaveLength(14);
