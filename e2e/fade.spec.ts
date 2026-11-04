@@ -18,6 +18,12 @@ test('marks long-untouched problems with a dot on the mastery cell, without drop
   await expect(cell).toHaveAttribute('data-level', '1');
   await expect(cell).not.toHaveAttribute('data-fade', /./);
   await expect(cell).toHaveAccessibleName('Learning');
+  await page.goto('/#/problems');
+  const freshChip = page.locator('.problem-row', { hasText: 'Two Sum' }).locator('.chip-recall');
+  await expect(freshChip).toHaveText('100% recall');
+  await expect(freshChip).not.toHaveAttribute('data-fade', /./);
+  await expect(page.locator('.problem-row', { hasText: 'Valid Anagram' }).locator('.chip-recall')).toHaveCount(0);
+  await page.goto('/#/problems/1');
 
   // 一個月沒碰：有點忘了（空心點），顏色還是學習中
   await page.clock.setFixedTime(new Date(start.getTime() + 30 * DAY));
@@ -33,8 +39,13 @@ test('marks long-untouched problems with a dot on the mastery cell, without drop
   await expect(cell).toHaveAccessibleName('Learning, not touched in 150 days, probably forgotten some');
 
   // 題目列表、進度頁的方格也有，圖例寫出兩種點
+  const recallNow = (await page.locator('dt:has-text("Remember it now") + dd').textContent())!;
   await page.goto('/#/problems');
   await expect(page.getByRole('img', { name: 'Learning, not touched in 150 days, probably forgotten some' })).toHaveAttribute('data-fade', '2');
+  // 每一題旁邊的小框寫還記得的機率，跟題目頁的數字一樣；可能忘了的是橘底
+  const chip = page.locator('.problem-row', { hasText: 'Two Sum' }).locator('.chip-recall');
+  await expect(chip).toHaveText(`${recallNow} recall`);
+  await expect(chip).toHaveAttribute('data-fade', '2');
   await page.goto('/#/progress');
   const mastery = page.locator('.sheet:has(#mastery)');
   await expect(mastery.getByRole('link', { name: 'Two Sum, Learning, not touched in 150 days, probably forgotten some' })).toBeVisible();

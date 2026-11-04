@@ -148,6 +148,14 @@ export function fadeOf(state: Partial<Pick<ReviewState, 'stability' | 'lastRevie
   return recall >= FADED_RECALL ? 1 : 2;
 }
 
+/**
+ * 畫面上寫的還記得的機率（%）：無條件捨去，69.6% 寫 69%。四捨五入會寫成 70%，卻已經有橘點、黃葉，
+ * 數字跟門檻（70%、55%）對不上。加一點點是因為 0.7 * 100 在浮點數可能算成 69.999…
+ */
+export function recallPercent(recall: number): number {
+  return Math.floor(recall * 100 + 1e-9);
+}
+
 /** 一題在樹上的樣子：還沒做是空位，上次靠提示是小芽，自己解出是葉子（依現在還記得的機率上色），征服的結果實 */
 export function nodeFor(state: StateLike | undefined, conquered: boolean, today: Day): TreeNode {
   if (!state) return { kind: 'bud' };

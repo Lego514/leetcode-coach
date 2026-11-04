@@ -146,6 +146,7 @@ const en: Messages = {
     dueNow: 'Due for review',
     dueOverdue: (relative) => `Due for review (${relative})`,
     nextReview: (day) => `Next review ${day}`,
+    recallTag: (pct) => `${pct}% recall`,
   },
 
   editAttempt: {

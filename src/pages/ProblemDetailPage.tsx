@@ -21,7 +21,7 @@ import { LANGUAGES } from '../lib/languages';
 import { conquests } from '../lib/motivation';
 import { stuckKinds } from '../lib/stuck';
 import { recallOn, stageOf } from '../lib/srs';
-import { nodeFor } from '../lib/tree';
+import { nodeFor, recallPercent } from '../lib/tree';
 import { deleteCustomProblem, resetProgress, saveNote, setCompanies } from '../store/actions';
 import type { AttemptRecord, NoteRecord } from '../store/db';
 import { explainLatest, retentionOf } from '../store/progress';
@@ -151,7 +151,7 @@ function ProblemDetail({ problem }: { problem: Problem }) {
                     {recallOn(progress, day) !== undefined && (
                       <>
                         <dt>{t.detail.recallNow}</dt>
-                        <dd>{Math.round(recallOn(progress, day)! * 100)}%</dd>
+                        <dd>{recallPercent(recallOn(progress, day)!)}%</dd>
                         <dt>{t.detail.memory}</dt>
                         <dd>{t.detail.memoryValue(Math.round(progress.stability), Math.round(progress.difficulty * 10) / 10)}</dd>
                     </>
