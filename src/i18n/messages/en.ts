@@ -532,6 +532,7 @@ const en: Messages = {
     status: 'Status',
     statusAny: 'Any status',
     statusDue: 'Due for review',
+    statusFading: 'Fading (orange dot)',
     company: 'Company',
     allCompanies: 'All companies',
     search: 'Search',
@@ -1126,6 +1127,8 @@ const en: Messages = {
     weakest: (pattern) => `Weakest right now: <link>${pattern}</link>`,
     emptyList: 'This list has no problems.',
     cellLabel: (title, stage) => `${title}, ${stage}`,
+    fading: (n) =>
+      `${count(n, 'problem')} ${n === 1 ? 'hasn’t' : 'haven’t'} been touched in a while (orange dot). Today’s reviews put the most forgotten first. <link>See which ones</link>`,
     weakestTip: (pattern) => `Try a mock interview with “Attempted but weakest” and the pattern set to ${pattern}.`,
     weeklyTitle: 'Sessions per week',
     weeklyNote: 'New problems, reviews, and mock interviews',

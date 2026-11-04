@@ -24,6 +24,7 @@ import {
   weeklyCounts,
 } from '../lib/stats';
 import { STUCK_WINDOW_DAYS, summarizeStuck } from '../lib/stuck';
+import { fadeOf } from '../lib/tree';
 import { retentionOf } from '../store/progress';
 import { useAttempts, useCardReviews, useCatalog, useMetaMap, useMocks, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
 
@@ -58,6 +59,8 @@ export function ProgressPage() {
 
   const started = problems.filter((p) => progress.has(p.id)).length;
   const mastered = problems.filter((p) => stageOf(progress.get(p.id)) === 'mastered').length;
+  // 有橘點（很久沒碰）的題數；複習清單本來就把最可能忘的排前面，這裡讓人看得到是哪幾題
+  const fading = problems.filter((p) => fadeOf(progress.get(p.id), day) > 0).length;
   // 做過微複習的日子也算連續天數
   const streak = practiceStreak(streakDays(allAttempts, cardReviews ?? [], rehearsals ?? []), day);
   // 熱度圖的範圍：練題目或做微複習都算有練習的一天，和連續天數的算法一樣
@@ -197,6 +200,13 @@ export function ProgressPage() {
                     {t.legend.hint}
                   </p>
                 </div>
+                {fading > 0 && (
+                  <p className="sheet-note" style={{ marginTop: 10 }}>
+                    {rich(t.progress.fading(fading), {
+                      link: (text) => <Link to={`/problems?list=${list}&status=fading`}>{text}</Link>,
+                    })}
+                  </p>
+                )}
                 {weakest && (
                   <p className="sheet-note" style={{ marginTop: 10 }}>
                     {t.progress.weakestTip(getPattern(weakest.pattern, locale).name)}

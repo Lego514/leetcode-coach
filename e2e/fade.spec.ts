@@ -41,4 +41,23 @@ test('marks long-untouched problems with a dot on the mastery cell, without drop
   const legend = mastery.getByLabel('Legend');
   await expect(legend).toContainText('Fading');
   await expect(legend).toContainText('Probably forgotten');
+
+  // 進度頁寫有幾題很久沒碰，連到題目列表的「很久沒碰」篩選，只列出有橘點的題
+  await expect(mastery).toContainText('1 problem hasn’t been touched in a while (orange dot).');
+  await mastery.getByRole('link', { name: 'See which ones' }).click();
+  await expect(page).toHaveURL(/#\/problems\?.*status=fading/);
+  await expect(page.getByLabel('Status')).toHaveValue('fading');
+  await expect(page.locator('.problem-row')).toHaveCount(1);
+  await expect(page.getByRole('link', { name: 'Two Sum', exact: true })).toBeVisible();
+});
+
+test('shows no fading note on Progress when nothing has faded', async ({ page }) => {
+  await page.clock.setFixedTime(start);
+  await page.goto('/#/practice/1');
+  await page.getByRole('group', { name: 'While solving' }).getByRole('button', { name: 'I’m done' }).click();
+  await page.getByRole('button', { name: /^Solved alone/ }).click();
+  await page.getByRole('region', { name: 'Record this attempt' }).getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Saved. Next review');
+  await page.goto('/#/progress');
+  await expect(page.locator('.sheet:has(#mastery)')).not.toContainText('touched in a while');
 });

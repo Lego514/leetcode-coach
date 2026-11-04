@@ -12,11 +12,13 @@ import { inList, LIST_FILTERS } from '../lib/catalog';
 import { IMPORT_DUE_PER_DAY, schedule, stageOf, STAGES, type Rating, type Stage } from '../lib/srs';
 import { markSolvedBefore, updateSettings } from '../store/actions';
 import { retentionOf } from '../store/progress';
+import { fadeOf } from '../lib/tree';
 import { useCatalog, useCompanies, useMetaMap, useProgressMap, useSettings, useToday } from '../store/queries';
 
-type StatusFilter = 'any' | 'due' | Stage;
+// fading：很久沒碰、方格右上角有橘點的題目（門檻跟演算法樹的黃葉一樣）
+type StatusFilter = 'any' | 'due' | 'fading' | Stage;
 
-const STATUS_FILTERS: StatusFilter[] = ['any', 'due', ...STAGES];
+const STATUS_FILTERS: StatusFilter[] = ['any', 'due', 'fading', ...STAGES];
 const DIFFICULTIES: Difficulty[] = ['Easy', 'Medium', 'Hard'];
 
 function pick<T extends string, F extends string>(value: string | null, allowed: readonly T[], fallback: F): T | F {
@@ -69,7 +71,8 @@ export function ProblemsPage() {
       if (difficulty !== 'any' && p.difficulty !== difficulty) return false;
       const state = progress.get(p.id);
       if (status === 'due' && !(state && state.due <= day)) return false;
-      if (status !== 'any' && status !== 'due' && stageOf(state) !== status) return false;
+      if (status === 'fading' && !fadeOf(state, day)) return false;
+      if (status !== 'any' && status !== 'due' && status !== 'fading' && stageOf(state) !== status) return false;
       if (company !== 'any' && !metaMap.get(p.id)?.companies.includes(company)) return false;
       if (q && !p.title.toLowerCase().includes(q) && String(p.id) !== q) return false;
       return true;
@@ -88,7 +91,7 @@ export function ProblemsPage() {
   );
   const listStarted = listTotal.filter((p) => progress.has(p.id)).length;
   const statusLabel = (s: StatusFilter) =>
-    s === 'any' ? t.problems.statusAny : s === 'due' ? t.problems.statusDue : t.stages[s];
+    s === 'any' ? t.problems.statusAny : s === 'due' ? t.problems.statusDue : s === 'fading' ? t.problems.statusFading : t.stages[s];
 
   // 已經有紀錄的題目不能批次標記；標記完成後自動從選取中消失
   const selectedIds = [...selected].filter((id) => !progress.has(id));
