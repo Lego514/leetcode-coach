@@ -209,6 +209,22 @@ export async function deleteStory(id: string): Promise<void> {
   });
 }
 
+/**
+ * 按「新增故事」會先建立一則空的再打開；什麼都沒寫就離開的話，回到故事列表時刪掉，不留「未命名」。
+ * 只看標題和 STAR 四段，先標好的主題不算寫了東西。在列表頁做而不是離開編輯頁時做：
+ * 離開時可能還有沒存的字，列表頁沒有人在編輯
+ */
+export async function discardEmptyStories(): Promise<void> {
+  await db.transaction('rw', db.stories, db.outbox, async () => {
+    const stories = await db.stories.toArray();
+    const empty = stories.filter((s) => [s.title, s.situation, s.task, s.action, s.result].every((text) => text.trim() === ''));
+    for (const story of empty) {
+      await db.stories.delete(story.id);
+      await track(db, 'stories', story.id, true);
+    }
+  });
+}
+
 /** 存一次行為面試的練習；回傳它的 uid */
 export async function saveRehearsal(record: Omit<RehearsalRecord, 'id' | 'uid'>): Promise<string> {
   const uid = crypto.randomUUID();

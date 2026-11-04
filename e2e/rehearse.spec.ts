@@ -82,6 +82,11 @@ test('answers a behavioral question out loud with a story, checks it, and gets A
   await expect(page.getByLabel('Answer with')).toHaveValue(/.+/);
   await expect(page.getByLabel('Answer with').locator('option:checked')).toHaveText('Pipeline fix');
   await page.getByLabel('Record audio (stays on this device)').uncheck();
+  // 逐字稿要自己打開（聲音會送到 Google），旁邊寫清楚
+  const transcribe = page.getByRole('checkbox', { name: 'Show a live English transcript' });
+  await expect(transcribe).not.toBeChecked();
+  await expect(transcribe).toHaveAccessibleDescription(/sends the audio to Google/);
+  await transcribe.check();
   await page.getByRole('button', { name: 'Start answering' }).click();
 
   await expect(page.getByRole('heading', { level: 1, name: 'Answer out loud' })).toBeVisible();

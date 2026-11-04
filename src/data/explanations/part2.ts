@@ -6,7 +6,7 @@ export const EXPLANATIONS_PART_2: Record<number, string> = {
 So I use binary search with left and right bounds and move one bound past the middle each time.
 For example, searching for 9 in [-1, 0, 3, 5, 9, 12], the middle is 3, which is too small, so I search the right half and find 9 at index 4.
 This takes O(log n) time and O(1) space.
-One edge case is a target that isn't present, where the bounds cross and I return -1; I compute the middle as left + (right - left) / 2 to avoid overflow.`,
+One edge case is a target that isn't present, where the bounds cross and I return -1; in Python I compute the middle with integer division, (left + right) // 2, since Python integers don't overflow.`,
 
   278: `The key insight is that versions are good and then bad, so the first bad version is a boundary I can binary search for.
 So I use binary search that keeps the right bound on a bad version and moves left past good ones.
@@ -290,7 +290,7 @@ One edge case is a path that starts at the root, which I cover by seeding prefix
 So I use BFS that carries each node's index.
 For example, a level with indices 4 and 7 has width 4, even though the nodes in between are null.
 This takes O(n) time and O(w) space.
-One edge case is indices overflowing on deep, sparse trees, so I subtract each level's first index before computing its children.`,
+One edge case is a deep, sparse tree, where the indices double every level and get huge, so I subtract each level's first index before computing its children.`,
 
   863: `The key insight is that distance K can go up through parents, so I need to treat the tree like an undirected graph.
 So I first record each node's parent, then run BFS from the target over children and parents with a visited set.

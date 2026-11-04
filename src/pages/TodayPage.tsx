@@ -29,7 +29,7 @@ import {
 } from '../lib/stats';
 import { useCloud } from '../store/cloud';
 import { retentionOf } from '../store/progress';
-import { loadDemoData } from '../store/demo';
+import { loadDemoData, useCanTryDemo } from '../store/demo';
 import { useSprint } from '../store/sprint';
 import type { AttemptMode, AttemptRecord } from '../store/db';
 import { useAttempts, useCardReviews, useCatalog, useProgressMap, useRehearsals, useSettings, useToday } from '../store/queries';
@@ -209,6 +209,8 @@ export function TodayPage() {
 
   const oneMore = () => setExtra({ day, count: extraToday + 1 });
   const firstRun = loaded && progress.size === 0;
+  // 只寫過筆記、故事或白板的人不能載入示範資料：清除時會連自己的東西一起清掉
+  const canTryDemo = useCanTryDemo() === true;
 
   const rowActions = (p: Problem, mode: AttemptMode) => (
     <>
@@ -249,13 +251,13 @@ export function TodayPage() {
                   {t.today.adjustPlan}
                 </Link>
                 {/* 還沒登入時可以先看示範資料（例如看履歷的面試官，不用自己刷題就看得到所有功能） */}
-                {account.kind !== 'signed-in' && (
+                {account.kind !== 'signed-in' && canTryDemo && (
                   <button className="btn btn-primary" onClick={() => void tryDemo()}>
                     {t.demo.load}
                   </button>
                 )}
               </div>
-              {account.kind !== 'signed-in' && <p className="field-hint" style={{ marginTop: 8 }}>{t.demo.loadHint}</p>}
+              {account.kind !== 'signed-in' && canTryDemo && <p className="field-hint" style={{ marginTop: 8 }}>{t.demo.loadHint}</p>}
             </div>
           </Sheet>
         )}

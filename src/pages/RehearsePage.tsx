@@ -62,7 +62,8 @@ function RehearseSetup({ onStart }: { onStart: (setup: Setup) => void }) {
   const [question, setQuestion] = useState<BehavioralQuestion | undefined>(() => drawQuestion(BEHAVIORAL_QUESTIONS));
   const [storyId, setStoryId] = useState<string | null>(null);
   const [withAudio, setWithAudio] = useState(true);
-  const [withTranscript, setWithTranscript] = useState(speechSupported());
+  // 跟模擬面試一樣預設不開：Chrome 會把聲音送到 Google 轉文字，要自己決定
+  const [withTranscript, setWithTranscript] = useState(false);
 
   const draw = (next: BehavioralTheme | 'all', previous?: string) => {
     const pool = BEHAVIORAL_QUESTIONS.filter((q) => next === 'all' || q.theme === next);
@@ -164,10 +165,23 @@ function RehearseSetup({ onStart }: { onStart: (setup: Setup) => void }) {
             <input type="checkbox" checked={withAudio} onChange={(e) => setWithAudio(e.target.checked)} />
             {r.withAudio}
           </label>
-          <label className="check">
-            <input type="checkbox" checked={withTranscript} disabled={!speechSupported()} onChange={(e) => setWithTranscript(e.target.checked)} />
-            {speechSupported() ? r.withTranscript : r.noTranscript}
-          </label>
+          <div>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={withTranscript}
+                disabled={!speechSupported()}
+                aria-describedby={speechSupported() ? 'rehearse-transcript-hint' : undefined}
+                onChange={(e) => setWithTranscript(e.target.checked)}
+              />
+              {speechSupported() ? r.withTranscript : r.noTranscript}
+            </label>
+            {speechSupported() && (
+              <p className="field-hint" id="rehearse-transcript-hint" style={{ marginTop: 4 }}>
+                {t.mock.transcriptHint}
+              </p>
+            )}
+          </div>
           <div className="btn-row">
             <button
               type="button"
