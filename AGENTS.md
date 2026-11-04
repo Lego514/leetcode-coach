@@ -118,4 +118,4 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 - 使用者要做的設定：Render 補上 `AI_ALLOWED_EMAILS`；選用的 `SENTRY_DSN`、`ADMIN_EMAILS`。
 - 跟朋友互相模擬面試（面試官看題目和評分表，兩邊共用白板）。
-- 求職進度追蹤、資料模型的 ER 圖（Mermaid）。
+- 資料模型的 ER 圖（Mermaid）。求職進度追蹤使用者在別的專案做了，這裡不做。
