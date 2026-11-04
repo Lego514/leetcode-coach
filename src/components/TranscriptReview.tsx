@@ -30,6 +30,8 @@ interface TranscriptReviewProps {
   /** 貼回來的 ChatGPT 或 Claude 回覆；有題目時才有 */
   chatReply?: string;
   onChatReply?: (reply: string) => void;
+  /** 用打字代替講出來：標題寫「你的講解」，只算字數（沒有語速、口頭禪），送 AI 時說明是打的 */
+  typed?: boolean;
 }
 
 export function TranscriptReview({
@@ -44,6 +46,7 @@ export function TranscriptReview({
   onFollowUp,
   chatReply,
   onChatReply,
+  typed,
 }: TranscriptReviewProps) {
   const { t, locale } = useI18n();
   const toast = useToast();
@@ -58,6 +61,7 @@ export function TranscriptReview({
     transcript: text,
     seconds: usedSec,
     language: locale,
+    ...(typed ? { typed: true } : {}),
   });
   const chatPrompts = problem
     ? [
@@ -79,10 +83,14 @@ export function TranscriptReview({
   }
 
   return (
-    <Sheet title={t.mock.transcriptTitle} id="transcript-review" note={t.mock.transcriptReviewNote}>
+    <Sheet
+      title={typed ? t.mock.typedReviewTitle : t.mock.transcriptTitle}
+      id="transcript-review"
+      note={typed ? t.mock.typedReviewNote : t.mock.transcriptReviewNote}
+    >
       <div className="sheet-body stack" style={{ gap: 12 }}>
         <label className="visually-hidden" htmlFor="transcript-input">
-          {t.mock.transcriptLabel}
+          {typed ? t.mock.typedLabel : t.mock.transcriptLabel}
         </label>
         <textarea
           id="transcript-input"
@@ -93,7 +101,8 @@ export function TranscriptReview({
           placeholder={t.mock.transcriptNone}
           onChange={(e) => onChange(e.target.value)}
         />
-        {text && (
+        {text && typed && <p className="sheet-note">{t.mock.typedWords(stats.words)}</p>}
+        {text && !typed && (
           <ul className="bullets">
             <li>
               {t.mock.transcriptStats(stats.words, stats.wpm)}
@@ -120,8 +129,11 @@ export function TranscriptReview({
               feedback={feedback}
               onFeedback={onFeedback}
               onUseScript={requestSave}
+              typed={typed}
             />
-            {onFollowUp && <FollowUpPanel problem={problem} transcript={value} usedSec={usedSec} value={followUp ?? null} onChange={onFollowUp} />}
+            {onFollowUp && (
+              <FollowUpPanel problem={problem} transcript={value} usedSec={usedSec} value={followUp ?? null} onChange={onFollowUp} typed={typed} />
+            )}
             {onChatReply && (
               <ChatPromptPanel
                 disabled={!text}

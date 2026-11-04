@@ -133,6 +133,8 @@ export const mockDataSchema = z.object({
   kind: z.enum(MOCK_KINDS),
   /** 在白板上照著步驟講的講解練習 */
   board: z.boolean().optional(),
+  /** 用打字代替講出來的講解練習：transcript 是打的字，不是語音辨識 */
+  typed: z.boolean().optional(),
   day,
   startedAt: timestamp,
   limitSec: z.number().int().min(0).max(24 * 3600),
@@ -419,10 +421,12 @@ export const feedbackRequestSchema = z.object({
     difficulty: z.enum(DIFFICULTIES),
     pattern: z.string().trim().min(1).max(80),
   }),
-  /** 語音辨識出來、使用者可能修正過的英文逐字稿 */
+  /** 語音辨識出來、使用者可能修正過的英文逐字稿；typed 時是打的字 */
   transcript: z.string().trim().min(20).max(20_000),
   seconds: z.number().int().min(0).max(24 * 3600),
   language: z.enum(LOCALE_IDS),
+  /** 用打字代替講出來：不是語音辨識，seconds 是打字的時間 */
+  typed: z.boolean().optional(),
 });
 export type FeedbackRequest = z.infer<typeof feedbackRequestSchema>;
 

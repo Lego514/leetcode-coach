@@ -13,11 +13,23 @@ import type { BehavioralFeedbackRequest, FeedbackRequest } from '../../shared/pr
 
 const SPEECH_NOTE =
   'The transcript comes from speech recognition, so it may lack punctuation or contain misheard words. Judge what I meant and do not penalize recognition errors.';
+/** 打字代替講出來：不是語音辨識，請它當成我會講出來的話來看 */
+const TYPED_NOTE = 'I typed it because I could not talk out loud, so judge it as what I would say to the interviewer, not as written text.';
+
+/** 講解是講的（語音辨識的逐字稿）還是打的 */
+const explanationIntro = (request: FeedbackRequest) =>
+  request.typed
+    ? `Below is my explanation of my solution to a LeetCode problem, typed as if to an interviewer. ${TYPED_NOTE}`
+    : `Below is a transcript of me explaining my solution to a LeetCode problem as if to an interviewer. ${SPEECH_NOTE}`;
+const followUpIntro = (request: FeedbackRequest) =>
+  request.typed
+    ? `Below are the problem and my explanation, typed instead of spoken. ${TYPED_NOTE}`
+    : `Below are the problem and a transcript of my explanation. ${SPEECH_NOTE}`;
 
 /** 講解回饋：五個重點打分數、要改的句子、改寫成英文講法 */
 export function explanationChatPrompt(request: FeedbackRequest): string {
   const lang = LANGUAGE_NAMES[request.language];
-  return `I'm preparing for US software engineering interviews, and explaining my solution out loud in English is the skill I most want to improve. Below is a transcript of me explaining my solution to a LeetCode problem as if to an interviewer. ${SPEECH_NOTE}
+  return `I'm preparing for US software engineering interviews, and explaining my solution out loud in English is the skill I most want to improve. ${explanationIntro(request)}
 
 Score my explanation on five points, each 0 (missing), 1 (mentioned but incomplete or unclear), or 2 (clear and correct):
 ${EXPLAIN_RUBRIC}
@@ -37,7 +49,7 @@ ${buildUserMessage(request)}`;
 /** 面試官追問：一次問一題、等我回答，三題問完再評分 */
 export function followUpChatPrompt(request: FeedbackRequest): string {
   const lang = LANGUAGE_NAMES[request.language];
-  return `Let's practice the follow-up part of a coding interview. You play the interviewer at a US tech company, and I'm practicing how to explain and defend my solution out loud in English. Below are the problem and a transcript of my explanation. ${SPEECH_NOTE}
+  return `Let's practice the follow-up part of a coding interview. You play the interviewer at a US tech company, and I'm practicing how to explain and defend my solution out loud in English. ${followUpIntro(request)}
 
 Ask me the follow-up questions a real interviewer would most likely ask next, one at a time. Prefer questions about what my explanation left vague, skipped, or got wrong. Mix these kinds: ${FOLLOW_UP_KIND_GUIDE}. Ask each question in short spoken English, do not hint at the answer, and wait for my reply before asking the next one.
 

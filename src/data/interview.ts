@@ -164,6 +164,8 @@ One edge case is ..., which I handle by ...`;
 
 export const MOCK_MINUTES = { Easy: 15, Medium: 25, Hard: 40 } as const;
 export const EXPLAIN_SECONDS = 120;
+/** 打字比講話慢：用打的講解預設五分鐘 */
+export const TYPED_EXPLAIN_SECONDS = 300;
 
 /** 講解練習：兩分鐘內要講到的重點（文字在 interview.explainChecks） */
 export const EXPLAIN_CHECKS = EXPLAIN_POINTS;

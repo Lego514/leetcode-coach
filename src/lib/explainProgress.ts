@@ -16,6 +16,8 @@ export interface MockLike {
   steps: readonly string[];
   /** 講解練習的自評：1 講得很順、2 有卡住、3 講不出來 */
   clarity?: 1 | 2 | 3;
+  /** 用打字代替講出來：重點照樣算，但「講得很順」只算講出來的 */
+  typed?: boolean;
   feedback?: Pick<ExplanationFeedback, 'points'>;
   followUp?: { items: readonly { kind: FollowUpKind; score?: 0 | 1 | 2 }[] };
 }
@@ -28,6 +30,7 @@ export interface ExplainSession {
   points: Record<ExplainPoint, number>;
   /** 五個重點的平均（0 到 1） */
   score: number;
+  /** 講出來的講解練習的自評；打字的不算（寫得順不代表講得順） */
   clarity?: 1 | 2 | 3;
   /** 追問的回答，有評分的才算（0 到 1） */
   followUps: { kind: FollowUpKind; score: number }[];
@@ -53,7 +56,7 @@ export function explainSessions(mocks: readonly MockLike[]): ExplainSession[] {
         source: ai ? 'ai' : 'self',
         points,
         score: average(EXPLAIN_POINTS.map((id) => points[id]))!,
-        clarity: m.kind === 'explain' ? m.clarity : undefined,
+        clarity: m.kind === 'explain' && !m.typed ? m.clarity : undefined,
         followUps: (m.followUp?.items ?? []).flatMap((item) => (item.score === undefined ? [] : [{ kind: item.kind, score: item.score / 2 }])),
       };
     });

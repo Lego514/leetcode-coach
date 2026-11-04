@@ -91,6 +91,19 @@ describe('explainProgress', () => {
 const markBase: MockLike = { kind: 'explain', day: '2026-10-01', startedAt: '2026-10-01T10:00:00Z', steps: [] };
 const ai = (score: 0 | 1 | 2, n = 5) => ({ points: EXPLAIN_POINTS.slice(0, n).map((id) => ({ id, score, note: '' })) });
 
+describe('typed explanations', () => {
+  it('count their points like spoken ones, but only spoken drills count as smooth', () => {
+    const spoken = drill([...EXPLAIN_POINTS], 1);
+    const typed = { ...drill([...EXPLAIN_POINTS], 1), typed: true };
+    const sessions = explainSessions([spoken, typed]);
+    expect(sessions.map((s) => s.score)).toEqual([1, 1]);
+    expect(sessions.map((s) => s.clarity)).toEqual([1, undefined]);
+    expect(explainProgress(sessions).smooth).toEqual({ recent: 1, recentOf: 1, previous: 0, previousOf: 0 });
+    // 寫得清楚也算講得清楚：「已熟練」和 Easy 看的是內容
+    expect(explanationMark(typed)?.clear).toBe(true);
+  });
+});
+
 describe('explanationMark', () => {
   it('uses the AI score when there is one: clear from 80% of the five points', () => {
     expect(explanationMark({ ...markBase, feedback: ai(2) as never })).toEqual({ day: '2026-10-01', clear: true });
