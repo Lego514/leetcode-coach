@@ -7,8 +7,8 @@ const en: Messages = {
   demo: {
     load: 'Try it with demo data',
     loadHint: 'Fills the app with six weeks of made-up practice so you can see every feature. Clear it anytime; it’s never synced.',
-    loaded: 'Demo data loaded. Look around: reviews, the whiteboard, progress, and more.',
-    banner: 'You’re looking at demo data: six weeks of made-up practice.',
+    loaded: 'Demo data loaded. Look around: reviews, progress, your explanation drills, and more.',
+    banner: 'You’re looking at demo data: six weeks of made-up practice. Clearing it also removes anything you add meanwhile.',
     clear: 'Clear demo data',
   },
   app: {
@@ -212,7 +212,7 @@ const en: Messages = {
     levelTitle: (index, title) => `Hint ${index}: ${title}`,
     directionTitle: 'Which direction to think',
     patternLabel: (name) => name,
-    direction: (pattern) => `This one is a <b>${pattern}</b> problem. Typical signs of this pattern:`,
+    direction: (pattern) => `This one uses the <b>${pattern}</b> pattern. Typical signs of it:`,
     insightTitle: 'Key insight',
     yourNote: (idea) => `Your earlier note: ${idea}`,
     noBuiltinHint: 'You added this problem, so there is no built-in insight. The next layers show edge cases and the template.',
@@ -1704,7 +1704,7 @@ const en: Messages = {
     levelUp: (pattern, level) => `Pattern level up: ${pattern} is now “${level}”.`,
     levels: ['Not started', 'Practicing', 'Got it', 'Mastered'],
     milestonePattern: (n, pattern, level) => `Next goal: ${count(n, 'more problem')} and ${pattern} reaches “${level}”.`,
-    milestoneSprouts: (n) => ` ${n === 1 ? 'One sprout' : `${n} sprouts`} in this pattern count once you rewrite them.`,
+    milestoneSprouts: (n) => (n === 1 ? ' One sprout in this pattern counts once you rewrite it.' : ` ${n} sprouts in this pattern count once you rewrite them.`),
     milestoneReadiness: (n, pct) => `Next goal: ${count(n, 'more problem')} and your readiness reaches ${pct}%.`,
     conqueredTime: (title, first, now) => `Conquered! ${title}: ${first} min with help the first time, ${now} min on your own now.`,
     personalBest: (title, now, best) => `New best! ${title}: ${now} min, ${best - now} min faster than your previous best of ${best}.`,

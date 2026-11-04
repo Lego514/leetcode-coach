@@ -6,7 +6,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 
 **Live app:** https://leetcode-coach-f6q7.onrender.com — it runs on free hosting that sleeps when idle, so the first visit after a while can take about a minute to wake up. After that it's fast, and once loaded it keeps working offline.
 
-**No account needed to look around:** on the Today page, press **Try it with demo data** to fill the app with six weeks of made-up practice (reviews due, a streak, a growing tree, explanation drills, stuck patterns). It stays in your browser, is never synced, and **Clear demo data** removes it.
+**No account needed to look around:** on the Today page, press **Try it with demo data** to fill the app with six weeks of made-up practice (reviews due, a streak, a growing tree, explanation drills, stuck patterns). It stays in your browser, is never synced, and **Clear demo data** removes it. Since clearing empties the browser, it's only offered before you've saved anything of your own (settings are put back when you clear).
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/today-dark.png"><img src="docs/images/today-light.png" alt="The Today page: today's goal with the streak and its shields, a small algorithm tree, and the capybara coding on a laptop next to a speech bubble with an encouraging line and a tip"></picture>
 
@@ -331,7 +331,7 @@ Notes:
 
 這是一個幫忙準備美國軟體工程師面試的刷題教練。題目還是在 LeetCode 上寫，這個 App 負責寫題以外的事：決定今天練什麼、用 FSRS（Anki 用的排程演算法）排好每一題的複習、記筆記和解題步驟、練習用英文把解法講清楚。演算法樹和陪你刷題的卡皮巴拉讓人每天想回來。不用帳號就能用，登入後可以在不同裝置之間同步。
 
-**線上版本**：https://leetcode-coach-f6q7.onrender.com 。免費方案閒置 15 分鐘會休眠，之後第一次開啟大約要等一分鐘，醒來之後就很快；頁面載入過一次後也能離線使用。想先看看的話，在今天頁按「用示範資料看看」，會載入六週編出來的練習紀錄（到期的複習、連續天數、長大中的樹、講解練習、常卡住的模式），只存在你的瀏覽器、不會同步，隨時可以清掉。上面的截圖也是這份示範資料，`npm run screenshots` 會重新產生。
+**線上版本**：https://leetcode-coach-f6q7.onrender.com 。免費方案閒置 15 分鐘會休眠，之後第一次開啟大約要等一分鐘，醒來之後就很快；頁面載入過一次後也能離線使用。想先看看的話，在今天頁按「用示範資料看看」，會載入六週編出來的練習紀錄（到期的複習、連續天數、長大中的樹、講解練習、常卡住的模式），只存在你的瀏覽器、不會同步，隨時可以清掉。清除會清空這個瀏覽器的資料，所以只有還沒存過自己的東西時才會出現（先調過的設定清除時會放回去）。上面的截圖也是這份示範資料，`npm run screenshots` 會重新產生。
 
 ### 功能
 

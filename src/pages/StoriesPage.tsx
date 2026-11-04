@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { SaveStatus, useAutosave } from '../components/autosave';
 import { SpotArt } from '../components/SpotArt';
@@ -8,7 +8,7 @@ import { Dialog, PageHead, Sheet } from '../components/ui';
 import { BEHAVIORAL_QUESTIONS, BEHAVIORAL_THEMES, STAR_PARTS, STAR_PHRASES, type BehavioralTheme, type StarPart } from '../data/behavioral';
 import { useI18n } from '../i18n';
 import { needsMoreAction, storiesByTheme, storyLength } from '../lib/stories';
-import { createStory, deleteStory, saveStory } from '../store/actions';
+import { createStory, deleteStory, discardEmptyStories, saveStory } from '../store/actions';
 import type { StoryRecord } from '../store/db';
 import { formatDuration } from '../lib/dates';
 import { useRehearsals, useStories, useStory } from '../store/queries';
@@ -20,6 +20,10 @@ export function StoriesPage() {
   const rehearsals = useRehearsals();
   const navigate = useNavigate();
   const [theme, setTheme] = useState<BehavioralTheme | null>(null);
+  // 按了「新增故事」卻什麼都沒寫就回來的，不留在列表上
+  useEffect(() => {
+    void discardEmptyStories();
+  }, []);
   const byTheme = useMemo(() => storiesByTheme(stories ?? []), [stories]);
   const covered = BEHAVIORAL_THEMES.filter((th) => byTheme.get(th)!.length > 0).length;
   const s = t.stories;

@@ -91,6 +91,7 @@ test('copies a behavioral feedback prompt after practicing out loud', { tag: '@d
   await page.addInitScript(installFakeRecognition);
   await page.goto('/#/stories/practice');
   await page.getByLabel('Record audio (stays on this device)').uncheck();
+  await page.getByLabel('Show a live English transcript').check();
   await page.getByRole('button', { name: 'Start answering' }).click();
   await speak(page, 'When our release slipped I owned the fix and we shipped two days later.');
   await page.getByRole('button', { name: 'I’m done' }).click();

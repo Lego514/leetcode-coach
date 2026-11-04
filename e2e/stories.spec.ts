@@ -38,3 +38,13 @@ test('writes STAR stories, tags their themes, and shows which questions still ne
   await expect(page.getByRole('status')).toContainText('Story deleted');
   await expect(page.getByRole('region', { name: 'My stories' }).getByRole('listitem')).toHaveCount(1);
 });
+
+test('drops a new story you left without writing anything', async ({ page }) => {
+  await page.goto('/#/stories');
+  await page.getByRole('button', { name: 'New story' }).first().click();
+  await expect(page.getByLabel('Title')).toBeVisible();
+  // 什麼都沒寫就回到列表，不留一則「未命名」
+  await page.getByRole('link', { name: '← All stories' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Behavioral interviews' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Untitled story' })).toHaveCount(0);
+});

@@ -8,6 +8,7 @@ import {
   deleteMock,
   deleteRehearsal,
   deleteStory,
+  discardEmptyStories,
   markSolvedBefore,
   parseSlug,
   recordAttempt,
@@ -386,6 +387,17 @@ describe('behavioral stories', () => {
     // 刪掉的故事不能再存
     await saveStory(id, { title: 'gone' });
     expect(await db.stories.get(id)).toBeUndefined();
+  });
+
+  it('drops stories that were started but never written, even with themes picked', async () => {
+    const empty = await createStory(['conflict']);
+    const blank = await createStory();
+    await saveStory(blank, { situation: '   ' });
+    const written = await createStory();
+    await saveStory(written, { result: 'Shipped it.' });
+    await discardEmptyStories();
+    expect((await db.stories.toArray()).map((s) => s.id)).toEqual([written]);
+    expect((await db.outbox.toArray()).filter((e) => e.deleted).map((e) => e.key).sort()).toEqual([blank, empty].sort());
   });
 });
 

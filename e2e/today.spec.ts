@@ -191,6 +191,18 @@ test('loads demo data to look around, then clears it', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Before you start' })).toBeVisible();
 });
 
+test('does not offer demo data once you have anything of your own, since clearing it would wipe that too', async ({ page }) => {
+  // 只寫過行為面試的故事、還沒刷題
+  await page.goto('/#/stories');
+  await page.getByRole('button', { name: 'New story' }).first().click();
+  await page.getByLabel('Title').fill('Pipeline fix');
+  await expect(page.getByText('Saving…')).toHaveCount(0, { timeout: 5000 });
+  await page.goto('/');
+  const welcome = page.getByRole('region', { name: 'Before you start' });
+  await expect(welcome).toBeVisible();
+  await expect(welcome.getByRole('button', { name: 'Try it with demo data' })).toHaveCount(0);
+});
+
 test('never carries demo data into an account', { tag: '@desktop' }, async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Try it with demo data' }).click();
