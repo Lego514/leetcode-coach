@@ -39,9 +39,11 @@ interface FollowUpPanelProps {
   usedSec: number;
   value: FollowUpRecord | null;
   onChange: (value: FollowUpRecord) => void;
+  /** 講解是打字的：追問照樣問，告訴 AI 不是語音辨識 */
+  typed?: boolean;
 }
 
-export function FollowUpPanel({ problem, transcript, usedSec, value, onChange }: FollowUpPanelProps) {
+export function FollowUpPanel({ problem, transcript, usedSec, value, onChange, typed }: FollowUpPanelProps) {
   const { t, locale } = useI18n();
   const f = t.followUp;
   const signedIn = useCloud().account.kind === 'signed-in';
@@ -59,6 +61,7 @@ export function FollowUpPanel({ problem, transcript, usedSec, value, onChange }:
     transcript: text,
     seconds: usedSec,
     language: locale,
+    ...(typed ? { typed: true } : {}),
   });
 
   async function run<T extends { usedToday: number; dailyLimit: number }>(kind: 'ask' | 'grade', call: () => Promise<T>): Promise<T | null> {

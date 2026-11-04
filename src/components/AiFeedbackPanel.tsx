@@ -19,9 +19,11 @@ interface AiFeedbackPanelProps {
   feedback: ExplanationFeedback | null;
   onFeedback: (feedback: ExplanationFeedback) => void;
   onUseScript: (script: string) => void;
+  /** 用打字代替講出來：告訴 AI 這不是語音辨識的逐字稿 */
+  typed?: boolean;
 }
 
-export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeedback, onUseScript }: AiFeedbackPanelProps) {
+export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeedback, onUseScript, typed }: AiFeedbackPanelProps) {
   const { t, locale } = useI18n();
   const signedIn = useCloud().account.kind === 'signed-in';
   const status = useAiStatus(signedIn);
@@ -44,6 +46,7 @@ export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeed
         transcript: text,
         seconds: usedSec,
         language: locale,
+        ...(typed ? { typed: true } : {}),
       });
       onFeedback(response.feedback);
       setRequestedFor(text);
@@ -96,7 +99,7 @@ export function AiFeedbackPanel({ problem, transcript, usedSec, feedback, onFeed
   return (
     <div className="ai-feedback stack" style={{ gap: 12 }}>
       <h3 className="ai-feedback-title">{t.mock.aiTitle}</h3>
-      <p className="sheet-note">{t.mock.aiIntro}</p>
+      <p className="sheet-note">{typed ? t.mock.aiIntroTyped : t.mock.aiIntro}</p>
       {action}
       {error && (
         <p className="form-error" role="alert">

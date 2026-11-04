@@ -272,6 +272,10 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
               <Link className="btn" to={`/practice/${problem.id}`}>
                 {t.review.redo}
               </Link>
+              {/* 回想完先講一次：計時、可以請 AI 回饋，存好就回到這裡看筆記、評分 */}
+              <Link className="btn" to={`/mock?problem=${problem.id}&kind=explain&from=review`}>
+                {t.review.explainNow}
+              </Link>
               <button className="btn btn-quiet" onClick={onSkip}>
                 {t.review.skip}
               </button>

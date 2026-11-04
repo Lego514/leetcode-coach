@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import type { StoredStuckReason } from '../../shared/constants';
 import type { ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
 import { FeedbackView } from '../components/AiFeedbackPanel';
@@ -22,6 +22,7 @@ import {
   EXPLANATION_SCAFFOLD,
   INTERVIEW_STEPS,
   MOCK_MINUTES,
+  TYPED_EXPLAIN_SECONDS,
 } from '../data/interview';
 import { getPattern, getPatterns, type PatternId } from '../data/patterns';
 import type { Difficulty, Problem } from '../data/problems';
@@ -29,6 +30,7 @@ import { useI18n } from '../i18n';
 import { rich } from '../i18n/rich';
 import { problemsInList, skipPremium } from '../lib/catalog';
 import { formatDuration, today } from '../lib/dates';
+import { transcriptStats } from '../lib/transcript';
 import { HINT_LEVELS, suggestRating } from '../lib/practice';
 import { useRecorder, useStopwatch } from '../lib/session';
 import { speechSupported, useSpeechTranscript } from '../lib/speech';
@@ -43,6 +45,8 @@ interface Session {
   limitSec: number;
   withAudio: boolean;
   withTranscript: boolean;
+  /** 講解練習用打字代替講出來（不方便出聲的時候） */
+  typed: boolean;
   startedAt: string;
 }
 
@@ -64,6 +68,24 @@ type Phase =
 export function MockPage() {
   const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>({ name: 'setup' });
+  const navigate = useNavigate();
+  // 從複習頁按「現在講一次」來的：存好（或放棄）之後回複習頁，繼續看筆記、評分
+  const [params] = useSearchParams();
+  const fromReview = params.get('from') === 'review';
+  const [finished, setFinished] = useState(false);
+
+  // 等離開保護卸載之後再回上一頁
+  useEffect(() => {
+    if (!finished) return;
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate('/review', { replace: true });
+  }, [finished, navigate]);
+
+  function done() {
+    setPhase({ name: 'setup' });
+    if (fromReview) setFinished(true);
+  }
 
   return (
     <div className="page" style={phase.name === 'setup' ? undefined : { maxWidth: 1180 }}>
@@ -83,7 +105,7 @@ export function MockPage() {
         />
       )}
       {phase.name === 'review' && (
-        <MockReview session={phase.session} result={phase.result} onDone={() => setPhase({ name: 'setup' })} />
+        <MockReview session={phase.session} result={phase.result} onDone={done} />
       )}
 
       {phase.name !== 'setup' && (
@@ -127,6 +149,9 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
   const [withAudio, setWithAudio] = useState(true);
   const [canTranscribe] = useState(speechSupported);
   const [withTranscript, setWithTranscript] = useState(false);
+  // 講解練習：用說的，或在不方便出聲的地方用打字
+  const [how, setHow] = useState<'speak' | 'type'>('speak');
+  const typed = kind === 'explain' && how === 'type';
   const [error, setError] = useState<'notFound' | 'noMatch' | null>(null);
 
   const listProblems = useMemo(
@@ -173,14 +198,15 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
       }
       problem = pickRandom(pool);
     }
-    const auto = kind === 'explain' ? EXPLAIN_SECONDS : MOCK_MINUTES[problem.difficulty] * 60;
+    const auto = kind === 'explain' ? (typed ? TYPED_EXPLAIN_SECONDS : EXPLAIN_SECONDS) : MOCK_MINUTES[problem.difficulty] * 60;
     const custom = Number(minutes);
     onStart({
       problem,
       kind,
       limitSec: custom > 0 ? Math.round(custom * 60) : auto,
-      withAudio,
-      withTranscript: canTranscribe && withTranscript,
+      withAudio: !typed && withAudio,
+      withTranscript: !typed && canTranscribe && withTranscript,
+      typed,
       startedAt: new Date().toISOString(),
     });
   }
@@ -209,6 +235,22 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
             {kind === 'full' ? t.mock.fullHint(MOCK_MINUTES.Easy, MOCK_MINUTES.Medium, MOCK_MINUTES.Hard) : t.mock.explainHint}
           </span>
         </div>
+
+        {kind === 'explain' && (
+          <div className="field">
+            <span className="field-label" id="how-label">
+              {t.mock.how}
+            </span>
+            <div className="segmented" role="group" aria-labelledby="how-label">
+              {(['speak', 'type'] as const).map((h) => (
+                <button key={h} type="button" aria-pressed={how === h} onClick={() => setHow(h)}>
+                  {t.mock.hows[h]}
+                </button>
+              ))}
+            </div>
+            {typed && <span className="field-hint">{t.mock.typedHint(TYPED_EXPLAIN_SECONDS / 60)}</span>}
+          </div>
+        )}
 
         <div className="field">
           <span className="field-label" id="pick-label">
@@ -294,33 +336,38 @@ function MockSetup({ onStart }: { onStart: (session: Session) => void }) {
               min={1}
               max={120}
               step="any"
-              placeholder={kind === 'explain' ? '2' : t.mock.autoMinutes}
+              placeholder={kind === 'explain' ? String((typed ? TYPED_EXPLAIN_SECONDS : EXPLAIN_SECONDS) / 60) : t.mock.autoMinutes}
               value={minutes}
               onChange={(e) => setMinutes(e.target.value)}
             />
           </label>
-          <label className="field" style={{ justifyContent: 'flex-end' }}>
-            <span style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 38 }}>
-              <input type="checkbox" checked={withAudio} onChange={(e) => setWithAudio(e.target.checked)} />
-              {t.mock.recordAudio}
-            </span>
-          </label>
-          <p className="field-hint span-2">{t.mock.audioPrivacy}</p>
-          <div className="field span-2">
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                checked={canTranscribe && withTranscript}
-                disabled={!canTranscribe}
-                aria-describedby="transcript-hint"
-                onChange={(e) => setWithTranscript(e.target.checked)}
-              />
-              {t.mock.transcriptOption}
-            </label>
-            <span className="field-hint" id="transcript-hint">
-              {canTranscribe ? t.mock.transcriptHint : t.mock.transcriptUnsupported}
-            </span>
-          </div>
+          {/* 用打字的講解不錄音、不開語音辨識 */}
+          {!typed && (
+            <>
+              <label className="field" style={{ justifyContent: 'flex-end' }}>
+                <span style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 38 }}>
+                  <input type="checkbox" checked={withAudio} onChange={(e) => setWithAudio(e.target.checked)} />
+                  {t.mock.recordAudio}
+                </span>
+              </label>
+              <p className="field-hint span-2">{t.mock.audioPrivacy}</p>
+              <div className="field span-2">
+                <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={canTranscribe && withTranscript}
+                    disabled={!canTranscribe}
+                    aria-describedby="transcript-hint"
+                    onChange={(e) => setWithTranscript(e.target.checked)}
+                  />
+                  {t.mock.transcriptOption}
+                </label>
+                <span className="field-hint" id="transcript-hint">
+                  {canTranscribe ? t.mock.transcriptHint : t.mock.transcriptUnsupported}
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="btn-row">
@@ -348,6 +395,8 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
   const [hints, setHints] = useState(0);
   const [sawSolution, setSawSolution] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  // 用打字的講解：邊看講解的架構邊打
+  const [typedText, setTypedText] = useState('');
   const started = useRef(false);
   const { problem } = session;
   // 每一步除了打勾，也可以寫一句自己的想法，存進這題的筆記
@@ -379,7 +428,7 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
     const ms = pause();
     const [audio, transcript] = await Promise.all([
       stopRecording(),
-      session.withTranscript ? stopSpeech() : Promise.resolve(null),
+      session.typed ? Promise.resolve(typedText) : session.withTranscript ? stopSpeech() : Promise.resolve(null),
     ]);
     const steps =
       session.kind === 'full' ? done : EXPLAIN_CHECKS.filter((c) => checks[`explain:${c}`]);
@@ -446,6 +495,26 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
               </button>
             </div>
           </section>
+
+          {session.typed && (
+            <Sheet title={t.mock.typedTitle} id="typed-explanation" note={t.mock.typedWords(transcriptStats(typedText, 0).words)}>
+              <div className="sheet-body">
+                <label className="visually-hidden" htmlFor="typed-input">
+                  {t.mock.typedLabel}
+                </label>
+                <textarea
+                  id="typed-input"
+                  className="textarea"
+                  rows={10}
+                  lang="en"
+                  autoFocus
+                  value={typedText}
+                  placeholder={t.mock.typedPlaceholder}
+                  onChange={(e) => setTypedText(e.target.value)}
+                />
+              </div>
+            </Sheet>
+          )}
 
           {session.kind === 'full' ? (
             <Sheet
@@ -553,22 +622,24 @@ function MockSession({ session, onFinish }: { session: Session; onFinish: (resul
               onSolution={() => setSawSolution(true)}
             />
           )}
-          <Sheet title={t.mock.recordingTitle} id="recording">
-            <div className="sheet-body">
-              {recorder.state === 'recording' && (
-                <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="rec-dot" aria-hidden /> {t.mock.recording}
-                </p>
-              )}
-              {recorder.state === 'paused' && <p>{t.mock.recordingPaused}</p>}
-              {recorder.state === 'idle' &&
-                (recorder.error ? (
-                  <p className="form-error">{t.errors.recorder[recorder.error]}</p>
-                ) : (
-                  <p className="sheet-note">{session.withAudio ? t.mock.openingMic : t.mock.noRecording}</p>
-                ))}
-            </div>
-          </Sheet>
+          {!session.typed && (
+            <Sheet title={t.mock.recordingTitle} id="recording">
+              <div className="sheet-body">
+                {recorder.state === 'recording' && (
+                  <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="rec-dot" aria-hidden /> {t.mock.recording}
+                  </p>
+                )}
+                {recorder.state === 'paused' && <p>{t.mock.recordingPaused}</p>}
+                {recorder.state === 'idle' &&
+                  (recorder.error ? (
+                    <p className="form-error">{t.errors.recorder[recorder.error]}</p>
+                  ) : (
+                    <p className="sheet-note">{session.withAudio ? t.mock.openingMic : t.mock.noRecording}</p>
+                  ))}
+              </div>
+            </Sheet>
+          )}
           {session.withTranscript && (
             <Sheet
               title={t.mock.transcriptTitle}
@@ -653,6 +724,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
     };
     if (rating) record.rating = rating;
     if (clarity) record.clarity = clarity;
+    if (session.typed) record.typed = true;
     if (result.hints > 0) record.hints = result.hints;
     if (result.sawSolution) record.sawSolution = true;
     if (result.audio) record.audio = result.audio;
@@ -693,18 +765,20 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
 
       <div className="split">
         <div className="stack">
-          <Sheet title={t.mock.playbackTitle} id="playback">
-            <div className="sheet-body stack" style={{ gap: 10 }}>
-              {result.audio ? (
-                <>
-                  <BlobAudio blob={result.audio} />
-                  <p className="sheet-note">{t.mock.playbackHint}</p>
-                </>
-              ) : (
-                <p className="sheet-note">{t.mock.noPlayback}</p>
-              )}
-            </div>
-          </Sheet>
+          {!session.typed && (
+            <Sheet title={t.mock.playbackTitle} id="playback">
+              <div className="sheet-body stack" style={{ gap: 10 }}>
+                {result.audio ? (
+                  <>
+                    <BlobAudio blob={result.audio} />
+                    <p className="sheet-note">{t.mock.playbackHint}</p>
+                  </>
+                ) : (
+                  <p className="sheet-note">{t.mock.noPlayback}</p>
+                )}
+              </div>
+            </Sheet>
+          )}
 
           {result.transcript !== null && (
             <TranscriptReview
@@ -719,6 +793,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
               onFollowUp={setFollowUp}
               chatReply={chatReply}
               onChatReply={setChatReply}
+              typed={session.typed}
             />
           )}
 
@@ -738,7 +813,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
 
           <ReviewReference problemId={problem.id} />
 
-          <Sheet title={isFull ? t.mock.rateFull : t.mock.rateExplain} id="self-rating">
+          <Sheet title={isFull ? t.mock.rateFull : session.typed ? t.mock.rateTyped : t.mock.rateExplain} id="self-rating">
             <div className="sheet-body stack" style={{ gap: 16 }}>
               <div className="rating-grid">
                 {isFull
@@ -748,12 +823,16 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
                         <span className="rating-detail">{t.ratings[r].detail}</span>
                       </button>
                     ))
-                  : CLARITY_OPTIONS.map((c) => (
-                      <button key={c} type="button" className="rating-option" aria-pressed={clarity === c} onClick={() => setClarity(c)}>
-                        <span className="rating-label">{t.interview.clarity[c].label}</span>
-                        <span className="rating-detail">{t.interview.clarity[c].detail}</span>
-                      </button>
-                    ))}
+                  : CLARITY_OPTIONS.map((c) => {
+                      // 用打字的問寫得順不順
+                      const option = session.typed ? t.interview.clarityTyped[c] : t.interview.clarity[c];
+                      return (
+                        <button key={c} type="button" className="rating-option" aria-pressed={clarity === c} onClick={() => setClarity(c)}>
+                          <span className="rating-label">{option.label}</span>
+                          <span className="rating-detail">{option.detail}</span>
+                        </button>
+                      );
+                    })}
               </div>
               {isFull && <p className="field-hint">{t.mock.suggestedHint}</p>}
               {isFull && <StuckPicker value={stuck} onChange={setStuck} />}
@@ -868,7 +947,7 @@ function MockHistory() {
         <ul className="rows">
           {mocks.map((m) => {
             const p = catalog.byId.get(m.problemId);
-            const clarity = m.clarity ? t.interview.clarity[m.clarity] : undefined;
+            const clarity = m.clarity ? (m.typed ? t.interview.clarityTyped : t.interview.clarity)[m.clarity] : undefined;
             const total = m.kind === 'full' ? INTERVIEW_STEPS.length : EXPLAIN_CHECKS.length;
             return (
               <li key={m.id} className="sheet-body stack" style={{ gap: 8 }}>
@@ -884,6 +963,7 @@ function MockHistory() {
                 <div className="problem-meta">
                   <span className="chip">{t.mock.kinds[m.kind]}</span>
                   {m.board && <span className="chip">{t.mock.onBoard}</span>}
+                  {m.typed && <span className="chip">{t.mock.typedTag}</span>}
                   <span>{fmt.day(m.day)}</span>
                   <span>{t.mock.usedOfLimit(formatDuration(m.usedSec), formatDuration(m.limitSec))}</span>
                   <span>
@@ -896,7 +976,7 @@ function MockHistory() {
                 {m.reflection && <p className="prose-block">{m.reflection}</p>}
                 {m.transcript && (
                   <details>
-                    <summary>{t.mock.showTranscript}</summary>
+                    <summary>{m.typed ? t.mock.showTyped : t.mock.showTranscript}</summary>
                     <p className="prose-block" lang="en" style={{ marginTop: 8 }}>
                       {m.transcript}
                     </p>

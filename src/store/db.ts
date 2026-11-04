@@ -95,7 +95,9 @@ export interface MockRecord {
   rating?: Rating;
   /** 在白板上照著步驟講的講解練習 */
   board?: boolean;
-  /** 講解練習的自評：1 講得很順、2 有卡住、3 講不出來 */
+  /** 不方便出聲時用打字代替講出來；transcript 是打的字 */
+  typed?: boolean;
+  /** 講解練習的自評：1 講得很順、2 有卡住、3 講不出來（打字的是寫得順不順） */
   clarity?: Clarity;
   hints?: number;
   sawSolution?: boolean;

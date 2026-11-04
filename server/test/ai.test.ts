@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { EXPLANATION_PROMPT } from '../../shared/ai';
 import type {
   AiStatus,
   BehavioralFeedback,
@@ -140,6 +141,19 @@ describe('explanation feedback API', () => {
     expect(usage).toBeUndefined();
   });
 
+  it('passes a typed explanation through to the model', async () => {
+    const calls: FeedbackRequest[] = [];
+    const client = await signedIn({
+      dailyLimit: 5,
+      generate: async (input) => {
+        calls.push(input);
+        return { feedback, usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    });
+    expect((await client.request('POST', '/api/ai/explanation-feedback', { ...request, typed: true })).status).toBe(200);
+    expect(calls).toEqual([{ ...request, typed: true }]);
+  });
+
   it('keeps each user to a few requests per minute', async () => {
     const client = await signedIn({ dailyLimit: 100, generate: async () => ({ feedback, usage: { inputTokens: 0, outputTokens: 0 } }) });
     for (let i = 0; i < 5; i++) {
@@ -156,6 +170,15 @@ describe('feedback prompt and output', () => {
     expect(message).toContain('Speaking time: 1:35');
     expect(message).toContain('Feedback language: Traditional Chinese (Taiwan)');
     expect(message).toContain(`<transcript>\n${request.transcript}\n</transcript>`);
+  });
+
+  it('says when the explanation was typed instead of spoken, with the writing time', () => {
+    const message = buildUserMessage({ ...request, typed: true });
+    expect(message).toContain('Typed, not spoken');
+    expect(message).toContain('Writing time: 1:35');
+    expect(message).not.toContain('Speaking time');
+    // 系統提示說明打的講解怎麼評
+    expect(EXPLANATION_PROMPT).toContain('typed instead of spoken');
   });
 
   it('orders points, drops duplicates and bad scores, and trims lists', () => {

@@ -21,6 +21,16 @@ describe('chat prompts', () => {
     expect(explanationChatPrompt({ ...request, language: 'en' })).toContain('Reply in English');
   });
 
+  it('says the explanation was typed when it was, instead of calling it a speech transcript', () => {
+    const typed = { ...request, typed: true };
+    for (const prompt of [explanationChatPrompt(typed), followUpChatPrompt(typed)]) {
+      expect(prompt).toContain('I typed it because I could not talk out loud');
+      expect(prompt).toContain('Writing time: 1:35');
+      expect(prompt).not.toContain('speech recognition');
+    }
+    expect(explanationChatPrompt(request)).toContain('speech recognition');
+  });
+
   it('turns the chat into an interviewer that asks one question at a time, then grades', () => {
     const prompt = followUpChatPrompt(request);
     expect(prompt).toContain(FOLLOW_UP_KIND_GUIDE);

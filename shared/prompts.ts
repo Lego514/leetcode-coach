@@ -29,11 +29,14 @@ export function formatSeconds(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+/** 打字代替講出來的講解：告訴模型這不是語音辨識的逐字稿 */
+export const TYPED_NOTE = 'Typed, not spoken: the candidate wrote this explanation instead of saying it out loud.';
+
 export function buildUserMessage(request: FeedbackRequest): string {
   const { problem } = request;
   return [
     `Problem: ${problem.id}. ${problem.title} (${problem.difficulty}, pattern: ${problem.pattern})`,
-    `Speaking time: ${formatSeconds(request.seconds)}`,
+    ...(request.typed ? [TYPED_NOTE, `Writing time: ${formatSeconds(request.seconds)}`] : [`Speaking time: ${formatSeconds(request.seconds)}`]),
     `Feedback language: ${LANGUAGE_NAMES[request.language]}`,
     '',
     '<transcript>',
