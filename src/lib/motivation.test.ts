@@ -64,13 +64,15 @@ describe('readiness', () => {
       [1, stateAfter([['solo', '2026-10-20']])],
       [2, stateAfter([['hint', '2026-10-20']])],
     ]);
+    // 做過兩題，其中自己解出的那題才算會了
     expect(readiness(problems, progress, today)).toEqual({
       ready: 1,
+      started: 2,
       total: 3,
       byDifficulty: [
-        { difficulty: 'Easy', ready: 1, total: 1 },
-        { difficulty: 'Medium', ready: 0, total: 2 },
-        { difficulty: 'Hard', ready: 0, total: 0 },
+        { difficulty: 'Easy', ready: 1, started: 1, total: 1 },
+        { difficulty: 'Medium', ready: 0, started: 1, total: 2 },
+        { difficulty: 'Hard', ready: 0, started: 0, total: 0 },
       ],
     });
   });

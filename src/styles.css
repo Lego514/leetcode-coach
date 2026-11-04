@@ -1940,9 +1940,22 @@ kbd,
   font-variant-numeric: tabular-nums;
 }
 
+/* 數字欄的標題（做過），只有一行、不畫分隔線 */
+.mastery-head {
+  padding: 0 0 2px;
+}
+
+.mastery-head + .mastery-row {
+  border-top: 0;
+}
+
 @media (max-width: 599px) {
   .mastery-row {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .mastery-head > :nth-child(2) {
+    display: none;
   }
 
   .mastery-cells {
@@ -1963,6 +1976,21 @@ kbd,
 
 .stat + .stat {
   border-left: 1px solid var(--rule);
+}
+
+/* 總覽下面：做過、會了、已熟練是什麼意思（整個 App 都用這三個詞） */
+.stat-defs {
+  margin: 0;
+  padding: 10px 20px 14px;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+.stat-defs b {
+  font-weight: 600;
+  color: var(--ink-2);
 }
 
 .stat-label {
@@ -2224,6 +2252,44 @@ kbd,
 
 .meter-fill {
   height: 100%;
+  border-radius: 999px;
+  background: var(--level-4);
+}
+
+/* 兩層的長條：淺色是做過，深色是會了（會了的一定也做過，所以深色疊在淺色上） */
+.meter-stacked {
+  position: relative;
+}
+
+.meter-stacked .meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+
+.meter-fill-started,
+.meter-swatch[data-kind='started'] {
+  background: var(--level-2);
+}
+
+.meter-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.meter-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meter-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 8px;
   border-radius: 999px;
   background: var(--level-4);
 }

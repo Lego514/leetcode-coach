@@ -272,11 +272,12 @@ export function ReadinessSheet({
           <strong>{percent(result.ready, result.total)}%</strong>
           <span>{m.readinessValue(result.ready, result.total)}</span>
         </p>
+        <MeterLegend />
         <div className="difficulty-bars">
           {result.byDifficulty
             .filter((d) => d.total > 0)
             .map((d) => (
-              <Meter key={d.difficulty} label={m.readinessLabel(d.difficulty)} value={d.ready} max={d.total}>
+              <Meter key={d.difficulty} label={m.readinessLabel(d.difficulty)} value={d.ready} started={d.started} max={d.total}>
                 <span className="difficulty" data-level={d.difficulty}>
                   {d.difficulty}
                 </span>
@@ -289,7 +290,7 @@ export function ReadinessSheet({
         ) : (
           <div className="difficulty-bars">
             {companies.map((c) => (
-              <Meter key={c.company} label={m.companyLabel(c.company)} value={c.ready} max={c.total}>
+              <Meter key={c.company} label={m.companyLabel(c.company)} value={c.ready} started={c.started} max={c.total}>
                 <span className="readiness-company">{c.company}</span>
               </Meter>
             ))}
@@ -300,11 +301,39 @@ export function ReadinessSheet({
   );
 }
 
-function Meter({ label, value, max, children }: { label: string; value: number; max: number; children: ReactNode }) {
+/** 長條的圖例：深色是會了、淺色是做過但還不算會了 */
+function MeterLegend() {
+  const { t } = useI18n();
+  return (
+    <p className="meter-legend" aria-hidden="true">
+      <span>
+        <i className="meter-swatch" data-kind="ready" />
+        {t.words.ready}
+      </span>
+      <span>
+        <i className="meter-swatch" data-kind="started" />
+        {t.motivation.startedNotReady}
+      </span>
+    </p>
+  );
+}
+
+/** 一條長條：深色是會了（value），後面淺色疊著做過（started） */
+function Meter({ label, value, started, max, children }: { label: string; value: number; started: number; max: number; children: ReactNode }) {
+  const { t } = useI18n();
   return (
     <div className="meter-row">
       {children}
-      <div className="meter" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}>
+      <div
+        className="meter meter-stacked"
+        role="meter"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        aria-valuetext={t.motivation.meterText(value, started, max)}
+      >
+        <div className="meter-fill meter-fill-started" style={{ width: `${percent(started, max)}%` }} />
         <div className="meter-fill" style={{ width: `${percent(value, max)}%` }} />
       </div>
       <span className="meter-value">
@@ -336,7 +365,7 @@ export function PatternMap({ problems, progress, today }: { problems: readonly P
                 <ArtIcon art={LEVEL_ART[p.level]} className="pattern-tile-art" />
                 <span className="pattern-tile-name">{name}</span>
                 <span className="pattern-tile-level">
-                  {m.levels[p.level]} · {p.ready} / {p.total}
+                  {m.levels[p.level]} · {m.mapCount(p.ready, p.total)}
                 </span>
               </Link>
             </li>

@@ -1,5 +1,5 @@
 import { PATTERN_ORDER, type PatternId } from '../data/patterns';
-import type { Difficulty, Problem } from '../data/problems';
+import type { Problem } from '../data/problems';
 import { streakState } from '../../shared/streak';
 import { addDays, diffDays, startOfWeek, type Day } from './dates';
 import { masteryOf, recallOn, stageOf, type Rating, type ReviewState } from './srs';
@@ -122,23 +122,6 @@ export function summarizePatterns(problems: Problem[], progress: StateMap): Patt
     const s = groups.get(id);
     // 累加時 mastery 存的是總和，這裡換算成平均
     return s ? [{ ...s, mastery: s.mastery / s.total, startedMastery: s.started ? s.mastery / s.started : 0 }] : [];
-  });
-}
-
-export interface DifficultySummary {
-  difficulty: Difficulty;
-  total: number;
-  started: number;
-}
-
-export function summarizeDifficulty(problems: Problem[], progress: StateMap): DifficultySummary[] {
-  return (['Easy', 'Medium', 'Hard'] as const).map((difficulty) => {
-    const subset = problems.filter((p) => p.difficulty === difficulty);
-    return {
-      difficulty,
-      total: subset.length,
-      started: subset.filter((p) => progress.has(p.id)).length,
-    };
   });
 }
 

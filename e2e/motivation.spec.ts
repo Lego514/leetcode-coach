@@ -69,8 +69,21 @@ test('celebrates conquering a problem, and shows readiness, the pattern map, and
   await expect(readiness.getByRole('meter', { name: 'Easy problems you can solve now' })).toBeVisible();
   await expect(readiness).toContainText('Tag companies on a problem’s details page');
 
+  // 整頁只用三個詞：做過、會了、已熟練。總覽寫出意思，準備度的長條同時有會了和做過，數字對得起來
+  const overview = page.getByRole('region', { name: 'Overview' });
+  const got = Number((await overview.locator('.stat').filter({ hasText: 'Got it' }).locator('.stat-value').textContent())!.trim());
+  await expect(overview).toContainText('Got it: solved alone last time, and you still remember it (70% or more).');
+  await expect(readiness).toContainText(`${got} of 150 problems you can solve now`);
+  await expect(readiness.getByRole('meter', { name: 'Easy problems you can solve now' })).toHaveAttribute('aria-valuetext', /^Got \d+ of 28, attempted \d+$/);
+  await expect(page.getByRole('region', { name: 'Algorithm tree' })).toContainText(`${got}got it (of 150)`);
+  await expect(page.getByRole('region', { name: 'Algorithm tree' })).toContainText('patterns in bloom (80% got it)');
+  // 已經沒有另一張只算做過的「難度分布」
+  await expect(page.locator('#difficulty')).toHaveCount(0);
+
   const map = page.getByRole('region', { name: 'Pattern map' });
   await expect(map.getByRole('link', { name: /^Arrays & Hashing: / })).toBeVisible();
+  await expect(map.getByRole('link', { name: /^Arrays & Hashing: / })).toContainText(/got \d+\/9/);
+  await expect(map.getByRole('link', { name: /^Bit Manipulation: / })).toHaveAccessibleName('Bit Manipulation: Not started, got 0 of 7');
   // 每一格有等級的小圖：做過的題型至少是小芽，還沒開始的是藍圖的一個點
   await expect(map.getByRole('link', { name: /^Arrays & Hashing: / }).locator('.pattern-tile-art')).toBeVisible();
   await expect(map.getByRole('link', { name: /^Bit Manipulation: / }).locator('.pattern-tile-art .algo-bud')).toBeVisible();
