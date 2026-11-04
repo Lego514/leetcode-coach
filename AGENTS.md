@@ -72,7 +72,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 - **使用者自己的 AI 金鑰只存在 localStorage（`src/store/ownAi.ts`）**：刻意不經過 `actions.ts`、不進同步的待上傳清單，永遠不送到我們的伺服器。測試裡用 `page.route` 攔下 AI 的網址，不要真的呼叫。
 - **卡在哪的代號**：記錄時的選項是 `STUCK_REASONS`（`shared/constants.ts`）；舊紀錄還有 `edge`、`bug`、`time`（`LEGACY_STUCK_REASONS`），同步的 schema 兩種都收。顯示和統計用 `stuckKinds`（`src/lib/stuck.ts`）把 `edge`、`bug` 換成 `logic`；`time` 沒有選項了但保留，改紀錄時 `toggleStuck` 不會清掉它。不要改寫已經存的紀錄。
 - **介面文字只放在 `src/i18n/messages/{zh-TW,en}.ts`**：兩份的 key 要一樣（有測試檢查），其他檔案裡出現中文字會讓測試失敗。
-- **改資料格式**：先改 `shared/protocol.ts` 的 zod schema；資料庫要加 `server/migrations/000N_*.sql` 並同步改 `server/src/db/schema.ts`；server 測試裡的 migration 清單（`server/test/infra.test.ts`）也要加。
+- **改資料格式**：先改 `shared/protocol.ts` 的 zod schema；資料庫要加 `server/migrations/000N_*.sql` 並同步改 `server/src/db/schema.ts`；server 測試裡的 migration 清單（`server/test/infra.test.ts`）也要加。README 的 Data model 一節有兩張 Mermaid ER 圖（伺服器的資料表、瀏覽器的每種紀錄），加了資料表或集合要一起改。
 - **新的環境變數**：`server/src/env.ts`、`render.yaml`、`server/.env.example`、README 的 Deploying 一節都要加。
 - **示範資料**（`src/store/demo.ts`）：清除是清空整個瀏覽器的資料，所以只有除了設定以外什麼紀錄都沒有時才能載入（`canTryDemo`，筆記、故事、白板都算）；載入前的設定收在 localStorage，清除時放回去並記進待上傳清單。
 - **Dexie 不要用會開 key cursor 的查詢**（`uniqueKeys`、`eachKey`）：iOS 上會丟 "Unable to open cursor"。整張讀出來用 JS 處理。
@@ -119,4 +119,4 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 - 使用者要做的設定：Render 補上 `AI_ALLOWED_EMAILS`；選用的 `SENTRY_DSN`、`ADMIN_EMAILS`。
 - 跟朋友互相模擬面試（面試官看題目和評分表，兩邊共用白板）。
-- 資料模型的 ER 圖（Mermaid）。求職進度追蹤使用者在別的專案做了，這裡不做。
+- 求職進度追蹤使用者在別的專案做了，這裡不做。
