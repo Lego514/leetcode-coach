@@ -137,6 +137,7 @@ const zhTW = {
     dueNow: '該複習了',
     dueOverdue: (relative: string) => `該複習了（${relative}）`,
     nextReview: (day: string) => `下次複習 ${day}`,
+    recallTag: (pct: number) => `記得 ${pct}%`,
   },
 
   editAttempt: {

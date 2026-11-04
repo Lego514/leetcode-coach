@@ -12,6 +12,7 @@ import {
   grownBetween,
   nextStage,
   pointOn,
+  recallPercent,
   stageView,
   treeLayout,
   treeStage,
@@ -292,7 +293,7 @@ export function AlgorithmTree({ share, ...props }: TreeProps & { share?: { strea
 export function describeNode(nodes: ReturnType<typeof useI18n>['t']['tree']['nodes'], node: TreeNode): string {
   if (node.kind === 'bud') return nodes.bud;
   if (node.kind === 'sprout') return nodes.sprout;
-  const pct = Math.round(node.recall * 100);
+  const pct = recallPercent(node.recall);
   const text = node.shade === 'faded' ? nodes.faded(pct) : node.shade === 'fading' ? nodes.fading(pct) : nodes.leaf(pct);
   return node.fruit ? `${text}${nodes.fruit}` : text;
 }

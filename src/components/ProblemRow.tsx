@@ -4,7 +4,9 @@ import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { diffDays, type Day } from '../lib/dates';
+import { recallOn } from '../lib/srs';
 import { needsRewrite } from '../lib/stats';
+import { fadeOf, recallPercent } from '../lib/tree';
 import type { ProgressRecord } from '../store/db';
 import { DifficultyTag, LeetCodeLink, MasteryCell, stageLabel } from './ui';
 
@@ -26,6 +28,9 @@ export function ProblemRow({ problem, progress, today, marked, showPattern, comp
   const overdue = progress && progress.due < today;
   // 到期而且上次靠提示或解答的題目，標成「重寫」
   const rewrite = progress && progress.due <= today && needsRewrite(progress);
+  // 今天還記得的機率（FSRS）；舊版沒有穩定度的紀錄算不出來就不顯示
+  const recall = recallOn(progress, today);
+  const recallPct = recall === undefined ? undefined : recallPercent(recall);
 
   return (
     <div className="problem-row">
@@ -50,6 +55,11 @@ export function ProblemRow({ problem, progress, today, marked, showPattern, comp
             </span>
           ) : null}
           {progress && <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>}
+          {recallPct !== undefined && (
+            <span className="chip chip-recall" data-fade={fadeOf(progress, today) || undefined} title={t.common.recallChance(recallPct)}>
+              {t.row.recallTag(recallPct)}
+            </span>
+          )}
           {rewrite && <span className="chip chip-rewrite">{t.common.rewriteTag}</span>}
           {note && <span className="problem-note">{note}</span>}
           {problem.premium && <span>{t.common.premium}</span>}

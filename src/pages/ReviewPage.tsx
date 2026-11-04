@@ -13,6 +13,7 @@ import { diffDays } from '../lib/dates';
 import { languageLabel } from '../lib/languages';
 import { RATINGS, recallOn, schedule, type Rating } from '../lib/srs';
 import { capDue, dueProblems, needsRewrite, reviewForecast, reviewsDoneOn } from '../lib/stats';
+import { recallPercent } from '../lib/tree';
 import { recordAttempt } from '../store/actions';
 import type { ProgressRecord } from '../store/db';
 import { retentionOf } from '../store/progress';
@@ -162,7 +163,7 @@ function ReviewQueue({
                 </span>
                 <DifficultyTag difficulty={p.difficulty} />
                 {needsRewrite(state) && <span className="chip chip-rewrite">{t.common.rewriteTag}</span>}
-                {recall !== undefined && <span className="review-queue-meta">{t.common.recallChance(Math.round(recall * 100))}</span>}
+                {recall !== undefined && <span className="review-queue-meta">{t.common.recallChance(recallPercent(recall))}</span>}
                 {state.due < today && <span className="review-queue-meta">{t.date.relative(diffDays(today, state.due))}</span>}
                 {i === 0 && <span className="review-queue-now">{t.review.current}</span>}
               </button>
@@ -229,7 +230,7 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
           </button>
         )}
         <span>{t.common.lastResult(t.ratings[progress.lastRating].label)}</span>
-        {recall !== undefined && <span>{t.common.recallChance(Math.round(recall * 100))}</span>}
+        {recall !== undefined && <span>{t.common.recallChance(recallPercent(recall))}</span>}
         <Link to={`/problems/${problem.id}`}>{t.review.details}</Link>
       </div>
 

@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { getPattern, PATTERN_ORDER, type PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
+import { READY_RECALL } from './motivation';
 import { schedule, type Rating } from './srs';
 import {
   branchOutline,
   canopyBlobs,
   FADED_RECALL,
   fadeOf,
+  recallPercent,
   GROUND,
   grownBetween,
   nextStage,
@@ -98,6 +100,22 @@ describe('treeState', () => {
 
   it('shades leaves from fresh to faded', () => {
     expect([0.95, 0.85, 0.72, 0.6, 0.5].map(shadeOf)).toEqual(['fresh', 'good', 'ok', 'fading', 'faded']);
+  });
+});
+
+describe('recallPercent', () => {
+  it('rounds down so the number agrees with the dot and leaf thresholds', () => {
+    expect(recallPercent(0.696)).toBe(69);
+    expect(recallPercent(0.7)).toBe(70);
+    expect(recallPercent(0.55)).toBe(55);
+    expect(recallPercent(0.549)).toBe(54);
+    expect(recallPercent(1)).toBe(100);
+    // 有點的題目寫的數字一定在 70% 以下，實心點一定在 55% 以下
+    for (let r = 0.3; r <= 1; r += 0.0007) {
+      const fade = r >= READY_RECALL ? 0 : r >= FADED_RECALL ? 1 : 2;
+      expect(recallPercent(r) < 70).toBe(fade > 0);
+      expect(recallPercent(r) < 55).toBe(fade === 2);
+    }
   });
 });
 

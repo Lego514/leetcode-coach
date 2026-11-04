@@ -18,6 +18,7 @@
   --marker-ink: #16233a;
   --easy: #1d7350;
   --medium: #9a5b06;
+  --medium-soft: #fbf0dc;
   --hard: #b83427;
   --danger: #b42318;
   --danger-soft: #fdecea;
@@ -101,6 +102,7 @@
     --marker-ink: #fff6c9;
     --easy: #5cc79a;
     --medium: #e3a94c;
+    --medium-soft: #3a2c16;
     --hard: #f08579;
     --danger: #f08579;
     --danger-soft: #3a1f24;
@@ -171,6 +173,7 @@
   --marker-ink: #fff6c9;
   --easy: #5cc79a;
   --medium: #e3a94c;
+  --medium-soft: #3a2c16;
   --hard: #f08579;
   --danger: #f08579;
   --danger-soft: #3a1f24;
@@ -4254,6 +4257,21 @@ a.more-account:hover {
   border-color: var(--pen);
   color: var(--pen);
   background: var(--pen-soft);
+}
+
+/* 還記得的機率：門檻跟方格的橘點一樣，空心點是橘框、實心點再加橘底 */
+.chip-recall {
+  font-variant-numeric: tabular-nums;
+}
+
+.chip-recall[data-fade] {
+  border-color: var(--medium);
+  color: var(--medium);
+}
+
+.chip-recall[data-fade='2'] {
+  background: var(--medium-soft);
+  font-weight: 600;
 }
 
 .review-rewrite p {
