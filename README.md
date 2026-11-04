@@ -205,6 +205,168 @@ In production a single Node service serves both `/api` and the built web app. Th
 
 Known limitation: conflicts are decided by each device's clock.
 
+### Data model
+
+The server keeps accounts in ordinary relational tables. Everything you create lives in one document table, `records`, keyed by user, collection, and key. A new kind of data is a new collection with a zod schema in `shared/protocol.ts`, not a migration.
+
+```mermaid
+erDiagram
+  users ||--o{ sessions : "signs in with"
+  users ||--o{ oauth_accounts : "links"
+  users ||--o{ password_resets : "resets with"
+  users ||--o{ records : "syncs"
+  users ||--o{ ai_usage : "uses AI"
+  users ||--o{ push_subscriptions : "is reminded on"
+  users |o--o{ reports : "files"
+
+  users {
+    uuid id PK
+    text email UK
+    text password_hash "null for GitHub-only accounts"
+  }
+  sessions {
+    text id PK "SHA-256 of the token"
+    uuid user_id FK
+    timestamptz expires_at
+  }
+  oauth_accounts {
+    text provider PK "github"
+    text provider_user_id PK
+    uuid user_id FK "one per provider"
+    text username
+  }
+  password_resets {
+    text id PK "SHA-256 of the token"
+    uuid user_id FK
+    timestamptz expires_at
+    timestamptz used_at
+  }
+  records {
+    uuid user_id PK, FK
+    text collection PK "attempts, mocks, notes, ..."
+    text key PK
+    jsonb data "checked by a zod schema"
+    boolean deleted "tombstone"
+    bigint updated_at "client time, last write wins"
+    bigint version "server sequence, sync cursor"
+  }
+  ai_usage {
+    uuid user_id PK, FK
+    date day PK "UTC"
+    int requests "daily quota"
+    bigint input_tokens
+    bigint output_tokens
+  }
+  push_subscriptions {
+    text endpoint PK "one per device"
+    uuid user_id FK
+    smallint hour "local hour to remind"
+    text time_zone
+    date last_sent_day
+  }
+  reports {
+    uuid id PK
+    uuid user_id FK "null when signed out"
+    text kind
+    text message
+    timestamptz resolved_at
+  }
+```
+
+In the browser, each collection is an IndexedDB table, and every row is one `records` document. Problems, patterns, and flashcards ship with the app (your own problems are the `customProblems` collection). The review schedule, `progress`, is never stored on the server: it is rebuilt by replaying a problem's attempts, and its clear explanations decide Easy and Mastered (dashed lines).
+
+```mermaid
+erDiagram
+  problem ||--o{ attempts : "practiced in"
+  problem ||--o{ mocks : "explained in"
+  problem ||--o| notes : "has"
+  problem ||--o| meta : "is tagged in"
+  problem ||--o| boards : "is drawn on"
+  problem ||--o| progress : "is scheduled by"
+  attempts }o..|| progress : "replayed into"
+  mocks }o..o| progress : "explanations count in"
+  pattern ||--o{ problem : "groups"
+  pattern ||--o| patternNotes : "has"
+  stories |o--o{ rehearsals : "told in"
+  card ||--o{ cardReviews : "answered in"
+
+  problem {
+    int id PK "built in, or customProblems"
+    string pattern FK
+    string difficulty
+  }
+  attempts {
+    string uid PK "same on every device"
+    int problemId FK
+    date day
+    string rating "solo, hint, solution, fail"
+    int minutes
+    int hints "deepest hint layer"
+    string[] stuck "where you got stuck"
+  }
+  mocks {
+    string uid PK
+    int problemId FK
+    string kind "full mock or explanation drill"
+    string[] steps "points or steps covered"
+    int clarity "self-rating"
+    json feedback "AI scores"
+    blob audio "stays on the device"
+  }
+  notes {
+    int problemId PK, FK
+    string idea
+    string explanation "English script"
+    string code
+  }
+  meta {
+    int problemId PK, FK
+    string[] companies
+  }
+  boards {
+    string id PK "p and the problem id, or scratch"
+    json doc "dsa-whiteboard document"
+  }
+  progress {
+    int problemId PK, FK
+    float stability "FSRS"
+    float difficulty "FSRS"
+    date due
+    date fsrsDue "early checks only"
+    bool explained "latest explanation clear"
+  }
+  pattern {
+    string id PK
+  }
+  patternNotes {
+    string patternId PK, FK
+    string template
+    string notes
+  }
+  stories {
+    string id PK
+    string title
+    string situation
+    string action
+  }
+  rehearsals {
+    string uid PK
+    string questionId "behavioral question"
+    string storyId FK "optional"
+    json feedback "AI scores"
+  }
+  card {
+    string id PK
+  }
+  cardReviews {
+    string uid PK
+    string cardId FK
+    string result
+  }
+```
+
+`settings` is a single record. Two more tables never sync: `outbox` holds one pending change per record, and `syncState` holds the account and the sync cursor.
+
 ### Security
 
 - **Passwords** are hashed with scrypt (N=2^15) and a random salt. A failed login for an unknown email still runs a dummy hash, so response times don't reveal which emails are registered.
@@ -323,7 +485,6 @@ Notes:
 ## Roadmap
 
 - **Mock interviews with a friend**: an interviewer view with the problem and a scoring sheet, on a shared whiteboard.
-- **Job application tracker**: each company's stage and dates, linked to the interview sprint.
 - **Whiteboard**: flashcards that show a recorded step and ask what happens next. Whiteboard features themselves are tracked in [dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard).
 - **More AI assistance**: hints that react to your own code, and code review.
 
@@ -428,6 +589,8 @@ Notes:
 - 有新版本時會自動更新並重新整理，但計時練習、模擬面試、微複習、白板或回報表單開著的時候會等你結束。
 
 ### 開發和部署
+
+資料模型（伺服器的 PostgreSQL 資料表，和瀏覽器裡每一種紀錄跟題目的關係）畫成兩張 ER 圖，在英文的 [Data model](#data-model) 一節。
 
 本機開發執行 `npm run dev`，會同時啟動網頁（http://localhost:5173）和後端（內建 PGlite 資料庫，不需要另外安裝）。`npm test` 跑單元和 API 測試，`npm run test:e2e` 會先建置，再用 Playwright 跑端對端測試。完整的指令和設定請看上面英文的 Getting started 和 Deploying。
 
