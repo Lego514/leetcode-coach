@@ -8,7 +8,7 @@
 
 - 線上：https://leetcode-coach-f6q7.onrender.com（Render 免費方案，閒置會睡，第一次開要等約一分鐘）
 - Repo：https://github.com/Lego514/leetcode-coach（公開）
-- 白板是另一個 repo：https://github.com/Lego514/dsa-whiteboard（本機 `C:\dev\dsa-whiteboard`），這裡用 `"dsa-whiteboard": "github:Lego514/dsa-whiteboard#vX.Y.Z"` 裝進來
+- 白板是另一個 repo：https://github.com/Lego514/dsa-whiteboard（本機 `C:\dev\dsa-whiteboard`），發佈在 npm，這裡用 `npm install dsa-whiteboard@X.Y.Z --save-exact` 裝固定的版本（以前從 GitHub 的 tag 裝，0.1.11 起改成 npm）
 - 使用者：2026 年畢業的 MSCS 國際學生，正在找工作，用 Python 刷題，講解解法是最弱的地方。技術選擇要放得上新鮮人的履歷。
 
 ## 跟使用者合作的方式
