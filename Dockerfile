@@ -5,10 +5,6 @@
 
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
-# dsa-whiteboard 是從 GitHub 裝的套件，npm 需要 git
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends git ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
 # 先只複製套件清單，程式碼改了也能沿用安裝好的那一層
 COPY package.json package-lock.json ./
 COPY server/package.json server/
