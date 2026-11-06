@@ -254,3 +254,22 @@ test('caps how many Medium and Hard problems come each day', async ({ page }) =>
   await page.goto('/');
   await expect(items.filter({ hasText: 'Medium' })).toHaveCount(3);
 });
+
+test('turns into the next day at midnight with the app left open', async ({ page }) => {
+  // 測試的瀏覽器在太平洋時間；以前每個畫面各自每分鐘才檢查一次，過了午夜最多要等一分鐘
+  await page.clock.install({ time: new Date('2026-11-05T23:59:20-08:00') });
+  await page.goto('/');
+  await expect(page.locator('.page-head')).toContainText('Thursday, November 5, 2026');
+  await newList(page).getByRole('listitem').first().getByRole('button', { name: 'Record' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: /Solved alone/ }).click();
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(doneList(page).getByRole('listitem')).toHaveCount(1);
+  await expect(newList(page).getByRole('listitem')).toHaveCount(2);
+
+  // 跨過午夜幾秒：標題、今天做完的和新題目都換成新的一天
+  await page.clock.runFor(42_000);
+  await expect(page.locator('.page-head')).toContainText('Friday, November 6, 2026', { timeout: 3000 });
+  await expect(doneList(page).getByRole('listitem')).toHaveCount(0);
+  await expect(newList(page).getByRole('listitem')).toHaveCount(3);
+});

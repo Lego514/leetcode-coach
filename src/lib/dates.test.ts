@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, diffDays, formatDuration, isDay, startOfWeek } from './dates';
+import { addDays, diffDays, formatDuration, isDay, msUntilNextDay, startOfWeek, toDay } from './dates';
 
 describe('dates', () => {
   it('adds days across month ends and leap years', () => {
@@ -22,6 +22,18 @@ describe('dates', () => {
     expect(isDay('2026-09-16')).toBe(true);
     expect(isDay('2026-9-16')).toBe(false);
     expect(isDay(20260916)).toBe(false);
+  });
+
+  it('counts the time left until the next local midnight', () => {
+    const HOUR = 60 * 60 * 1000;
+    expect(msUntilNextDay(new Date(2026, 10, 5, 23, 59, 30))).toBe(30_000);
+    expect(msUntilNextDay(new Date(2026, 10, 5, 0, 0, 0))).toBe(24 * HOUR);
+    // 不管這天有幾小時（日光節約時間），等完都剛好是隔天的 0 點
+    for (const day of [new Date(2026, 2, 8, 12), new Date(2026, 10, 1, 12), new Date(2026, 11, 31, 18)]) {
+      const next = new Date(day.getTime() + msUntilNextDay(day));
+      expect([next.getHours(), next.getMinutes()]).toEqual([0, 0]);
+      expect(toDay(next)).toBe(addDays(toDay(day), 1));
+    }
   });
 
   it('formats durations', () => {

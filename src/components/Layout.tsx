@@ -106,6 +106,7 @@ function Badge({ count }: { count: number }) {
 function SyncFootnote() {
   const { t, fmt } = useI18n();
   const cloud = useCloud();
+  const day = useToday();
   const { account } = cloud;
   if (account.kind === 'loading') return null;
   if (account.kind === 'signed-in') {
@@ -115,7 +116,7 @@ function SyncFootnote() {
           {account.user.email}
         </Link>
         <br />
-        <span className={cloud.phase === 'error' ? 'overdue' : undefined}>{syncStatusText(cloud, t, fmt)}</span>
+        <span className={cloud.phase === 'error' ? 'overdue' : undefined}>{syncStatusText(cloud, t, fmt, day)}</span>
       </p>
     );
   }

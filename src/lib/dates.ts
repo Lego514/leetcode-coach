@@ -13,6 +13,11 @@ export function today(): Day {
   return toDay(new Date());
 }
 
+/** 離下一個本地午夜還有幾毫秒；用日曆加一天，日光節約時間那天（23 或 25 小時）也對 */
+export function msUntilNextDay(now: Date): number {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
+}
+
 export function parseDay(day: Day): Date {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(y, m - 1, d);

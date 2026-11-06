@@ -75,6 +75,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 - **改資料格式**：先改 `shared/protocol.ts` 的 zod schema；資料庫要加 `server/migrations/000N_*.sql` 並同步改 `server/src/db/schema.ts`；server 測試裡的 migration 清單（`server/test/infra.test.ts`）也要加。README 的 Data model 一節有兩張 Mermaid ER 圖（伺服器的資料表、瀏覽器的每種紀錄），加了資料表或集合要一起改。
 - **新的環境變數**：`server/src/env.ts`、`render.yaml`、`server/.env.example`、README 的 Deploying 一節都要加。
 - **示範資料**（`src/store/demo.ts`）：清除是清空整個瀏覽器的資料，所以只有除了設定以外什麼紀錄都沒有時才能載入（`canTryDemo`，筆記、故事、白板都算）；載入前的設定收在 localStorage，清除時放回去並記進待上傳清單。
+- **畫面上的「今天」一律用 `useToday()`**（`src/store/queries.ts`）：整個 App 共用一個日期，午夜那一刻、回到前景時一起換；不要在畫面裡直接呼叫 `today()` 或 `new Date()` 判斷是不是今天（存檔當下的時間戳除外）。
 - **Dexie 不要用會開 key cursor 的查詢**（`uniqueKeys`、`eachKey`）：iOS 上會丟 "Unable to open cursor"。整張讀出來用 JS 處理。
 - **隱私**：錯誤追蹤（Sentry）不能送使用者資料，規則在 `src/lib/monitoring.ts`、`server/src/monitoring.ts`；新增的 log 不要帶 email、筆記、逐字稿。
 - **白板功能改在 dsa-whiteboard repo**，這裡只負責接上存檔和講解模式。發新版的流程見那邊的 AGENTS.md。
