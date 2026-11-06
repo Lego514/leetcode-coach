@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { useHref, useSearchParams } from 'react-router';
-import { EMPTY_DOC, newRoomId, ROOM_ID, ShareControls, Whiteboard, type BoardDoc, type ExplainHooks } from 'dsa-whiteboard';
+import { EMPTY_DOC, guestName, isOldGuestName, newRoomId, ROOM_ID, ShareControls, Whiteboard, type BoardDoc, type ExplainHooks } from 'dsa-whiteboard';
 import type { Difficulty, Problem } from '../../data/problems';
-import { useI18n } from '../../i18n';
+import { useI18n, type Locale } from '../../i18n';
 import { saveBoard } from '../../store/actions';
 import { useCloud } from '../../store/cloud';
 import { useBoard } from '../../store/queries';
@@ -20,15 +20,19 @@ const COLLAB_URL = import.meta.env.VITE_COLLAB_URL;
 /** 共用時別人看到的名字 */
 const NAME_KEY = 'leetcode-coach:collab-name';
 
-function storedName(guest: string): string {
+/**
+ * 共用時別人看到的名字：第一次用時取一個形容詞加動物（白板套件的 guestName，頭像會是那種動物）；
+ * 舊版自動取的「訪客 17」也換掉，自己取的名字不動
+ */
+function storedName(locale: Locale): string {
   try {
     const saved = localStorage.getItem(NAME_KEY)?.trim();
-    if (saved) return saved;
-    const name = `${guest} ${Math.floor(Math.random() * 90) + 10}`;
+    if (saved && !isOldGuestName(saved)) return saved;
+    const name = guestName(locale);
     localStorage.setItem(NAME_KEY, name);
     return name;
   } catch {
-    return guest;
+    return guestName(locale);
   }
 }
 
@@ -55,7 +59,7 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
   const room = COLLAB_URL && param && ROOM_ID.test(param) ? param : null;
   /** 這個分頁建立的房間，和建立時的白板：房間是空的時候放上去 */
   const [created, setCreated] = useState<{ id: string; doc: BoardDoc } | null>(null);
-  const [name, setName] = useState(() => storedName(t.board.guestName));
+  const [name, setName] = useState(() => storedName(locale));
   /** 白板現在的內容（共用時是房間的內容） */
   const current = useRef<BoardDoc>(EMPTY_DOC);
   // 共用的連結一律打開白板頁，練習頁裡的白板分享出去也一樣

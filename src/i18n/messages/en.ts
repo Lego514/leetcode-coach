@@ -1065,7 +1065,6 @@ const en: Messages = {
     savedLocal: 'Saved on this device',
     savedSynced: 'Saved and synced to your account',
     sharedCaption: 'Shared whiteboard',
-    guestName: 'Guest',
     saveCopyConfirm: 'Replace your own copy of this whiteboard with the shared one? Yours will be overwritten.',
     savedCopy: 'Saved to your whiteboard',
     listTitle: 'My whiteboards',

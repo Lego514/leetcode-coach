@@ -1042,7 +1042,6 @@ const zhTW = {
     savedLocal: '已存在這台裝置',
     savedSynced: '已儲存，會同步到雲端',
     sharedCaption: '共用白板',
-    guestName: '訪客',
     saveCopyConfirm: '要用這張共用白板取代你自己的這張白板嗎？你原本的會被蓋掉。',
     savedCopy: '已存到你的白板',
     listTitle: '我的白板',

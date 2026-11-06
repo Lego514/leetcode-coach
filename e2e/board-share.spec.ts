@@ -70,9 +70,13 @@ test('shares a whiteboard: both people edit it, and each keeps their own board',
   await alice.goto('/#/board/scratch');
   await alice.getByRole('button', { name: 'Array', exact: true }).click();
 
-  // 按「共用」：網址多了房間，自己的白板放進房間
+  // 按「共用」先看說明，按「建立連結」才開房間：網址多了房間，自己的白板放進房間
   await alice.getByRole('button', { name: 'Share' }).click();
+  await alice.getByRole('dialog', { name: 'Share this board' }).getByRole('button', { name: 'Create link' }).click();
   await expect(alice).toHaveURL(/#\/board\/scratch\?room=[a-z0-9]{16}$/);
+  // 建好之後房間選單打開、顯示連結；先關起來
+  await expect(alice.getByRole('textbox', { name: 'Link to this room' })).toHaveValue(alice.url());
+  await alice.keyboard.press('Escape');
   await expect(status(alice)).toHaveText('1 person here');
   await expect(alice.getByRole('dialog', { name: 'Scratch whiteboard' })).toContainText('Shared whiteboard');
 
