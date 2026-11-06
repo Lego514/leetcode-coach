@@ -454,7 +454,7 @@ test('builds a graph from an edge list, connects nodes, and marks an edge', asyn
   await page.goto('/#/board/scratch');
   await page.getByRole('button', { name: 'Graph', exact: true }).click();
   const graph = page.getByRole('group', { name: /^Graph graph/ });
-  await expect(graph).toHaveAccessibleName('Graph graph: n = 4, edges = [[0,1],[0,2],[1,3]]');
+  await expect(graph).toHaveAccessibleName('Graph graph: n = 4, edges = [[0,1],[1,2],[0,3]]');
 
   const selbar = page.getByRole('toolbar', { name: 'Selected element' });
   await selbar.getByRole('button', { name: 'Build from text' }).click();
