@@ -2,11 +2,21 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useSyncExternalStore } from 'react';
 import { demoData } from '../lib/demo';
 import type { Day } from '../lib/dates';
-import { db, type AttemptRecord, type CardReviewRecord, type CoachDB, type MockRecord, type SettingsRecord } from './db';
+import {
+  db,
+  type AttemptRecord,
+  type BoardRecord,
+  type CardReviewRecord,
+  type CoachDB,
+  type MockRecord,
+  type RehearsalRecord,
+  type SettingsRecord,
+  type StoryRecord,
+} from './db';
 import { wipeLocalData } from './sync';
 import { rebuildAllProgress, track } from './tracking';
 
-// 示範資料：第一次打開、還沒登入時，可以一鍵載入六週的練習紀錄看看所有功能。
+// 示範資料：第一次打開、還沒登入時，可以一鍵載入六週的練習紀錄、行為面試的故事和練習、白板，看看所有功能。
 // 載入和清除都只動這個瀏覽器，不記進待上傳清單：示範資料不會同步，清除時也不會刪到雲端的東西。
 // 示範中登入的話，先把示範資料清掉再合併（cloud.ts），編出來的紀錄不會跑進真的帳號。
 // 清除是把整個瀏覽器的資料清空，所以只有完全沒有自己的紀錄時才能載入（canTryDemo）；
@@ -85,10 +95,13 @@ export async function loadDemoData(today: Day): Promise<void> {
   if (!(await canTryDemo())) return;
   saveSettings(await db.settings.get('app'));
   const demo = demoData(today);
-  await db.transaction('rw', [db.attempts, db.cardReviews, db.mocks, db.settings, db.progress, db.customProblems], async () => {
+  await db.transaction('rw', [db.attempts, db.cardReviews, db.mocks, db.stories, db.rehearsals, db.boards, db.settings, db.progress, db.customProblems], async () => {
     await db.attempts.bulkPut(demo.attempts as unknown as AttemptRecord[]);
     await db.cardReviews.bulkPut(demo.cardReviews as unknown as CardReviewRecord[]);
     await db.mocks.bulkPut(demo.mocks as unknown as MockRecord[]);
+    await db.stories.bulkPut(demo.stories as unknown as StoryRecord[]);
+    await db.rehearsals.bulkPut(demo.rehearsals as unknown as RehearsalRecord[]);
+    await db.boards.bulkPut(demo.boards as unknown as BoardRecord[]);
     await db.settings.bulkPut(demo.settings as unknown as SettingsRecord[]);
     await rebuildAllProgress(db);
   });

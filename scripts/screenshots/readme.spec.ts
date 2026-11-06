@@ -33,6 +33,9 @@ function demoBackup() {
       customProblems: [],
       settings: demo.settings,
       cardReviews: demo.cardReviews,
+      stories: demo.stories,
+      rehearsals: demo.rehearsals,
+      boards: demo.boards,
     },
   };
 }

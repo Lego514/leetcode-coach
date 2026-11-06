@@ -188,11 +188,27 @@ test('loads demo data to look around, then clears it', async ({ page }) => {
   await page.goto('/#/progress');
   await expect(banner).toBeVisible();
   await expect(page.getByRole('region', { name: /practice sessions in the past year/ })).toBeVisible();
+  // 行為面試的故事和兩題的白板也有，這兩個功能才看得到
+  await page.goto('/#/stories');
+  await expect(page.locator('.story-title', { hasText: 'Disagreeing on the database for the capstone' })).toBeVisible();
+  // 練習講一題的紀錄：最近的在前面，有 AI 回饋的那次寫出分數
+  const practices = page.locator('.rehearsal-row');
+  await expect(practices).toHaveCount(2);
+  await expect(practices.first()).toContainText('Describe a mistake you made');
+  await expect(practices.nth(1)).toContainText('Disagreeing on the database for the capstone');
+  await expect(practices.nth(1)).toContainText('8 / 10.');
+  await page.goto('/#/board');
+  await expect(page.getByRole('main')).toContainText('Container With Most Water');
+  await page.goto('/#/board/1');
+  await expect(page.getByText('Two Sum: one pass with a hash map')).toBeVisible();
 
+  await page.goto('/');
   await banner.getByRole('button', { name: 'Clear demo data' }).click();
   await expect(banner).toHaveCount(0);
   await page.goto('/');
   await expect(page.getByRole('region', { name: 'Before you start' })).toBeVisible();
+  await page.goto('/#/stories');
+  await expect(page.locator('.story-title', { hasText: 'Disagreeing on the database for the capstone' })).toHaveCount(0);
 });
 
 test('does not offer demo data once you have anything of your own, since clearing it would wipe that too', async ({ page }) => {
