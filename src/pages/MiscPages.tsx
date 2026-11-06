@@ -9,6 +9,7 @@ import { PageHead } from '../components/ui';
 import { useI18n } from '../i18n';
 import { reportError } from '../lib/monitoring';
 import { useCloud } from '../store/cloud';
+import { useToday } from '../store/queries';
 import { stashError } from '../store/reports';
 
 // 手機分頁列沒有的頁面，順序跟側邊欄一樣
@@ -60,6 +61,7 @@ export function MorePage() {
 function AccountCard() {
   const { t, fmt } = useI18n();
   const cloud = useCloud();
+  const day = useToday();
   const { account } = cloud;
   if (account.kind === 'loading') return null;
   if (account.kind === 'signed-in') {
@@ -68,7 +70,7 @@ function AccountCard() {
         <span className="more-account-text">
           <span className="more-account-title">{account.user.email}</span>
           <span className="more-account-note">
-            {syncStatusText(cloud, t, fmt)}
+            {syncStatusText(cloud, t, fmt, day)}
             {cloud.login?.github && ` · GitHub ${t.account.github.linkedAs(cloud.login.github)}`}
           </span>
         </span>

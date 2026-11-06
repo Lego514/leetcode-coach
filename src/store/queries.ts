@@ -1,10 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { PatternId } from '../data/patterns';
 import { buildCatalog, type Catalog } from '../lib/catalog';
 import { explanationsByProblem } from '../lib/explainProgress';
 import type { ExplanationMark } from '../lib/srs';
-import { today, type Day } from '../lib/dates';
+import { msUntilNextDay, today, type Day } from '../lib/dates';
 import {
   db,
   DEFAULT_SETTINGS,
@@ -144,17 +144,60 @@ export function useMocks(): MockRecord[] | undefined {
   return useLiveQuery(async () => (await db.mocks.orderBy('id').toArray()).reverse(), []);
 }
 
-/** 目前的日期；跨過午夜或從背景回來時會更新 */
+/*
+ * 整個 App 共用一個「今天」：午夜那一刻換日，側邊欄和頁面一起換。
+ * 以前每個畫面各自每分鐘檢查一次，跨過午夜最多慢一分鐘，而且各換各的。
+ * 電腦睡著或分頁在背景時計時器會延後，所以回到前景、每分鐘也再確認一次。
+ */
+let currentDay: Day = today();
+const dayListeners = new Set<() => void>();
+let midnightTimer: number | undefined;
+let minuteTimer: number | undefined;
+
+function refreshDay(): void {
+  const next = today();
+  if (next === currentDay) return;
+  currentDay = next;
+  for (const listener of dayListeners) listener();
+}
+
+function scheduleMidnight(): void {
+  window.clearTimeout(midnightTimer);
+  // 多等一點點，計時器提早幾毫秒觸發時還是昨天
+  midnightTimer = window.setTimeout(() => {
+    refreshDay();
+    scheduleMidnight();
+  }, msUntilNextDay(new Date()) + 100);
+}
+
+function onWake(): void {
+  refreshDay();
+  scheduleMidnight();
+}
+
+function subscribeDay(listener: () => void): () => void {
+  dayListeners.add(listener);
+  if (dayListeners.size === 1) {
+    scheduleMidnight();
+    minuteTimer = window.setInterval(refreshDay, 60_000);
+    document.addEventListener('visibilitychange', onWake);
+    window.addEventListener('focus', onWake);
+    window.addEventListener('pageshow', onWake);
+  }
+  // 沒有畫面在聽的時候日期可能已經換了
+  refreshDay();
+  return () => {
+    dayListeners.delete(listener);
+    if (dayListeners.size > 0) return;
+    window.clearTimeout(midnightTimer);
+    window.clearInterval(minuteTimer);
+    document.removeEventListener('visibilitychange', onWake);
+    window.removeEventListener('focus', onWake);
+    window.removeEventListener('pageshow', onWake);
+  };
+}
+
+/** 目前的日期；午夜那一刻、從背景回來時會更新，所有畫面同時換 */
 export function useToday(): Day {
-  const [day, setDay] = useState(today);
-  useEffect(() => {
-    const refresh = () => setDay(today());
-    const timer = window.setInterval(refresh, 60_000);
-    document.addEventListener('visibilitychange', refresh);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', refresh);
-    };
-  }, []);
-  return day;
+  return useSyncExternalStore(subscribeDay, () => currentDay);
 }

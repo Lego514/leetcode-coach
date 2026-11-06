@@ -18,6 +18,8 @@ import {
   type CloudState,
 } from '../store/cloud';
 import { db } from '../store/db';
+import { useToday } from '../store/queries';
+import { toDay, type Day } from '../lib/dates';
 import { useToast } from './toast';
 import { SpotArt } from './SpotArt';
 import { Dialog, Sheet } from './ui';
@@ -28,7 +30,8 @@ const GITHUB_ICON = (
   </svg>
 );
 
-export function syncStatusText(cloud: CloudState, t: Messages, fmt: Formatters): string {
+/** 同步狀態；`day` 是今天（`useToday`），過了午夜昨天同步的時間會加上日期 */
+export function syncStatusText(cloud: CloudState, t: Messages, fmt: Formatters, day: Day): string {
   switch (cloud.phase) {
     case 'syncing':
       return t.sync.syncing;
@@ -37,13 +40,12 @@ export function syncStatusText(cloud: CloudState, t: Messages, fmt: Formatters):
     case 'error':
       return t.sync.failed(t.errors.api[cloud.error ?? 'unknown']);
     case 'idle':
-      return cloud.lastSyncedAt ? t.sync.synced(formatSyncTime(cloud.lastSyncedAt, fmt)) : t.sync.never;
+      return cloud.lastSyncedAt ? t.sync.synced(formatSyncTime(cloud.lastSyncedAt, fmt, day)) : t.sync.never;
   }
 }
 
-function formatSyncTime(ms: number, fmt: Formatters): string {
-  const sameDay = new Date().toDateString() === new Date(ms).toDateString();
-  return sameDay ? fmt.time(ms) : fmt.dateTime(new Date(ms).toISOString());
+function formatSyncTime(ms: number, fmt: Formatters, day: Day): string {
+  return toDay(new Date(ms)) === day ? fmt.time(ms) : fmt.dateTime(new Date(ms).toISOString());
 }
 
 export function AccountSection() {
@@ -67,6 +69,7 @@ export function AccountSection() {
 export function AccountSummary() {
   const { t, fmt } = useI18n();
   const cloud = useCloud();
+  const day = useToday();
   const { account } = cloud;
   const signedIn = account.kind === 'signed-in';
   const summary =
@@ -90,7 +93,7 @@ export function AccountSummary() {
           <dt>{t.account.accountLabel}</dt>
           <dd>{account.user.email}</dd>
           <dt>{t.account.syncLabel}</dt>
-          <dd className={cloud.phase === 'error' ? 'overdue' : undefined}>{syncStatusText(cloud, t, fmt)}</dd>
+          <dd className={cloud.phase === 'error' ? 'overdue' : undefined}>{syncStatusText(cloud, t, fmt, day)}</dd>
           {showGithub && (
             <>
               <dt>{t.account.github.label}</dt>
@@ -342,6 +345,7 @@ function ForgotPasswordDialog({ open, email, onClose }: { open: boolean; email: 
 
 function SignedIn({ email, cloud }: { email: string; cloud: CloudState }) {
   const { t, fmt } = useI18n();
+  const day = useToday();
   const toast = useToast();
   const pending = useLiveQuery(() => db.outbox.count(), []) ?? 0;
   const [dialog, setDialog] = useState<'logout' | 'delete' | null>(null);
@@ -399,7 +403,7 @@ function SignedIn({ email, cloud }: { email: string; cloud: CloudState }) {
         <dd>{email}</dd>
         <dt>{t.account.syncLabel}</dt>
         <dd className={cloud.phase === 'error' ? 'overdue' : undefined} aria-live="polite">
-          {syncStatusText(cloud, t, fmt)}
+          {syncStatusText(cloud, t, fmt, day)}
         </dd>
         <dt>{t.account.pendingLabel}</dt>
         <dd>{pending === 0 ? t.account.pendingNone : t.account.pendingCount(pending)}</dd>
