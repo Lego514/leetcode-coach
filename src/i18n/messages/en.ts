@@ -7,7 +7,7 @@ const en: Messages = {
   demo: {
     load: 'Try it with demo data',
     loadHint: 'Fills the app with six weeks of made-up practice so you can see every feature. Clear it anytime; it’s never synced.',
-    loaded: 'Demo data loaded. Look around: reviews, progress, your explanation drills, and more.',
+    loaded: 'Demo data loaded. Look around: reviews, progress, explanation drills, behavioral stories and practice, and whiteboards.',
     banner: 'You’re looking at demo data: six weeks of made-up practice. Clearing it also removes anything you add meanwhile.',
     clear: 'Clear demo data',
   },

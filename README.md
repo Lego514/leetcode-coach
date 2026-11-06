@@ -6,7 +6,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 
 **Live app:** https://leetcode-coach-f6q7.onrender.com — it runs on free hosting that sleeps when idle, so the first visit after a while can take about a minute to wake up. After that it's fast, and once loaded it keeps working offline.
 
-**No account needed to look around:** on the Today page, press **Try it with demo data** to fill the app with six weeks of made-up practice (reviews due, a streak, a growing tree, explanation drills, stuck patterns). It stays in your browser, is never synced, and **Clear demo data** removes it. Since clearing empties the browser, it's only offered before you've saved anything of your own (settings are put back when you clear).
+**No account needed to look around:** on the Today page, press **Try it with demo data** to fill the app with six weeks of made-up practice (reviews due, a streak, a growing tree, explanation drills, stuck patterns, three behavioral stories with two practice answers, and two whiteboards). It stays in your browser, is never synced, and **Clear demo data** removes it. Since clearing empties the browser, it's only offered before you've saved anything of your own (settings are put back when you clear).
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/today-dark.png"><img src="docs/images/today-light.png" alt="The Today page: today's goal with the streak and its shields, a small algorithm tree, and the capybara coding on a laptop next to a speech bubble with an encouraging line and a tip"></picture>
 

@@ -52,9 +52,18 @@ describe('demo data', () => {
     expect(await db.attempts.count()).toBeGreaterThan(0);
     expect((await db.settings.get('app'))?.activeList).toBe('neetcode150');
 
+    // 故事、練習講一題和白板也一起載入，但不記進待上傳清單，不會同步
+    expect(await db.stories.count()).toBeGreaterThan(0);
+    expect(await db.rehearsals.count()).toBeGreaterThan(0);
+    expect(await db.boards.count()).toBeGreaterThan(0);
+    expect((await db.outbox.toArray()).map((e) => e.collection)).toEqual(['settings']);
+
     await clearDemoData();
     expect(isDemo()).toBe(false);
     expect(await db.attempts.count()).toBe(0);
+    expect(await db.stories.count()).toBe(0);
+    expect(await db.rehearsals.count()).toBe(0);
+    expect(await db.boards.count()).toBe(0);
     expect(await db.settings.get('app')).toMatchObject({ dailyNew: 5, activeList: 'blind75' });
     expect((await db.outbox.toArray()).map((e) => e.key)).toEqual(['app']);
   });
