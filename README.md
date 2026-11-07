@@ -27,7 +27,11 @@ You still solve problems on LeetCode. This app handles the parts around solving:
   </tr>
 </table>
 
-Screenshots use generated demo data and are regenerated with `npm run screenshots`. They follow your GitHub theme (light or dark). The capybara animation is an SVG drawn from the app's own component and text.
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/reference-board-dark.gif"><img src="docs/images/reference-board-light.gif" alt="The reference board for Reverse Linked List playing step by step: prev, curr, and next move along the list as each link is pointed back, the caption under the board is one line of the reference explanation, and the last steps add a complexity block and an edge-case note"></picture>
+
+**Reference boards**: 15 problems come with a finished whiteboard that plays step by step. Each step's caption is a line of the problem's reference explanation, so you see the board and the words you'd say together.
+
+Screenshots use generated demo data and are regenerated with `npm run screenshots`, along with the reference board animation. They follow your GitHub theme (light or dark). The capybara animation is an SVG drawn from the app's own component and text.
 
 ## Features
 
@@ -94,9 +98,11 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
 - **Whiteboard**: [DSA Whiteboard](https://github.com/Lego514/dsa-whiteboard), which I built from scratch for this app and later split into its own open-source package ([try it standalone](https://lego514.github.io/dsa-whiteboard/)). Drag arrays, pointers, stacks, queues, dicts, sets, 2D arrays, variables, binary trees, linked lists, graphs, heaps, union-find, tries, bits, recursion trees, DP tables, intervals, tables, text, code, and sticky notes onto a pannable, zoomable canvas to trace an idea by hand. It has templates for common patterns, Build from text (paste a problem's example), range frames for sliding windows, a LeetCode-style code box with line-by-line tracing, step-by-step playback, and PNG export. See its README for the full list.
   - **Explain mode** (this app only): walk through your steps out loud in English. The current step's note shows as a prompt while a timer, audio recording, and live transcript run. Afterwards you see how long you spent on each step (the slow one is usually the part you can't explain smoothly yet), play back the audio, and fix the transcript. On a problem's whiteboard you can also tick which of the five points you covered, get AI feedback, save the transcript as the problem's script, and save the run as an explanation drill, marked "Whiteboard" in the mock interview history.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
+  - **Put this problem's example on the board**: an empty problem board offers a button that draws the problem's LeetCode example (the same data as the reference explanation's "For example"), so you can start tracing right away.
+  - **Reference boards** for 15 problems, one or two per pattern (1, 3, 11, 20, 56, 78, 102, 104, 200, 206, 207, 215, 322, 704, 739): a finished board that opens in playback, one step per line of the reference explanation, ending with a complexity block and an edge case. Open it any time from the problem page, the review page, or the problem's whiteboard. You can doodle on it without saving, or **Copy to my board** to keep and edit it.
   - **Share** a board for a mock interview or study session: everyone who opens the link edits it together, with each person's cursor and name. Joining doesn't need an account. Your own board isn't touched, and "Save a copy to my board" keeps the shared one. Rooms run on the package's Cloudflare Worker.
   - On the practice page the board opens on top, so the timer keeps running.
-  - The app installs the package from GitHub at a release tag and plugs in its own storage, sync status, toasts, and explain mode. The server validates boards with the package's zod schema before storing them.
+  - The app installs the package from npm at an exact version and plugs in its own storage, sync status, toasts, and explain mode. The server validates boards with the package's zod schema before storing them.
 - **Behavioral interviews**: a STAR story bank for the non-coding round.
   - Write each story as Situation, Task, Action, and Result, and tag what it can answer: conflict, failure, leadership, deadlines, ambiguity, influence, learning, proudest work, feedback, or teamwork. Stories autosave and sync like notes.
   - The editor offers English opening phrases for each part (click one to add it), estimates how long the story takes to say at about 140 words a minute (1½–2½ minutes is the target), and points out when Action, what you did, is less than 40% of it.
@@ -413,7 +419,7 @@ npm run test:e2e     # build, then run the Playwright tests in Chromium
 npm run lint
 npm run typecheck
 npm run build:all    # web app into dist/ and API into server/dist/
-npm run screenshots  # rebuild, then regenerate the README screenshots and the capybara animation in docs/images/
+npm run screenshots  # rebuild, then regenerate the README screenshots, the reference board GIFs, and the capybara animation in docs/images/
 npm start            # run the built API (and the web app when NODE_ENV=production)
 ```
 
@@ -548,6 +554,8 @@ Notes:
 - 可以拖拉陣列、指標、堆疊、佇列、字典、集合、二維陣列、變數、二元樹、鏈結串列、圖、堆積、併查集、字典樹、位元、遞迴樹、DP 表、區間、表格、文字、程式碼和便利貼，取代紙筆手動跑一遍。有常見模式的模板、貼上題目範例就能建立、滑動視窗的範圍框、LeetCode 風格的程式碼框和逐行追蹤、逐步播放、匯出圖片。完整功能請看那邊的 README。
 - **講解模式**（只有這個 App 有）：照著記好的步驟用英文講出來。這一步的說明會當作提詞，同時計時、錄音、顯示即時逐字稿。講完看每一步講了多久（特別久的那步通常就是還講不順的地方）、聽錄音、修正逐字稿；在題目的白板上還可以勾有講到哪幾個重點、拿 AI 回饋、把逐字稿存成講解稿，並存成一筆講解練習，在模擬面試的紀錄裡標成「白板」。
 - 每一題有自己的白板，另外有一張自由白板；「我的白板」列出全部，也寫出存在哪裡。白板會自動儲存，登入後會同步。
+- **放上這題的範例**：題目的白板是空的時候，一個按鈕就畫出這題 LeetCode 的範例（跟參考講法的「For example」同一組資料），馬上可以開始手動跑。
+- **參考板書**（先做 15 題，每種題型一兩題：1、3、11、20、56、78、102、104、200、206、207、215、322、704、739）：做好的白板，打開就從第一步播放，每一步的字幕是參考講法的一句，最後是複雜度和邊界情況。題目頁、複習頁和這題的白板隨時都能打開；上面可以隨手畫（不會存），按「複製到我的白板」就留下來自己改。
 - **共用**：模擬面試或一起讀書時，把白板的連結傳給對方，打開的人都能一起編輯，看得到每個人的游標和名字，對方不用帳號。自己的白板不會被改到，想留下共用的內容就按「存一份到我的白板」。房間在 dsa-whiteboard 的 Cloudflare Worker 上。
 
 **講解和模擬面試**：

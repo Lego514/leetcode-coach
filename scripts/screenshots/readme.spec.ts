@@ -1,12 +1,16 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import gifenc from 'gifenc';
+import { PNG } from 'pngjs';
 import { demoData } from '../../src/lib/demo';
 
 // README 的截圖，淺色和深色各一張。資料是 src/lib/demo.ts 的示範紀錄（約六週的練習），不是任何人的真實資料。
 // 執行：npm run screenshots（最後再跑 capybara.ts 畫卡皮巴拉的動畫）
 
 const OUT = path.resolve('docs/images');
+// gifenc 是 CommonJS，只能整包匯入
+const { applyPalette, GIFEncoder, quantize } = gifenc;
 const VIEWPORT = { width: 1280, height: 800 };
 
 function dayOffset(days: number): string {
@@ -204,4 +208,49 @@ test('README screenshots', async ({ page }) => {
       window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 24);
     });
   });
+});
+
+// 參考板書一步一步播放的動畫（GIF），淺色和深色各一個。
+// 1 倍解析度、視窗小一點，檔案才不會太大；每一步停的時間跟字幕長度成正比，讀得完
+const GIF_VIEWPORT = { width: 1100, height: 680 };
+const GIF_PROBLEM = 206;
+
+function stepDelay(caption: string): number {
+  return Math.min(6500, Math.max(2600, 1400 + caption.length * 45));
+}
+
+test('README reference board animation', async ({ browser }) => {
+  test.setTimeout(120_000);
+  for (const scheme of ['light', 'dark'] as const) {
+    const context = await browser.newContext({ viewport: GIF_VIEWPORT, deviceScaleFactor: 1, locale: 'en-US', colorScheme: scheme });
+    const page = await context.newPage();
+    await page.goto(`/#/board/${GIF_PROBLEM}?view=reference`);
+    const playback = page.getByRole('toolbar', { name: 'Step playback' });
+    const caption = playback.locator('.board-playback-notes');
+    await expect(playback).toContainText('Step 1 of');
+    // 幾步：數「跳到第 N 步」的按鈕（工具列的文字會跟按鈕上的數字黏在一起）
+    const total = await playback.getByRole('button', { name: /^Go to step / }).count();
+    await page.evaluate(() => document.fonts.ready);
+
+    const frames: { rgba: Uint8Array; delay: number }[] = [];
+    for (let step = 1; step <= total; step += 1) {
+      if (step > 1) await playback.getByRole('button', { name: 'Next step' }).click();
+      await expect(playback).toContainText(`Step ${step} of ${total}`);
+      // 等元件移動的動畫停下來
+      await page.waitForTimeout(500);
+      const png = PNG.sync.read(await page.screenshot());
+      const delay = stepDelay((await caption.textContent()) ?? '') + (step === total ? 1500 : 0);
+      frames.push({ rgba: new Uint8Array(png.data), delay });
+    }
+
+    // 每一格自己的調色盤，字才清楚
+    const gif = GIFEncoder();
+    for (const { rgba, delay } of frames) {
+      const colors = quantize(rgba, 256);
+      gif.writeFrame(applyPalette(rgba, colors), GIF_VIEWPORT.width, GIF_VIEWPORT.height, { palette: colors, delay });
+    }
+    gif.finish();
+    writeFileSync(path.join(OUT, `reference-board-${scheme}.gif`), gif.bytes());
+    await context.close();
+  }
 });
