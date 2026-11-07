@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
+import { REFERENCE_BOARD_IDS } from '../data/referenceBoards';
 import { useI18n } from '../i18n';
 
 // 參考講法約 130 KB，第一次需要時才下載
@@ -50,15 +52,31 @@ export function ReferenceExplanation({ problemId, open = false }: ReferenceExpla
     </p>
   );
 
-  if (open) return body;
+  // 做好參考板書的題目：一顆按鈕，什麼時候想看都可以（不用先展開講法）
+  const boardLink = REFERENCE_BOARD_IDS.has(problemId) && (
+    <Link className="btn btn-small reference-board-link" to={`/board/${problemId}?view=reference`}>
+      {t.reference.openBoard}
+    </Link>
+  );
+
+  if (open)
+    return (
+      <>
+        {body}
+        {boardLink}
+      </>
+    );
   return (
-    <details className="reference-details">
-      <summary>{t.reference.show}</summary>
-      <p className="field-hint" style={{ margin: '8px 0' }}>
-        {t.reference.hint}
-      </p>
-      {body}
-    </details>
+    <>
+      <details className="reference-details">
+        <summary>{t.reference.show}</summary>
+        <p className="field-hint" style={{ margin: '8px 0' }}>
+          {t.reference.hint}
+        </p>
+        {body}
+      </details>
+      {boardLink}
+    </>
   );
 }
 

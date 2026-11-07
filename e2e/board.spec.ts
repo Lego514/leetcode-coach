@@ -49,6 +49,39 @@ test('on a phone, keeps the title and save status in view and puts language, the
   await expect(page.getByRole('button', { name: 'Export image', exact: true })).toBeEnabled();
 });
 
+test('plays the reference board step by step, with the reference explanation as captions, and copies it to my board', async ({ page }) => {
+  // 題目頁的參考講法旁邊有按鈕，不用先展開講法
+  await page.goto('/#/problems/1');
+  await page.getByRole('link', { name: 'View reference board' }).click();
+  await expect(page).toHaveURL(/#\/board\/1\?view=reference$/);
+  // 一打開就從第一步播放：說明是講法的第一句，只能看，沒有編輯步驟的按鈕
+  const playback = page.getByRole('toolbar', { name: 'Step playback' });
+  await expect(playback).toContainText('Step 1 of 6');
+  await expect(playback).toContainText('The key insight is that for each number x');
+  await expect(playback.getByRole('textbox')).toHaveCount(0);
+  await expect(playback.getByRole('button', { name: 'Delete step' })).toHaveCount(0);
+  // 第四步是範例那一句，整句看得到
+  for (let i = 0; i < 3; i += 1) await playback.getByRole('button', { name: 'Next step' }).click();
+  await expect(playback).toContainText('find it at index 0, and return [0, 1].');
+
+  // 停止播放：白板上是最後一步的畫面，陣列、字典、複雜度區塊
+  await playback.getByRole('button', { name: /^Stop playback/ }).click();
+  await expect(page.getByRole('group', { name: 'Array nums: 2, 7, 11, 15' })).toBeVisible();
+  await expect(page.getByRole('group', { name: /^Complexity Complexity: time O\(n\), space O\(n\)$/ })).toBeVisible();
+
+  // 複製到我的白板：自己這題的白板是空的，直接複製，回到自己的白板
+  await page.getByRole('button', { name: 'Copy to my board' }).click();
+  await expect(page).toHaveURL(/#\/board\/1$/);
+  await expect(page.getByText('Copied to your whiteboard for this problem')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Array nums: 2, 7, 11, 15' })).toBeVisible();
+
+  // 題目白板的選單也打得開；沒有參考板書的題目沒有這一項
+  await (await headerButton(page, 'View reference board')).click();
+  await expect(page).toHaveURL(/view=reference/);
+  await page.goto('/#/board/2');
+  await expect(page.getByRole('button', { name: 'View reference board' })).toHaveCount(0);
+});
+
 test('puts the problem’s example on an empty problem board in one click', async ({ page }) => {
   await page.goto('/#/board/1');
   const draw = page.getByRole('button', { name: /^Put this problem’s example on the board/ });

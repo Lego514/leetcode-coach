@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { useHref, useSearchParams } from 'react-router';
+import { useHref, useNavigate, useSearchParams } from 'react-router';
 import { EMPTY_DOC, guestName, isOldGuestName, newRoomId, ROOM_ID, ShareControls, Whiteboard, type BoardDoc, type ExplainHooks } from 'dsa-whiteboard';
 import { PROBLEM_EXAMPLES } from '../../data/examples';
+import { REFERENCE_BOARD_IDS } from '../../data/referenceBoards';
 import type { Difficulty, Problem } from '../../data/problems';
 import { useI18n, type Locale } from '../../i18n';
 import { saveBoard } from '../../store/actions';
@@ -58,6 +59,12 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
   const toast = useToast();
   // 語言、深淺色：寬的畫面在標題列，手機上收進白板的「⋯」選單
   const prefs = useBoardPrefs();
+  const navigate = useNavigate();
+  // 有參考板書的題目，選單多一項「看參考板書」
+  const menu =
+    problem && REFERENCE_BOARD_IDS.has(problem.id)
+      ? [{ label: t.reference.openBoard, icon: ICON_REFERENCE, onSelect: () => navigate(`/board/${problem.id}?view=reference`) }, ...prefs]
+      : prefs;
   const [params, setParams] = useSearchParams();
   const param = params.get('room');
   const room = COLLAB_URL && param && ROOM_ID.test(param) ? param : null;
@@ -145,7 +152,7 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
             }}
           />
         }
-        menu={prefs}
+        menu={menu}
         // 題目的白板是空的時候，一鍵放上這題的範例（跟參考講解用同一組資料）；自己新增的題目沒有
         example={problem && !problem.custom ? PROBLEM_EXAMPLES[problem.id] : undefined}
         collab={room && COLLAB_URL ? { url: `${COLLAB_URL.replace(/^http/, 'ws').replace(/\/$/, '')}/room/${room}`, name, seed } : undefined}
@@ -153,3 +160,11 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
     </ExplainProblemContext.Provider>
   );
 }
+
+/** 參考板書：一塊板子上有播放的三角形 */
+const ICON_REFERENCE = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="3.5" y="5" width="17" height="12" rx="2" />
+    <path d="M10.5 8.8v4.4l3.6-2.2zM8 20.5h8" />
+  </svg>
+);

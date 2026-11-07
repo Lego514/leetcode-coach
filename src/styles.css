@@ -2991,6 +2991,12 @@ audio {
   margin-top: 8px;
 }
 
+/* 參考講法下面「看參考板書」：獨立一顆，不用先展開講法 */
+.reference-board-link {
+  justify-self: start;
+  margin-top: 10px;
+}
+
 .reference-details summary {
   cursor: pointer;
   color: var(--pen);

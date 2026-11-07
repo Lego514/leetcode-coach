@@ -1082,6 +1082,12 @@ const zhTW = {
     show: '顯示參考講法',
     hint: '先用自己的話講一次再看，比較記得住。五句依序是：關鍵觀察、資料結構、例子、複雜度、邊界情況。',
     compareNote: '跟你剛才的講法對照看看',
+    openBoard: '看參考板書',
+    boardCaption: '參考板書',
+    notSaved: '這裡的改動不會存',
+    copy: '複製到我的白板',
+    copied: '已複製到你這題的白板',
+    replaceConfirm: '要用參考板書取代你這題白板上的內容嗎？',
   },
 
   patterns: {
