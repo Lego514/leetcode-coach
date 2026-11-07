@@ -49,6 +49,26 @@ test('on a phone, keeps the title and save status in view and puts language, the
   await expect(page.getByRole('button', { name: 'Export image', exact: true })).toBeEnabled();
 });
 
+test('puts the problem’s example on an empty problem board in one click', async ({ page }) => {
+  await page.goto('/#/board/1');
+  const draw = page.getByRole('button', { name: /^Put this problem’s example on the board/ });
+  // 按鈕上寫出要畫的是什麼，跟參考講解用同一組資料
+  await expect(draw).toContainText('nums = [2,7,11,15], target = 9');
+  await draw.click();
+  await expect(page.getByRole('group', { name: 'Array nums: 2, 7, 11, 15' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Variable target = 9' })).toBeVisible();
+  // 白板有東西了，按鈕就收起來
+  await expect(draw).toHaveCount(0);
+
+  // 樹的題目畫成樹；自由白板沒有對應的題目，沒有這個按鈕
+  await page.goto('/#/board/104');
+  await page.getByRole('button', { name: /^Put this problem’s example on the board/ }).click();
+  await expect(page.getByRole('group', { name: /^Binary tree root/ })).toBeVisible();
+  await page.goto('/#/board/scratch');
+  await expect(page.getByText('Click or drag in an element')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Put this problem’s example/ })).toHaveCount(0);
+});
+
 test('writes a complexity block on a problem board and keeps it after reloading', async ({ page }) => {
   await page.goto('/#/board/1');
   await page.getByRole('button', { name: 'Complexity', exact: true }).click();

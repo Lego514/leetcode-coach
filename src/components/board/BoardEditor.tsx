@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useHref, useSearchParams } from 'react-router';
 import { EMPTY_DOC, guestName, isOldGuestName, newRoomId, ROOM_ID, ShareControls, Whiteboard, type BoardDoc, type ExplainHooks } from 'dsa-whiteboard';
+import { PROBLEM_EXAMPLES } from '../../data/examples';
 import type { Difficulty, Problem } from '../../data/problems';
 import { useI18n, type Locale } from '../../i18n';
 import { saveBoard } from '../../store/actions';
@@ -145,6 +146,8 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
           />
         }
         menu={prefs}
+        // 題目的白板是空的時候，一鍵放上這題的範例（跟參考講解用同一組資料）；自己新增的題目沒有
+        example={problem && !problem.custom ? PROBLEM_EXAMPLES[problem.id] : undefined}
         collab={room && COLLAB_URL ? { url: `${COLLAB_URL.replace(/^http/, 'ws').replace(/\/$/, '')}/room/${room}`, name, seed } : undefined}
       />
     </ExplainProblemContext.Provider>
