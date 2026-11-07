@@ -49,6 +49,22 @@ test('on a phone, keeps the title and save status in view and puts language, the
   await expect(page.getByRole('button', { name: 'Export image', exact: true })).toBeEnabled();
 });
 
+test('writes a complexity block on a problem board and keeps it after reloading', async ({ page }) => {
+  await page.goto('/#/board/1');
+  await page.getByRole('button', { name: 'Complexity', exact: true }).click();
+  // 有建議清單的輸入框是 combobox；打 n 會顯示成 O(n)
+  await page.getByRole('combobox', { name: 'Time', exact: true }).fill('n');
+  await page.getByRole('textbox', { name: 'Time: Why?' }).fill('each number is seen once');
+  await page.getByRole('combobox', { name: 'Space', exact: true }).fill('n');
+  await page.keyboard.press('Enter');
+  const block = page.getByRole('group', { name: /^Complexity / });
+  await expect(block).toHaveAccessibleName('Complexity Complexity: time O(n), space O(n)');
+  await expect(saveStatus(page)).toHaveText('Saved on this device');
+  await page.reload();
+  await expect(block).toHaveAccessibleName('Complexity Complexity: time O(n), space O(n)');
+  await expect(block).toContainText('each number is seen once');
+});
+
 test('sketches an array with a pointer and keeps it after reloading', async ({ page }) => {
   await page.goto('/#/board/scratch');
   const board = page.getByRole('dialog', { name: 'Scratch whiteboard' });
