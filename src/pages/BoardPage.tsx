@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { BoardEditor } from '../components/board/BoardEditor';
+import { ReferenceBoardView } from '../components/board/ReferenceBoardView';
+import { REFERENCE_BOARD_IDS } from '../data/referenceBoards';
 import { SpotArt } from '../components/SpotArt';
 import { Dialog, PageHead, Sheet } from '../components/ui';
 import { useI18n } from '../i18n';
@@ -22,6 +24,7 @@ function useClose(fallback: string) {
 export function BoardPage() {
   const { t } = useI18n();
   const { id } = useParams();
+  const [params] = useSearchParams();
   const catalog = useCatalog();
   const problem = id === 'scratch' ? undefined : catalog.byId.get(Number(id));
   const close = useClose(problem ? `/problems/${problem.id}` : '/board');
@@ -42,6 +45,10 @@ export function BoardPage() {
         </PageHead>
       </div>
     );
+  }
+  // ?view=reference：這一題的參考板書（還沒做的題目就打開自己的白板）
+  if (params.get('view') === 'reference' && REFERENCE_BOARD_IDS.has(problem.id)) {
+    return <ReferenceBoardView problem={problem} onClose={close} />;
   }
   return (
     <BoardEditor

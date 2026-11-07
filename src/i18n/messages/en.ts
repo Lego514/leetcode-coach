@@ -1105,6 +1105,12 @@ const en: Messages = {
     show: 'Show reference explanation',
     hint: 'Try explaining it in your own words first; it sticks better. The five sentences cover the key insight, data structure, example, complexity, and an edge case.',
     compareNote: 'Compare it with how you just explained it',
+    openBoard: 'View reference board',
+    boardCaption: 'Reference board',
+    notSaved: 'Changes here aren’t saved',
+    copy: 'Copy to my board',
+    copied: 'Copied to your whiteboard for this problem',
+    replaceConfirm: 'Replace what’s on your whiteboard for this problem with the reference board?',
   },
 
   patterns: {
