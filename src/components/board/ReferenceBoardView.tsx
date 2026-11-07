@@ -21,14 +21,16 @@ export function ReferenceBoardView({ problem, onClose }: { problem: Problem; onC
   const navigate = useNavigate();
   const prefs = useBoardPrefs();
   const mine = useBoard(`p${problem.id}`);
-  const [doc, setDoc] = useState<BoardDoc | null | undefined>(undefined);
+  // 記下載入的是哪一題：換題（只改網址）時第一次 render 還拿著上一題的板書，不能拿來開白板
+  const [loaded, setLoaded] = useState<{ id: number; doc: BoardDoc | null } | undefined>(undefined);
+  const doc = loaded?.id === problem.id ? loaded.doc : undefined;
   /** 現在畫面上的內容（可能播放後改過），複製時存這個 */
   const current = useRef<BoardDoc | null>(null);
 
   useEffect(() => {
     let active = true;
-    void loadReferenceBoard(problem.id).then((loaded) => {
-      if (active) setDoc(loaded ?? null);
+    void loadReferenceBoard(problem.id).then((board) => {
+      if (active) setLoaded({ id: problem.id, doc: board ?? null });
     });
     return () => {
       active = false;

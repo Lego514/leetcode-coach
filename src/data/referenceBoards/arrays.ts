@@ -98,7 +98,7 @@ export function longestSubstring(): BoardDoc {
     { caption: 'r = 0 to 2: a, b, and c are all new, so the window grows to "abc" and best becomes 3.', elements: grown },
     { caption: example, elements: moved },
     { caption: cost, elements: [...moved, result] },
-    { caption: edge, elements: [...moved, result, note('edge', 620, 120, 'l = max(l, last[c] + 1): l only moves forward.')] },
+    { caption: edge, elements: [...moved, result, note('edge', 620, 140, 'l = max(l, last[c] + 1): l only moves forward.')] },
   ]);
 }
 
@@ -119,7 +119,7 @@ export function validParentheses(): BoardDoc {
     },
     { caption: example, elements: done },
     { caption: cost, elements: [...done, result] },
-    { caption: edge, elements: [...done, result, note('edge', 480, 120, 'A closer with an empty stack, or openers left at the end: invalid.', 300)] },
+    { caption: edge, elements: [...done, result, note('edge', 480, 140, 'A closer with an empty stack, or openers left at the end: invalid.', 300)] },
   ]);
 }
 
@@ -150,7 +150,7 @@ export function dailyTemperatures(): BoardDoc {
     },
     { caption: example, elements: waiting },
     { caption: cost, elements: [...waiting, result] },
-    { caption: edge, elements: [...waiting, result, note('edge', 470, 130, 'Days still on the stack at the end never warm up: answer stays 0.')] },
+    { caption: edge, elements: [...waiting, result, note('edge', 470, 140, 'Days still on the stack at the end never warm up: answer stays 0.')] },
   ]);
 }
 
@@ -172,6 +172,6 @@ export function binarySearch(): BoardDoc {
     },
     { caption: example, elements: found },
     { caption: cost, elements: [...found, result] },
-    { caption: edge, elements: [...found, result, note('edge', 540, 120, 'Not there: left passes right and I return -1.')] },
+    { caption: edge, elements: [...found, result, note('edge', 540, 140, 'Not there: left passes right and I return -1.')] },
   ]);
 }
