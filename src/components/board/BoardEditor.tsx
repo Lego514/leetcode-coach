@@ -4,6 +4,7 @@ import { EMPTY_DOC, guestName, isOldGuestName, newRoomId, ROOM_ID, ShareControls
 import type { Difficulty, Problem } from '../../data/problems';
 import { useI18n, type Locale } from '../../i18n';
 import { saveBoard } from '../../store/actions';
+import { useBoardPrefs } from './BoardPrefs';
 import { useCloud } from '../../store/cloud';
 import { useBoard } from '../../store/queries';
 import { useToast } from '../toast';
@@ -54,6 +55,8 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
   const record = useBoard(boardId);
   const signedIn = useCloud().account.kind === 'signed-in';
   const toast = useToast();
+  // 語言、深淺色：寬的畫面在標題列，手機上收進白板的「⋯」選單
+  const prefs = useBoardPrefs();
   const [params, setParams] = useSearchParams();
   const param = params.get('room');
   const room = COLLAB_URL && param && ROOM_ID.test(param) ? param : null;
@@ -141,6 +144,7 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
             }}
           />
         }
+        menu={prefs}
         collab={room && COLLAB_URL ? { url: `${COLLAB_URL.replace(/^http/, 'ws').replace(/\/$/, '')}/room/${room}`, name, seed } : undefined}
       />
     </ExplainProblemContext.Provider>
