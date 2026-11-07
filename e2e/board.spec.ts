@@ -78,6 +78,12 @@ test('plays the reference board step by step, with the reference explanation as 
   // 題目白板的選單也打得開；沒有參考板書的題目沒有這一項
   await (await headerButton(page, 'View reference board')).click();
   await expect(page).toHaveURL(/view=reference/);
+  // 只改網址換到另一題的參考板書：換成那一題的，不會留著上一題的
+  await page.goto('/#/board/704?view=reference');
+  await expect(page.getByRole('toolbar', { name: 'Step playback' })).toContainText('in a sorted array, comparing with the middle value');
+  await page.getByRole('toolbar', { name: 'Step playback' }).getByRole('button', { name: /^Stop playback/ }).click();
+  await expect(page.getByRole('group', { name: /^Array nums: -1, 0, 3, 5, 9, 12/ })).toBeVisible();
+  await expect(page.getByRole('group', { name: /^Array nums: 2, 7, 11, 15/ })).toHaveCount(0);
   await page.goto('/#/board/2');
   await expect(page.getByRole('button', { name: 'View reference board' })).toHaveCount(0);
 });

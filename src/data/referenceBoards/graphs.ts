@@ -57,14 +57,14 @@ export function courseSchedule(): BoardDoc {
       colors,
     );
   const counts = [array('indegree', 260, 0, 'indegree', ['1', '1']), queue('queue', 260, 100, 'queue', [])];
-  const done = [courses(['red', 'red']), ...counts, variable('taken', 260, 180, 'processed', '0 < 2 → False')];
+  const done = [courses(['red', 'red']), ...counts, variable('taken', 260, 200, 'processed', '0 < 2 → False')];
   const result = complexity('cx', 520, 0, 'V + E', 'each course and prerequisite is handled once', 'V + E', 'the graph, indegrees, and queue');
   return board([
     { caption: insight, elements: [courses()] },
     { caption: structure, elements: [courses(), ...counts] },
     { caption: example, elements: done },
     { caption: cost, elements: [...done, result] },
-    { caption: edge, elements: [...done, result, note('edge', 520, 120, 'Indegree 0 starts in the queue; processed < numCourses means a cycle.', 320)] },
+    { caption: edge, elements: [...done, result, note('edge', 520, 140, 'Indegree 0 starts in the queue; processed < numCourses means a cycle.', 320)] },
   ]);
 }
 
@@ -95,7 +95,7 @@ export function mergeIntervals(): BoardDoc {
     },
     { caption: example, elements: done },
     { caption: cost, elements: [...done, result] },
-    { caption: edge, elements: [...done, result, note('edge', 460, 130, 'Touching intervals like [1, 4] and [4, 5] merge into [1, 5].')] },
+    { caption: edge, elements: [...done, result, note('edge', 460, 140, 'Touching intervals like [1, 4] and [4, 5] merge into [1, 5].')] },
   ]);
 }
 
@@ -119,6 +119,6 @@ export function coinChange(): BoardDoc {
     },
     { caption: example, elements: done },
     { caption: cost, elements: [...done, result] },
-    { caption: edge, elements: [...done, result, note('edge', 600, 120, 'An amount that can’t be made stays ∞, so I return -1.')] },
+    { caption: edge, elements: [...done, result, note('edge', 600, 140, 'An amount that can’t be made stays ∞, so I return -1.')] },
   ]);
 }

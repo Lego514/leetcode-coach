@@ -25,7 +25,7 @@ export function reverseLinkedList(): BoardDoc {
     },
     { caption: example, elements: reversed },
     { caption: cost, elements: [...reversed, result] },
-    { caption: edge, elements: [...reversed, result, note('edge', 540, 120, 'Empty list or a single node: return head as is.')] },
+    { caption: edge, elements: [...reversed, result, note('edge', 540, 140, 'Empty list or a single node: return head as is.')] },
   ]);
 }
 
@@ -75,7 +75,7 @@ export function maximumDepth(): BoardDoc {
     },
     { caption: example, elements: done },
     { caption: cost, elements: [...done, result] },
-    { caption: edge, elements: [...done, result, note('edge', 480, 120, 'Empty tree: depth 0. BFS counting levels works too.')] },
+    { caption: edge, elements: [...done, result, note('edge', 480, 140, 'Empty tree: depth 0. BFS counting levels works too.')] },
   ]);
 }
 
@@ -102,7 +102,7 @@ export function levelOrder(): BoardDoc {
     },
     { caption: example, elements: done },
     { caption: cost, elements: [...done, result] },
-    { caption: edge, elements: [...done, result, note('edge', 680, 120, 'Empty tree: return [].', 200)] },
+    { caption: edge, elements: [...done, result, note('edge', 680, 140, 'Empty tree: return [].', 200)] },
   ]);
 }
 
@@ -127,7 +127,7 @@ export function kthLargest(): BoardDoc {
     },
     { caption: example, elements: done },
     { caption: cost, elements: [...done, result] },
-    { caption: edge, elements: [...done, result, note('edge', 460, 120, 'Duplicates count separately: it’s the kth largest, not the kth distinct.')] },
+    { caption: edge, elements: [...done, result, note('edge', 460, 140, 'Duplicates count separately: it’s the kth largest, not the kth distinct.')] },
   ]);
 }
 
@@ -157,6 +157,6 @@ export function subsets(): BoardDoc {
     { caption: 'Back up to [1] and try the next element, 3: that records [1, 3].', elements: [nums, calls(5)] },
     { caption: example, elements: done },
     { caption: cost, elements: [...done, result] },
-    { caption: edge, elements: [...done, result, note('edge', 520, 130, 'Empty input: still one subset, [].', 200)] },
+    { caption: edge, elements: [...done, result, note('edge', 520, 140, 'Empty input: still one subset, [].', 200)] },
   ]);
 }
