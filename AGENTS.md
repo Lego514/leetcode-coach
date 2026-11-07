@@ -78,7 +78,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 - **畫面上的「今天」一律用 `useToday()`**（`src/store/queries.ts`）：整個 App 共用一個日期，午夜那一刻、回到前景時一起換；不要在畫面裡直接呼叫 `today()` 或 `new Date()` 判斷是不是今天（存檔當下的時間戳除外）。
 - **Dexie 不要用會開 key cursor 的查詢**（`uniqueKeys`、`eachKey`）：iOS 上會丟 "Unable to open cursor"。整張讀出來用 JS 處理。
 - **隱私**：錯誤追蹤（Sentry）不能送使用者資料，規則在 `src/lib/monitoring.ts`、`server/src/monitoring.ts`；新增的 log 不要帶 email、筆記、逐字稿。
-- **白板功能改在 dsa-whiteboard repo**，這裡只負責接上存檔和講解模式。發新版的流程見那邊的 AGENTS.md。
+- **白板功能改在 dsa-whiteboard repo**，這裡只負責接上存檔和講解模式。發新版的流程見那邊的 AGENTS.md。白板的標題列有語言和深淺色切換（`components/board/BoardPrefs.tsx` 的 `useBoardPrefs`，傳給白板的 `menu`，改的是整個 App 的設定），因為收到共用連結的人只看得到白板；手機上它們和匯出圖片收進白板的「⋯」選單，所以 e2e 用 `headerButton()` 找這些按鈕（手機上會先打開選單），用 `saveStatus()` 看存檔狀態的文字。
 - 新增的套件釘版本（exact），選發佈超過一週的版本；看 `node_modules` 裡的型別確認 API（例如 Sentry v11 用 `dataCollection`，不是 `sendDefaultPii`）。
 
 ## 測試

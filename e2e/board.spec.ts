@@ -1,4 +1,51 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+
+/** 存檔狀態：看文字，等存好才往下做 */
+const saveStatus = (scope: Page | Locator) => scope.locator('.board-save');
+
+/** 標題列可以收起來的按鈕（匯出、語言、深淺色）：手機上要先打開白板的「⋯」選單 */
+async function headerButton(page: Page, name: string) {
+  const more = page.getByRole('button', { name: /^(More|更多)$/ });
+  if (await more.isVisible()) await more.click();
+  return page.getByRole('button', { name, exact: true });
+}
+
+test('switches language and light or dark from inside the whiteboard, for people who only ever open a shared board', async ({ page }) => {
+  await page.goto('/#/board/scratch');
+  await expect(page.getByRole('dialog', { name: 'Scratch whiteboard' })).toBeVisible();
+  // 關閉只放一個 ×，省下的寬度留給題目名稱；名稱還是 Close
+  await expect(page.getByRole('button', { name: 'Close', exact: true })).toHaveText('');
+
+  // 按鈕寫的是要換成的語言
+  await (await headerButton(page, '繁體中文')).click();
+  await expect(page.getByRole('dialog', { name: '自由白板' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '陣列', exact: true })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant-TW');
+
+  // 深淺色：跟側邊欄、設定頁是同一個設定
+  const dark = await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches);
+  await (await headerButton(page, dark ? '換成淺色' : '換成深色')).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', dark ? 'light' : 'dark');
+
+  // 關掉白板之後，整個 App 還是中文、還是換過的外觀
+  await page.reload();
+  await expect(page.getByRole('dialog', { name: '自由白板' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', dark ? 'light' : 'dark');
+  await (await headerButton(page, 'English')).click();
+  await expect(page.getByRole('dialog', { name: 'Scratch whiteboard' })).toBeVisible();
+});
+
+test('on a phone, keeps the title and save status in view and puts language, theme, and export in a ⋯ menu', async ({ page, isMobile }) => {
+  if (!isMobile) await page.setViewportSize({ width: 390, height: 700 });
+  await page.goto('/#/board/1');
+  await page.getByRole('button', { name: 'Array', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Two Sum');
+  await expect(page.getByText('Saved on this device')).toBeVisible();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await expect(page.getByRole('button', { name: '繁體中文', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Switch to (dark|light)$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export image', exact: true })).toBeEnabled();
+});
 
 test('sketches an array with a pointer and keeps it after reloading', async ({ page }) => {
   await page.goto('/#/board/scratch');
@@ -30,7 +77,7 @@ test('sketches an array with a pointer and keeps it after reloading', async ({ p
   await page.getByRole('button', { name: 'Redo (Ctrl+Shift+Z)' }).click();
   await expect(page.getByRole('group', { name: 'Array nums: x, 2, 3, 4' })).toBeVisible();
 
-  await expect(page.getByText('Saved on this device')).toBeVisible();
+  await expect(saveStatus(page)).toHaveText('Saved on this device');
   await page.reload();
   await expect(page.getByRole('group', { name: 'Array nums: x, 2, 3, 4' })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Pointer i at index 2' })).toBeVisible();
@@ -43,7 +90,7 @@ test('opens a problem’s whiteboard from practice without stopping the timer', 
   const board = page.getByRole('dialog', { name: '1. Two Sum' });
   await page.getByRole('button', { name: 'Dict', exact: true }).click();
   await expect(board.getByRole('group', { name: /^Dict count/ })).toBeVisible();
-  await expect(board.getByText('Saved on this device')).toBeVisible();
+  await expect(saveStatus(page)).toHaveText('Saved on this device');
   await board.getByRole('button', { name: 'Close' }).click();
   await expect(board).toBeHidden();
   await expect(page.getByRole('region', { name: 'Timer' })).toBeVisible();
@@ -90,7 +137,7 @@ test('keeps the view where it is after adding something', async ({ page }) => {
   const canvas = page.getByRole('region', { name: 'Whiteboard canvas' });
   const world = canvas.locator('.board-world');
   await page.getByRole('button', { name: 'Text', exact: true }).click();
-  await expect(page.getByText('Saved on this device')).toBeVisible();
+  await expect(saveStatus(page)).toHaveText('Saved on this device');
 
   // 用手掌工具平移畫面，再放一個元件；存檔之後畫面不應該跳回中間
   await page.keyboard.press('h');
@@ -103,8 +150,8 @@ test('keeps the view where it is after adding something', async ({ page }) => {
   const panned = await world.getAttribute('style');
 
   await page.getByRole('button', { name: 'Variable', exact: true }).click();
-  await expect(page.getByText('Saving…')).toBeVisible();
-  await expect(page.getByText('Saved on this device')).toBeVisible();
+  await expect(saveStatus(page)).toHaveText('Saving…');
+  await expect(saveStatus(page)).toHaveText('Saved on this device');
   await page.waitForTimeout(300);
   expect(await world.getAttribute('style')).toBe(panned);
 });
@@ -172,7 +219,7 @@ test('lists my whiteboards and says where they are stored', async ({ page }) => 
   const board = page.getByRole('dialog', { name: '1. Two Sum' });
   await expect(board).toContainText('Problem whiteboard');
   await page.getByRole('button', { name: 'Variable', exact: true }).click();
-  await expect(board.getByText('Saved on this device')).toBeVisible();
+  await expect(saveStatus(page)).toHaveText('Saved on this device');
 
   await page.goto('/#/board');
   await expect(page.getByRole('heading', { level: 1, name: 'My whiteboards' })).toBeVisible();
@@ -193,14 +240,14 @@ test('lists my whiteboards and says where they are stored', async ({ page }) => 
 test('switching straight from one whiteboard to another never mixes them up', async ({ page }) => {
   await page.goto('/#/board/1');
   await page.getByRole('button', { name: 'Variable', exact: true }).click();
-  await expect(page.getByText('Saved on this device')).toBeVisible();
+  await expect(saveStatus(page)).toHaveText('Saved on this device');
 
   // 在同一個分頁直接換網址到另一題的白板（像按瀏覽器的上一頁、下一頁）
   await page.evaluate(() => (window.location.hash = '#/board/3'));
   const other = page.getByRole('dialog', { name: /^3\. / });
   await expect(other).toContainText('Click or drag in an element');
   await page.getByRole('button', { name: 'Array', exact: true }).click();
-  await expect(other.getByText('Saved on this device')).toBeVisible();
+  await expect(saveStatus(other)).toHaveText('Saved on this device');
   await expect(other.getByRole('group', { name: /^Array nums/ })).toHaveCount(1);
   await expect(other.getByRole('group', { name: /^Variable/ })).toHaveCount(0);
 
@@ -291,12 +338,12 @@ test('records steps and plays them back with notes', async ({ page }) => {
 
 test('exports the board, or the step being played, as a PNG', async ({ page }) => {
   await page.goto('/#/board/scratch');
-  const exportButton = page.getByRole('button', { name: 'Export image' });
-  await expect(exportButton).toBeDisabled();
+  await expect(await headerButton(page, 'Export image')).toBeDisabled();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Array', exact: true }).click();
   await page.getByRole('button', { name: 'Pointer', exact: true }).click();
 
-  const [download] = await Promise.all([page.waitForEvent('download'), exportButton.click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), (await headerButton(page, 'Export image')).click()]);
   expect(download.suggestedFilename()).toBe('whiteboard.png');
   const path = await download.path();
   const { readFileSync } = await import('node:fs');
@@ -308,7 +355,7 @@ test('exports the board, or the step being played, as a PNG', async ({ page }) =
   // 播放時匯出的是那一步
   await page.keyboard.press('s');
   await page.getByRole('button', { name: 'Play the step from the start' }).click();
-  const [stepDownload] = await Promise.all([page.waitForEvent('download'), exportButton.click()]);
+  const [stepDownload] = await Promise.all([page.waitForEvent('download'), (await headerButton(page, 'Export image')).click()]);
   expect(stepDownload.suggestedFilename()).toBe('whiteboard-step-1.png');
 });
 
@@ -388,7 +435,7 @@ test('builds a binary tree from LeetCode’s format and edits it node by node', 
   await tree.locator('[data-cell="0"]').click();
   await expect(selbar.getByRole('button', { name: 'Delete this subtree' })).toBeDisabled();
 
-  await expect(page.getByText('Saved on this device')).toBeVisible();
+  await expect(saveStatus(page)).toHaveText('Saved on this device');
   await page.reload();
   await expect(page.getByRole('group', { name: 'Binary tree root: [3,9,null,null,8]' })).toBeVisible();
 });
