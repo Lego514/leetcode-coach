@@ -64,7 +64,7 @@ async function join(page: Page, name: string, room: (ws: WebSocketRoute) => void
 
 const status = (page: Page) => page.locator('.board-save');
 
-test('shares a whiteboard: both people edit it, and each keeps their own board', async ({ page: alice, browser }) => {
+test('shares a whiteboard: both people edit it, and each keeps their own board', async ({ page: alice, browser, isMobile }) => {
   const room = fakeRoom();
   await join(alice, 'Alice', room);
   await alice.goto('/#/board/scratch');
@@ -78,7 +78,8 @@ test('shares a whiteboard: both people edit it, and each keeps their own board',
   await expect(alice.getByRole('textbox', { name: 'Link to this room' })).toHaveValue(alice.url());
   await alice.keyboard.press('Escape');
   await expect(status(alice)).toHaveText('1 person here');
-  await expect(alice.getByRole('dialog', { name: 'Scratch whiteboard' })).toContainText('Shared whiteboard');
+  // 手機上那行小字換成連線狀態
+  if (!isMobile) await expect(alice.getByRole('dialog', { name: 'Scratch whiteboard' })).toContainText('Shared whiteboard');
 
   // Bob 打開連結，看到同一張白板，加一個變數
   const context = await browser.newContext({ locale: 'en-US' });

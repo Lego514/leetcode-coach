@@ -3,10 +3,12 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 /** 存檔狀態：看文字，等存好才往下做 */
 const saveStatus = (scope: Page | Locator) => scope.locator('.board-save');
 
-/** 標題列可以收起來的按鈕（匯出、語言、深淺色）：手機上要先打開白板的「⋯」選單 */
+/**
+ * 標題列可以收起來的按鈕（匯出、語言、深淺色）：白板在 560px 以下收進「⋯」選單，要先打開。
+ * 看畫面寬度決定，不看「⋯」現在看不看得到：頁面剛載入時它還沒畫出來
+ */
 async function headerButton(page: Page, name: string) {
-  const more = page.getByRole('button', { name: /^(More|更多)$/ });
-  if (await more.isVisible()) await more.click();
+  if ((page.viewportSize()?.width ?? 1280) <= 560) await page.getByRole('button', { name: /^(More|更多)$/ }).click();
   return page.getByRole('button', { name, exact: true });
 }
 
@@ -213,11 +215,12 @@ test('frames part of an array with a rectangle without blocking it', async ({ pa
   await expect(array).toBeVisible();
 });
 
-test('lists my whiteboards and says where they are stored', async ({ page }) => {
+test('lists my whiteboards and says where they are stored', async ({ page, isMobile }) => {
   // 先在第 1 題的白板放一個東西
   await page.goto('/#/board/1');
   const board = page.getByRole('dialog', { name: '1. Two Sum' });
-  await expect(board).toContainText('Problem whiteboard');
+  // 手機上那行小字換成存檔狀態，題目名稱才放得下
+  if (!isMobile) await expect(board).toContainText('Problem whiteboard');
   await page.getByRole('button', { name: 'Variable', exact: true }).click();
   await expect(saveStatus(page)).toHaveText('Saved on this device');
 
