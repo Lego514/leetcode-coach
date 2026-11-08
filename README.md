@@ -31,7 +31,14 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 
 **Reference boards**: every problem in the bank comes with a finished whiteboard that plays step by step. Each step's caption is a line of the problem's reference explanation, so you see the board and the words you'd say together.
 
-Screenshots use generated demo data and are regenerated with `npm run screenshots`, along with the reference board animation. They follow your GitHub theme (light or dark). The capybara animation is an SVG drawn from the app's own component and text.
+<table>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/reference-board-dp-dark.gif"><img src="docs/images/reference-board-dp-light.gif" alt="The reference board for Longest Common Subsequence filling its DP table cell by cell, with arrows from the cells each value comes from"></picture><br><b>Dynamic programming</b>: Longest Common Subsequence fills its table cell by cell, with arrows to the cells each value comes from.</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/reference-board-graph-dark.gif"><img src="docs/images/reference-board-graph-light.gif" alt="The reference board for Course Schedule II: courses are taken as their indegree drops to zero, and the queue and the order fill in"></picture><br><b>Graphs</b>: Course Schedule II takes each course as its indegree drops to zero, filling the queue and the order.</td>
+  </tr>
+</table>
+
+Screenshots use generated demo data and are regenerated with `npm run screenshots`, along with the reference board animations. They follow your GitHub theme (light or dark). The capybara animation is an SVG drawn from the app's own component and text.
 
 ## Features
 
