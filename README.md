@@ -29,7 +29,7 @@ You still solve problems on LeetCode. This app handles the parts around solving:
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/reference-board-dark.gif"><img src="docs/images/reference-board-light.gif" alt="The reference board for Reverse Linked List playing step by step: prev, curr, and next move along the list as each link is pointed back, the caption under the board is one line of the reference explanation, and the last steps add a complexity block and an edge-case note"></picture>
 
-**Reference boards**: 15 problems come with a finished whiteboard that plays step by step. Each step's caption is a line of the problem's reference explanation, so you see the board and the words you'd say together.
+**Reference boards**: every problem in the bank comes with a finished whiteboard that plays step by step. Each step's caption is a line of the problem's reference explanation, so you see the board and the words you'd say together.
 
 Screenshots use generated demo data and are regenerated with `npm run screenshots`, along with the reference board animation. They follow your GitHub theme (light or dark). The capybara animation is an SVG drawn from the app's own component and text.
 
@@ -99,7 +99,7 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
   - **Explain mode** (this app only): walk through your steps out loud in English. The current step's note shows as a prompt while a timer, audio recording, and live transcript run. Afterwards you see how long you spent on each step (the slow one is usually the part you can't explain smoothly yet), play back the audio, and fix the transcript. On a problem's whiteboard you can also tick which of the five points you covered, get AI feedback, save the transcript as the problem's script, and save the run as an explanation drill, marked "Whiteboard" in the mock interview history.
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - **Put this problem's example on the board**: an empty problem board offers a button that draws the problem's LeetCode example (the same data as the reference explanation's "For example"), so you can start tracing right away.
-  - **Reference boards** for 15 problems, one or two per pattern (1, 3, 11, 20, 56, 78, 102, 104, 200, 206, 207, 215, 322, 704, 739): a finished board that opens in playback, one step per line of the reference explanation, ending with a complexity block and an edge case. Open it any time from the problem page, the review page, or the problem's whiteboard. You can doodle on it without saving, or **Copy to my board** to keep and edit it.
+  - **Reference boards** for all 213 problems: a finished board that opens in playback, one step per line of the reference explanation, ending with a complexity block and an edge case. Open it any time from the problem page, the review page, or the problem's whiteboard. You can doodle on it without saving, or **Copy to my board** to keep and edit it.
   - **Share** a board for a mock interview or study session: everyone who opens the link edits it together, with each person's cursor and name. Joining doesn't need an account. Your own board isn't touched, and "Save a copy to my board" keeps the shared one. Rooms run on the package's Cloudflare Worker.
   - On the practice page the board opens on top, so the timer keeps running.
   - The app installs the package from npm at an exact version and plugs in its own storage, sync status, toasts, and explain mode. The server validates boards with the package's zod schema before storing them.
@@ -555,7 +555,7 @@ Notes:
 - **講解模式**（只有這個 App 有）：照著記好的步驟用英文講出來。這一步的說明會當作提詞，同時計時、錄音、顯示即時逐字稿。講完看每一步講了多久（特別久的那步通常就是還講不順的地方）、聽錄音、修正逐字稿；在題目的白板上還可以勾有講到哪幾個重點、拿 AI 回饋、把逐字稿存成講解稿，並存成一筆講解練習，在模擬面試的紀錄裡標成「白板」。
 - 每一題有自己的白板，另外有一張自由白板；「我的白板」列出全部，也寫出存在哪裡。白板會自動儲存，登入後會同步。
 - **放上這題的範例**：題目的白板是空的時候，一個按鈕就畫出這題 LeetCode 的範例（跟參考講法的「For example」同一組資料），馬上可以開始手動跑。
-- **參考板書**（先做 15 題，每種題型一兩題：1、3、11、20、56、78、102、104、200、206、207、215、322、704、739）：做好的白板，打開就從第一步播放，每一步的字幕是參考講法的一句，最後是複雜度和邊界情況。題目頁、複習頁和這題的白板隨時都能打開；上面可以隨手畫（不會存），按「複製到我的白板」就留下來自己改。
+- **參考板書**（題庫的 213 題都有）：做好的白板，打開就從第一步播放，每一步的字幕是參考講法的一句，最後是複雜度和邊界情況。題目頁、複習頁和這題的白板隨時都能打開；上面可以隨手畫（不會存），按「複製到我的白板」就留下來自己改。
 - **共用**：模擬面試或一起讀書時，把白板的連結傳給對方，打開的人都能一起編輯，看得到每個人的游標和名字，對方不用帳號。自己的白板不會被改到，想留下共用的內容就按「存一份到我的白板」。房間在 dsa-whiteboard 的 Cloudflare Worker 上。
 
 **講解和模擬面試**：
