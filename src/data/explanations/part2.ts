@@ -331,7 +331,7 @@ One edge case is finding the same word twice, so I clear the word from the trie 
 
   336: `The key insight is that words[i] plus words[j] is a palindrome when one word's reverse matches part of the other and the leftover part is itself a palindrome.
 So I store each word's reverse in a hash map, and for every split of each word into prefix and suffix, I look for a matching reverse on the correct side.
-For example, "abcd" and "dcba" pair both ways, and "s" and "lls" form "llss".
+For example, "abcd" and "dcba" pair both ways, and "s" plus "lls" forms "slls".
 This takes O(n times k^2) time for n words of length k, and O(n times k) space.
 One edge case is the empty string, which pairs with every word that is already a palindrome.`,
 

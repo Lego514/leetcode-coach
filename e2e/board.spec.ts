@@ -84,7 +84,11 @@ test('plays the reference board step by step, with the reference explanation as 
   await page.getByRole('toolbar', { name: 'Step playback' }).getByRole('button', { name: /^Stop playback/ }).click();
   await expect(page.getByRole('group', { name: /^Array nums: -1, 0, 3, 5, 9, 12/ })).toBeVisible();
   await expect(page.getByRole('group', { name: /^Array nums: 2, 7, 11, 15/ })).toHaveCount(0);
-  await page.goto('/#/board/2');
+  // 每一題都有參考板書，每種題型的板書另外載入：換到鏈結串列的題目也打得開
+  await page.goto('/#/board/2?view=reference');
+  await expect(page.getByRole('group', { name: /^Linked list l1/ })).toBeVisible();
+  // 自由白板不是題目，沒有參考板書
+  await page.goto('/#/board/scratch');
   await expect(page.getByRole('button', { name: 'View reference board' })).toHaveCount(0);
 });
 
