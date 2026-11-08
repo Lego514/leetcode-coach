@@ -210,47 +210,56 @@ test('README screenshots', async ({ page }) => {
   });
 });
 
-// 參考板書一步一步播放的動畫（GIF），淺色和深色各一個。
+// 參考板書一步一步播放的動畫（GIF），每題淺色和深色各一個：鏈結串列（README 上方那張）、二維 DP、圖各一題。
 // 1 倍解析度、視窗小一點，檔案才不會太大；每一步停的時間跟字幕長度成正比，讀得完
 const GIF_VIEWPORT = { width: 1100, height: 680 };
-const GIF_PROBLEM = 206;
+const GIF_BOARDS = [
+  { problem: 206, file: 'reference-board' },
+  { problem: 1143, file: 'reference-board-dp' },
+  { problem: 210, file: 'reference-board-graph' },
+];
 
 function stepDelay(caption: string): number {
   return Math.min(6500, Math.max(2600, 1400 + caption.length * 45));
 }
 
-test('README reference board animation', async ({ browser }) => {
-  test.setTimeout(120_000);
-  for (const scheme of ['light', 'dark'] as const) {
-    const context = await browser.newContext({ viewport: GIF_VIEWPORT, deviceScaleFactor: 1, locale: 'en-US', colorScheme: scheme });
-    const page = await context.newPage();
-    await page.goto(`/#/board/${GIF_PROBLEM}?view=reference`);
-    const playback = page.getByRole('toolbar', { name: 'Step playback' });
-    const caption = playback.locator('.board-playback-notes');
-    await expect(playback).toContainText('Step 1 of');
-    // 幾步：數「跳到第 N 步」的按鈕（工具列的文字會跟按鈕上的數字黏在一起）
-    const total = await playback.getByRole('button', { name: /^Go to step / }).count();
-    await page.evaluate(() => document.fonts.ready);
+for (const { problem, file } of GIF_BOARDS) {
+  test(`README reference board animation: ${problem}`, async ({ browser }) => {
+    test.setTimeout(120_000);
+    for (const scheme of ['light', 'dark'] as const) {
+      const context = await browser.newContext({ viewport: GIF_VIEWPORT, deviceScaleFactor: 1, locale: 'en-US', colorScheme: scheme });
+      const page = await context.newPage();
+      await page.goto(`/#/board/${problem}?view=reference`);
+      const playback = page.getByRole('toolbar', { name: 'Step playback' });
+      const caption = playback.locator('.board-playback-notes');
+      await expect(playback).toContainText('Step 1 of');
+      // 幾步：數「跳到第 N 步」的按鈕（工具列的文字會跟按鈕上的數字黏在一起）
+      const total = await playback.getByRole('button', { name: /^Go to step / }).count();
+      await page.evaluate(() => document.fonts.ready);
+      // 白板打開後下一格畫面才照最後一步縮放；伺服器剛啟動時比較慢，等縮放離開預設的 100% 再開始錄
+      // （這三題都要縮小一點才放得下，不會剛好是 100%）
+      await expect(page.locator('.board-zoom-value')).not.toHaveText('100%');
 
-    const frames: { rgba: Uint8Array; delay: number }[] = [];
-    for (let step = 1; step <= total; step += 1) {
-      if (step > 1) await playback.getByRole('button', { name: 'Next step' }).click();
-      await expect(playback).toContainText(`Step ${step} of ${total}`);
-      // 等元件移動的動畫停下來
-      await page.waitForTimeout(500);
-      const png = PNG.sync.read(await page.screenshot());
-      const delay = stepDelay((await caption.textContent()) ?? '') + (step === total ? 1500 : 0);
-      frames.push({ rgba: new Uint8Array(png.data), delay });
-    }
+      const frames: { rgba: Uint8Array; delay: number }[] = [];
+      for (let step = 1; step <= total; step += 1) {
+        if (step > 1) await playback.getByRole('button', { name: 'Next step' }).click();
+        await expect(playback).toContainText(`Step ${step} of ${total}`);
+        // 等元件移動的動畫停下來
+        await page.waitForTimeout(500);
+        const png = PNG.sync.read(await page.screenshot());
+        const delay = stepDelay((await caption.textContent()) ?? '') + (step === total ? 1500 : 0);
+        frames.push({ rgba: new Uint8Array(png.data), delay });
+      }
 
-    // 每一格自己的調色盤，字才清楚
-    const gif = GIFEncoder();
-    for (const { rgba, delay } of frames) {
-      const colors = quantize(rgba, 256);
-      gif.writeFrame(applyPalette(rgba, colors), GIF_VIEWPORT.width, GIF_VIEWPORT.height, { palette: colors, delay });
+      // 每一格自己的調色盤，字才清楚
+      const gif = GIFEncoder();
+      for (const { rgba, delay } of frames) {
+        const colors = quantize(rgba, 256);
+        gif.writeFrame(applyPalette(rgba, colors), GIF_VIEWPORT.width, GIF_VIEWPORT.height, { palette: colors, delay });
+      }
+      gif.finish();
+      writeFileSync(path.join(OUT, `${file}-${scheme}.gif`), gif.bytes());
+      await context.close();
     }
-    gif.finish();
-    writeFileSync(path.join(OUT, `reference-board-${scheme}.gif`), gif.bytes());
-    await context.close();
-  }
-});
+  });
+}
