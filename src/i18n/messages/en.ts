@@ -448,8 +448,10 @@ const en: Messages = {
     newTitle: 'New problems for today',
     startedToday: (n) => `${count(n, 'new problem')} started today`,
     roadmapOrder: (list) => `In ${list} pattern order`,
+    grindOrder: (list) => `${list}, in Grind’s suggested order`,
     pick: {
       mixedOrder: (list) => `${list}, mostly in pattern order, with one from another pattern`,
+      mixedGrindOrder: (list) => `${list}, in Grind’s suggested order, rotating through patterns`,
       focusOrder: (pattern) => `Focusing on ${pattern}`,
       focusDone: (pattern) => `${pattern} is done; back to the roadmap`,
       mix: 'Mixed in from another pattern',
@@ -1308,15 +1310,26 @@ const en: Messages = {
     maxHard: 'Most Hard problems per day',
     noLimit: 'No limit',
     difficultyCapHint: 'Counts new problems only, not reviews. Extra ones are swapped for the next easier problem in your list.',
+    newOrder: 'Order of new problems',
+    newOrders: {
+      pattern: {
+        label: 'By pattern',
+        detail: 'One pattern at a time, easy to hard (the NeetCode roadmap). Good for building the basics.',
+      },
+      grind: {
+        label: 'Grind’s suggested order',
+        detail: 'Easy, foundational problems first, Hard and Premium later, rotating through patterns, since an interview can ask anything. Problems outside Grind 169 come last.',
+      },
+    },
     newMode: 'How new problems are picked',
     newModes: {
       mixed: {
         label: 'Mixed (recommended)',
-        detail: 'Mostly the pattern you’re learning, plus one from another pattern so you practice spotting which approach fits, like in an interview. A pattern you keep getting stuck on gets an extra, easier problem.',
+        detail: 'Mostly the pattern you’re learning, plus one from another pattern so you practice spotting which approach fits, like in an interview. A pattern you keep getting stuck on gets an extra, easier problem. With Grind’s suggested order, patterns already rotate, so only the extra problem is added.',
       },
       roadmap: {
-        label: 'Roadmap order',
-        detail: 'One pattern at a time, easy to hard, in the order of your list’s roadmap.',
+        label: 'In order',
+        detail: 'One after another in the order above, with nothing mixed in.',
       },
       focus: {
         label: 'Focus on one pattern',

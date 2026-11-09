@@ -13,7 +13,7 @@ import type { Problem } from '../data/problems';
 import { useI18n } from '../i18n';
 import { bold, rich } from '../i18n/rich';
 import { getPattern, type PatternId } from '../data/patterns';
-import { problemsInList, skipPremium } from '../lib/catalog';
+import { inNewOrder, newOrderOf, problemsInList, skipPremium } from '../lib/catalog';
 import { adaptDifficulty, pickNewProblems, STRUGGLE_DAYS, stricterCap, strugglingPatterns, type NewPick } from '../lib/daily';
 import { addDays, startOfWeek, type Day } from '../lib/dates';
 import {
@@ -107,9 +107,11 @@ export function TodayPage() {
   const extraToday = extra.day === day ? extra.count : 0;
 
   const listName = t.lists.labels[settings.activeList];
+  // 新題的順序：照模式或 Grind 建議的順序（設定裡選）
+  const newOrder = newOrderOf(settings);
   const listProblems = useMemo(
-    () => skipPremium(problemsInList(catalog, settings.activeList), settings.skipPremium, (id) => progress.has(id)),
-    [catalog, settings.activeList, settings.skipPremium, progress],
+    () => skipPremium(inNewOrder(problemsInList(catalog, settings.activeList), newOrder), settings.skipPremium, (id) => progress.has(id)),
+    [catalog, settings.activeList, newOrder, settings.skipPremium, progress],
   );
   const dueNow = useMemo(() => dueProblems(catalog.problems, progress, day), [catalog, progress, day]);
   // 衝刺時，面試那天會忘記的題目提前到最後幾天複習
@@ -156,6 +158,7 @@ export function TodayPage() {
     focus: settings.focusPattern,
     struggling,
     lastPracticed,
+    grindOrder: newOrder === 'grind',
     maxMedium: adaptive ? stricterCap(settings.maxMedium, adaptation.maxMedium) : settings.maxMedium,
     maxHard: adaptive ? stricterCap(settings.maxHard, adaptation.maxHard) : settings.maxHard,
   });
@@ -179,14 +182,16 @@ export function TodayPage() {
     return showPatterns ? t.today.pick.reinforceNamed(getPattern(pick.problem.pattern, locale).name) : t.today.pick.reinforce;
   };
   const focusName = settings.focusPattern ? getPattern(settings.focusPattern, locale).name : '';
+  const grindOrder = newOrder === 'grind';
+  const roadmapNote = grindOrder ? t.today.grindOrder(listName) : t.today.roadmapOrder(listName);
+  const mixedNote = grindOrder ? t.today.pick.mixedGrindOrder(listName) : t.today.pick.mixedOrder(listName);
+  const listNote = newMode === 'roadmap' ? roadmapNote : mixedNote;
   const planNote =
     newMode === 'focus' && settings.focusPattern
       ? dayPlan.some((pick) => pick.reason === 'focus')
         ? t.today.pick.focusOrder(focusName)
         : t.today.pick.focusDone(focusName)
-      : newMode === 'roadmap'
-        ? t.today.roadmapOrder(listName)
-        : t.today.pick.mixedOrder(listName);
+      : listNote;
   const untouched = listProblems.filter((p) => !progress.has(p.id)).length;
   const moreAvailable = sprint && sprintDay ? sprint.plan.queue.length > newProblems.length : untouched > newProblems.length;
   const beyondGoal = Math.max(0, startedToday - settings.dailyNew);

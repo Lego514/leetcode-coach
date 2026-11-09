@@ -74,6 +74,8 @@ export interface PickInput {
   struggling?: readonly PatternId[];
   /** 每個模式最後一次練習的日子：穿插時挑最久沒碰的模式 */
   lastPracticed?: ReadonlyMap<PatternId, Day>;
+  /** 照 Grind 建議的順序：模式本來就輪著出，穿插時不再另外挑別的模式 */
+  grindOrder?: boolean;
   /** 每天最多幾題 Medium、幾題 Hard；沒寫是不限 */
   maxMedium?: number;
   maxHard?: number;
@@ -141,7 +143,7 @@ export function pickNewProblems(input: PickInput): NewPick[] {
   }
 
   // 穿插一題別的模式：先挑學過、還有題目、最久沒碰的模式；都沒有的話，先看下一個模式的第一題
-  if (count - extras.length >= 2) {
+  if (!input.grindOrder && count - extras.length >= 2) {
     const reinforced = extras[0]?.problem.pattern;
     const learned = new Set(list.filter((p) => started(p.id)).map((p) => p.pattern));
     const candidates = [...new Set(fresh.map((p) => p.pattern))].filter((p) => p !== frontier && p !== reinforced);

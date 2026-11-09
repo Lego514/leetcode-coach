@@ -169,12 +169,31 @@ test('mixes another pattern into new problems, hides the pattern, and lets me ch
   for (let i = 0; i < 3; i += 1) await expect(items.nth(i)).toContainText('Graphs');
 
   await page.goto('/#/settings');
-  const roadmap = page.getByRole('radio', { name: /^Roadmap order/ });
+  const roadmap = page.getByRole('radio', { name: /^In order/ });
   await roadmap.click();
   await expect(roadmap).toBeChecked();
   await page.goto('/');
   await expect(newList(page)).toContainText('In NeetCode 150 pattern order');
   for (let i = 0; i < 3; i += 1) await expect(items.nth(i)).toContainText('Arrays & Hashing');
+
+  // Grind 建議的順序：簡單、基礎的在前，模式輪著出
+  await page.goto('/#/settings');
+  const grindOrder = page.getByRole('radio', { name: /^Grind’s suggested order/ });
+  await grindOrder.click();
+  await expect(grindOrder).toBeChecked();
+  await page.goto('/');
+  await expect(newList(page)).toContainText('NeetCode 150, in Grind’s suggested order');
+  await expect(items.nth(0)).toContainText('Two Sum');
+  await expect(items.nth(1)).toContainText('Valid Parentheses');
+  await expect(items.nth(2)).toContainText('Merge Two Sorted Lists');
+
+  // 換回照模式
+  await page.goto('/#/settings');
+  const byPattern = page.getByRole('radio', { name: /^By pattern/ });
+  await byPattern.click();
+  await expect(byPattern).toBeChecked();
+  await page.goto('/');
+  await expect(newList(page)).toContainText('In NeetCode 150 pattern order');
 });
 
 test('loads demo data to look around, then clears it', async ({ page }) => {

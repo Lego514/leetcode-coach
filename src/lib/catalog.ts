@@ -1,4 +1,4 @@
-import { STUDY_LISTS, type ListId } from '../data/lists';
+import { getList, STUDY_LISTS, type ListId } from '../data/lists';
 import { PATTERN_ORDER } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Difficulty, type Problem } from '../data/problems';
 
@@ -57,6 +57,28 @@ export function inList(catalog: Catalog, problem: Problem, filter: ListFilter): 
 
 export function problemsInList(catalog: Catalog, filter: ListFilter): Problem[] {
   return catalog.problems.filter((p) => inList(catalog, p, filter));
+}
+
+/** 新題的順序：照模式（NeetCode 的路線圖，一個模式做完再換下一個），或 Grind 建議的順序 */
+export const NEW_ORDERS = ['pattern', 'grind'] as const;
+export type NewOrder = (typeof NEW_ORDERS)[number];
+
+/** Grind 169 的題號 → 在 Grind 建議的順序裡排第幾 */
+const GRIND_RANK = new Map(getList('grind169').problemIds.map((id, i) => [id, i]));
+
+/** 沒選過的話：Grind 169 照 Grind 建議的順序，其他題單照模式 */
+export function newOrderOf(settings: { newOrder?: NewOrder; activeList: ListId }): NewOrder {
+  return settings.newOrder ?? (settings.activeList === 'grind169' ? 'grind' : 'pattern');
+}
+
+/**
+ * 把照路線圖排好的題目換成新題的順序。Grind 建議的順序：簡單、基礎的在前，Hard 和 Premium 往後，模式輪著出；
+ * 不在 Grind 169 裡的題排在最後，彼此照路線圖（sort 是穩定的）
+ */
+export function inNewOrder(problems: readonly Problem[], order: NewOrder): Problem[] {
+  if (order === 'pattern') return [...problems];
+  const rank = (p: Problem) => GRIND_RANK.get(p.id) ?? Number.MAX_SAFE_INTEGER;
+  return [...problems].sort((a, b) => rank(a) - rank(b));
 }
 
 /**
