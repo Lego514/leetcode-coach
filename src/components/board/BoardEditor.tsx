@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useHref, useNavigate, useSearchParams } from 'react-router';
-import { EMPTY_DOC, guestName, isOldGuestName, newRoomId, ROOM_ID, ShareControls, Whiteboard, type BoardDoc, type ExplainHooks } from 'dsa-whiteboard';
+import { EMPTY_DOC, guestName, isOldGuestName, newRoomId, ROOM_ID, ShareControls, VIEW_ID, Whiteboard, type BoardDoc, type ExplainHooks } from 'dsa-whiteboard';
 import { PROBLEM_EXAMPLES } from '../../data/examples';
 import { REFERENCE_BOARD_IDS } from '../../data/referenceBoards';
 import type { Difficulty, Problem } from '../../data/problems';
@@ -14,7 +14,8 @@ import { DifficultyTag } from '../ui';
 import { ExplainProblemContext, ExplainReview, ExplainSession, type ExplainResult } from './BoardExplain';
 
 // 白板本身是 dsa-whiteboard 套件；這裡接上刷題教練的存檔、同步、講解模式和共用。
-// 共用：網址加上 ?room=…，打開連結的人一起編輯同一張白板（房間在 dsa-whiteboard 的伺服器上）。
+// 共用：網址加上 ?room=…，打開連結的人一起編輯同一張白板（房間在 dsa-whiteboard 的伺服器上）；
+// ?watch=… 是同一個房間只能看的連結（給模擬面試的面試官這類只要看的人）。?view= 已經給參考板書用了，所以叫 watch。
 
 const EXPLAIN: ExplainHooks<ExplainResult> = { Session: ExplainSession, Review: ExplainReview };
 
@@ -37,6 +38,20 @@ function storedName(locale: Locale): string {
   } catch {
     return guestName(locale);
   }
+}
+
+/** 網址裡的房間：?room=… 能改，?watch=… 只能看（沒設定共用伺服器時當作沒有） */
+interface RoomLink {
+  id: string;
+  viewOnly: boolean;
+}
+
+function roomFromParams(params: URLSearchParams): RoomLink | null {
+  if (!COLLAB_URL) return null;
+  const room = params.get('room');
+  if (room && ROOM_ID.test(room)) return { id: room, viewOnly: false };
+  const watch = params.get('watch');
+  return watch && VIEW_ID.test(watch) ? { id: watch, viewOnly: true } : null;
 }
 
 interface BoardEditorProps {
@@ -66,8 +81,7 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
       ? [{ label: t.reference.openBoard, icon: ICON_REFERENCE, onSelect: () => navigate(`/board/${problem.id}?view=reference`) }, ...prefs]
       : prefs;
   const [params, setParams] = useSearchParams();
-  const param = params.get('room');
-  const room = COLLAB_URL && param && ROOM_ID.test(param) ? param : null;
+  const room = roomFromParams(params);
   /** 這個分頁建立的房間，和建立時的白板：房間是空的時候放上去 */
   const [created, setCreated] = useState<{ id: string; doc: BoardDoc } | null>(null);
   const [name, setName] = useState(() => storedName(locale));
@@ -84,12 +98,13 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
     );
   }
 
-  // 用 hash 路由：連結是 …/#/board/15?room=…
-  const linkTo = (id: string) => new URL(`${boardHref}?room=${id}`, window.location.href).href;
+  // 用 hash 路由：連結是 …/#/board/15?room=…，只能看的是 …/#/board/15?watch=…
+  const linkTo = (key: 'room' | 'watch', id: string) => new URL(`${boardHref}?${key}=${id}`, window.location.href).href;
   const setRoom = (id: string | null) =>
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
+        next.delete('watch');
         if (id) next.set('room', id);
         else next.delete('room');
         return next;
@@ -104,7 +119,7 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
     const id = newRoomId();
     setCreated({ id, doc });
     setRoom(id);
-    return linkTo(id);
+    return linkTo('room', id);
   };
 
   const saveCopy = () => {
@@ -121,11 +136,12 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
     }
   };
 
-  const seed = room !== null && created?.id === room;
+  const seed = room !== null && !room.viewOnly && created?.id === room.id;
+  const collabUrl = COLLAB_URL?.replace(/^http/, 'ws').replace(/\/$/, '');
   return (
     <ExplainProblemContext.Provider value={problem}>
       <Whiteboard
-        key={room ? `room:${room}` : boardId}
+        key={room ? `${room.viewOnly ? 'view' : 'room'}:${room.id}` : boardId}
         initial={room ? (seed ? (created?.doc ?? EMPTY_DOC) : EMPTY_DOC) : (record?.doc ?? EMPTY_DOC)}
         // 共用時內容存在房間裡，不動自己的白板
         onSave={(doc) => (room ? undefined : saveBoard(boardId, doc))}
@@ -143,7 +159,9 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
         actions={
           <ShareControls
             onShare={COLLAB_URL ? share : undefined}
-            link={room ? linkTo(room) : undefined}
+            // 用只能看的連結進來的人，複製的也是只能看的連結
+            link={room ? linkTo(room.viewOnly ? 'watch' : 'room', room.id) : undefined}
+            viewLink={(viewId) => linkTo('watch', viewId)}
             onRename={rename}
             onSaveCopy={saveCopy}
             onLeave={() => {
@@ -155,7 +173,11 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
         menu={menu}
         // 題目的白板是空的時候，一鍵放上這題的範例（跟參考講解用同一組資料）；自己新增的題目沒有
         example={problem && !problem.custom ? PROBLEM_EXAMPLES[problem.id] : undefined}
-        collab={room && COLLAB_URL ? { url: `${COLLAB_URL.replace(/^http/, 'ws').replace(/\/$/, '')}/room/${room}`, name, seed } : undefined}
+        collab={
+          room && collabUrl
+            ? { url: `${collabUrl}/${room.viewOnly ? 'view' : 'room'}/${room.id}`, name, seed, viewOnly: room.viewOnly }
+            : undefined
+        }
       />
     </ExplainProblemContext.Provider>
   );
