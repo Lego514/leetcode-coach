@@ -440,6 +440,8 @@ const en: Messages = {
     dueLater: (n) => `Daily review limit reached; ${count(n, 'more problem')} can wait`,
     adaptEasier: (solo, total) =>
       `You solved ${solo} of your last ${total} Medium problems on your own, so today has fewer Mediums and more Easy problems to build on (you can turn this off in Settings).`,
+    adaptEasierTopUp: (solo, total) =>
+      `You solved ${solo} of your last ${total} Medium problems on your own. Today would have more Easy problems, but your list has none left, so Mediums fill the rest (you can turn this off in Settings).`,
     adaptReady: (solo, total) => `You solved ${solo} of your last ${total} Medium problems on your own. Consider raising your Medium limit in Settings.`,
     dueRewrite: (n) => `${count(n, 'problem')} marked “Rewrite” needed a hint or the solution last time. Write ${n === 1 ? 'it' : 'them'} from scratch without your notes.`,
     reviewAll: 'Review one by one',
@@ -456,6 +458,7 @@ const en: Messages = {
       focusDone: (pattern) => `${pattern} is done; back to the roadmap`,
       mix: 'Mixed in from another pattern',
       reinforce: 'Extra practice: you got stuck on this kind lately',
+      topUp: 'No Easy left, so a Medium fills in',
       reinforceNamed: (pattern) => `Extra practice: you got stuck on ${pattern} lately`,
     },
     listFinished: (list) => `You’ve done every problem in ${list} once. Pick another list in Settings, or focus on reviews.`,

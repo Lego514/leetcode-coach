@@ -93,6 +93,21 @@ test('schedules fewer Mediums after recent Mediums needed help, unless turned of
   await expect(fresh).toContainText(/You solved \d+ of your last \d+ Medium problems on your own, so today has fewer Mediums/);
   await expect(fresh.locator('.difficulty[data-level="Hard"]')).toHaveCount(0);
 
+  // 題單裡的 Easy 都做過了：照樣用 Medium 補滿每天的題數，不會變少
+  await page.goto('/#/problems?list=neetcode150&difficulty=Easy');
+  await page.getByRole('button', { name: 'Mark problems I solved before' }).click();
+  const selectAll = page.getByRole('button', { name: 'Select all in this group' });
+  for (let i = 0; i < (await selectAll.count()); i += 1) await selectAll.nth(i).click();
+  const bar = page.getByRole('region', { name: 'Mark problems you solved before' }).last();
+  await bar.getByRole('button', { name: 'Roughly remember' }).click();
+  await bar.getByRole('button', { name: /^Mark \d+ problems/ }).click();
+  await expect(bar).toContainText('0 problems selected');
+  await page.goto('/');
+  await expect(fresh).toContainText('your list has none left, so Mediums fill the rest');
+  await expect(fresh.locator('.difficulty[data-level="Easy"]')).toHaveCount(0);
+  await expect(fresh.locator('.difficulty[data-level="Hard"]')).toHaveCount(0);
+  await expect(fresh).toContainText('No Easy left, so a Medium fills in');
+
   await page.goto('/#/settings');
   const adaptive = page.getByLabel('Adjust difficulty automatically');
   await expect(adaptive).toBeChecked();

@@ -13,8 +13,8 @@ import { addDays, type Day } from './dates';
 export const NEW_PROBLEM_MODES = ['mixed', 'roadmap', 'focus'] as const;
 export type NewProblemMode = (typeof NEW_PROBLEM_MODES)[number];
 
-/** 為什麼推這題：照路線圖、穿插的別的模式、常卡住要鞏固、專練的模式 */
-export type NewPickReason = 'next' | 'mix' | 'reinforce' | 'focus';
+/** 為什麼推這題：照路線圖、穿插的別的模式、常卡住要鞏固、專練的模式、Easy 不夠補滿的 Medium */
+export type NewPickReason = 'next' | 'mix' | 'reinforce' | 'focus' | 'topUp';
 
 export interface NewPick {
   problem: Problem;
@@ -79,6 +79,11 @@ export interface PickInput {
   /** 每天最多幾題 Medium、幾題 Hard；沒寫是不限 */
   maxMedium?: number;
   maxHard?: number;
+  /**
+   * 自動調整難度把 Medium 上限調低時，使用者自己設的 Medium 上限（Infinity 是不限）：
+   * 題單裡的 Easy 不夠補滿每天的題數，就放寬回這個上限補 Medium。沒寫是不放寬
+   */
+  relaxedMaxMedium?: number;
 }
 
 /** 某個難度今天最多幾題；Easy 不限 */
@@ -89,6 +94,28 @@ function capOf(input: PickInput, difficulty: Problem['difficulty']): number {
 }
 
 export function pickNewProblems(input: PickInput): NewPick[] {
+  const picks = pickWithinCaps(input);
+  const relaxed = input.relaxedMaxMedium;
+  if (relaxed === undefined || picks.length >= input.count) return picks;
+  // Easy 不夠補滿：Medium 放寬回使用者自己的上限，照清單的順序補（專練時先補那個模式的）；Hard 照樣不排
+  const taken = new Set(picks.map((pick) => pick.problem.id));
+  const pool =
+    input.mode === 'focus' && input.focus
+      ? [...input.list.filter((p) => p.pattern === input.focus), ...input.list.filter((p) => p.pattern !== input.focus)]
+      : input.list;
+  let mediums = picks.filter((pick) => pick.problem.difficulty === 'Medium').length;
+  const topUp: NewPick[] = [];
+  for (const problem of pool) {
+    if (picks.length + topUp.length >= input.count || mediums >= relaxed) break;
+    if (problem.difficulty !== 'Medium' || taken.has(problem.id) || input.started(problem.id)) continue;
+    mediums += 1;
+    topUp.push({ problem, reason: 'topUp' });
+  }
+  return [...picks, ...topUp];
+}
+
+/** 在難度上限以內挑 */
+function pickWithinCaps(input: PickInput): NewPick[] {
   const { list, started, count, mode } = input;
   if (count <= 0) return [];
   const fresh = list.filter((p) => !started(p.id));

@@ -109,6 +109,36 @@ describe('picking new problems', () => {
     expect(easyOnly.every((p) => p.problem.difficulty === 'Easy')).toBe(true);
     expect(easyOnly).toHaveLength(4);
   });
+
+  it('fills the day with Mediums when the list runs out of Easy problems under a lowered Medium cap', () => {
+    const count = (picks: { problem: Problem }[], d: Problem['difficulty']) => picks.filter((p) => p.problem.difficulty === d).length;
+    // 只剩兩題 Easy（數學、位元運算的），其他 Easy 都做過了
+    const lastEasy = list.filter((p) => p.difficulty === 'Easy').slice(-2);
+    const started = (id: number) => list.some((p) => p.id === id && p.difficulty === 'Easy') && !lastEasy.some((p) => p.id === id);
+    for (const mode of ['mixed', 'roadmap', 'focus'] as const) {
+      // 不放寬：自動調整把 Medium 壓到 2 題，只有 4 題
+      const short = pickNewProblems({ list, started, count: 6, mode, focus: 'trees', maxMedium: 2, maxHard: 0 });
+      expect(short).toHaveLength(4);
+      // 放寬回自己的上限（不限）：用 Medium 補滿 6 題，Hard 照樣不排
+      const full = pickNewProblems({ list, started, count: 6, mode, focus: 'trees', maxMedium: 2, maxHard: 0, relaxedMaxMedium: Infinity });
+      expect(full).toHaveLength(6);
+      expect(count(full, 'Easy')).toBe(2);
+      expect(count(full, 'Medium')).toBe(4);
+      expect(count(full, 'Hard')).toBe(0);
+      expect(full.filter((p) => p.reason === 'topUp')).toHaveLength(2);
+      expect(new Set(full.map((p) => p.problem.id)).size).toBe(6);
+    }
+    // 專練時先補那個模式的 Medium
+    const focus = pickNewProblems({ list, started, count: 6, mode: 'focus', focus: 'trees', maxMedium: 2, maxHard: 0, relaxedMaxMedium: Infinity });
+    expect(focus.filter((p) => p.reason === 'topUp').every((p) => p.problem.pattern === 'trees')).toBe(true);
+    // 自己設的上限照樣守：最多 3 題 Medium
+    const ownCap = pickNewProblems({ list, started, count: 6, mode: 'roadmap', maxMedium: 2, maxHard: 0, relaxedMaxMedium: 3 });
+    expect(count(ownCap, 'Medium')).toBe(3);
+    expect(ownCap).toHaveLength(5);
+    // Easy 夠的時候不會補 Medium
+    const enough = pickNewProblems({ list, started: () => false, count: 6, mode: 'roadmap', maxMedium: 2, maxHard: 0, relaxedMaxMedium: Infinity });
+    expect(enough.some((p) => p.reason === 'topUp')).toBe(false);
+  });
 });
 
 describe('struggling patterns', () => {
