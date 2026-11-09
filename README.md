@@ -74,7 +74,7 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
 - **Daily plan**: the Today page lists the reviews that are due plus N new problems. By default the new problems are *interleaved*: mostly the pattern you're learning, plus one from another pattern so you practice recognizing which approach fits, and a pattern you've been stuck on lately (solutions read, still stuck, or stuck reasons ticked) gets an extra, easier problem. The pattern isn't shown until you ask, as in an interview. Settings can switch to strictly in order or to focusing on one pattern, and the day's list is planned from the morning's state so it doesn't reshuffle as you work. At the top, a progress bar and three numbers show how much of the list is left, your daily pace, and when you'll finish the first pass. With a target date set, they show the days left and how many new problems a day you need, flagged when your daily goal is too low.
   - Any new problem you start counts toward the daily goal, wherever you start it. **One more problem** adds the next one in roadmap order.
   - Settings can cap how many Medium and Hard problems and how many reviews come each day; the review page lists what's up next beyond today's cap.
-  - **Adjust difficulty automatically** (on by default, off during a sprint): when most recent Mediums needed a hint, new problems include fewer Mediums and no Hards until you solve them on your own again.
+  - **Adjust difficulty automatically** (on by default, off during a sprint): when most recent Mediums needed a hint, new problems include fewer Mediums and no Hards until you solve them on your own again. If your list has no Easy problems left, Mediums still fill the daily goal.
   - A review whose last attempt needed a hint or the solution is marked **Rewrite**: write it from scratch, without your notes, until it passes.
   - **Record another problem** finds a problem by number, title, or LeetCode URL. If it isn't in your lists yet, you add its details and record it in the same dialog.
   - **Mark problems I solved before** (on Problems) schedules problems you solved before using the app for review in one go. A big batch is spread out so no more than five problems come due on any day, counting reviews already scheduled. They don't count toward streaks or session totals.
@@ -516,7 +516,7 @@ Notes:
 **每日計畫（今天頁）**：列出到期的複習和每天 N 題新題。預設是「交錯」：大部分是正在學的模式，再加一題別的模式，練習看出該用哪一招；最近常卡住的模式（看了解答、看完還不懂，或勾了卡住原因）會多一題比較簡單的。預設不顯示模式，跟面試一樣自己看出來。設定可以改成照順序不穿插，或專練一個模式；當天的清單照早上的狀態排好，做的過程中不會一直變。最上面有進度條和三個數字：清單還剩多少、每天的速度、預計什麼時候刷完第一輪；設定了目標日期的話，改成顯示剩幾天、每天要做幾題，每日目標太低時會提醒。
 - 不管從哪裡開始的新題都算進今天的目標；做完還可以「再來一題」。
 - 設定可以限制每天最多幾題 Medium、幾題 Hard 和最多複習幾題，複習頁會列出接下來的題目。
-- 「自動調整難度」（預設開，衝刺時關）：最近的 Medium 大多要看提示時，先少排 Medium、不排 Hard，自己解得出來之後再調回去。
+- 「自動調整難度」（預設開，衝刺時關）：最近的 Medium 大多要看提示時，先少排 Medium、不排 Hard，自己解得出來之後再調回去。題單裡的 Easy 做完了的話，照樣用 Medium 補滿每天的題數。
 - 上次看了提示或解答的複習題會標成「重寫」：不看筆記，在 LeetCode 從頭寫到通過。
 - 「記錄其他題目」輸入題號、題名或網址就能記錄；清單裡沒有的題目，在同一個對話框補上資料。
 - 題庫的「標記以前刷過的題」可以一次把以前刷過的題排進複習。一大批會分散到之後幾天，每天最多 5 題到期（算進已經排好的複習），也不會算進連續天數和練習次數。

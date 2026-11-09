@@ -433,6 +433,8 @@ const zhTW = {
     dueLater: (n: number) => `已達每天的複習上限，另外 ${n} 題留到之後`,
     adaptEasier: (solo: number, total: number) =>
       `最近 ${total} 次 Medium 只有 ${solo} 次自己解出，今天先少排 Medium、多做 Easy 打底（設定裡可以關掉自動調整）。`,
+    adaptEasierTopUp: (solo: number, total: number) =>
+      `最近 ${total} 次 Medium 只有 ${solo} 次自己解出，本來要少排 Medium、多做 Easy，但題單裡的 Easy 做完了，所以照樣用 Medium 補滿（設定裡可以關掉自動調整）。`,
     adaptReady: (solo: number, total: number) => `最近 ${total} 次 Medium 有 ${solo} 次自己解出，可以到設定把 Medium 上限調高了。`,
     dueRewrite: (n: number) => `標「重寫」的 ${n} 題上次靠提示或解答，這次不看筆記從頭寫一次。`,
     reviewAll: '逐題複習',
@@ -449,6 +451,7 @@ const zhTW = {
       focusDone: (pattern: string) => `「${pattern}」做完了，回到路線圖`,
       mix: '穿插別的模式',
       reinforce: '鞏固：最近常在這類題卡住',
+      topUp: 'Easy 做完了，用 Medium 補',
       reinforceNamed: (pattern: string) => `鞏固：最近常在「${pattern}」卡住`,
     },
     listFinished: (list: string) => `${list} 的題目都做過一輪了。可以到設定換一份清單，或專心把複習做完。`,

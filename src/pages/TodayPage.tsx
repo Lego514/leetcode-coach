@@ -150,6 +150,7 @@ export function TodayPage() {
     [attempts, catalog, day, settings.dailyNew],
   );
   const adaptive = (settings.adaptiveDifficulty ?? true) && !sprint;
+  const adaptiveMedium = adaptive ? stricterCap(settings.maxMedium, adaptation.maxMedium) : settings.maxMedium;
   const dayPlan = pickNewProblems({
     list: listProblems,
     started: (id) => progress.has(id) && !practicedFirstToday.has(id),
@@ -159,12 +160,17 @@ export function TodayPage() {
     struggling,
     lastPracticed,
     grindOrder: newOrder === 'grind',
-    maxMedium: adaptive ? stricterCap(settings.maxMedium, adaptation.maxMedium) : settings.maxMedium,
+    maxMedium: adaptiveMedium,
     maxHard: adaptive ? stricterCap(settings.maxHard, adaptation.maxHard) : settings.maxHard,
+    // Easy 不夠補滿時，Medium 放寬回自己設的上限，題數才不會變少
+    relaxedMaxMedium: adaptiveMedium !== settings.maxMedium ? (settings.maxMedium ?? Infinity) : undefined,
   });
+  const toppedUp = dayPlan.some((pick) => pick.reason === 'topUp');
   const adaptNote =
     adaptive && adaptation.state === 'easier'
-      ? t.today.adaptEasier(adaptation.solo, adaptation.total)
+      ? toppedUp
+        ? t.today.adaptEasierTopUp(adaptation.solo, adaptation.total)
+        : t.today.adaptEasier(adaptation.solo, adaptation.total)
       : adaptive && adaptation.state === 'ready' && settings.maxMedium !== undefined && settings.maxMedium < settings.dailyNew
         ? t.today.adaptReady(adaptation.solo, adaptation.total)
         : undefined;
@@ -177,6 +183,7 @@ export function TodayPage() {
   const showPatterns = settings.showPatterns ?? false;
   const pickNote = (pick: NewPick): string | undefined => {
     if (pick.reason === 'mix') return t.today.pick.mix;
+    if (pick.reason === 'topUp') return t.today.pick.topUp;
     if (pick.reason !== 'reinforce') return undefined;
     // 模式名稱不顯示時，也不在說明裡講出來
     return showPatterns ? t.today.pick.reinforceNamed(getPattern(pick.problem.pattern, locale).name) : t.today.pick.reinforce;
@@ -192,9 +199,19 @@ export function TodayPage() {
         ? t.today.pick.focusOrder(focusName)
         : t.today.pick.focusDone(focusName)
       : listNote;
+  const beyondGoal = Math.max(0, startedToday - settings.dailyNew);
+  const newNotes = [
+    sprintDay
+      ? t.today.sprint.newNote
+      : beyondGoal > 0
+        ? t.today.extraNote(beyondGoal)
+        : startedToday > 0
+          ? t.today.startedToday(startedToday)
+          : planNote,
+    adaptNote,
+  ].filter((line): line is string => Boolean(line));
   const untouched = listProblems.filter((p) => !progress.has(p.id)).length;
   const moreAvailable = sprint && sprintDay ? sprint.plan.queue.length > newProblems.length : untouched > newProblems.length;
-  const beyondGoal = Math.max(0, startedToday - settings.dailyNew);
 
   const practiced = practiceAttempts(attempts ?? []);
   const todayAttempts = practiced.filter((a) => a.day === day);
@@ -321,18 +338,14 @@ export function TodayPage() {
           count={newProblems.length}
           id="new"
           note={
-            [
-              sprintDay
-                ? t.today.sprint.newNote
-                : beyondGoal > 0
-                  ? t.today.extraNote(beyondGoal)
-                  : startedToday > 0
-                    ? t.today.startedToday(startedToday)
-                    : planNote,
-              adaptNote,
-            ]
-              .filter(Boolean)
-              .join(' ')
+            newNotes.length > 0
+              ? // 一句一行：前一句沒有句號，接在一起會黏成一句
+                newNotes.map((line) => (
+                  <span key={line} style={{ display: 'block' }}>
+                    {line}
+                  </span>
+                ))
+              : undefined
           }
           actions={
             newProblems.length > 0 && moreAvailable ? (
