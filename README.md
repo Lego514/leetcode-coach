@@ -107,7 +107,7 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
   - Each problem has its own board, plus a scratch board. **My whiteboards** lists them and says where they're stored; boards save automatically and sync.
   - **Put this problem's example on the board**: an empty problem board offers a button that draws the problem's LeetCode example (the same data as the reference explanation's "For example"), so you can start tracing right away.
   - **Reference boards** for all 213 problems: a finished board that opens in playback, one step per line of the reference explanation, ending with a complexity block and an edge case. Open it any time from the problem page, the review page, or the problem's whiteboard. You can doodle on it without saving, or **Copy to my board** to keep and edit it.
-  - **Share** a board for a mock interview or study session: everyone who opens the link edits it together, with each person's cursor and name. Joining doesn't need an account. Your own board isn't touched, and "Save a copy to my board" keeps the shared one. Rooms run on the package's Cloudflare Worker.
+  - **Share** a board for a mock interview or study session: everyone who opens the link edits it together, with each person's cursor and name. Joining doesn't need an account. A second, view-only link lets an interviewer watch the board live without being able to change it. Your own board isn't touched, and "Save a copy to my board" keeps the shared one. Rooms run on the package's Cloudflare Worker.
   - On the practice page the board opens on top, so the timer keeps running.
   - The app installs the package from npm at an exact version and plugs in its own storage, sync status, toasts, and explain mode. The server validates boards with the package's zod schema before storing them.
 - **Behavioral interviews**: a STAR story bank for the non-coding round.
@@ -563,7 +563,7 @@ Notes:
 - 每一題有自己的白板，另外有一張自由白板；「我的白板」列出全部，也寫出存在哪裡。白板會自動儲存，登入後會同步。
 - **放上這題的範例**：題目的白板是空的時候，一個按鈕就畫出這題 LeetCode 的範例（跟參考講法的「For example」同一組資料），馬上可以開始手動跑。
 - **參考板書**（題庫的 213 題都有）：做好的白板，打開就從第一步播放，每一步的字幕是參考講法的一句，最後是複雜度和邊界情況。題目頁、複習頁和這題的白板隨時都能打開；上面可以隨手畫（不會存），按「複製到我的白板」就留下來自己改。
-- **共用**：模擬面試或一起讀書時，把白板的連結傳給對方，打開的人都能一起編輯，看得到每個人的游標和名字，對方不用帳號。自己的白板不會被改到，想留下共用的內容就按「存一份到我的白板」。房間在 dsa-whiteboard 的 Cloudflare Worker 上。
+- **共用**：模擬面試或一起讀書時，把白板的連結傳給對方，打開的人都能一起編輯，看得到每個人的游標和名字，對方不用帳號。另外有一個只能看的連結，給面試官這類只要看的人：白板跟著動，但不能改。自己的白板不會被改到，想留下共用的內容就按「存一份到我的白板」。房間在 dsa-whiteboard 的 Cloudflare Worker 上。
 
 **講解和模擬面試**：
 - 計時的美式面試七步驟流程，每一步有檢查清單和英文說法，也能用同一個提示面板（像面試官給提示）。可以錄音（MediaRecorder），結束後自我檢討；也有兩分鐘的講解練習；不方便出聲的地方可以改用打字（預設五分鐘），一樣能拿 AI 回饋，算進五個重點和「已熟練」，但不算進「講得很順」的次數。
