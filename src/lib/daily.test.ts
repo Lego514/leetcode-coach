@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
-import { buildCatalog, problemsInList } from './catalog';
+import { buildCatalog, inNewOrder, problemsInList } from './catalog';
 import { addDays } from './dates';
 import { adaptDifficulty, pickNewProblems, stricterCap, strugglingPatterns } from './daily';
 
@@ -39,6 +39,17 @@ describe('picking new problems', () => {
   it('on day one, previews the next pattern instead', () => {
     const picks = pickNewProblems({ list, started: () => false, count: 3, mode: 'mixed' });
     expect(picks.map((p) => p.problem.pattern)).toEqual(['arrays', 'arrays', 'two-pointers']);
+  });
+
+  it('follows Grind’s suggested order without mixing in another pattern, but still reinforces', () => {
+    const grind = inNewOrder(problemsInList(catalog, 'grind169'), 'grind');
+    const mixed = pickNewProblems({ list: grind, started: () => false, count: 3, mode: 'mixed', grindOrder: true });
+    expect(ids(mixed)).toEqual([1, 20, 21]);
+    expect(mixed.every((p) => p.reason === 'next')).toBe(true);
+    // 常卡住的模式照樣多一題簡單的
+    const reinforced = pickNewProblems({ list: grind, started: () => false, count: 3, mode: 'mixed', grindOrder: true, struggling: ['heap'] });
+    expect(reinforced.map((p) => p.reason)).toEqual(['next', 'next', 'reinforce']);
+    expect(reinforced[2].problem.pattern).toBe('heap');
   });
 
   it('adds an easier problem from a pattern you keep getting stuck on', () => {

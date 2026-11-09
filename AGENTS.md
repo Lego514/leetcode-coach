@@ -71,6 +71,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 - **AI 的提示詞、輸出 schema、整理輸出的函式在 `shared/ai.ts`**：伺服器（`server/src/ai/feedback.ts`）和使用者自己的金鑰（`src/lib/llm.ts`，瀏覽器直接呼叫 Anthropic、OpenAI、OpenRouter）共用同一份，改評分標準只改一個地方。
 - **使用者自己的 AI 金鑰只存在 localStorage（`src/store/ownAi.ts`）**：刻意不經過 `actions.ts`、不進同步的待上傳清單，永遠不送到我們的伺服器。測試裡用 `page.route` 攔下 AI 的網址，不要真的呼叫。
 - **卡在哪的代號**：記錄時的選項是 `STUCK_REASONS`（`shared/constants.ts`）；舊紀錄還有 `edge`、`bug`、`time`（`LEGACY_STUCK_REASONS`），同步的 schema 兩種都收。顯示和統計用 `stuckKinds`（`src/lib/stuck.ts`）把 `edge`、`bug` 換成 `logic`；`time` 沒有選項了但保留，改紀錄時 `toggleStuck` 不會清掉它。不要改寫已經存的紀錄。
+- **新題的順序**（設定的 `newOrder`）：照模式（NeetCode 的路線圖，`roadmapCompare`，`problemsInList` 回傳的就是這個順序）或 Grind 建議的順序（`inNewOrder`，照 `lists.ts` 裡 Grind 169 的題號順序，是 Grind 網站 26 週、40 小時列出的順序；不在 Grind 169 的題排最後）。Grind 的順序不是照出題頻率：簡單、基礎的在前，Hard 和 Premium 往後，模式輪著出（作者的 FAQ），畫面上不要寫成「常考」。沒選過時 Grind 169 照 Grind 的順序、其他照模式（`newOrderOf`）。今天頁和衝刺計畫用這個順序；照 Grind 的順序時「穿插」不另外挑別的模式（`PickInput.grindOrder`），常卡住的模式照樣補一題。Grind 169 的題號順序有意義，不要重排。
 - **介面文字只放在 `src/i18n/messages/{zh-TW,en}.ts`**：兩份的 key 要一樣（有測試檢查），其他檔案裡出現中文字會讓測試失敗。
 - **改資料格式**：先改 `shared/protocol.ts` 的 zod schema；資料庫要加 `server/migrations/000N_*.sql` 並同步改 `server/src/db/schema.ts`；server 測試裡的 migration 清單（`server/test/infra.test.ts`）也要加。README 的 Data model 一節有兩張 Mermaid ER 圖（伺服器的資料表、瀏覽器的每種紀錄），加了資料表或集合要一起改。
 - **新的環境變數**：`server/src/env.ts`、`render.yaml`、`server/.env.example`、README 的 Deploying 一節都要加。

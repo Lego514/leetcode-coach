@@ -10,6 +10,7 @@ import { getPatterns, type PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS } from '../data/problems';
 import { useI18n } from '../i18n';
 import { NEW_PROBLEM_MODES } from '../lib/daily';
+import { NEW_ORDERS, newOrderOf } from '../lib/catalog';
 import { isDay, toDay } from '../lib/dates';
 import { RETENTIONS } from '../lib/srs';
 import { LANGUAGES } from '../lib/languages';
@@ -73,6 +74,32 @@ export function SettingsPage() {
                       </span>
                       <span className="rating-detail" style={{ display: 'block' }}>
                         {t.lists.descriptions[list.id]}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            {/* 新題的順序：照模式或 Grind 建議的順序（src/lib/catalog.ts 的 inNewOrder） */}
+            <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+              <legend className="field-label" style={{ marginBottom: 8 }}>
+                {t.settings.newOrder}
+              </legend>
+              <div className="stack" style={{ gap: 8 }}>
+                {NEW_ORDERS.map((order) => (
+                  <label key={order} className="rating-option" style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                    <input
+                      type="radio"
+                      name="new-order"
+                      style={{ marginTop: 5, accentColor: 'var(--pen)' }}
+                      checked={newOrderOf(settings) === order}
+                      onChange={() => void updateSettings({ newOrder: order })}
+                    />
+                    <span>
+                      <span className="rating-label">{t.settings.newOrders[order].label}</span>
+                      <span className="rating-detail" style={{ display: 'block' }}>
+                        {t.settings.newOrders[order].detail}
                       </span>
                     </span>
                   </label>

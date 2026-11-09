@@ -3,7 +3,7 @@ import { LIST_IDS, PATTERN_IDS } from '../../shared/constants';
 import { STUDY_LISTS } from '../data/lists';
 import { PATTERN_ORDER } from '../data/patterns';
 import { BUILTIN_PROBLEMS } from '../data/problems';
-import { buildCatalog, lookupProblem, nextNewProblems, parseProblemList, problemsInList, skipPremium } from './catalog';
+import { buildCatalog, inNewOrder, lookupProblem, newOrderOf, nextNewProblems, parseProblemList, problemsInList, skipPremium } from './catalog';
 
 describe('built-in data', () => {
   it('has unique ids and slugs', () => {
@@ -56,6 +56,40 @@ describe('catalog', () => {
     expect(blind.at(-1)!.pattern).toBe('bits');
     expect(problemsInList(catalog, 'custom')).toEqual([custom]);
     expect(problemsInList(catalog, 'all')).toHaveLength(BUILTIN_PROBLEMS.length + 1);
+  });
+
+  it('orders new problems by pattern or in Grind’s suggested order', () => {
+    const catalog = buildCatalog([custom]);
+    const grindIds = STUDY_LISTS.find((l) => l.id === 'grind169')!.problemIds;
+    const grind = inNewOrder(problemsInList(catalog, 'grind169'), 'grind');
+    // Grind 網站的前幾題：Two Sum、Valid Parentheses、Merge Two Sorted Lists、Best Time to Buy and Sell Stock
+    expect(grind.slice(0, 4).map((p) => p.id)).toEqual([1, 20, 21, 121]);
+    expect(grind.map((p) => p.id)).toEqual(grindIds);
+    // 照模式就是原本的路線圖
+    const byPattern = inNewOrder(problemsInList(catalog, 'grind169'), 'pattern');
+    expect(byPattern).toEqual(problemsInList(catalog, 'grind169'));
+    expect(byPattern[0].pattern).toBe('arrays');
+  });
+
+  it('puts problems outside Grind 169 last, still in roadmap order, in Grind’s suggested order', () => {
+    const catalog = buildCatalog([custom]);
+    const neet = problemsInList(catalog, 'neetcode150');
+    const grindFirst = inNewOrder(neet, 'grind');
+    expect(grindFirst).toHaveLength(neet.length);
+    expect(grindFirst.slice(0, 3).map((p) => p.id)).toEqual([1, 20, 21]);
+    const inGrind = new Set(STUDY_LISTS.find((l) => l.id === 'grind169')!.problemIds);
+    const firstOutside = grindFirst.findIndex((p) => !inGrind.has(p.id));
+    const tail = grindFirst.slice(firstOutside);
+    expect(tail.every((p) => !inGrind.has(p.id))).toBe(true);
+    expect(tail).toEqual(neet.filter((p) => !inGrind.has(p.id)));
+    expect(nextNewProblems(grindFirst, (id) => id === 1, 2).map((p) => p.id)).toEqual([20, 21]);
+  });
+
+  it('defaults to Grind’s suggested order for Grind 169 and by pattern for the other lists', () => {
+    expect(newOrderOf({ activeList: 'grind169' })).toBe('grind');
+    expect(newOrderOf({ activeList: 'neetcode150' })).toBe('pattern');
+    expect(newOrderOf({ activeList: 'grind169', newOrder: 'pattern' })).toBe('pattern');
+    expect(newOrderOf({ activeList: 'blind75', newOrder: 'grind' })).toBe('grind');
   });
 
   it('ignores custom problems that collide with built-in ids', () => {

@@ -5,6 +5,7 @@ import type { ListId } from '../data/lists';
 import type { PatternId } from '../data/patterns';
 import type { Problem } from '../data/problems';
 import type { NewProblemMode } from '../lib/daily';
+import type { NewOrder } from '../lib/catalog';
 import type { Day } from '../lib/dates';
 import type { SprintSettings } from '../lib/sprint';
 import type { Rating, ReviewState } from '../lib/srs';
@@ -186,6 +187,8 @@ export interface SettingsRecord {
   sprint?: SprintSettings;
   /** 每天的新題怎麼挑（src/lib/daily.ts）；沒寫是 mixed */
   newMode?: NewProblemMode;
+  /** 新題的順序：照模式或 Grind 建議的順序（src/lib/catalog.ts 的 newOrderOf）；沒寫是 Grind 169 照 Grind 的順序、其他照模式 */
+  newOrder?: NewOrder;
   /** newMode 是 focus 時專練的模式 */
   focusPattern?: PatternId;
   /** 新題直接顯示是哪個模式；沒寫是不顯示，練習自己看出來 */

@@ -441,8 +441,10 @@ const zhTW = {
     newTitle: '今天的新題',
     startedToday: (n: number) => `今天已開始 ${n} 題新題`,
     roadmapOrder: (list: string) => `依 ${list} 的模式順序`,
+    grindOrder: (list: string) => `${list}，照 Grind 建議的順序`,
     pick: {
       mixedOrder: (list: string) => `${list}，大致照模式順序，穿插一題別的模式`,
+      mixedGrindOrder: (list: string) => `${list}，照 Grind 建議的順序，模式輪著出`,
       focusOrder: (pattern: string) => `專練「${pattern}」`,
       focusDone: (pattern: string) => `「${pattern}」做完了，回到路線圖`,
       mix: '穿插別的模式',
@@ -1278,15 +1280,26 @@ const zhTW = {
     maxHard: '每天最多幾題 Hard',
     noLimit: '不限',
     difficultyCapHint: '只算新題，複習不受影響。超過的會換成題單裡下一題比較簡單的。',
+    newOrder: '新題的順序',
+    newOrders: {
+      pattern: {
+        label: '照模式',
+        detail: '一個模式做完再換下一個，同一個模式從簡單到難（NeetCode 的路線圖）。適合從頭打底。',
+      },
+      grind: {
+        label: 'Grind 建議的順序',
+        detail: '簡單、基礎的在前，Hard 和 Premium 往後，模式輪著出（跟面試一樣什麼都可能出）。不在 Grind 169 裡的題排在最後。',
+      },
+    },
     newMode: '新題怎麼挑',
     newModes: {
       mixed: {
         label: '穿插（推薦）',
-        detail: '大部分是正在學的模式，再穿插一題別的模式，練習看到題目時判斷該用哪個方法，跟面試一樣。最近常卡住的模式，會多一題比較簡單的鞏固。',
+        detail: '大部分是正在學的模式，再穿插一題別的模式，練習看到題目時判斷該用哪個方法，跟面試一樣。最近常卡住的模式，會多一題比較簡單的鞏固。選「Grind 建議的順序」時模式本來就輪著出，只會補常卡住的模式。',
       },
       roadmap: {
-        label: '照路線圖',
-        detail: '一個模式做完再換下一個，同一個模式從簡單到難，照題單路線圖的順序。',
+        label: '照順序',
+        detail: '照上面選的順序一題一題來，不另外穿插別的模式。'
       },
       focus: {
         label: '專練一個模式',

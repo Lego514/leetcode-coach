@@ -193,6 +193,8 @@ export const settingsDataSchema = z.object({
   retention: z.number().min(0.7).max(0.97).optional(),
   /** 每天的新題怎麼挑：穿插（預設）、照路線圖、專練一個模式 */
   newMode: z.enum(['mixed', 'roadmap', 'focus']).optional(),
+  /** 新題的順序：照模式、Grind 建議的順序 */
+  newOrder: z.enum(['pattern', 'grind']).optional(),
   focusPattern: z.enum(PATTERN_IDS).optional(),
   /** 新題直接顯示模式 */
   showPatterns: z.boolean().optional(),
