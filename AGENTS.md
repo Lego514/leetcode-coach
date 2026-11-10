@@ -9,7 +9,7 @@
 - 線上：https://leetcode-coach-f6q7.onrender.com（Render 免費方案，閒置會睡，第一次開要等約一分鐘）
 - Repo：https://github.com/Lego514/leetcode-coach（公開）
 - 白板是另一個 repo：https://github.com/Lego514/dsa-whiteboard（本機 `C:\dev\dsa-whiteboard`），發佈在 npm，這裡用 `npm install dsa-whiteboard@X.Y.Z --save-exact` 裝固定的版本（以前從 GitHub 的 tag 裝，0.1.11 起改成 npm）
-- 使用者：2026 年畢業的 MSCS 國際學生，正在找工作，用 Python 刷題，講解解法是最弱的地方。技術選擇要放得上新鮮人的履歷。
+- 使用者：用 Python 刷題，這個 App 特別加強用英文講解解法。技術選擇要能寫進新鮮人的履歷。
 
 ## 跟使用者合作的方式
 
@@ -97,8 +97,8 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 - CI（`.github/workflows/ci.yml`）有三個工作：`check`（lint、typecheck、單元測試、建置）、`e2e`（PostgreSQL 17，Chromium + iPhone）、`docker`（用 compose 建映像跑起來，再對容器跑一部分 e2e）。
 - Render 在 main 的 CI 通過後自動部署（`render.yaml`，`autoDeployTrigger: checksPass`），啟動時跑 migration。
-- Render 上的設定（使用者設，不在 repo 裡）：`DATABASE_URL`（Neon）、`ANTHROPIC_API_KEY`、`BREVO_API_KEY`/`MAIL_FROM`、`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（GitHub 登入，2026-10-20 設好）、`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（每日提醒，2026-10-20 設好；`CRON_SECRET` 也設成了 repo 的 Actions secret）。
-- 還沒設定的：`SENTRY_DSN`（錯誤追蹤）、`ADMIN_EMAILS`（回報收件匣）。2026-10-20 的日誌顯示 `AI_ALLOWED_EMAILS` 是空的（AI 回饋沒有帳號能用），已請使用者補上。沒設定時那個功能就不出現；伺服器啟動時的日誌會逐項寫出哪些功能開著。
+- Render 上的設定（使用者設，不在 repo 裡）：`DATABASE_URL`（Neon）、`ANTHROPIC_API_KEY`、`BREVO_API_KEY`/`MAIL_FROM`、`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（GitHub 登入，2026-10-20 設好）、`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（每日提醒，2026-10-20 設好；`CRON_SECRET` 也設成了 repo 的 Actions secret）、`SENTRY_DSN`/`SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT`（錯誤追蹤，2026-11-10 設好：Sentry 的 org 是 `lego-1a`、專案 `leetcode-coach`（平台選 React），建置時上傳 source map；測試的錯誤 LEETCODE-COACH-1 收到了，堆疊指得回原本的檔案）。
+- 還沒設定的：`ADMIN_EMAILS`（回報收件匣）。2026-10-20 的日誌顯示 `AI_ALLOWED_EMAILS` 是空的（AI 回饋沒有帳號能用），已請使用者補上。沒設定時那個功能就不出現；伺服器啟動時的日誌會逐項寫出哪些功能開著。
 - 白板共用伺服器在 dsa-whiteboard 的 Cloudflare Worker；網址放在 `.env.production` 的 `VITE_COLLAB_URL`（公開設定，建置時用）。
 
 ## 這台電腦的坑（Windows）
@@ -119,6 +119,6 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 ## 待辦（使用者提過、還沒做的）
 
-- 使用者要做的設定：Render 補上 `AI_ALLOWED_EMAILS`；選用的 `SENTRY_DSN`、`ADMIN_EMAILS`。
+- 使用者要做的設定：Render 補上 `AI_ALLOWED_EMAILS`；選用的 `ADMIN_EMAILS`。
 - 跟朋友互相模擬面試（面試官看題目和評分表，兩邊共用白板）。
 - 求職進度追蹤使用者在別的專案做了，這裡不做。
