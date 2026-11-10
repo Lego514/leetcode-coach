@@ -4247,39 +4247,139 @@ a.more-account:hover {
   gap: 8px;
 }
 
+/*
+ * 深色模式開關：圓角的按鈕在軌道上滑動，上面的點從太陽飛成月亮。
+ * 淺色時按鈕在左邊、邊緣是暖黃色的光；深色時在右邊、是藍色的光。
+ * 位置用 aria-pressed（是不是深色）決定，整個畫面的淡入淡出在下面的 ::view-transition
+ */
 .theme-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
+  --track-w: 58px;
+  --track-h: 34px;
+  --knob: 26px;
+  --inset: 3px;
+  --glow: rgba(240, 160, 30, 0.5);
+  --glow-edge: rgba(255, 196, 92, 0.95);
+  --dot: #b7700f;
+  position: relative;
+  flex: none;
+  width: var(--track-w);
+  height: var(--track-h);
   padding: 0;
   border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-sm);
-  background: var(--sheet);
-  color: var(--ink-2);
+  border-radius: 999px;
+  background-color: var(--sheet-2);
+  box-shadow: inset 0 1px 3px rgba(22, 35, 58, 0.16);
   cursor: pointer;
+  view-transition-class: theme-toggle;
+  /* 開關不跟著整個畫面淡化（見下面的 ::view-transition），所以顏色自己慢慢換 */
+  transition:
+    background-color 460ms ease,
+    border-color 460ms ease,
+    box-shadow 460ms ease;
 }
 
-.theme-toggle svg {
-  width: 18px;
-  height: 18px;
+.theme-toggle[aria-pressed='true'] {
+  --glow: rgba(110, 150, 255, 0.5);
+  --glow-edge: rgba(160, 188, 255, 0.95);
+  --dot: #d8e3ff;
+  background-color: var(--paper);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .theme-toggle-compact {
-  width: 28px;
-  height: 28px;
+  --track-w: 48px;
+  --track-h: 28px;
+  --knob: 22px;
+  --inset: 2px;
 }
 
-.theme-toggle-compact svg {
-  width: 16px;
-  height: 16px;
+.theme-knob {
+  position: absolute;
+  top: var(--inset);
+  left: var(--inset);
+  display: grid;
+  place-items: center;
+  width: var(--knob);
+  height: var(--knob);
+  border-radius: calc(var(--knob) * 0.32);
+  /* 漸層不能慢慢換顏色，所以底色用單色，上緣的反光用內陰影 */
+  background-color: var(--sheet);
+  /* 外圈一道細的亮邊，再往外是柔和的光暈；下面一點陰影讓按鈕浮起來 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 1px var(--glow-edge),
+    0 0 10px 1px var(--glow),
+    0 2px 4px rgba(0, 0, 0, 0.22);
+  transform: translateX(0);
+  /* 稍微衝過頭再回來，像真的開關 */
+  transition:
+    transform 460ms cubic-bezier(0.34, 1.32, 0.5, 1),
+    box-shadow 460ms ease,
+    background-color 460ms ease;
+}
+
+.theme-toggle[aria-pressed='true'] .theme-knob {
+  /* 軌道內側的寬度（扣掉兩邊的框）減掉按鈕和兩邊的空隙 */
+  transform: translateX(calc(var(--track-w) - 2px - var(--knob) - 2 * var(--inset)));
+}
+
+.theme-knob svg {
+  width: 62%;
+  height: 62%;
+  overflow: visible;
+}
+
+.theme-dot {
+  fill: var(--dot);
+  opacity: var(--lo);
+  transform: translate(var(--lx), var(--ly));
+  transition:
+    transform 420ms cubic-bezier(0.65, 0, 0.25, 1),
+    opacity 300ms ease,
+    fill 460ms ease;
+}
+
+.theme-toggle[aria-pressed='true'] .theme-dot {
+  opacity: var(--do);
+  transform: translate(var(--dx), var(--dy));
 }
 
 @media (hover: hover) {
-  .theme-toggle:hover {
-    background: var(--sheet-2);
-    color: var(--ink);
+  .theme-toggle:hover .theme-knob {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 0 0 1px var(--glow-edge),
+      0 0 14px 2px var(--glow),
+      0 2px 4px rgba(0, 0, 0, 0.22);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle,
+  .theme-knob,
+  .theme-dot {
+    transition: none;
+  }
+}
+
+/* 換外觀：舊畫面和新畫面交叉淡化（theme.ts 的 fadeTheme） */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 開關自己不淡化：舊的那張藏起來，新的直接顯示，看得到按鈕滑過去、點聚成新的形狀 */
+::view-transition-old(*.theme-toggle) {
+  display: none;
+}
+
+::view-transition-new(*.theme-toggle) {
+  animation: none;
+}
+
+::view-transition-group(*.theme-toggle) {
+  animation: none;
 }
 
 /* ---------- 複習：接下來的題目 ---------- */
