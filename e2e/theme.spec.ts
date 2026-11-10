@@ -44,3 +44,35 @@ test('turns dark mode off when the system is dark', { tag: '@desktop' }, async (
   await page.getByRole('group', { name: 'Theme' }).getByRole('button', { name: 'System' }).click();
   await expect(page.getByRole('button', { name: 'Dark mode' })).toHaveAttribute('aria-pressed', 'true');
 });
+
+// 換外觀時整個畫面淡入淡出（View Transitions），開關上的點從太陽聚成月亮；要求減少動態效果時直接換
+test('fades the whole page when switching, unless reduced motion is on', { tag: '@desktop' }, async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = document.startViewTransition?.bind(document);
+    const counter = window as unknown as { fades: number };
+    counter.fades = 0;
+    if (original) {
+      document.startViewTransition = ((update: () => void) => {
+        counter.fades += 1;
+        return original(update);
+      }) as typeof document.startViewTransition;
+    }
+  });
+  const fades = () => page.evaluate(() => (window as unknown as { fades: number }).fades);
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'no-preference' });
+  await page.goto('/');
+  const toggle = page.getByRole('button', { name: 'Dark mode' });
+
+  // 淺色時是太陽：看得見的點排成太陽，深色時排成月亮
+  const shownDots = () => toggle.locator('.theme-dot').evaluateAll((dots) => dots.filter((dot) => getComputedStyle(dot).opacity !== '0').length);
+  const sunDots = await shownDots();
+  await toggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await fades()).toBe(1);
+  await expect.poll(shownDots).not.toBe(sunDots);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await toggle.click();
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/);
+  expect(await fades()).toBe(1);
+});

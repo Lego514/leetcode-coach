@@ -51,8 +51,23 @@ export function setTheme(choice: ThemeChoice): void {
     // 無法儲存時仍然套用到這次的畫面
   }
   current = choice;
-  applyTheme(choice);
-  for (const listener of listeners) listener();
+  fadeTheme(() => {
+    applyTheme(choice);
+    for (const listener of listeners) listener();
+  });
+}
+
+/**
+ * 換外觀時整個畫面淡入淡出（View Transitions：瀏覽器先拍下舊畫面，換好後兩張交叉淡化，時間在 styles.css）。
+ * 不支援的瀏覽器、使用者要求減少動態效果、或分頁在背景時直接換
+ */
+export function fadeTheme(update: () => void): void {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (typeof document.startViewTransition !== 'function' || reduce || document.visibilityState !== 'visible') {
+    update();
+    return;
+  }
+  document.startViewTransition(update);
 }
 
 export function useTheme(): [ThemeChoice, (choice: ThemeChoice) => void] {
