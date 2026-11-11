@@ -3858,6 +3858,35 @@ audio {
   padding: 0;
 }
 
+/* 卡在哪的一句話：接在選項下面，跟選項一樣是選填 */
+.stuck-note-input {
+  margin-top: 10px;
+}
+
+/* 題目頁的練習紀錄、複習頁「以前卡在哪」：自己當時寫的原話 */
+.history-stuck-note,
+.stuck-notes q {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-2);
+}
+
+.stuck-notes {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stuck-notes-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
 .stuck-list {
   display: grid;
   gap: 16px;

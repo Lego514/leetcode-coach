@@ -17,6 +17,7 @@ import {
   PATTERN_IDS,
   RATING_IDS,
   STORED_STUCK_REASONS,
+  STUCK_NOTE_MAX,
   REPORT_KINDS,
   REPORT_MAX_LENGTH,
   STEP_NOTE_KEYS,
@@ -41,6 +42,8 @@ export const attemptDataSchema = z.object({
   delayDays: z.number().int().min(1).max(365).optional(),
   /** 卡在哪；沒勾就沒有 */
   stuck: z.array(z.enum(STORED_STUCK_REASONS)).max(STORED_STUCK_REASONS.length).optional(),
+  /** 自己寫的一句話：具體卡在哪（例如「忘了陣列是空的」）；沒寫就沒有 */
+  stuckNote: text(STUCK_NOTE_MAX).optional(),
   /** 事後改過的時間（ISO）；同步時用來判斷哪一版比較新 */
   editedAt: timestamp.optional(),
 });

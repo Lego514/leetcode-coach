@@ -78,6 +78,7 @@ export function RecordForm({
   const [minutes, setMinutes] = useState(initialMinutes ? String(initialMinutes) : '');
   const [idea, setIdea] = useState<string | null>(null);
   const [stuck, setStuck] = useState<StoredStuckReason[]>([]);
+  const [stuckNote, setStuckNote] = useState('');
   const [saving, setSaving] = useState(false);
 
   const currentIdea = idea ?? note?.idea ?? '';
@@ -101,6 +102,7 @@ export function RecordForm({
         hints,
         sawSolution,
         stuck,
+        stuckNote,
       });
       if (idea !== null && idea !== (note?.idea ?? '')) {
         await saveNote(problem.id, { idea: idea.trim() });
@@ -217,12 +219,12 @@ export function RecordForm({
       {/* 卡在哪直接列出來：點一下就好，不用再打開；勾了記憶類的，上面的複習天數會跟著變 */}
       {insightFirst ? (
         <>
-          <StuckPicker value={stuck} onChange={setStuck} />
+          <StuckPicker value={stuck} onChange={setStuck} note={stuckNote} onNoteChange={setStuckNote} />
           {memoryStuck && <p className="field-hint">{t.record.memoryStuckNote}</p>}
         </>
       ) : (
         <>
-          <StuckPicker value={stuck} onChange={setStuck} />
+          <StuckPicker value={stuck} onChange={setStuck} note={stuckNote} onNoteChange={setStuckNote} />
           {memoryStuck && <p className="field-hint">{t.record.memoryStuckNote}</p>}
           <div className="form-grid">
             {minutesField}

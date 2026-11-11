@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { STUCK_NOTE_MAX } from '../../shared/constants';
 import { attemptDataSchema } from '../../shared/protocol';
 import { BUILTIN_PROBLEMS } from '../data/problems';
 import { stuckKinds, stuckPatterns, summarizeStuck, toggleStuck } from './stuck';
@@ -61,5 +62,12 @@ describe('stuck reasons', () => {
     expect(attemptDataSchema.safeParse({ ...base, stuck: ['syntax', 'logic'] }).success).toBe(true);
     expect(attemptDataSchema.safeParse({ ...base, stuck: ['edge', 'bug', 'time'] }).success).toBe(true);
     expect(attemptDataSchema.safeParse({ ...base, stuck: ['lazy'] }).success).toBe(false);
+  });
+
+  it('syncs a short note of where exactly I got stuck, up to the length limit', () => {
+    const base = { problemId: 1, day: '2026-10-01', at: '2026-10-01T10:00:00.000Z', rating: 'hint', mode: 'practice' };
+    expect(attemptDataSchema.safeParse({ ...base, stuckNote: 'forgot the empty array' }).success).toBe(true);
+    expect(attemptDataSchema.safeParse({ ...base, stuckNote: 'x'.repeat(STUCK_NOTE_MAX) }).success).toBe(true);
+    expect(attemptDataSchema.safeParse({ ...base, stuckNote: 'x'.repeat(STUCK_NOTE_MAX + 1) }).success).toBe(false);
   });
 });

@@ -1482,6 +1482,9 @@ const zhTW = {
 
   stuck: {
     label: '卡在哪？（可複選，選填）',
+    noteLabel: '具體卡在哪（選填）',
+    notePlaceholder: '具體卡在哪？例如：忘了陣列是空的情況（選填）',
+    notesTitle: '以前卡在哪',
     title: '最常卡在哪',
     note: (days: number, n: number) => `最近 ${days} 天，有 ${n} 次練習勾了卡住的原因`,
     empty: '做完題目時勾「卡在哪」，這裡會統計你最常卡住的地方，以及在哪些模式卡住。',

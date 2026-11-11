@@ -75,6 +75,8 @@ export const LEGACY_STUCK_REASONS = ['edge', 'bug', 'time'] as const;
 /** 紀錄裡可能出現的全部代號（同步時伺服器都要收，舊裝置傳上來的才不會被拒） */
 export const STORED_STUCK_REASONS = [...STUCK_REASONS, ...LEGACY_STUCK_REASONS] as const;
 export type StoredStuckReason = (typeof STORED_STUCK_REASONS)[number];
+/** 卡在哪的一句話筆記最多幾個字：一兩句就好，長的想法寫在題目的筆記 */
+export const STUCK_NOTE_MAX = 200;
 
 /** 面試官追問的類型：邊界情況、複雜度、能不能更好、換個做法、正確性、實作細節 */
 export const FOLLOW_UP_KINDS = ['edge', 'complexity', 'optimize', 'alternative', 'correctness', 'implementation'] as const;
