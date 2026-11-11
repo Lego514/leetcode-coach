@@ -4,6 +4,7 @@ import { useToast } from '../components/toast';
 import { ReviewForecast } from '../components/ReviewForecast';
 import { SpotArt } from '../components/SpotArt';
 import { ReferenceExplanation } from '../components/ReferenceExplanation';
+import { StuckNotes } from '../components/StuckNotes';
 import { DifficultyTag, PageHead, Sheet } from '../components/ui';
 import { getPattern } from '../data/patterns';
 import type { Problem } from '../data/problems';
@@ -319,6 +320,8 @@ function ReviewCard({ problem, progress, remaining, doneCount, today, onRated, o
               </div>
             )}
           </div>
+
+          <StuckNotes problemId={problem.id} />
 
           <div className="review-step">
             <ReferenceExplanation problemId={problem.id} />

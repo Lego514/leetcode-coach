@@ -1,4 +1,5 @@
-import { EXPLAIN_POINTS } from '../../shared/constants';
+import { EXPLAIN_POINTS, STUCK_NOTE_MAX } from '../../shared/constants';
+import { attemptDataSchema } from '../../shared/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   addCustomProblem,
@@ -91,6 +92,27 @@ describe('recordAttempt', () => {
     const byProblem = new Map((await db.attempts.toArray()).map((a) => [a.problemId, a]));
     expect(byProblem.get(1)?.stuck).toEqual(['optimize', 'logic']);
     expect(byProblem.get(2)).not.toHaveProperty('stuck');
+  });
+
+  it('keeps a trimmed note of where exactly I got stuck, and nothing when it is blank', async () => {
+    await recordAttempt(1, 'hint', { day: '2026-09-16', stuck: ['logic'], stuckNote: '  forgot the empty array  ' });
+    await recordAttempt(2, 'solo', { day: '2026-09-16', stuckNote: '   ' });
+    await recordAttempt(3, 'hint', { day: '2026-09-16', stuckNote: 'x'.repeat(STUCK_NOTE_MAX + 50) });
+    const byProblem = new Map((await db.attempts.toArray()).map((a) => [a.problemId, a]));
+    expect(byProblem.get(1)?.stuckNote).toBe('forgot the empty array');
+    expect(byProblem.get(2)).not.toHaveProperty('stuckNote');
+    // 太長的截掉，同步的 schema 才收得下
+    expect(byProblem.get(3)?.stuckNote).toHaveLength(STUCK_NOTE_MAX);
+    expect(attemptDataSchema.safeParse(toSyncData('attempts', byProblem.get(3)!)).success).toBe(true);
+  });
+
+  it('edits the stuck note along with the rest, and clears it when emptied', async () => {
+    await recordAttempt(1, 'hint', { day: '2026-09-16', stuck: ['logic'], stuckNote: 'off by one' });
+    const [attempt] = await db.attempts.toArray();
+    await updateAttempt(attempt.uid, { rating: 'hint', stuck: ['logic'], stuckNote: 'off by one at the right end' });
+    expect((await db.attempts.get(attempt.id!))?.stuckNote).toBe('off by one at the right end');
+    await updateAttempt(attempt.uid, { rating: 'hint', stuck: ['logic'], stuckNote: '' });
+    expect(await db.attempts.get(attempt.id!)).not.toHaveProperty('stuckNote');
   });
 
   it('edits a record: replaces the result, time, and where I got stuck, and reschedules from all records', async () => {

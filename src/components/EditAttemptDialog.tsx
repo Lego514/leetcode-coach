@@ -41,6 +41,7 @@ function EditAttemptForm({ attempt, onDone }: { attempt: AttemptRecord; onDone: 
   const [minutes, setMinutes] = useState(attempt.minutes ? String(attempt.minutes) : '');
   // 舊紀錄的「漏了邊界」「有 bug」換成現在的「邏輯／邊界」，選項上才看得到勾起來
   const [stuck, setStuck] = useState<StoredStuckReason[]>(() => stuckKinds(attempt.stuck));
+  const [stuckNote, setStuckNote] = useState(attempt.stuckNote ?? '');
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -49,7 +50,7 @@ function EditAttemptForm({ attempt, onDone }: { attempt: AttemptRecord; onDone: 
     if (saving) return;
     setSaving(true);
     try {
-      const progress = await updateAttempt(attempt.uid, { rating, minutes: Number(minutes) || undefined, stuck });
+      const progress = await updateAttempt(attempt.uid, { rating, minutes: Number(minutes) || undefined, stuck, stuckNote });
       if (progress) toast(t.editAttempt.saved(fmt.day(progress.due), t.date.relative(diffDays(day, progress.due))));
       onDone();
     } finally {
@@ -84,7 +85,7 @@ function EditAttemptForm({ attempt, onDone }: { attempt: AttemptRecord; onDone: 
         </div>
       </fieldset>
 
-      <StuckPicker value={stuck} onChange={setStuck} />
+      <StuckPicker value={stuck} onChange={setStuck} note={stuckNote} onNoteChange={setStuckNote} />
 
       <div className="form-grid">
         <label className="field">

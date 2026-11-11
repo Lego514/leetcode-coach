@@ -1516,6 +1516,9 @@ const en: Messages = {
 
   stuck: {
     label: 'Where did you get stuck? (optional, pick any)',
+    noteLabel: 'What exactly tripped you up (optional)',
+    notePlaceholder: 'What exactly? e.g. forgot the empty array case (optional)',
+    notesTitle: 'Where you got stuck before',
     title: 'Where you get stuck',
     note: (days, n) => `Last ${days} days, ${count(n, 'session')} with a reason marked`,
     empty: 'Mark where you got stuck when you record a problem, and this shows where you get stuck most and in which patterns.',

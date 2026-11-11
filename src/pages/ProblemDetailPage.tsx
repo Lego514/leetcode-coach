@@ -449,6 +449,7 @@ function History({ problem }: { problem: Problem }) {
                       {t.stuck.reasons[reason].name}
                     </span>
                   ))}
+                  {a.stuckNote && <q className="history-stuck-note">{a.stuckNote}</q>}
                 </span>
                 <span className="history-side">
                   <span className="history-when history-date">{fmt.day(a.day)}</span>

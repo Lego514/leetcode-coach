@@ -1,4 +1,4 @@
-import type { StoredStuckReason } from '../../shared/constants';
+import { STUCK_NOTE_MAX, type StoredStuckReason } from '../../shared/constants';
 import type { PatternId } from '../data/patterns';
 import { BUILTIN_PROBLEMS, type Problem } from '../data/problems';
 import { toDay, type Day } from '../lib/dates';
@@ -34,6 +34,8 @@ export interface RecordAttemptOptions {
   delayDays?: number;
   /** 卡在哪 */
   stuck?: readonly StoredStuckReason[];
+  /** 具體卡在哪的一句話 */
+  stuckNote?: string;
   day?: Day;
   at?: Date;
 }
@@ -44,7 +46,7 @@ const scheduleTables = () => [db.progress, db.attempts, db.outbox, db.settings, 
 export async function recordAttempt(
   problemId: number,
   rating: Rating,
-  { mode = 'practice', minutes, hints, sawSolution, delayDays, stuck, day, at = new Date() }: RecordAttemptOptions = {},
+  { mode = 'practice', minutes, hints, sawSolution, delayDays, stuck, stuckNote, day, at = new Date() }: RecordAttemptOptions = {},
 ): Promise<ProgressRecord> {
   const attemptDay = day ?? toDay(at);
   return db.transaction('rw', scheduleTables(), async () => {
@@ -61,6 +63,7 @@ export async function recordAttempt(
       ...(sawSolution ? { sawSolution } : {}),
       ...(delayDays && delayDays > 0 ? { delayDays } : {}),
       ...(stuck && stuck.length > 0 ? { stuck: [...stuck] } : {}),
+      ...stuckNoteOf(stuckNote),
     });
     await track(db, 'attempts', uid);
     // 照這題全部的紀錄（和講解）重算，跟同步、修改紀錄之後用同一條路
@@ -111,6 +114,13 @@ export interface AttemptEdit {
   rating: Rating;
   minutes?: number;
   stuck?: readonly StoredStuckReason[];
+  stuckNote?: string;
+}
+
+/** 卡在哪的筆記：前後空白拿掉、太長的截掉；空的就不存這個欄位 */
+function stuckNoteOf(note: string | undefined): { stuckNote?: string } {
+  const trimmed = note?.trim().slice(0, STUCK_NOTE_MAX).trim();
+  return trimmed ? { stuckNote: trimmed } : {};
 }
 
 /**
@@ -121,13 +131,15 @@ export async function updateAttempt(uid: string, edit: AttemptEdit, at = new Dat
   return db.transaction('rw', scheduleTables(), async () => {
     const attempt = await db.attempts.where('uid').equals(uid).first();
     if (!attempt) return undefined;
-    // 時間和卡在哪整個換掉：清空的就拿掉，不留舊的
+    // 時間、卡在哪和卡在哪的筆記整個換掉：清空的就拿掉，不留舊的
     const record: AttemptRecord = { ...attempt, rating: edit.rating, editedAt: at.toISOString() };
     delete record.minutes;
     delete record.stuck;
+    delete record.stuckNote;
     Object.assign(record, {
       ...(edit.minutes && edit.minutes > 0 ? { minutes: edit.minutes } : {}),
       ...(edit.stuck && edit.stuck.length > 0 ? { stuck: [...edit.stuck] } : {}),
+      ...stuckNoteOf(edit.stuckNote),
     });
     await db.attempts.put(record);
     await track(db, 'attempts', uid, false, at.getTime());
