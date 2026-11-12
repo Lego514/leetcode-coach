@@ -6,7 +6,7 @@
 
 **刷題教練（LeetCode Coach）**：幫忙準備美國軟體工程師面試的 PWA。題目還是在 LeetCode 上寫，這個 App 決定今天練哪幾題、用 FSRS 排複習、記筆記和解題步驟、計時模擬面試、用英文講解並拿 AI 回饋、行為面試的故事庫、微複習卡片、白板。
 
-- 線上：https://leetcode-coach-f6q7.onrender.com（Render 免費方案，閒置會睡，第一次開要等約一分鐘）
+- 線上：https://leetcode-coach-f6q7.onrender.com（Render 免費方案，閒置 15 分鐘會睡，第一次開要等 20 到 60 秒；上班時間有使用者設的外部 ping 讓它醒著，見待辦）
 - Repo：https://github.com/Lego514/leetcode-coach（公開）
 - 白板是另一個 repo：https://github.com/Lego514/dsa-whiteboard（本機 `C:\dev\dsa-whiteboard`），發佈在 npm，這裡用 `npm install dsa-whiteboard@X.Y.Z --save-exact` 裝固定的版本（以前從 GitHub 的 tag 裝，0.1.11 起改成 npm）
 - 使用者：用 Python 刷題，這個 App 特別加強用英文講解解法。技術選擇要能寫進新鮮人的履歷。
@@ -97,7 +97,7 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 - CI（`.github/workflows/ci.yml`）有三個工作：`check`（lint、typecheck、單元測試、建置）、`e2e`（PostgreSQL 17，Chromium + iPhone）、`docker`（用 compose 建映像跑起來，再對容器跑一部分 e2e）。
 - Render 在 main 的 CI 通過後自動部署（`render.yaml`，`autoDeployTrigger: checksPass`），啟動時跑 migration。
-- Render 上的設定（使用者設，不在 repo 裡）：`DATABASE_URL`（Neon）、`ANTHROPIC_API_KEY`、`BREVO_API_KEY`/`MAIL_FROM`、`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（GitHub 登入，2026-10-20 設好）、`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（每日提醒，2026-10-20 設好；`CRON_SECRET` 也設成了 repo 的 Actions secret）、`SENTRY_DSN`/`SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT`（錯誤追蹤，2026-11-10 設好：Sentry 的 org 是 `lego-1a`、專案 `leetcode-coach`（平台選 React），建置時上傳 source map；測試的錯誤 LEETCODE-COACH-1 收到了，堆疊指得回原本的檔案）。
+- Render 上的設定（使用者設，不在 repo 裡）：`DATABASE_URL`（Neon）、`ANTHROPIC_API_KEY`、`BREVO_API_KEY`/`MAIL_FROM`、`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`（GitHub 登入，2026-10-20 設好）、`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`CRON_SECRET`（每日提醒，2026-10-20 設在 Render；但 repo 的 Actions secrets 是空的，見待辦）、`SENTRY_DSN`/`SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT`（錯誤追蹤，2026-11-10 設好：Sentry 的 org 是 `lego-1a`、專案 `leetcode-coach`（平台選 React），建置時上傳 source map；測試的錯誤 LEETCODE-COACH-1 收到了，堆疊指得回原本的檔案）。
 - 還沒設定的：`ADMIN_EMAILS`（回報收件匣）。2026-10-20 的日誌顯示 `AI_ALLOWED_EMAILS` 是空的（AI 回饋沒有帳號能用），已請使用者補上。沒設定時那個功能就不出現；伺服器啟動時的日誌會逐項寫出哪些功能開著。
 - 白板共用伺服器在 dsa-whiteboard 的 Cloudflare Worker；網址放在 `.env.production` 的 `VITE_COLLAB_URL`（公開設定，建置時用）。
 
@@ -119,6 +119,8 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 
 ## 待辦（使用者提過、還沒做的）
 
+- **每日提醒從來沒寄出去過**（2026-11-10 查到）：`.github/workflows/reminders.yml` 每次都印 `CRON_SECRET is not set; skipping.`，因為 repo 的 Actions secrets 裡沒有 `CRON_SECRET`（`gh secret list` 是空的）。要使用者自己把 Render 上的同一個值加成 repo 的 secret，再手動跑一次（`gh workflow run reminders.yml`）確認伺服器有回應。另外 GitHub 的排程不準：寫每小時一次，實際一天只跑 2 到 5 次，提醒會晚好幾個小時或整天沒寄；考慮改用 Cloudflare Worker 的 Cron Triggers 呼叫 `POST /api/push/send-due`（白板的 Worker 已經在 Cloudflare 上）。
+- 網站不睡的 ping 是使用者在外部服務設的、不在 repo 裡，**只在 HR 上班時間**讓 Render 醒著（不是整個月，所以不會用完免費的 750 小時）。上班時間外伺服器會睡，第一次打開要等 20 到 30 秒，這是預期的。2026-11-11 測過：美東半夜 12 點到 1 點不在設定的時段，每 20 分鐘連一次要等 19 到 32 秒（睡著了）；同一天美東下午 1:00、1:20、1:40 三次都在 0.25 秒內（一直醒著），所以上班時間的 ping 有在運作。測的時候要在設定的時段裡，而且先關掉 App：登入後分頁在畫面上時每 5 分鐘同步一次（`src/store/cloud.ts` 的 `POLL_MS`），伺服器就不會睡，會測不準。
 - 使用者要做的設定：Render 補上 `AI_ALLOWED_EMAILS`；選用的 `ADMIN_EMAILS`。
 - 跟朋友互相模擬面試（面試官看題目和評分表，兩邊共用白板）。
 - 求職進度追蹤使用者在別的專案做了，這裡不做。
