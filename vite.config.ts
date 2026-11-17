@@ -8,7 +8,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 const apiProxy = { '/api': { target: 'http://localhost:8787', changeOrigin: false } };
 
 // Render 和 GitHub Actions 建置時會提供 commit，回報問題時附上，才知道是哪一版
-const version = (process.env.RENDER_GIT_COMMIT ?? process.env.GITHUB_SHA ?? 'dev').slice(0, 7);
+const version = (process.env.APP_VERSION ?? process.env.RENDER_GIT_COMMIT ?? process.env.GITHUB_SHA ?? 'dev').slice(0, 7);
 
 // 錯誤追蹤的 DSN 前後端共用：Render 上只要設定 SENTRY_DSN，建前端時也會用到（DSN 本來就是公開的）
 if (process.env.SENTRY_DSN && !process.env.VITE_SENTRY_DSN) process.env.VITE_SENTRY_DSN = process.env.SENTRY_DSN;
@@ -84,7 +84,7 @@ export default defineConfig({
   ],
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'edge/**/*.test.ts'],
     setupFiles: ['./src/test/setup.ts'],
   },
 });

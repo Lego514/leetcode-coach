@@ -1,0 +1,7 @@
+# Cloudflare 上的快取（跟 server/src/app.ts 一樣）：每次確認有沒有新版；檔名有 hash 的檔案永久快取。
+# 符合的規則會疊在一起，所以 /assets/* 先用「! Cache-Control」拿掉上面那條再設定
+/*
+  Cache-Control: no-cache
+/assets/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable

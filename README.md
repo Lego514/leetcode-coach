@@ -155,7 +155,7 @@ Screenshots use generated demo data and are regenerated with `npm run screenshot
 | Illustrations | Drawn in code as SVG React components (the algorithm tree, the capybara and its poses, empty-state art), colored with CSS variables for both themes; the README's capybara animation is generated from the same component |
 | Quality | Vitest (unit, API, and two-device sync tests), Playwright end-to-end tests against the production build and a real PostgreSQL on Chromium and iPhone WebKit, ESLint, GitHub Actions CI |
 | AI | Claude Opus 5.5 through the Anthropic TypeScript SDK, JSON-schema structured output, server-side refusal fallback, per-user daily quota stored in PostgreSQL. With your own key, the browser calls Anthropic (the same SDK), OpenAI, or OpenRouter directly, using the same prompts and schemas (`shared/ai.ts`) |
-| Hosting | Render (one Node service for the API and the web app), Neon PostgreSQL |
+| Hosting | The web app on Cloudflare Workers static assets (served from the edge, never asleep), with a small Worker proxying `/api` to the Node API on Render; Neon PostgreSQL |
 | Auth | Email and password (scrypt, only hashed session tokens stored) plus Sign in with GitHub (OAuth 2.0 authorization code flow with PKCE, explicit account linking); a fake GitHub server covers the whole flow in end-to-end tests |
 | Monitoring | Sentry for the React app and the Hono API: errors only (no tracing), loaded only when a DSN is set, with account info, cookies, headers, request bodies, query strings, AI inputs and outputs, and local variables kept out; source maps are uploaded at build time and not published |
 | Containers | Multi-stage Dockerfile (build, then a slim runtime that runs as a non-root user with a health check) and Docker Compose with PostgreSQL; CI builds the image, starts it with Compose, and runs end-to-end tests against the container |
@@ -466,6 +466,11 @@ docker compose down          # stop; add -v to also delete the database volume
    2. Choose **New → Blueprint**, select the repository, and paste the Neon connection string as `DATABASE_URL` when asked.
    3. Render builds and starts the service. Migrations run automatically at startup. When the deploy finishes, open the `onrender.com` URL and check `/api/health`.
 3. **Later deploys** happen automatically when a commit on `main` passes CI (`autoDeployTrigger: checksPass`).
+4. **Fast first load (Cloudflare, optional)**: the free Render service sleeps, and the first visit then waits for it to wake. `wrangler.jsonc` serves the built web app from Cloudflare instead, so it opens at once, and `edge/worker.ts` forwards `/api/*` to Render on the same origin (cookies, redirects and the visitor's IP pass through). Only signing in, syncing and AI wait for the API; the app works offline in the meantime.
+   1. In Cloudflare, create an API token from the **Edit Cloudflare Workers** template and note your account ID. Add them to the GitHub repo as Actions secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. For Sentry in the Cloudflare build, also add variables `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` and secret `SENTRY_AUTH_TOKEN`.
+   2. The `Deploy web to Cloudflare` workflow deploys after CI passes on `main` (or run it by hand). The site is at `https://leetcode-coach.<your-subdomain>.workers.dev`.
+   3. On Render, set `APP_ORIGINS` to the new URL and the old `onrender.com` one (comma-separated, new one first) and `APP_URL` to the new URL. With GitHub sign-in, change the OAuth App's callback to `<new URL>/api/auth/github/callback`. Board sharing needs the new URL in the whiteboard server's `ALLOWED_ORIGINS`.
+   4. `API_ORIGIN` in `wrangler.jsonc` is the Render URL the Worker forwards to.
 
 Notes:
 
@@ -619,6 +624,7 @@ Notes:
 1. 到 Neon 建立專案（區域選 AWS US East 2 (Ohio)，跟 Render 同一區），複製連線字串（`postgresql://…?sslmode=require`）。
 2. 到 Render 用 GitHub 登入，選 **New → Blueprint**，選這個 repository，`DATABASE_URL` 貼上 Neon 的連線字串。
 3. 部署完成後打開 `onrender.com` 的網址，確認 `/api/health` 回傳 `{"ok":true}`。之後 `main` 的 CI 通過就會自動部署。
+4. **讓網頁秒開（Cloudflare，選用）**：Render 免費方案會睡，第一次打開要等它醒。`wrangler.jsonc` 把建好的網頁放在 Cloudflare，打開馬上就有；`/api/*` 由 `edge/worker.ts` 在同一個網址轉給 Render（cookie、轉址、使用者的 IP 都照轉）。只有登入、同步、AI 要等伺服器醒來，這段時間 App 照樣離線可用。設定：Cloudflare 建 API token（範本 Edit Cloudflare Workers），和 Account ID 一起設成 repo 的 Actions secrets `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`；CI 通過後 `Deploy web to Cloudflare` 就會部署到 `https://leetcode-coach.<子網域>.workers.dev`。接著 Render 的 `APP_ORIGINS` 改成新網址加舊網址（新的放前面）、`APP_URL` 改成新網址，GitHub 登入的 OAuth App callback 也換成新網址，白板共用伺服器的 `ALLOWED_ORIGINS` 加上新網址。
 
 選用的功能，設定了才會打開：
 - **AI 回饋**：設定 `ANTHROPIC_API_KEY` 和允許名單 `AI_ALLOWED_EMAILS`（空的代表沒有人，`*` 代表所有人），每人每天預設 20 次。用 Claude Opus 5.5 一次大約 1～3 元台幣。
