@@ -1,0 +1,19 @@
+{
+  // 網頁放在 Cloudflare Workers（靜態檔走 CDN，不會睡），/api 由 edge/worker.ts 轉給 Render 上的伺服器。
+  // 部署：.github/workflows/edge.yml（main 的 CI 通過後）。設定步驟見 README 的 Deploying 一節。
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "leetcode-coach",
+  "main": "edge/worker.ts",
+  "compatibility_date": "2026-09-30",
+  "assets": {
+    "directory": "./dist",
+    // hash 路由只有一頁：找不到的網址都回 index.html
+    "not_found_handling": "single-page-application",
+    // /api 先給 Worker 轉送，其他直接回靜態檔（不算 Worker 的請求數）
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "API_ORIGIN": "https://leetcode-coach-f6q7.onrender.com"
+  },
+  "observability": { "enabled": true }
+}

@@ -20,3 +20,6 @@ server/.data
 !.env.example
 # 建置正式版用的公開設定（白板共用伺服器的網址）
 !.env.production
+
+# wrangler dev 的暫存
+.wrangler
