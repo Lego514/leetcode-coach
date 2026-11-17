@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSyncExternalStore } from 'react';
 import { demoData } from '../lib/demo';
-import type { Day } from '../lib/dates';
+import { today, type Day } from '../lib/dates';
 import {
   db,
   type AttemptRecord,
@@ -106,6 +106,33 @@ export async function loadDemoData(today: Day): Promise<void> {
     await rebuildAllProgress(db);
   });
   write(true);
+}
+
+/** 網址上的 ?demo：可以放在 # 前面（…/?demo#/）或 hash 路由裡（…/#/?demo） */
+function takeDemoParam(url: URL): { found: boolean; next: string } {
+  const search = new URLSearchParams(url.search);
+  const [route, query = ''] = url.hash.split('?');
+  const inHash = new URLSearchParams(query);
+  const found = search.has('demo') || inHash.has('demo');
+  search.delete('demo');
+  inHash.delete('demo');
+  const searchText = search.toString();
+  const hashQuery = inHash.toString();
+  const hash = route + (hashQuery ? `?${hashQuery}` : '');
+  return { found, next: `${url.pathname}${searchText ? `?${searchText}` : ''}${hash}` };
+}
+
+/**
+ * 試用連結（README、履歷上的 …/?demo）：打開時這個瀏覽器什麼紀錄都沒有，就直接載入示範資料，
+ * 不用找「用示範資料試試看」的按鈕；已經有自己的紀錄就不動。參數用完就從網址拿掉，重新整理不會再載一次
+ */
+export async function openDemoFromLink(href: string = window.location.href): Promise<boolean> {
+  const { found, next } = takeDemoParam(new URL(href));
+  if (!found) return false;
+  window.history.replaceState(window.history.state, '', next);
+  if (!(await canTryDemo())) return false;
+  await loadDemoData(today());
+  return true;
 }
 
 /** 清掉示範資料，回到第一次打開的樣子；載入前自己調過的設定放回去（也記回待上傳清單，之後登入才同步得出去） */

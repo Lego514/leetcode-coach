@@ -1,14 +1,16 @@
 # LeetCode Coach（刷題教練）
 
-A local-first study coach for LeetCode interview prep. It decides what to practice today, schedules reviews with spaced repetition, keeps structured notes, and runs timed mock interviews with think-aloud recording. To keep you coming back, an algorithm tree grows from your practice and a capybara practices with you. You can use it without an account; signing in syncs your data across devices.
+A study coach for LeetCode interview prep. You solve problems on LeetCode; it plans what to practice each day, schedules reviews with spaced repetition, and makes you explain solutions out loud in English, with AI feedback.
 
-You still solve problems on LeetCode. This app handles the parts around solving: planning, remembering, and explaining.
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/tour-dark.gif"><img src="docs/images/tour-light.gif" alt="A tour of one day: Today's plan, timed practice with the interview steps, recording how it went, explaining out loud with AI feedback on five points, a reference board playing step by step, and the algorithm tree on the Progress page"></picture>
 
-**Live app:** https://leetcode-coach-f6q7.onrender.com — it runs on free hosting that sleeps when idle, so the first visit after a while can take about a minute to wake up. After that it's fast, and once loaded it keeps working offline.
+**[Try it with demo data](https://leetcode-coach-f6q7.onrender.com/?demo)** (six weeks of made-up practice, no sign-up) · **[Whiteboard example](https://lego514.github.io/dsa-whiteboard/#example=206)** · [中文說明](#中文說明)
 
-**No account needed to look around:** on the Today page, press **Try it with demo data** to fill the app with six weeks of made-up practice (reviews due, a streak, a growing tree, explanation drills, stuck patterns, three behavioral stories with two practice answers, and two whiteboards). It stays in your browser, is never synced, and **Clear demo data** removes it. Since clearing empties the browser, it's only offered before you've saved anything of your own (settings are put back when you clear).
+- **Spaced repetition that uses more than a rating**: FSRS-6, adjusted by how long you took, how deep the hints went, and where you got stuck, and it explains every interval.
+- **Local-first PWA**: IndexedDB in the browser, works offline; an account syncs through a Hono API and PostgreSQL with an outbox and last-write-wins.
+- **My own open-source whiteboard** ([dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard) on npm), with live co-editing on Cloudflare Durable Objects and 213 step-by-step reference boards.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/today-dark.png"><img src="docs/images/today-light.png" alt="The Today page: today's goal with the streak and its shields, a small algorithm tree, and the capybara coding on a laptop next to a speech bubble with an encouraging line and a tip"></picture>
+The live app runs on a free plan that sleeps when idle, so the first visit after a while can take up to a minute; once loaded it keeps working offline. The demo link fills an empty browser only, stays in your browser, is never synced, and **Clear demo data** removes it.
 
 ## Screenshots
 
@@ -508,7 +510,7 @@ Notes:
 
 這是一個幫忙準備美國軟體工程師面試的刷題教練。題目還是在 LeetCode 上寫，這個 App 負責寫題以外的事：決定今天練什麼、用 FSRS（Anki 用的排程演算法）排好每一題的複習、記筆記和解題步驟、練習用英文把解法講清楚。演算法樹和陪你刷題的卡皮巴拉讓人每天想回來。不用帳號就能用，登入後可以在不同裝置之間同步。
 
-**線上版本**：https://leetcode-coach-f6q7.onrender.com 。免費方案閒置 15 分鐘會休眠，之後第一次開啟大約要等一分鐘，醒來之後就很快；頁面載入過一次後也能離線使用。想先看看的話，在今天頁按「用示範資料看看」，會載入六週編出來的練習紀錄（到期的複習、連續天數、長大中的樹、講解練習、常卡住的模式），只存在你的瀏覽器、不會同步，隨時可以清掉。清除會清空這個瀏覽器的資料，所以只有還沒存過自己的東西時才會出現（先調過的設定清除時會放回去）。上面的截圖也是這份示範資料，`npm run screenshots` 會重新產生。
+**線上版本**：https://leetcode-coach-f6q7.onrender.com （[直接用示範資料試用](https://leetcode-coach-f6q7.onrender.com/?demo)：空的瀏覽器會自動載入六週的示範紀錄）。免費方案閒置 15 分鐘會休眠，之後第一次開啟大約要等一分鐘，醒來之後就很快；頁面載入過一次後也能離線使用。想先看看的話，在今天頁按「用示範資料看看」，會載入六週編出來的練習紀錄（到期的複習、連續天數、長大中的樹、講解練習、常卡住的模式），只存在你的瀏覽器、不會同步，隨時可以清掉。清除會清空這個瀏覽器的資料，所以只有還沒存過自己的東西時才會出現（先調過的設定清除時會放回去）。上面的截圖也是這份示範資料，`npm run screenshots` 會重新產生。
 
 ### 功能
 
