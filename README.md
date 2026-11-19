@@ -6,7 +6,7 @@ A study coach for LeetCode interview prep. You solve problems on LeetCode; it pl
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/tour-dark.gif"><img src="docs/images/tour-light.gif" alt="A tour of one day: Today's plan, timed practice with the interview steps, recording how it went, explaining out loud with AI feedback on five points, a reference board playing step by step, and the algorithm tree on the Progress page"></picture>
 
-**[Try it with demo data](https://coach.legoli.dev/?demo)** (six weeks of made-up practice, no sign-up) · **[Whiteboard example](https://lego514.github.io/dsa-whiteboard/#example=206)** · [中文說明](README.zh-TW.md)
+**[Try it with demo data](https://coach.legoli.dev/?demo)** (six weeks of made-up practice, no sign-up) · **[Whiteboard example](https://dsaboard.legoli.dev/#example=206)** · [中文說明](README.zh-TW.md)
 
 - **Spaced repetition that uses more than a rating**: FSRS-6, adjusted by how long you took, how deep the hints went, and where you got stuck, and it explains every interval.
 - **Local-first PWA**: IndexedDB in the browser, works offline; an account syncs through a Hono API and PostgreSQL with an outbox and last-write-wins.
