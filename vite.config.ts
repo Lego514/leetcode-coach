@@ -62,6 +62,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // 分享預覽卡片的圖只給 LinkedIn 這類網站抓，不用先存進離線快取
+        globIgnores: ['og.png'],
         // API 一律走網路，不要被 service worker 當成頁面回應
         navigateFallbackDenylist: [/^\/api\//],
         // 新版啟用後立刻接管，不用等所有分頁關掉
