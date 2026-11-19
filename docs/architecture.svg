@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1040" width="1200" height="1040" role="img" aria-labelledby="title desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
   <title id="title">LeetCode Coach architecture</title>
-  <desc id="desc">An installable React PWA stores data locally in IndexedDB and syncs through a Hono API on Render to Neon PostgreSQL. The API calls the Claude API for feedback, GitHub for sign-in, Brevo for password reset email, and browser push services for daily reminders. With the user's own key, the browser calls Anthropic, OpenAI, or OpenRouter directly. The whiteboard, an open-source package, connects over WebSockets to Cloudflare Workers with one Durable Object per room for live co-editing. Sentry receives errors from the web app and the API. GitHub Actions runs lint, type checks, unit, API, Playwright, and Docker container tests before Render deploys main, and wakes the API every hour to send reminders.</desc>
+  <desc id="desc">An installable React PWA stores data locally in IndexedDB. Cloudflare Workers serve the web app from the edge and forward /api to a Hono API on Render, which syncs to Neon PostgreSQL. The API calls the Claude API for feedback, GitHub for sign-in, Brevo for password reset email, and browser push services for daily reminders. With the user's own key, the browser calls Anthropic, OpenAI, or OpenRouter directly. The whiteboard, an open-source package, connects over WebSockets to Cloudflare Workers with one Durable Object per room for live co-editing. Sentry receives errors from the web app and the API. GitHub Actions runs lint, type checks, unit, API, Playwright, and Docker container tests before Render deploys the API and Cloudflare deploys the web app, and wakes the API every hour to send reminders.</desc>
   <defs>
     <style>
       .bg { fill: #ffffff; }
@@ -38,7 +38,7 @@
 
   <rect class="bg" x="0" y="0" width="1200" height="1040" />
   <text class="h1" x="30" y="46">LeetCode Coach — Architecture</text>
-  <text class="sub" x="30" y="66">Offline-first study coach for coding interviews · React PWA + Node/PostgreSQL sync API + live whiteboard rooms</text>
+  <text class="sub" x="30" y="66">Offline-first study coach for coding interviews · React PWA at the edge + Node/PostgreSQL sync API + live whiteboard rooms</text>
 
   <!-- Browser -->
   <rect class="panel" x="30" y="84" width="370" height="676" rx="10" />
@@ -87,7 +87,7 @@
 
   <!-- Render -->
   <rect class="panel" x="470" y="84" width="340" height="490" rx="10" />
-  <text class="h2" x="490" y="114">Render — Node 24 (Docker-ready)</text>
+  <text class="h2" x="490" y="114">Render — Node 24 API (Docker-ready)</text>
   <g>
     <rect class="item" x="490" y="128" width="300" height="54" rx="6" />
     <text class="t" x="506" y="150">Hono API</text>
@@ -107,7 +107,7 @@
 
     <rect class="item" x="490" y="376" width="300" height="54" rx="6" />
     <text class="t" x="506" y="398">Static hosting</text>
-    <text class="d" x="506" y="417">Serves the built PWA on the same origin</text>
+    <text class="d" x="506" y="417">Also serves the PWA at onrender.com</text>
 
     <rect class="item" x="490" y="438" width="300" height="54" rx="6" />
     <text class="t" x="506" y="460">Data access</text>
@@ -119,10 +119,14 @@
   </g>
 
   <!-- Cloudflare -->
-  <rect class="edge" x="470" y="640" width="340" height="96" rx="10" />
-  <text class="h2" x="490" y="668">Cloudflare Workers</text>
-  <text class="d" x="490" y="692">Whiteboard rooms: one Durable Object each</text>
-  <text class="d" x="490" y="714">WebSockets · server-ordered last-write-wins</text>
+  <rect class="edge" x="470" y="604" width="340" height="156" rx="10" />
+  <text class="h2" x="490" y="632">Cloudflare Workers</text>
+  <rect class="item" x="490" y="644" width="300" height="48" rx="6" />
+  <text class="t" x="506" y="664">Web app at the edge</text>
+  <text class="d" x="506" y="682">Static assets, never asleep · proxies /api</text>
+  <rect class="item" x="490" y="700" width="300" height="48" rx="6" />
+  <text class="t" x="506" y="720">Whiteboard rooms</text>
+  <text class="d" x="506" y="738">One Durable Object each · WebSockets</text>
 
   <!-- External services -->
   <rect class="ext" x="880" y="84" width="290" height="160" rx="10" />
@@ -157,12 +161,14 @@
   <text class="d" x="900" y="714">No accounts, bodies, or query strings</text>
 
   <!-- Connections -->
-  <line class="wire" x1="402" y1="210" x2="468" y2="210" marker-start="url(#arrow)" marker-end="url(#arrow)" />
-  <text class="label" x="435" y="198" text-anchor="middle">HTTPS</text>
-  <text class="label" x="435" y="230" text-anchor="middle">/api JSON</text>
+  <line class="wire" x1="402" y1="668" x2="488" y2="668" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text class="label" x="435" y="658" text-anchor="middle">HTTPS</text>
 
-  <line class="wire" x1="402" y1="688" x2="468" y2="688" marker-start="url(#arrow)" marker-end="url(#arrow)" />
-  <text class="label" x="435" y="676" text-anchor="middle">WebSocket</text>
+  <line class="wire" x1="402" y1="724" x2="488" y2="724" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text class="label" x="435" y="714" text-anchor="middle">WebSocket</text>
+
+  <line class="wire" x1="740" y1="642" x2="740" y2="577" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text class="label" x="728" y="594" text-anchor="end">/api JSON</text>
 
   <line class="wire" x1="812" y1="154" x2="878" y2="154" marker-end="url(#arrow)" />
   <text class="label" x="845" y="144" text-anchor="middle">SQL</text>
@@ -191,7 +197,7 @@
 
   <rect class="item" x="440" y="840" width="340" height="150" rx="6" />
   <text class="t" x="458" y="870">GitHub Actions</text>
-  <text class="d" x="458" y="892">ESLint · tsc · Vitest: 350+ unit &amp; API tests</text>
+  <text class="d" x="458" y="892">ESLint · tsc · Vitest: 400+ unit &amp; API tests</text>
   <text class="d" x="458" y="914">Playwright: 100+ e2e tests on Chromium and</text>
   <text class="d" x="458" y="934">iPhone WebKit, against PostgreSQL 17</text>
   <text class="d" x="458" y="956">Docker: build the image, test the container</text>
@@ -199,9 +205,9 @@
 
   <rect class="item" x="860" y="840" width="290" height="150" rx="6" />
   <text class="t" x="878" y="870">Deploy</text>
-  <text class="d" x="878" y="892">Render: main after CI passes</text>
+  <text class="d" x="878" y="892">Render: the API after CI passes</text>
   <text class="d" x="878" y="914">Migrations run on startup</text>
-  <text class="d" x="878" y="936">Cloudflare: whiteboard rooms</text>
+  <text class="d" x="878" y="936">Cloudflare: web app, whiteboard rooms</text>
   <text class="d" x="878" y="958">GitHub Pages: standalone whiteboard</text>
 
   <line class="wire" x1="362" y1="905" x2="438" y2="905" marker-end="url(#arrow)" />
