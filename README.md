@@ -6,13 +6,13 @@ A study coach for LeetCode interview prep. You solve problems on LeetCode; it pl
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/tour-dark.gif"><img src="docs/images/tour-light.gif" alt="A tour of one day: Today's plan, timed practice with the interview steps, recording how it went, explaining out loud with AI feedback on five points, a reference board playing step by step, and the algorithm tree on the Progress page"></picture>
 
-**[Try it with demo data](https://leetcode-coach-f6q7.onrender.com/?demo)** (six weeks of made-up practice, no sign-up) · **[Whiteboard example](https://lego514.github.io/dsa-whiteboard/#example=206)** · [中文說明](README.zh-TW.md)
+**[Try it with demo data](https://coach.legoli.dev/?demo)** (six weeks of made-up practice, no sign-up) · **[Whiteboard example](https://lego514.github.io/dsa-whiteboard/#example=206)** · [中文說明](README.zh-TW.md)
 
 - **Spaced repetition that uses more than a rating**: FSRS-6, adjusted by how long you took, how deep the hints went, and where you got stuck, and it explains every interval.
 - **Local-first PWA**: IndexedDB in the browser, works offline; an account syncs through a Hono API and PostgreSQL with an outbox and last-write-wins.
 - **My own open-source whiteboard** ([dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard) on npm), with live co-editing on Cloudflare Durable Objects and 213 step-by-step reference boards.
 
-The live app runs on a free plan that sleeps when idle, so the first visit after a while can take up to a minute; once loaded it keeps working offline. The demo link fills an empty browser only, stays in your browser, is never synced, and **Clear demo data** removes it.
+The app itself opens at once from Cloudflare. The API runs on a free plan that sleeps when idle, so after a quiet while, signing in or syncing can wait up to a minute for it to wake; the app keeps working offline in the meantime. The demo link fills an empty browser only, stays in your browser, is never synced, and **Clear demo data** removes it.
 
 ## What it does
 

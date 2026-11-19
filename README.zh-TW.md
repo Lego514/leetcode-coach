@@ -6,13 +6,13 @@
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/tour-dark.gif"><img src="docs/images/tour-light.gif" alt="一天怎麼用：今天的計畫、照面試步驟計時練習、記錄寫得怎麼樣、用英文講解並拿五個重點的 AI 回饋、參考板書一步一步播放、進度頁的演算法樹"></picture>
 
-**[用示範資料試用](https://leetcode-coach-f6q7.onrender.com/?demo)**（六週編出來的練習紀錄，不用註冊）· **[白板範例](https://lego514.github.io/dsa-whiteboard/#example=206)** · [English](README.md)
+**[用示範資料試用](https://coach.legoli.dev/?demo)**（六週編出來的練習紀錄，不用註冊）· **[白板範例](https://lego514.github.io/dsa-whiteboard/#example=206)** · [English](README.md)
 
 - **不只看自評的間隔重複**：FSRS-6，再依寫題時間、提示看到第幾層、卡在哪調整，每一個間隔都說得出為什麼。
 - **本機優先的 PWA**：資料存在瀏覽器的 IndexedDB，離線也能用；登入後透過 Hono API 和 PostgreSQL 同步（outbox、last-write-wins）。
 - **自己寫的開源白板**（[dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard)，發佈在 npm）：在 Cloudflare Durable Objects 上即時共同編輯，213 題都有一步一步播放的參考板書。
 
-線上版本用免費方案，閒置一陣子會休眠，之後第一次開啟最多要等一分鐘；載入過一次後也能離線使用。示範連結只會在空的瀏覽器載入資料，只存在你的瀏覽器、不會同步，按「清除示範資料」就清掉。
+網頁從 Cloudflare 送出，打開馬上就有。後端用免費方案，閒置一陣子會休眠，之後第一次登入或同步最多要等一分鐘讓它醒來；這段時間 App 照樣離線可用。示範連結只會在空的瀏覽器載入資料，只存在你的瀏覽器、不會同步，按「清除示範資料」就清掉。
 
 ## 能做什麼
 
