@@ -6,7 +6,7 @@
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/tour-dark.gif"><img src="docs/images/tour-light.gif" alt="一天怎麼用：今天的計畫、照面試步驟計時練習、記錄寫得怎麼樣、用英文講解並拿五個重點的 AI 回饋、參考板書一步一步播放、進度頁的演算法樹"></picture>
 
-**[用示範資料試用](https://coach.legoli.dev/?demo)**（六週編出來的練習紀錄，不用註冊）· **[白板範例](https://lego514.github.io/dsa-whiteboard/#example=206)** · [English](README.md)
+**[用示範資料試用](https://coach.legoli.dev/?demo)**（六週編出來的練習紀錄，不用註冊）· **[白板範例](https://dsaboard.legoli.dev/#example=206)** · [English](README.md)
 
 - **不只看自評的間隔重複**：FSRS-6，再依寫題時間、提示看到第幾層、卡在哪調整，每一個間隔都說得出為什麼。
 - **本機優先的 PWA**：資料存在瀏覽器的 IndexedDB，離線也能用；登入後透過 Hono API 和 PostgreSQL 同步（outbox、last-write-wins）。
