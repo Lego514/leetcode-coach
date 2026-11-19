@@ -1,6 +1,6 @@
 # Render Blueprint：一個 Node 服務同時提供 API 與網頁。
 # 使用前先在 Neon 之類的服務建立 PostgreSQL，建立 Blueprint 時填入 DATABASE_URL。
-# 步驟見 README 的 Deploying 一節。
+# 步驟見 docs/deploying.md。
 services:
   - type: web
     name: leetcode-coach
