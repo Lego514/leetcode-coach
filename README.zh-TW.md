@@ -22,7 +22,7 @@
 2. **練習**：在 LeetCode 寫題，這裡計時、照面試的七個步驟各寫一句想法，提示一層一層打開。
 3. **記錄**：寫得怎麼樣、卡在哪。FSRS 排下一次複習，也寫出為什麼隔這幾天。
 4. **講解**：用英文講一次解法（也可以打字）。Claude 依五個重點打分數、給更好的講法，還能扮演面試官追問。也可以用自己的 API 金鑰，或自己的 ChatGPT、Claude 對話。
-5. **白板**：拖拉 20 多種資料結構把想法畫出來。每一題都有一步一步播放的參考板書，白板也能共用、一起編輯。
+5. **白板**：拖拉 20 多種資料結構把想法畫出來，或看這題的**參考板書**：213 題每一題都有，一步一步播放解法，每一步下面是該講的那句話。白板也能共用、一起編輯。
 6. **行為面試**：用 STAR 寫故事，開口練習並拿 AI 回饋。
 7. **微複習**：零碎時間用，一回合 5 張只要點的卡片，大約一分鐘。
 8. **進度**：跟著練習長大、忘了會變黃的演算法樹，跟著連續天數長大的卡皮巴拉，依難度和公司看的準備度，以及講解能力的進步曲線。
@@ -32,7 +32,7 @@
 <table>
   <tr>
     <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/practice-dark.png"><img src="docs/images/practice-light.png" alt="計時練習，面試步驟一次一步"></picture><br><b>計時練習</b>：計時器、面試步驟一次一步，每一步寫一句；「我卡住了」「寫完了」隨時按得到。</td>
-    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/whiteboard-dark.png"><img src="docs/images/whiteboard-light.png" alt="白板上 Longest Substring Without Repeating Characters 的滑動視窗模板"></picture><br><b>白板</b>：陣列、指標、視窗框和計數字典，一鍵放上模板。</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/reference-board-dark.gif"><img src="docs/images/reference-board-light.gif" alt="Reverse Linked List 的參考板書一步一步播放：prev、curr、next 沿著串列往前走，每一步的字幕是參考講法的一句，最後加上複雜度和邊界情況"></picture><br><b>參考板書</b>：每一題的解法一步一步播放，每一步下面是一句講法。</td>
   </tr>
   <tr>
     <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/ai-feedback-dark.png"><img src="docs/images/ai-feedback-light.png" alt="口頭講解的 AI 回饋，五個重點各有分數和參考講法"></picture><br><b>用英文講出來</b>：即時逐字稿，講完 Claude 依五個重點打分數並給參考講法。</td>
