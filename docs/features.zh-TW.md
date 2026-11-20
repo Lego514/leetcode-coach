@@ -2,6 +2,23 @@
 
 這個 App 能做的每一件事。回到 [README](../README.zh-TW.md)。English: [Features](features.md).
 
+## 參考板書
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="images/reference-board-dark.gif"><img src="images/reference-board-light.gif" alt="Reverse Linked List 的參考板書一步一步播放：prev、curr、next 沿著串列往前走，每一個連結指回前一個；白板下面的字幕是參考講法的一句，最後幾步加上複雜度區塊和邊界情況的便利貼"></picture>
+
+**參考板書**：題庫的每一題都有做好的白板，一步一步播放。每一步的字幕是這題參考講法的一句，白板和要講的話一起看。
+
+<table>
+  <tr>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="images/reference-board-dp-dark.gif"><img src="images/reference-board-dp-light.gif" alt="Longest Common Subsequence 的參考板書一格一格填 DP 表，箭頭指向每個值是從哪幾格來的"></picture><br><b>動態規劃</b>：Longest Common Subsequence 一格一格填表，箭頭指向每個值從哪幾格來。</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="images/reference-board-graph-dark.gif"><img src="images/reference-board-graph-light.gif" alt="Course Schedule II 的參考板書：入度降到零的課就修，佇列和修課順序一格一格填上"></picture><br><b>圖</b>：Course Schedule II 入度降到零就修那門課，佇列和順序跟著填上。</td>
+  </tr>
+</table>
+
+截圖用編出來的示範資料，`npm run screenshots` 會連同參考板書的動畫一起重拍；會跟著 GitHub 的淺色或深色主題。
+
+## 所有功能
+
 **題庫**：NeetCode 150、Blind 75、Grind 169（不重複共 213 題），分成 18 個模式，也可以加入任何 LeetCode 題目。新題可以照模式一個一個做（NeetCode 的路線圖），或照 Grind 建議的順序（簡單、基礎的在前，Hard 和 Premium 往後，模式輪著出）；Grind 169 預設照 Grind 的順序。沒有 LeetCode Premium 的話，可以「跳過要 LeetCode Premium 的題目」，還沒做過的 Premium 題就不會出現在每日計畫、衝刺、模擬面試和題庫裡。
 
 **每日計畫（今天頁）**：列出到期的複習和每天 N 題新題。預設是「交錯」：大部分是正在學的模式，再加一題別的模式，練習看出該用哪一招；最近常卡住的模式（看了解答、看完還不懂，或勾了卡住原因）會多一題比較簡單的。預設不顯示模式，跟面試一樣自己看出來。設定可以改成照順序不穿插，或專練一個模式；當天的清單照早上的狀態排好，做的過程中不會一直變。最上面有進度條和三個數字：清單還剩多少、每天的速度、預計什麼時候刷完第一輪；設定了目標日期的話，改成顯示剩幾天、每天要做幾題，每日目標太低時會提醒。

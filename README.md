@@ -22,7 +22,7 @@ A day with the app, in the order you'd use it:
 2. **Practice** on LeetCode with a timer, the seven interview steps (one line of notes each), and hints that open one layer at a time.
 3. **Record** how it went and where you got stuck. FSRS picks the next review and shows why it's that many days away.
 4. **Explain** the solution out loud in English, or typed. Claude scores five points, suggests a better answer, and can play the interviewer with follow-up questions. Your own API key, or your own ChatGPT or Claude chat, works too.
-5. **Whiteboard** an idea with 20+ draggable data structures. Every problem has a reference board that plays step by step, and a board can be shared for live co-editing.
+5. **Whiteboard** an idea with 20+ draggable data structures, or watch the problem's **reference board**: every one of the 213 problems has one that plays the solution step by step, with the words you'd say under each step. A board can be shared for live co-editing.
 6. **Behavioral** stories in STAR form, practiced out loud with AI feedback.
 7. **Flashcards** for spare minutes: five tap-only cards, about a minute.
 8. **Progress**: an algorithm tree that grows as you practice and fades as you forget, a capybara that grows with your streak, readiness by difficulty and company, and how your explanations improve.
@@ -32,7 +32,7 @@ It works offline and without an account, and signing in syncs between devices. T
 <table>
   <tr>
     <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/practice-dark.png"><img src="docs/images/practice-light.png" alt="Timed practice with the interview steps shown one at a time"></picture><br><b>Timed practice</b>: a timer, the interview steps one at a time with a line of notes each, and <i>I'm stuck</i> and <i>I'm done</i> always at hand.</td>
-    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/whiteboard-dark.png"><img src="docs/images/whiteboard-light.png" alt="The whiteboard with a sliding-window template on Longest Substring Without Repeating Characters"></picture><br><b>Whiteboard</b>: arrays, pointers, a window frame, and a count dict, from a template in one click.</td>
+    <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/reference-board-dark.gif"><img src="docs/images/reference-board-light.gif" alt="The reference board for Reverse Linked List playing step by step: prev, curr, and next move along the list, each caption is one line of the reference explanation, and the last steps add the complexity and an edge case"></picture><br><b>Reference boards</b>: every problem's solution plays step by step, with one line of the explanation under each step.</td>
   </tr>
   <tr>
     <td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/ai-feedback-dark.png"><img src="docs/images/ai-feedback-light.png" alt="AI feedback on a spoken explanation, scored on five points with a model answer"></picture><br><b>Explaining out loud</b>: a live transcript, then Claude scores it on five points and suggests a model answer.</td>
