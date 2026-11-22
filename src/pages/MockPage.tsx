@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import type { StoredStuckReason } from '../../shared/constants';
 import type { ExplanationFeedback, FollowUpRecord } from '../../shared/protocol';
@@ -811,7 +812,7 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
             </Sheet>
           )}
 
-          <ReviewReference problemId={problem.id} />
+          <ReviewReference problem={problem} />
 
           <Sheet title={isFull ? t.mock.rateFull : session.typed ? t.mock.rateTyped : t.mock.rateExplain} id="self-rating">
             <div className="sheet-body stack" style={{ gap: 16 }}>
@@ -903,15 +904,27 @@ function MockReview({ session, result, onDone }: { session: Session; result: Ses
   );
 }
 
-function ReviewReference({ problemId }: { problemId: number }) {
+const ReferenceBoardView = lazy(async () => ({ default: (await import('../components/board/ReferenceBoardView')).ReferenceBoardView }));
+
+/** 講完之後對照參考講法；參考板書蓋在這一頁上打開，換頁會丟掉還沒存的這次講解 */
+function ReviewReference({ problem }: { problem: Problem }) {
   const { t } = useI18n();
-  const hasExplanation = useHasExplanation(problemId);
+  const hasExplanation = useHasExplanation(problem.id);
+  const [boardOpen, setBoardOpen] = useState(false);
   if (!hasExplanation) return null;
   return (
     <Sheet title={t.reference.title} id="reference" note={t.reference.compareNote}>
       <div className="sheet-body">
-        <ReferenceExplanation problemId={problemId} open />
+        <ReferenceExplanation problemId={problem.id} open onOpenBoard={() => setBoardOpen(true)} />
       </div>
+      {/* 放在 body 下面：卡片裡的樣式會讓全螢幕的白板跟著卡片走，手機上跑到畫面外。複製到自己的白板後留在這一頁 */}
+      {boardOpen &&
+        createPortal(
+          <Suspense fallback={null}>
+            <ReferenceBoardView problem={problem} onClose={() => setBoardOpen(false)} onCopied={() => setBoardOpen(false)} />
+          </Suspense>,
+          document.body,
+        )}
     </Sheet>
   );
 }

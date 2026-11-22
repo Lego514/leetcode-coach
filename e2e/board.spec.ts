@@ -92,6 +92,35 @@ test('plays the reference board step by step, with the reference explanation as 
   await expect(page.getByRole('button', { name: 'View reference board' })).toHaveCount(0);
 });
 
+test('opens the reference board from the practice whiteboard without leaving practice, so the timer keeps running', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/#/practice/1');
+  const timer = page.locator('.timer-value');
+  // 打開頁面就開始計時
+  await expect(timer).toHaveText('0:00');
+  await page.clock.runFor(65_000);
+  await expect(timer).toHaveText('1:05');
+
+  // 練習頁的白板選單打開參考板書：蓋在練習頁上，不換頁，不會問要不要離開練習
+  await page.getByRole('button', { name: 'Sketch it on the whiteboard' }).click();
+  await (await headerButton(page, 'View reference board')).click();
+  const playback = page.getByRole('toolbar', { name: 'Step playback' });
+  await expect(playback).toContainText('Step 1 of 6');
+  await expect(page).toHaveURL(/#\/practice\/1$/);
+  await expect(page.getByRole('dialog', { name: 'Leave this practice session?' })).toHaveCount(0);
+
+  // 複製到我的白板：換成自己的白板，還在練習頁
+  await page.getByRole('button', { name: 'Copy to my board' }).click();
+  await expect(page.getByRole('button', { name: 'Copy to my board' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Array nums: 2, 7, 11, 15' })).toBeVisible();
+  await expect(page).toHaveURL(/#\/practice\/1$/);
+
+  // 關掉白板回到練習，時間照樣往上加，沒有歸零
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.clock.runFor(10_000);
+  await expect(timer).toHaveText(/^1:1\d$/);
+});
+
 test('puts the problem’s example on an empty problem board in one click', async ({ page }) => {
   await page.goto('/#/board/1');
   const draw = page.getByRole('button', { name: /^Put this problem’s example on the board/ });

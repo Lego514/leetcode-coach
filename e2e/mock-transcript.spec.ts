@@ -94,6 +94,14 @@ test.describe('explanation drill with a transcript', () => {
     const reference = page.getByRole('region', { name: /^Reference explanation/ });
     await expect(reference).toContainText('Compare it with how you just explained it');
     await expect(reference).toContainText('The key insight is that for each number x');
+    // 參考板書蓋在這一頁上打開：不換頁，還沒存的這次講解不會不見
+    await reference.getByRole('button', { name: 'View reference board' }).click();
+    await expect(page.getByRole('toolbar', { name: 'Step playback' })).toContainText('Step 1 of 6');
+    await expect(page).toHaveURL(/#\/mock/);
+    await expect(page.getByRole('dialog', { name: /^Leave/ })).toHaveCount(0);
+    // 前面在講解稿裡打過字，iPhone 的 WebKit 可見範圍往下偏，全螢幕白板最上面那排算在畫面外，直接送點擊
+    await page.getByRole('button', { name: 'Close', exact: true }).dispatchEvent('click');
+    await expect(reference).toBeVisible();
 
     await page.getByRole('button', { name: /^Smooth/ }).click();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
