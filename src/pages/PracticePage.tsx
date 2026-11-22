@@ -23,6 +23,13 @@ import { useCatalog, useProgress } from '../store/queries';
 
 // 白板第一次打開時才下載
 const BoardEditor = lazy(async () => ({ default: (await import('../components/board/BoardEditor')).BoardEditor }));
+const ReferenceBoardView = lazy(async () => ({ default: (await import('../components/board/ReferenceBoardView')).ReferenceBoardView }));
+
+/**
+ * 蓋在練習頁上的白板：自己的，或從它的選單打開的參考板書（關掉回到自己的白板）。
+ * 都在這一頁打開，不換到白板頁：換頁會離開練習，計時歸零
+ */
+type BoardOverlay = 'mine' | 'reference';
 
 export function PracticePage() {
   const { t } = useI18n();
@@ -62,7 +69,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
   const [step, setStep] = useState<StepId>('clarify');
   const [stuckStep, setStuckStep] = useState<StepId | null>(null);
   const hintsRef = useRef<HTMLDivElement>(null);
-  const [boardOpen, setBoardOpen] = useState(false);
+  const [board, setBoard] = useState<BoardOverlay | null>(null);
   const autoStarted = useRef(false);
 
   const targetSec = MOCK_MINUTES[problem.difficulty] * 60;
@@ -148,7 +155,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
           <LeetCodeLink slug={problem.slug} className="btn">
             {t.common.solveOnLeetCode}
           </LeetCodeLink>
-          <button type="button" className="btn" onClick={() => setBoardOpen(true)}>
+          <button type="button" className="btn" onClick={() => setBoard('mine')}>
             {t.practice.board}
           </button>
           <span className="sheet-note">{t.practice.tabHint}</span>
@@ -220,7 +227,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
         {finished ? (
           <SolvingStepsSheet problemId={problem.id} title={t.solving.afterTitle} collapsible scriptButton />
         ) : (
-          <StepWizard problemId={problem.id} onStepChange={setStep} onOpenBoard={() => setBoardOpen(true)} onFinish={finish} />
+          <StepWizard problemId={problem.id} onStepChange={setStep} onOpenBoard={() => setBoard('mine')} onFinish={finish} />
         )}
 
         {!finished && (
@@ -231,7 +238,7 @@ function PracticeSession({ problem }: { problem: Problem }) {
               sawSolution={sawSolution}
               onReveal={revealHint}
               onRevealTo={revealHintTo}
-              onOpenBoard={() => setBoardOpen(true)}
+              onOpenBoard={() => setBoard('mine')}
               onSolution={() => setSawSolution(true)}
               stuck={stuckStep}
               onStuckChange={setStuckStep}
@@ -272,16 +279,25 @@ function PracticeSession({ problem }: { problem: Problem }) {
         />
       )}
 
-      {boardOpen && (
+      {board && (
         <Suspense fallback={null}>
-          <BoardEditor
-            boardId={`p${problem.id}`}
-            title={t.board.problemTitle(problem.id, problem.title)}
-            caption={t.board.problemCaption}
-            difficulty={problem.difficulty}
-            problem={problem}
-            onClose={() => setBoardOpen(false)}
-          />
+          {board === 'mine' ? (
+            <BoardEditor
+              boardId={`p${problem.id}`}
+              title={t.board.problemTitle(problem.id, problem.title)}
+              caption={t.board.problemCaption}
+              difficulty={problem.difficulty}
+              problem={problem}
+              onClose={() => setBoard(null)}
+              onOpenReference={() => setBoard('reference')}
+            />
+          ) : (
+            <ReferenceBoardView
+              problem={problem}
+              onClose={() => setBoard('mine')}
+              onCopied={() => setBoard('mine')}
+            />
+          )}
         </Suspense>
       )}
     </div>

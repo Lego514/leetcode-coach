@@ -64,10 +64,15 @@ interface BoardEditorProps {
   /** 題目的白板：講解完可以存成講解練習、請 AI 回饋 */
   problem?: Problem;
   onClose: () => void;
+  /**
+   * 選單的「看參考板書」改成在這裡打開（例如練習頁：換到白板頁會離開練習、計時歸零）。
+   * 沒給就換到白板頁
+   */
+  onOpenReference?: () => void;
 }
 
 /** 全螢幕的白板；內容自動存檔，登入時會同步 */
-export function BoardEditor({ boardId, title, caption, difficulty, problem, onClose }: BoardEditorProps) {
+export function BoardEditor({ boardId, title, caption, difficulty, problem, onClose, onOpenReference }: BoardEditorProps) {
   const { t, locale } = useI18n();
   const record = useBoard(boardId);
   const signedIn = useCloud().account.kind === 'signed-in';
@@ -78,7 +83,7 @@ export function BoardEditor({ boardId, title, caption, difficulty, problem, onCl
   // 有參考板書的題目，選單多一項「看參考板書」
   const menu =
     problem && REFERENCE_BOARD_IDS.has(problem.id)
-      ? [{ label: t.reference.openBoard, icon: ICON_REFERENCE, onSelect: () => navigate(`/board/${problem.id}?view=reference`) }, ...prefs]
+      ? [{ label: t.reference.openBoard, icon: ICON_REFERENCE, onSelect: onOpenReference ?? (() => navigate(`/board/${problem.id}?view=reference`)) }, ...prefs]
       : prefs;
   const [params, setParams] = useSearchParams();
   const room = roomFromParams(params);

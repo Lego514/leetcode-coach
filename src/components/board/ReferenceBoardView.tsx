@@ -15,7 +15,14 @@ import { useBoardPrefs } from './BoardPrefs';
  * 什麼時候想看都可以（題目頁、複習頁、白板的選單都有按鈕）。這裡的改動不會存；
  * 想留著就「複製到我的白板」，存成這一題自己的白板
  */
-export function ReferenceBoardView({ problem, onClose }: { problem: Problem; onClose: () => void }) {
+interface ReferenceBoardViewProps {
+  problem: Problem;
+  onClose: () => void;
+  /** 複製到自己的白板之後：沒給就換到這一題的白板頁；蓋在練習頁上時改成打開自己的白板，不離開練習 */
+  onCopied?: () => void;
+}
+
+export function ReferenceBoardView({ problem, onClose, onCopied }: ReferenceBoardViewProps) {
   const { t, locale } = useI18n();
   const toast = useToast();
   const navigate = useNavigate();
@@ -51,7 +58,8 @@ export function ReferenceBoardView({ problem, onClose }: { problem: Problem; onC
     if ((mine?.doc.elements.length ?? 0) > 0 && !window.confirm(t.reference.replaceConfirm)) return;
     await saveBoard(`p${problem.id}`, current.current ?? doc);
     toast(t.reference.copied);
-    navigate(`/board/${problem.id}`, { replace: true });
+    if (onCopied) onCopied();
+    else navigate(`/board/${problem.id}`, { replace: true });
   };
 
   return (
