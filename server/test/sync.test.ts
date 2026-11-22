@@ -152,6 +152,27 @@ describe('POST /api/sync', () => {
     }
   });
 
+  // dsa-whiteboard 0.1.23 起箭頭可以接到某一格、彎曲、畫虛線，框也能是虛線；
+  // 同步的 schema 用套件的格式，舊版會把這些欄位丟掉，換到別台裝置就變回直線、接到整個元件
+  it('keeps arrows attached to a cell, bent and dashed, and dashed frames', async () => {
+    const data = {
+      doc: {
+        elements: [
+          { type: 'list', id: 'a1', x: 0, y: 0, variant: 'array', label: 'nums', items: ['1', '2', '3'] },
+          { type: 'shape', id: 's1', x: 0, y: 80, variant: 'rect', w: 120, h: 60, color: 'blue', dash: true },
+          { type: 'arrow', id: 'r1', from: { id: 'a1', cell: 0 }, to: { id: 'a1', cell: 2 }, color: 'red', dash: true, bend: -90 },
+        ],
+      },
+      updatedAt: '2026-11-22T12:00:00.000Z',
+    };
+    await client.sync(0, [{ collection: 'boards', key: 'p1', updatedAt: 1, deleted: false, data }]);
+
+    const other = new TestClient(server.app);
+    await other.login('ray@example.com');
+    const res = await other.sync(0, []);
+    expect(res.changes).toEqual([{ collection: 'boards', key: 'p1', updatedAt: 1, deleted: false, data }]);
+  });
+
   it('stores behavioral stories and rejects unknown themes', async () => {
     const data = {
       title: 'Pipeline fix',
