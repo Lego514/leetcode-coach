@@ -97,6 +97,7 @@ npm test       # unit, API, and two-device sync tests
 - [Features](docs/features.md): everything the app does, in detail
 - [Architecture](docs/architecture.md): code map, offline-first sync, data model, security, tech stack
 - [Review scheduling](docs/scheduling.md): FSRS-6 and the weights on top of it
+- [Design decisions](docs/decisions.md): eight key choices, what each gave up, and what it costs
 - [Development](docs/development.md): commands, tests, Docker
 - [Deploying](docs/deploying.md): Render, Neon, Cloudflare, and the optional services
 - [Data and privacy](docs/privacy.md): what is stored where

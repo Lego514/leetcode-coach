@@ -73,5 +73,6 @@ npm test       # 單元、API 和兩台裝置同步的測試
 ## 文件
 
 - [功能](docs/features.zh-TW.md)：每一個功能的說明
+- [設計上的決定](docs/decisions.zh-TW.md)：八個關鍵的選擇、各放棄了什麼、代價是什麼
 - [開發和部署](docs/deploying.zh-TW.md)：本機開發、Docker、部署到 Render、Neon、Cloudflare，和選用的服務
 - 英文的技術文件：[Architecture](docs/architecture.md)（程式結構、同步、資料模型、安全）、[Review scheduling](docs/scheduling.md)、[Development](docs/development.md)、[Deploying](docs/deploying.md)、[Data and privacy](docs/privacy.md)
