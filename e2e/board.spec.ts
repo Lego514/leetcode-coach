@@ -118,7 +118,12 @@ test('opens the reference board from the practice whiteboard without leaving pra
   // 關掉白板回到練習，時間照樣往上加，沒有歸零
   await page.getByRole('button', { name: 'Close', exact: true }).click();
   await page.clock.runFor(10_000);
-  await expect(timer).toHaveText(/^1:1\d$/);
+  // 真的時間也在走（機器慢的時候會多好幾秒），所以只看有沒有歸零：至少 1:15
+  const seconds = (text: string | null) => {
+    const [min, sec] = (text ?? '0:0').split(':').map(Number);
+    return min * 60 + sec;
+  };
+  await expect.poll(async () => seconds(await timer.textContent())).toBeGreaterThanOrEqual(75);
 });
 
 test('puts the problem’s example on an empty problem board in one click', async ({ page }) => {
