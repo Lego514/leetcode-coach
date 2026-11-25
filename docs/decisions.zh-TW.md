@@ -117,5 +117,5 @@
   - 沒有金鑰的人，可以把提示詞複製到自己的 ChatGPT 或 Claude，再把回覆貼回來。
 - **沒選**：把金鑰送到我們的伺服器、由伺服器去呼叫。這樣我們就變成保管別人秘密的人。
 - **代價**：
-  - 網站上執行的任何程式都讀得到 localStorage，所以金鑰的安全跟整個頁面的安全一樣。React 會跳脫畫面上的文字，但網站還沒設 Content-Security-Policy，這是下一步要補的。
+  - 網站上執行的任何程式都讀得到 localStorage，所以金鑰的安全跟整個頁面的安全一樣。React 會跳脫畫面上的文字，Content-Security-Policy 只讓網站自己的程式執行（不能用 inline script、不能 eval），頁面也只能連到幾個已知的網址。但打包進來的套件如果有惡意程式照樣會跑，所以金鑰不像放在伺服器上那麼安全。
   - 從瀏覽器呼叫 AI 服務也要服務那邊允許，例如 Anthropic SDK 的 `dangerouslyAllowBrowser`。

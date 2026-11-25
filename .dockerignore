@@ -11,7 +11,7 @@ playwright-report
 .git
 .github
 .claude
-# 秘密不進映像；.env.production 是公開設定，建前端要用
-.env
-.env.*
+# 秘密不進映像（任何一層資料夾的 .env，例如 server/.env）；.env.production 是公開設定，建前端要用
+**/.env
+**/.env.*
 !.env.production

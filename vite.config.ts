@@ -1,8 +1,9 @@
 /// <reference types="vitest/config" />
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { contentSecurityPolicy } from './src/lib/csp';
 
 // 開發時把 /api 轉給本機的後端，瀏覽器看到的是同一個網域，cookie 才能正常運作
 const apiProxy = { '/api': { target: 'http://localhost:8787', changeOrigin: false } };
@@ -17,7 +18,28 @@ if (process.env.SENTRY_DSN && !process.env.VITE_SENTRY_DSN) process.env.VITE_SEN
 // 錯誤訊息會指到原本的 TypeScript，但網站上不會公開 source map
 const sentryUpload = Boolean(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT);
 
-export default defineConfig({
+// 正式建置時把 CSP 放在 index.html 的 <meta charset> 後面、所有 script 前面（規則在 src/lib/csp.ts）。
+// 開發時不加：Vite 的熱更新要跑 inline script
+const CHARSET_META = '<meta charset="UTF-8" />';
+
+function contentSecurityPolicyMeta(mode: string): Plugin {
+  return {
+    name: 'content-security-policy',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        if (!html.includes(CHARSET_META)) throw new Error(`index.html needs ${CHARSET_META} so the CSP can go right after it`);
+        const env = loadEnv(mode, process.cwd(), 'VITE_');
+        const policy = contentSecurityPolicy({ collabUrl: env.VITE_COLLAB_URL, sentryDsn: env.VITE_SENTRY_DSN });
+        return html.replace(CHARSET_META, `${CHARSET_META}
+    <meta http-equiv="Content-Security-Policy" content="${policy}" />`);
+      },
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
   server: {
     port: 5173,
     // 5173 被占用時直接報錯，不要換埠號（換了埠號就會看到另一份本機資料）
@@ -39,6 +61,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    contentSecurityPolicyMeta(mode),
     VitePWA({
       registerType: 'autoUpdate',
       // 由 src/pwa.ts 自己註冊，才能決定什麼時候重新載入
@@ -89,4 +112,4 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}', 'edge/**/*.test.ts'],
     setupFiles: ['./src/test/setup.ts'],
   },
-});
+}));

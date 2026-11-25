@@ -20,7 +20,8 @@ jobs:
           APP_URL: ${{ vars.APP_URL || 'https://leetcode-coach-f6q7.onrender.com' }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
-            echo "CRON_SECRET is not set; skipping."
+            # 不讓工作失敗（fork 的 repo 也會跑），但在執行結果上顯示警告，才不會以為提醒有寄出去
+            echo "::warning title=Reminders not sent::CRON_SECRET is not set, so no reminders were sent. Add it under Settings → Secrets and variables → Actions."
             exit 0
           fi
           # 伺服器在睡的話要一分鐘左右才醒，多試幾次

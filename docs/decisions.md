@@ -91,5 +91,5 @@ The choices that shaped this app, and what each one gave up. Each entry has four
   - For people without a key, the app can copy the prompt into their own ChatGPT or Claude and accept the reply pasted back.
 - **Not chosen**: sending the key to our server and calling the provider from there. That turns us into a holder of other people's secrets.
 - **Cost**:
-  - Any script running on the site could read localStorage, so the key is only as safe as the page. React escapes rendered text, but the site doesn't set a Content-Security-Policy yet; that's the next hardening step.
+  - Any script running on the site could read localStorage, so the key is only as safe as the page. React escapes rendered text, and a Content-Security-Policy lets only the site's own scripts run (no inline scripts, no eval) and lets the page connect only to known hosts. A malicious dependency bundled into the app would still run, so the key is not as safe as it would be on a server.
   - Calling a provider from the browser also needs their opt-in, such as the Anthropic SDK's `dangerouslyAllowBrowser`.

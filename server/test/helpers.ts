@@ -20,7 +20,7 @@ export interface TestServer {
 }
 
 export async function startTestServer(
-  options: { ai?: AiOptions; mail?: MailOptions; github?: GithubOptions; push?: PushOptions; adminEmails?: string[]; trustProxy?: boolean } = {},
+  options: { ai?: AiOptions; mail?: MailOptions; github?: GithubOptions; push?: PushOptions; adminEmails?: string[]; trustProxy?: boolean; staticDir?: string } = {},
 ): Promise<TestServer> {
   const database = await openDatabase('pglite:memory');
   await migrate(database.db, MIGRATIONS_DIR);
@@ -37,6 +37,7 @@ export async function startTestServer(
     push: options.push,
     adminEmails: options.adminEmails,
     trustProxy: options.trustProxy,
+    staticDir: options.staticDir,
   });
   return { app, database, clock, close: () => database.close() };
 }
