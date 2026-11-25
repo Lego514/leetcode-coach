@@ -3,6 +3,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
+import { PAGE_SECURITY_HEADERS } from '../../shared/securityHeaders';
 import { githubRoutes, type GithubOptions } from './auth/github';
 import { authRoutes, type MailOptions } from './auth/routes';
 import { aiRoutes, type AiOptions } from './ai/routes';
@@ -81,6 +82,11 @@ export function createApp(options: AppOptions) {
   if (options.staticDir) {
     // serveStatic 的 root 以目前工作目錄為基準
     const root = path.relative(process.cwd(), options.staticDir) || '.';
+    // 網頁的安全標頭，跟 Cloudflare 的 public/_headers 一樣（/api 上面已經有 secureHeaders）
+    app.use('*', async (c, next) => {
+      await next();
+      for (const [name, value] of Object.entries(PAGE_SECURITY_HEADERS)) c.header(name, value);
+    });
     app.use(
       '/assets/*',
       serveStatic({

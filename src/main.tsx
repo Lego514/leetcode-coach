@@ -1,3 +1,4 @@
+import './lib/zodConfig';
 import '@fontsource-variable/jetbrains-mono';
 import '@fontsource-variable/schibsted-grotesk';
 import { StrictMode } from 'react';

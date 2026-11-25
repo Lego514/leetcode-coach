@@ -117,6 +117,22 @@ describe('register / login / logout', () => {
     expect(limited.headers.get('retry-after')).toBeTruthy();
   });
 
+  it('still limits failed logins when every attempt claims a different IP', async () => {
+    await server.close();
+    server = await startTestServer({ trustProxy: true });
+    await new TestClient(server.app).register('ray@example.com');
+    const attacker = new TestClient(server.app);
+    const loginFrom = (ip: string, password: string) =>
+      attacker.request('POST', '/api/auth/login', { email: 'ray@example.com', password }, { 'x-forwarded-for': ip });
+    for (let i = 0; i < 30; i += 1) {
+      expect((await loginFrom(`203.0.113.${i}`, `wrong password ${i}`)).status).toBe(401);
+    }
+    expect((await loginFrom('198.51.100.1', 'wrong password again')).status).toBe(429);
+    // 其他帳號不受影響
+    await new TestClient(server.app).register('other@example.com');
+    expect((await new TestClient(server.app).login('other@example.com')).status).toBe(200);
+  });
+
   it('deletes the account and all of its data', async () => {
     const client = new TestClient(server.app);
     await client.register('ray@example.com');

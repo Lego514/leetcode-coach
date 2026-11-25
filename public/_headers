@@ -1,7 +1,15 @@
 # Cloudflare 上的快取（跟 server/src/app.ts 一樣）：每次確認有沒有新版；檔名有 hash 的檔案永久快取。
 # 符合的規則會疊在一起，所以 /assets/* 先用「! Cache-Control」拿掉上面那條再設定
+# 安全標頭跟 shared/securityHeaders.ts 一樣（server/test/securityHeaders.test.ts 會檢查）
 /*
   Cache-Control: no-cache
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), geolocation=(), payment=(), usb=(), microphone=(self)
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000
 /assets/*
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable

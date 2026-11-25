@@ -60,6 +60,9 @@ export function authRoutes(deps: AppDeps, mail?: MailOptions, providers: MeRespo
   const registerLimiter = new RateLimiter(10, 60 * MINUTE, now);
   const loginLimiter = new RateLimiter(10, 15 * MINUTE, now);
   const loginIpLimiter = new RateLimiter(50, 15 * MINUTE, now);
+  // 只看帳號、不看 IP：IP 來自 X-Forwarded-For，直接連到 Render 的人可以每次換一個，
+  // 所以每個帳號 15 分鐘最多 30 次失敗。代價是別人能讓這個帳號暫時不能用密碼登入（GitHub 登入、重設密碼照樣能用）
+  const loginEmailLimiter = new RateLimiter(30, 15 * MINUTE, now);
   // 重設密碼的信：同一個 IP 每小時 5 封，同一個 email 每小時 3 封
   const resetIpLimiter = new RateLimiter(5, 60 * MINUTE, now);
   const resetEmailLimiter = new RateLimiter(3, 60 * MINUTE, now);
@@ -87,6 +90,7 @@ export function authRoutes(deps: AppDeps, mail?: MailOptions, providers: MeRespo
       limitOrThrow(loginIpLimiter, ip);
       const { email, password } = await readJson(c, credentialsSchema);
       const key = `${ip}|${email}`;
+      limitOrThrow(loginEmailLimiter, email);
       limitOrThrow(loginLimiter, key);
 
       const [row] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -95,6 +99,7 @@ export function authRoutes(deps: AppDeps, mail?: MailOptions, providers: MeRespo
       if (!row || !ok) throw new HttpError(401, 'invalid_credentials', 'Email or password is incorrect');
 
       loginLimiter.reset(key);
+      loginEmailLimiter.reset(email);
       await deleteExpiredSessions(db, deps.now());
       const session = await createSession(db, row.id, deps.now());
       setSessionCookie(c, deps, session.token, session.expiresAt);
