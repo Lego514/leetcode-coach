@@ -2,17 +2,19 @@
 
 [English](README.md) · **中文**
 
-幫忙準備美國軟體工程師面試的刷題教練。題目還是在 LeetCode 上寫，這個 App 負責寫題以外的事：決定今天練什麼、用 FSRS（Anki 用的排程演算法）排好每一題的複習、練習用英文把解法講清楚，並拿 AI 回饋。
+準備程式面試的刷題教練。題目還是在 LeetCode 上寫，這個 App 決定每天練什麼、在你快忘記之前排好複習，並讓你練習用英文把解法講出來，拿 AI 的回饋。
+
+一個人做的專案，正式上線在 [coach.legoli.dev](https://coach.legoli.dev)，有 440 多個單元和 API 測試、130 多個端對端測試。
+
+**[用示範資料試用](https://coach.legoli.dev/?demo)**（六週編出來的練習紀錄，不用註冊）· **[白板範例](https://dsaboard.legoli.dev/#example=206)**
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/tour-dark.gif"><img src="docs/images/tour-light.gif" alt="一天怎麼用：今天的計畫、照面試步驟計時練習、記錄寫得怎麼樣、用英文講解並拿五個重點的 AI 回饋、參考板書一步一步播放、進度頁的演算法樹"></picture>
 
-**[用示範資料試用](https://coach.legoli.dev/?demo)**（六週編出來的練習紀錄，不用註冊）· **[白板範例](https://dsaboard.legoli.dev/#example=206)** · [English](README.md)
+- **在快忘記之前複習**：看你花了多久、打開幾層提示、卡在哪裡來排下一次複習，不只看自己按的評分；每次都告訴你為什麼排那一天。
+- **練習講出來**：用講的（或打字）解釋解法，Claude 依面試官會聽的五個重點打分數，還會追問。
+- **離線也能用、不用帳號**：所有東西先存在你的瀏覽器，登入後在不同裝置之間同步。
 
-- **不只看自評的間隔重複**：FSRS-6，再依寫題時間、提示看到第幾層、卡在哪調整，每一個間隔都說得出為什麼。
-- **本機優先的 PWA**：資料存在瀏覽器的 IndexedDB，離線也能用；登入後透過 Hono API 和 PostgreSQL 同步（outbox、last-write-wins）。
-- **自己寫的開源白板**（[dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard)，發佈在 npm）：在 Cloudflare Durable Objects 上即時共同編輯，213 題都有一步一步播放的參考板書。
-
-網頁從 Cloudflare 送出，打開馬上就有。後端用免費方案，閒置一陣子會休眠，之後第一次登入或同步最多要等一分鐘讓它醒來；這段時間 App 照樣離線可用。示範連結只會在空的瀏覽器載入資料，只存在你的瀏覽器、不會同步，按「清除示範資料」就清掉。
+用到的技術：React 19、TypeScript、Hono、PostgreSQL、Cloudflare Workers 和 Durable Objects、Claude API、Playwright。
 
 ## 能做什麼
 
@@ -27,7 +29,7 @@
 7. **微複習**：零碎時間用，一回合 5 張只要點的卡片，大約一分鐘。
 8. **進度**：跟著練習長大、忘了會變黃的演算法樹，跟著連續天數長大的卡皮巴拉，依難度和公司看的準備度，以及講解能力的進步曲線。
 
-不用帳號、離線都能用，登入後在不同裝置之間同步。整個 App 有繁體中文和英文。每一個功能的說明在 [docs/features.zh-TW.md](docs/features.zh-TW.md)。
+整個 App 有繁體中文和英文。每一個功能的說明在 [docs/features.zh-TW.md](docs/features.zh-TW.md)。
 
 <table>
   <tr>
@@ -44,15 +46,13 @@
   </tr>
 </table>
 
-截圖用的是編出來的示範資料，跟著 GitHub 的淺色、深色主題換；畫面是英文介面。
-
 ## 技術上的重點
 
 - **離線優先的同步**：每次寫入都在同一個交易裡存進 IndexedDB、記進待上傳清單（outbox）。一個 `POST /api/sync` 同時上傳和下載；每筆紀錄 last-write-wins，刪除留墓碑；伺服器的版本號來自 Postgres sequence，並在每個使用者的 advisory lock 下配發，下載的游標不會漏掉任何改動。複習排程不同步，從練習紀錄重播算出來。[同步怎麼做](docs/architecture.md#offline-first-sync)
 - **有證據的排程**：照公式自己寫 FSRS-6，測試裡跟官方的 `ts-fsrs` 在幾百組隨機紀錄上比對；再用寫題時間、提示深度、卡在哪調整每一次，寫得不順的一週內再確認。畫面上的「為什麼隔這幾天」跟排程用同一份程式。[複習排程](docs/scheduling.md)
 - **白板發佈成套件**：[dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard) 不用任何繪圖函式庫，從 GitHub Actions 帶 provenance 發佈到 npm；共用的房間一個 Cloudflare Durable Object。213 題的參考板書，測試會檢查每一步都照參考講解的順序。
 - **有防護的 AI**：Claude Opus 5.5 用 JSON schema 輸出結構化結果，伺服器有允許名單和每人每天的額度。同一份提示詞和 schema（`shared/ai.ts`）也在瀏覽器裡配使用者自己的金鑰跑，金鑰不會送到伺服器。
-- **安全**：scrypt 雜湊密碼、只存 session token 的雜湊、`__Host-` cookie、用 Content-Type 和 Origin 擋 CSRF、限流、用 PKCE 的 GitHub 登入，每一種同步的紀錄都有 zod schema 檢查。[安全](docs/architecture.md#security)
+- **安全**：scrypt 雜湊密碼、只存 session token 的雜湊、`__Host-` cookie、用 Content-Type 和 Origin 擋 CSRF、限流、用 PKCE 的 GitHub 登入、每一種同步的紀錄都有 zod schema 檢查，還有只讓網站自己的程式執行的 Content-Security-Policy。[安全](docs/architecture.md#security)
 - **照正式環境測**：Playwright 對正式建置和真的 PostgreSQL 17，在 Chromium 和 iPhone WebKit 上跑，用假的 GitHub 測 OAuth，也測兩個瀏覽器互相同步；CI 還會建 Docker 映像、對跑起來的容器測。
 - **免費方案也秒開**：網頁由 Cloudflare Workers 從邊緣送出，`/api` 由一個小 Worker 在同一個網址轉給 Render 上的 Node API，只有登入和同步要等免費的伺服器醒來。
 
@@ -60,7 +60,7 @@
 
 ## 本機執行
 
-需要 Node 24。不用另外裝資料庫，開發時用內建的 PGlite。
+需要 Node 24。不用另外裝資料庫，開發時用內建的 PGlite。（線上的 API 用免費方案，閒置一陣子會休眠，之後第一次登入或同步最多要等一分鐘；App 本身照常能用。）
 
 ```bash
 npm install
@@ -76,3 +76,7 @@ npm test       # 單元、API 和兩台裝置同步的測試
 - [設計上的決定](docs/decisions.zh-TW.md)：八個關鍵的選擇、各放棄了什麼、代價是什麼
 - [開發和部署](docs/deploying.zh-TW.md)：本機開發、Docker、部署到 Render、Neon、Cloudflare，和選用的服務
 - 英文的技術文件：[Architecture](docs/architecture.md)（程式結構、同步、資料模型、安全）、[Review scheduling](docs/scheduling.md)、[Development](docs/development.md)、[Deploying](docs/deploying.md)、[Data and privacy](docs/privacy.md)
+
+## 授權
+
+[MIT](LICENSE)

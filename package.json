@@ -1,6 +1,7 @@
 {
   "name": "leetcode-coach",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "type": "module",
   "description": "刷題教練：LeetCode 面試準備的學習路徑、間隔複習、筆記與模擬面試",

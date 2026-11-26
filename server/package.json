@@ -1,6 +1,7 @@
 {
   "name": "@leetcode-coach/server",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "type": "module",
   "description": "刷題教練的 API：帳號登入與資料同步",
