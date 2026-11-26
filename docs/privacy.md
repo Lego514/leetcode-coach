@@ -13,4 +13,5 @@ What is stored where, and what leaves your device. Back to the [README](../READM
 - **Your own AI key** stays in the browser. With it, requests go straight from the browser to the provider you picked, never through the server.
 - **Reports** you send store the message, the optional contact you typed (only when signed out), and the details listed on the form. They are linked to your account when you're signed in and deleted along with it.
 - **Signing out** can either keep the local copy or clear it (for shared computers).
+- **Visit counts**: the site at coach.legoli.dev uses Cloudflare Web Analytics, which counts page views without cookies and without following you to other sites. It sees the page address, the referring site, the browser and country, and page load times, not your data in the app. Running the app yourself or from the Render address doesn't include it.
 - **Problem statements are not included.** The app stores only titles and links to leetcode.com.
