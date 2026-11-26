@@ -1,11 +1,19 @@
 // 網頁的 Content-Security-Policy：建置時由 vite.config.ts 放進 index.html 的 <meta>，
 // Cloudflare 和 Node 伺服器送出的是同一份 HTML，所以兩邊的規則一定一樣。
-// 最重要的是 script-src 'self'：只能執行我們自己網站上的檔案。使用者自己的 AI 金鑰存在 localStorage，
-// 頁面上能跑的程式都讀得到，所以不能讓別人塞進來的程式跑起來。
+// 最重要的是 script-src：只能執行我們自己網站上的檔案，和 Cloudflare 流量統計的程式。使用者自己的 AI 金鑰
+// 存在 localStorage，頁面上能跑的程式都讀得到，所以不能讓別人塞進來的程式跑起來。
 // frame-ancestors 放在 <meta> 裡沒有作用，改在回應的標頭（public/_headers、server/src/app.ts）。
 
 /** 使用者自己的金鑰直接從瀏覽器呼叫的 AI 服務（src/lib/llm.ts） */
 export const AI_ORIGINS = ['https://api.anthropic.com', 'https://api.openai.com', 'https://openrouter.ai'] as const;
+
+/**
+ * Cloudflare 的流量統計（Web Analytics）：Cloudflare 送網頁時自動在 HTML 裡加一個 <script src>，
+ * 程式在 SCRIPT，資料回報到 REPORT（Cloudflare 文件寫的 CSP）。整個網站本來就是 Cloudflare 送的，
+ * 允許它的程式不會多信任一個新的對象；它不用 cookie。Node 伺服器送的網頁沒有這段程式，規則留著也沒影響。
+ */
+export const ANALYTICS_SCRIPT_ORIGIN = 'https://static.cloudflareinsights.com';
+export const ANALYTICS_REPORT_ORIGIN = 'https://cloudflareinsights.com';
 
 export interface CspSources {
   /** 白板共用房間的伺服器（VITE_COLLAB_URL），要同時允許 http(s) 和 ws(s) */
@@ -32,13 +40,19 @@ function socketOrigin(httpOrigin: string): string {
 export function connectSources({ collabUrl, sentryDsn }: CspSources): string[] {
   const collab = originOf(collabUrl);
   const sentry = originOf(sentryDsn);
-  return ["'self'", ...AI_ORIGINS, ...(collab ? [collab, socketOrigin(collab)] : []), ...(sentry ? [sentry] : [])];
+  return [
+    "'self'",
+    ...AI_ORIGINS,
+    ANALYTICS_REPORT_ORIGIN,
+    ...(collab ? [collab, socketOrigin(collab)] : []),
+    ...(sentry ? [sentry] : []),
+  ];
 }
 
 export function contentSecurityPolicy(sources: CspSources): string {
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
-    'script-src': ["'self'"],
+    'script-src': ["'self'", ANALYTICS_SCRIPT_ORIGIN],
     // React 和白板會寫 style 屬性；樣式塞不進可以執行的程式，代價比較小
     'style-src': ["'self'", "'unsafe-inline'"],
     // 分享圖片、匯出的白板、錄下來的講解都是 blob: 或 data:

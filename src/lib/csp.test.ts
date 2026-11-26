@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AI_ORIGINS, connectSources, contentSecurityPolicy } from './csp';
+import { AI_ORIGINS, ANALYTICS_REPORT_ORIGIN, ANALYTICS_SCRIPT_ORIGIN, connectSources, contentSecurityPolicy } from './csp';
 
 function directive(policy: string, name: string): string[] {
   const found = policy.split('; ').find((part) => part.startsWith(`${name} `));
@@ -7,16 +7,16 @@ function directive(policy: string, name: string): string[] {
 }
 
 describe('contentSecurityPolicy', () => {
-  it('only runs scripts from our own site', () => {
+  it('only runs scripts from our own site and Cloudflare analytics', () => {
     const policy = contentSecurityPolicy({});
-    expect(directive(policy, 'script-src')).toEqual(["'self'"]);
+    expect(directive(policy, 'script-src')).toEqual(["'self'", ANALYTICS_SCRIPT_ORIGIN]);
     expect(directive(policy, 'object-src')).toEqual(["'none'"]);
     expect(directive(policy, 'base-uri')).toEqual(["'self'"]);
     expect(policy).not.toContain('unsafe-eval');
   });
 
-  it('lets the browser call the AI providers used with your own key', () => {
-    expect(directive(contentSecurityPolicy({}), 'connect-src')).toEqual(["'self'", ...AI_ORIGINS]);
+  it('lets the browser call the AI providers used with your own key and report analytics', () => {
+    expect(directive(contentSecurityPolicy({}), 'connect-src')).toEqual(["'self'", ...AI_ORIGINS, ANALYTICS_REPORT_ORIGIN]);
   });
 
   it('adds the whiteboard server for both fetch and WebSocket', () => {
@@ -33,7 +33,7 @@ describe('contentSecurityPolicy', () => {
   });
 
   it('ignores settings that are not http(s) URLs', () => {
-    expect(connectSources({ collabUrl: 'not a url', sentryDsn: 'javascript:alert(1)' })).toEqual(["'self'", ...AI_ORIGINS]);
+    expect(connectSources({ collabUrl: 'not a url', sentryDsn: 'javascript:alert(1)' })).toEqual(["'self'", ...AI_ORIGINS, ANALYTICS_REPORT_ORIGIN]);
   });
 
   it('does not put frame-ancestors in the meta tag, where browsers ignore it', () => {

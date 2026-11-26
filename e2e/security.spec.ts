@@ -43,7 +43,7 @@ test('the page is served with security headers and a strict script policy', asyn
   expect(headers['content-security-policy']).toBe("frame-ancestors 'none'");
 
   const policy = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
-  expect(policy).toContain("script-src 'self';");
+  expect(policy).toContain("script-src 'self' https://static.cloudflareinsights.com;");
 
   // 別人塞進頁面的 inline script 不會執行
   const ran = await page.evaluate(() => {
@@ -54,6 +54,40 @@ test('the page is served with security headers and a strict script policy', asyn
   });
   expect(ran).toBe(false);
   await expect.poll(() => page.evaluate(() => window.cspViolations)).toContainEqual(expect.stringMatching(/^script-src-elem inline/));
+});
+
+// Cloudflare 送網頁時會在 HTML 裡加流量統計的 <script src>；這裡用假的程式代替，確認它跑得起來、回報得出去，
+// 別的網站的程式照樣被擋
+test('Cloudflare analytics can run and report, other sites still cannot', async ({ page }) => {
+  let reported = false;
+  await page.route('https://static.cloudflareinsights.com/**', (route) =>
+    route.fulfill({
+      contentType: 'text/javascript',
+      body: "window.analyticsRan = true; fetch('https://cloudflareinsights.com/cdn-cgi/rum', { method: 'POST', mode: 'no-cors', body: '{}' });",
+    }),
+  );
+  await page.route('https://cloudflareinsights.com/**', (route) => {
+    reported = true;
+    return route.fulfill({ status: 204 });
+  });
+  await page.route('https://evil.example/**', (route) =>
+    route.fulfill({ contentType: 'text/javascript', body: 'window.evilRan = true;' }),
+  );
+  await page.goto('/');
+
+  await page.evaluate(() => {
+    for (const src of ['https://static.cloudflareinsights.com/beacon.min.js', 'https://evil.example/x.js']) {
+      const script = document.createElement('script');
+      script.src = src;
+      document.body.append(script);
+    }
+  });
+  const ran = (name: string) => page.evaluate((key) => (window as unknown as Record<string, unknown>)[key] === true, name);
+  await expect.poll(() => ran('analyticsRan')).toBe(true);
+  await expect.poll(() => reported).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.cspViolations)).toContainEqual('script-src-elem https://evil.example/x.js');
+  expect(await ran('evilRan')).toBe(false);
+  expect(await page.evaluate(() => window.cspViolations)).toEqual(['script-src-elem https://evil.example/x.js']);
 });
 
 test('no page of the app is blocked by the policy', async ({ page }) => {
