@@ -2,17 +2,19 @@
 
 **English** · [中文](README.zh-TW.md)
 
-A study coach for LeetCode interview prep. You solve problems on LeetCode; it plans what to practice each day, schedules reviews with spaced repetition, and makes you explain solutions out loud in English, with AI feedback.
+A study coach for coding interviews. You solve problems on LeetCode; it plans what to practice each day, schedules each review for just before you'd forget, and trains you to explain solutions out loud in English, with AI feedback.
+
+Solo project, live at [coach.legoli.dev](https://coach.legoli.dev), with 440+ unit and API tests and 130+ end-to-end tests.
+
+**[Try it with demo data](https://coach.legoli.dev/?demo)** (six weeks of made-up practice, no sign-up) · **[Whiteboard example](https://dsaboard.legoli.dev/#example=206)**
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/tour-dark.gif"><img src="docs/images/tour-light.gif" alt="A tour of one day: Today's plan, timed practice with the interview steps, recording how it went, explaining out loud with AI feedback on five points, a reference board playing step by step, and the algorithm tree on the Progress page"></picture>
 
-**[Try it with demo data](https://coach.legoli.dev/?demo)** (six weeks of made-up practice, no sign-up) · **[Whiteboard example](https://dsaboard.legoli.dev/#example=206)** · [中文說明](README.zh-TW.md)
+- **Reviews right before you'd forget.** Each review is timed from how long you took, how many hints you opened, and where you got stuck, not just a self-rating, and the app tells you why it picked that day.
+- **Practice saying it.** Explain your solution out loud (or type it). Claude scores five points an interviewer listens for and asks follow-up questions.
+- **Works offline, no account needed.** Everything is saved in your browser first; signing in syncs it between devices.
 
-- **Spaced repetition that uses more than a rating**: FSRS-6, adjusted by how long you took, how deep the hints went, and where you got stuck, and it explains every interval.
-- **Local-first PWA**: IndexedDB in the browser, works offline; an account syncs through a Hono API and PostgreSQL with an outbox and last-write-wins.
-- **My own open-source whiteboard** ([dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard) on npm), with live co-editing on Cloudflare Durable Objects and 213 step-by-step reference boards.
-
-The app itself opens at once from Cloudflare. The API runs on a free plan that sleeps when idle, so after a quiet while, signing in or syncing can wait up to a minute for it to wake; the app keeps working offline in the meantime. The demo link fills an empty browser only, stays in your browser, is never synced, and **Clear demo data** removes it.
+Built with React 19, TypeScript, Hono, PostgreSQL, Cloudflare Workers and Durable Objects, the Claude API, and Playwright.
 
 ## What it does
 
@@ -27,7 +29,7 @@ A day with the app, in the order you'd use it:
 7. **Flashcards** for spare minutes: five tap-only cards, about a minute.
 8. **Progress**: an algorithm tree that grows as you practice and fades as you forget, a capybara that grows with your streak, readiness by difficulty and company, and how your explanations improve.
 
-It works offline and without an account, and signing in syncs between devices. The whole app is in English and Traditional Chinese. Every feature is described in [docs/features.md](docs/features.md).
+The whole app is in English and Traditional Chinese. Every feature is described in [docs/features.md](docs/features.md).
 
 <table>
   <tr>
@@ -44,15 +46,13 @@ It works offline and without an account, and signing in syncs between devices. T
   </tr>
 </table>
 
-Screenshots use generated demo data and follow your GitHub theme. `npm run screenshots` regenerates them, the tour, and the reference board animations.
-
 ## Engineering highlights
 
 - **Offline-first sync.** Every write goes to IndexedDB together with an outbox entry, in one transaction. A single `POST /api/sync` pushes and pulls. Each record is last-write-wins with tombstones for deletes, and server versions come from a Postgres sequence under a per-user advisory lock, so a cursor never skips a change. Review schedules aren't synced at all: they're rebuilt by replaying attempts. [How sync works](docs/architecture.md#offline-first-sync)
 - **Scheduling with evidence.** FSRS-6 is written from the formulas and checked against the official `ts-fsrs` on hundreds of random histories. On top of it, time, hint depth, and stuck reasons weight each attempt, and shaky solves come back within a week. The same code produces the on-screen "Why this many days?" breakdown. [Review scheduling](docs/scheduling.md)
 - **A whiteboard published as a package.** [dsa-whiteboard](https://github.com/Lego514/dsa-whiteboard) is a custom editor with no drawing library, released to npm with provenance from GitHub Actions. Live rooms run on one Cloudflare Durable Object each. Tests check that each of the 213 reference boards follows its reference explanation, step by step.
 - **AI with guardrails.** Claude Opus 5.5 returns JSON-schema structured output, behind an allow-list and a per-user daily quota. The same prompts and schemas (`shared/ai.ts`) run in the browser with your own key, which never reaches the server.
-- **Security.** scrypt password hashes, only hashed session tokens stored, `__Host-` cookies, CSRF blocked by content type and Origin checks, rate limits, Sign in with GitHub using PKCE, and a zod schema for every synced record. [Security](docs/architecture.md#security)
+- **Security.** scrypt password hashes, only hashed session tokens stored, `__Host-` cookies, CSRF blocked by content type and Origin checks, rate limits, Sign in with GitHub using PKCE, a zod schema for every synced record, and a Content-Security-Policy that runs only the site's own scripts. [Security](docs/architecture.md#security)
 - **Tested like production.** Playwright runs against the production build and a real PostgreSQL 17 on Chromium and iPhone WebKit, with a fake GitHub for the OAuth flow and two browsers syncing with each other. CI also builds the Docker image and tests the running container.
 - **Fast on free hosting.** Cloudflare Workers serve the web app from the edge, and a small Worker forwards `/api` to the Node API on Render on the same origin, so only sign-in and sync wait for the free server to wake.
 
@@ -82,7 +82,7 @@ The code map, sync protocol, data model (with ER diagrams), and security notes a
 
 ## Run it locally
 
-Requires Node 24. There's no database to install: development uses an embedded PGlite.
+Requires Node 24. There's no database to install: development uses an embedded PGlite. (The hosted API runs on a free plan that sleeps when idle, so the first sign-in or sync after a quiet while can take up to a minute; the app itself keeps working.)
 
 ```bash
 npm install
@@ -101,4 +101,7 @@ npm test       # unit, API, and two-device sync tests
 - [Development](docs/development.md): commands, tests, Docker
 - [Deploying](docs/deploying.md): Render, Neon, Cloudflare, and the optional services
 - [Data and privacy](docs/privacy.md): what is stored where
-- [中文說明](README.zh-TW.md)
+
+## License
+
+[MIT](LICENSE)

@@ -12,7 +12,7 @@ npm run test:e2e     # build, then run the Playwright tests in Chromium
 npm run lint
 npm run typecheck
 npm run build:all    # web app into dist/ and API into server/dist/
-npm run screenshots  # rebuild, then regenerate the README screenshots, the reference board GIFs, and the capybara animation in images/
+npm run screenshots  # rebuild, then regenerate the README screenshots, the tour and reference board GIFs, and the capybara animation in docs/images/, all from generated demo data
 npm start            # run the built API (and the web app when NODE_ENV=production)
 ```
 
