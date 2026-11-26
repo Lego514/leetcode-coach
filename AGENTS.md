@@ -126,5 +126,5 @@ e2e/                 Playwright；fake-github.mjs 是測試用的假 GitHub
 - **每日提醒從來沒寄出去過**（2026-11-10 查到）：`.github/workflows/reminders.yml` 每次都印 `CRON_SECRET is not set; skipping.`，因為 repo 的 Actions secrets 裡沒有 `CRON_SECRET`（`gh secret list` 是空的）。要使用者自己把 Render 上的同一個值加成 repo 的 secret，再手動跑一次（`gh workflow run reminders.yml`）確認伺服器有回應。另外 GitHub 的排程不準：寫每小時一次，實際一天只跑 2 到 5 次，提醒會晚好幾個小時或整天沒寄；考慮改用 Cloudflare Worker 的 Cron Triggers 呼叫 `POST /api/push/send-due`（白板的 Worker 已經在 Cloudflare 上）。
 - 網站不睡的 ping 是使用者在外部服務設的、不在 repo 裡，**只在 HR 上班時間**讓 Render 醒著（不是整個月，所以不會用完免費的 750 小時）。上班時間外伺服器會睡，第一次打開要等 20 到 30 秒，這是預期的。2026-11-11 測過：美東半夜 12 點到 1 點不在設定的時段，每 20 分鐘連一次要等 19 到 32 秒（睡著了）；同一天美東下午 1:00、1:20、1:40 三次都在 0.25 秒內（一直醒著），所以上班時間的 ping 有在運作。測的時候要在設定的時段裡，而且先關掉 App：登入後分頁在畫面上時每 5 分鐘同步一次（`src/store/cloud.ts` 的 `POLL_MS`），伺服器就不會睡，會測不準。
 - 使用者要做的設定：Render 補上 `AI_ALLOWED_EMAILS`；選用的 `ADMIN_EMAILS`。
-- 跟朋友互相模擬面試（面試官看題目和評分表，兩邊共用白板）。
+- 跟朋友互相模擬面試（面試官看題目和評分表，兩邊共用白板）：2026-11-23 使用者決定先擱著，不要主動做，也不要寫進公開的「What's next」。
 - 求職進度追蹤使用者在別的專案做了，這裡不做。

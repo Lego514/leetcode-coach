@@ -14,7 +14,7 @@ src/                 Web app
     companion.ts         Capybara: growth, head items, today's pose
     explainProgress.ts   Explanation scores over time
   store/               Data layer
-    db.ts                Dexie schema (v2: sync ids, outbox, sync state; v3: flashcard answers; v4: whiteboards; v5: FSRS rebuild; v6–7: behavioral stories and practice)
+    db.ts                Dexie schema (v2: sync ids, outbox, sync state; v3: flashcard answers; v4: whiteboards; v5: FSRS rebuild; v6–7: behavioral stories and practice; v8–11: schedule rebuilds after scheduling rule changes)
     actions.ts           Every local write; each one also records a change in the outbox
     queries.ts           Every read, as React hooks
     tracking.ts          Local record ⇄ sync payload conversion, schedule replay
@@ -165,6 +165,7 @@ erDiagram
     int problemId FK
     string kind "full mock or explanation drill"
     string[] steps "points or steps covered"
+    bool typed "typed instead of spoken"
     int clarity "self-rating"
     json feedback "AI scores"
     blob audio "stays on the device"
